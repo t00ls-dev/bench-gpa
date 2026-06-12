@@ -90,7 +90,7 @@ export const getDashboard = createServerFn({ method: "POST" })
 export const getImportedDates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("imported_dates");
+    const { data, error } = await (context.supabase as any).rpc("imported_dates");
     if (error) throw new Error(error.message);
     return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
   });
