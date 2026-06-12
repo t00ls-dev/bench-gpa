@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { uploadSheet } from "@/lib/upload.functions";
+import { beginImport, insertSalesChunk } from "@/lib/upload.functions";
+import { parseWorkbook } from "@/lib/xlsx-parser";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
@@ -18,23 +19,15 @@ interface Result {
   rows?: number;
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => {
-      const s = r.result as string;
-      res(s.split(",")[1] ?? s);
-    };
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
+const CHUNK = 400;
 
 function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<Result[]>([]);
   const [busy, setBusy] = useState(false);
-  const upload = useServerFn(uploadSheet);
+  const [progress, setProgress] = useState<string>("");
+  const begin = useServerFn(beginImport);
+  const insertChunk = useServerFn(insertSalesChunk);
 
   const process = async () => {
     if (files.length === 0) return;
@@ -43,18 +36,32 @@ function UploadPage() {
     const r: Result[] = [];
     for (const f of files) {
       try {
-        const base64 = await fileToBase64(f);
-        const out = await upload({ data: { filename: f.name, base64 } });
+        setProgress(`${f.name}: lendo arquivo…`);
+        const buf = await f.arrayBuffer();
+        setProgress(`${f.name}: processando planilha…`);
+        const parsed = parseWorkbook(buf);
+
+        setProgress(`${f.name}: preparando data ${parsed.sale_date}…`);
+        await begin({ data: { sale_date: parsed.sale_date, stores: parsed.stores, products: parsed.products } });
+
+        const total = parsed.sales.length;
+        for (let i = 0; i < total; i += CHUNK) {
+          const chunk = parsed.sales.slice(i, i + CHUNK);
+          setProgress(`${f.name}: enviando ${Math.min(i + CHUNK, total).toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}…`);
+          await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
+        }
+
         r.push({
           filename: f.name, ok: true,
-          message: `${out.rows.toLocaleString("pt-BR")} linhas importadas`,
-          sale_date: out.sale_date, rows: out.rows,
+          message: `${total.toLocaleString("pt-BR")} linhas importadas`,
+          sale_date: parsed.sale_date, rows: total,
         });
       } catch (e: any) {
         r.push({ filename: f.name, ok: false, message: e?.message ?? "Erro desconhecido" });
       }
       setResults([...r]);
     }
+    setProgress("");
     setBusy(false);
     const ok = r.filter((x) => x.ok).length;
     if (ok === r.length) toast.success(`${ok} arquivo(s) importado(s).`);
@@ -93,6 +100,9 @@ function UploadPage() {
               {busy ? <><Loader2 className="mr-2 size-4 animate-spin" /> Importando…</> : "Iniciar importação"}
             </Button>
           </div>
+          {busy && progress && (
+            <div className="mb-3 rounded-md bg-primary/5 px-3 py-2 text-xs text-primary">{progress}</div>
+          )}
           <ul className="space-y-2">
             {files.map((f) => (
               <li key={f.name} className="flex items-center gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
