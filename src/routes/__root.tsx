@@ -52,8 +52,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Bench GPA — Análise de Vendas" },
+      { title: "Data GPA — Análise de Vendas" },
       { name: "description", content: "Plataforma de análise operacional e comercial de lojas." },
+      { property: "og:title", content: "Data GPA — Análise de Vendas" },
+      { name: "twitter:title", content: "Data GPA — Análise de Vendas" },
+      { property: "og:description", content: "Plataforma de análise operacional e comercial de lojas." },
+      { name: "twitter:description", content: "Plataforma de análise operacional e comercial de lojas." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4db2b5d7-a112-46ba-a89b-2f0ac519928d/id-preview-3d79e490--06a53077-31d0-4d96-8bc8-43c1d178c8dd.lovable.app-1781234342794.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4db2b5d7-a112-46ba-a89b-2f0ac519928d/id-preview-3d79e490--06a53077-31d0-4d96-8bc8-43c1d178c8dd.lovable.app-1781234342794.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
