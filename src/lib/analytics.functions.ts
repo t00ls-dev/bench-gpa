@@ -99,7 +99,7 @@ export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ q: z.string().min(3) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.rpc("product_search", { p_q: data.q.trim() });
+    const { data: rows, error } = await (context.supabase as any).rpc("product_search", { p_q: data.q.trim() });
     if (error) throw new Error(error.message);
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
   });
@@ -114,7 +114,7 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const { data: res, error } = await context.supabase.rpc("product_analysis", {
+    const { data: res, error } = await (context.supabase as any).rpc("product_analysis", {
       p_prod_code: data.prodCode,
       p_store_code: data.storeCode || null,
       p_ref_date: data.referenceDate || null,
