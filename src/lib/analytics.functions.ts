@@ -28,7 +28,7 @@ function shiftPeriod(from: string, to: string, mode: "prev_period" | "prev_week"
 }
 
 async function callMetrics(supabase: any, f: Filters) {
-  const { data, error } = await supabase.rpc("dashboard_metrics", {
+  const { data, error } = await (supabase as any).rpc("dashboard_metrics", {
     p_date_from: f.dateFrom || null,
     p_date_to: f.dateTo || null,
     p_stores: f.stores ?? [],
@@ -54,7 +54,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
     z.object({ dateFrom: z.string().nullable().optional(), dateTo: z.string().nullable().optional() }).parse(d ?? {})
   )
   .handler(async ({ data, context }) => {
-    const { data: res, error } = await context.supabase.rpc("filter_options", {
+    const { data: res, error } = await (context.supabase as any).rpc("filter_options", {
       p_date_from: data.dateFrom || null,
       p_date_to: data.dateTo || null,
     });
