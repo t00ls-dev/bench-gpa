@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      import_log: {
+        Row: {
+          imported_at: string
+          imported_by: string | null
+          row_count: number
+          sale_date: string
+        }
+        Insert: {
+          imported_at?: string
+          imported_by?: string | null
+          row_count?: number
+          sale_date: string
+        }
+        Update: {
+          imported_at?: string
+          imported_by?: string | null
+          row_count?: number
+          sale_date?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           last_seen: string | null
@@ -133,6 +154,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      dashboard_metrics: {
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_deptos?: string[]
+          p_grupos?: string[]
+          p_secoes?: string[]
+          p_stores?: string[]
+          p_subgrupos?: string[]
+        }
+        Returns: Json
+      }
+      filter_options: {
+        Args: { p_date_from: string; p_date_to: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -140,7 +177,30 @@ export type Database = {
         }
         Returns: boolean
       }
+      imported_dates: {
+        Args: never
+        Returns: {
+          imported_at: string
+          row_count: number
+          sale_date: string
+        }[]
+      }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      product_analysis: {
+        Args: {
+          p_prod_code: string
+          p_ref_date?: string
+          p_store_code?: string
+        }
+        Returns: Json
+      }
+      product_search: {
+        Args: { p_q: string }
+        Returns: {
+          prod_code: string
+          prod_name: string
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }

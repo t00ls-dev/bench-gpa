@@ -62,3 +62,21 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { inserted: rows.length };
   });
+
+// Step 3: finalize — write import_log entry with total row count
+export const finalizeImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ sale_date: z.string(), row_count: z.number().int().nonnegative() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("import_log").upsert(
+      { sale_date: data.sale_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId },
+      { onConflict: "sale_date" }
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

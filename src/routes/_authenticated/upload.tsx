@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { beginImport, insertSalesChunk } from "@/lib/upload.functions";
+import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
+import { getImportedDates } from "@/lib/analytics.functions";
 import { parseWorkbook } from "@/lib/xlsx-parser";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/upload")({
   component: UploadPage,
@@ -20,6 +22,9 @@ interface Result {
 }
 
 const CHUNK = 400;
+const fmtInt = (n: number) => n.toLocaleString("pt-BR");
+const fmtDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
+const fmtDT = (iso: string) => new Date(iso).toLocaleString("pt-BR");
 
 function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -28,6 +33,14 @@ function UploadPage() {
   const [progress, setProgress] = useState<string>("");
   const begin = useServerFn(beginImport);
   const insertChunk = useServerFn(insertSalesChunk);
+  const finalize = useServerFn(finalizeImport);
+  const importedDates = useServerFn(getImportedDates);
+  const qc = useQueryClient();
+
+  const { data: dates } = useQuery({
+    queryKey: ["imported-dates"],
+    queryFn: () => importedDates(),
+  });
 
   const process = async () => {
     if (files.length === 0) return;
@@ -51,6 +64,8 @@ function UploadPage() {
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
         }
 
+        await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
+
         r.push({
           filename: f.name, ok: true,
           message: `${total.toLocaleString("pt-BR")} linhas importadas`,
@@ -63,6 +78,9 @@ function UploadPage() {
     }
     setProgress("");
     setBusy(false);
+    qc.invalidateQueries({ queryKey: ["imported-dates"] });
+    qc.invalidateQueries({ queryKey: ["filter-options"] });
+    qc.invalidateQueries({ queryKey: ["dashboard"] });
     const ok = r.filter((x) => x.ok).length;
     if (ok === r.length) toast.success(`${ok} arquivo(s) importado(s).`);
     else if (ok > 0) toast.warning(`${ok} de ${r.length} importados.`);
@@ -125,7 +143,7 @@ function UploadPage() {
                 <div className="flex-1">
                   <div className="font-medium">{r.filename}</div>
                   <div className="text-xs text-muted-foreground">
-                    {r.ok && r.sale_date && <>Data {new Date(r.sale_date + "T00:00:00").toLocaleDateString("pt-BR")} — </>}
+                    {r.ok && r.sale_date && <>Data {fmtDate(r.sale_date)} — </>}
                     {r.message}
                   </div>
                 </div>
@@ -134,6 +152,36 @@ function UploadPage() {
           </ul>
         </div>
       )}
+
+      <div className="mt-6 kpi-card">
+        <div className="mb-3 flex items-center gap-2">
+          <CalendarCheck className="size-4 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Datas já importadas</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="py-2">Data</th>
+                <th className="py-2 text-right">Registros</th>
+                <th className="py-2 text-right">Última atualização</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(dates ?? []).map((d) => (
+                <tr key={d.sale_date} className="border-b border-border/60">
+                  <td className="py-2 font-medium">{fmtDate(d.sale_date)}</td>
+                  <td className="num py-2 text-right">{fmtInt(d.row_count)}</td>
+                  <td className="py-2 text-right text-muted-foreground">{fmtDT(d.imported_at)}</td>
+                </tr>
+              ))}
+              {(!dates || dates.length === 0) && (
+                <tr><td colSpan={3} className="py-6 text-center text-xs text-muted-foreground">Nenhuma data importada ainda.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

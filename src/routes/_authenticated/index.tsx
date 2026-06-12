@@ -104,7 +104,7 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {(data?.current.byDepto ?? []).map((d) => {
+              {(data?.current.byDepto ?? []).map((d: { name: string; val: number }) => {
                 const pct = data!.current.total > 0 ? (d.val / data!.current.total) * 100 : 0;
                 return (
                   <tr key={d.name} className="border-b border-border/60">
