@@ -1,55 +1,64 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { parseWorkbook } from "./xlsx-parser";
 
-async function assertAdminAndApproved(ctx: { supabase: any; userId: string }) {
+async function assertAdmin(ctx: { supabase: any; userId: string }) {
   const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Acesso negado: apenas administradores podem importar.");
 }
 
-export const uploadSheet = createServerFn({ method: "POST" })
+const SaleRow = z.object({
+  store_code: z.string(),
+  store_name: z.string(),
+  depto: z.string().nullable(),
+  secao: z.string().nullable(),
+  grupo: z.string().nullable(),
+  subgrupo: z.string().nullable(),
+  prod_code: z.string(),
+  prod_name: z.string(),
+  val_vda: z.number(),
+});
+
+// Step 1: clears existing data for the date and upserts stores/products dictionaries.
+export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ filename: z.string(), base64: z.string() }).parse(data)
+  .inputValidator((d: unknown) =>
+    z.object({
+      sale_date: z.string(),
+      stores: z.array(z.object({ store_code: z.string(), store_name: z.string() })),
+      products: z.array(z.object({ prod_code: z.string(), prod_name: z.string() })),
+    }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    await assertAdminAndApproved(context);
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const buf = Buffer.from(data.base64, "base64");
-    const parsed = parseWorkbook(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-
-    // Replace existing data for this date
-    const { error: delErr } = await supabaseAdmin.from("sales").delete().eq("sale_date", parsed.sale_date);
+    const { error: delErr } = await supabaseAdmin.from("sales").delete().eq("sale_date", data.sale_date);
     if (delErr) throw new Error(`Erro removendo dados da data: ${delErr.message}`);
-
-    // Insert sales in chunks
-    const rows = parsed.sales.map((s) => ({ ...s, sale_date: parsed.sale_date }));
-    const chunkSize = 1000;
-    for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
-      const { error } = await supabaseAdmin.from("sales").insert(chunk);
-      if (error) throw new Error(`Erro inserindo vendas (chunk ${i}): ${error.message}`);
+    if (data.stores.length) {
+      const { error } = await supabaseAdmin.from("stores").upsert(data.stores, { onConflict: "store_code" });
+      if (error) throw new Error(`Erro lojas: ${error.message}`);
     }
-
-    // Upsert stores and products
-    if (parsed.stores.length) {
-      await supabaseAdmin.from("stores").upsert(parsed.stores, { onConflict: "store_code" });
+    if (data.products.length) {
+      const { error } = await supabaseAdmin
+        .from("products")
+        .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
+      if (error) throw new Error(`Erro produtos: ${error.message}`);
     }
-    if (parsed.products.length) {
-      await supabaseAdmin.from("products").upsert(
-        parsed.products.map((p) => ({ ...p, last_seen: parsed.sale_date })),
-        { onConflict: "prod_code" }
-      );
-    }
+    return { ok: true };
+  });
 
-    return {
-      filename: data.filename,
-      sale_date: parsed.sale_date,
-      rows: rows.length,
-      stores: parsed.stores.length,
-      products: parsed.products.length,
-    };
+// Step 2: insert a chunk of sales rows. Called many times by the client.
+export const insertSalesChunk = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ sale_date: z.string(), rows: z.array(SaleRow) }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const rows = data.rows.map((r) => ({ ...r, sale_date: data.sale_date }));
+    const { error } = await supabaseAdmin.from("sales").insert(rows);
+    if (error) throw new Error(error.message);
+    return { inserted: rows.length };
   });
