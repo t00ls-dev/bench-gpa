@@ -14,16 +14,139 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      products: {
+        Row: {
+          last_seen: string | null
+          prod_code: string
+          prod_name: string
+        }
+        Insert: {
+          last_seen?: string | null
+          prod_code: string
+          prod_name: string
+        }
+        Update: {
+          last_seen?: string | null
+          prod_code?: string
+          prod_name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          status: Database["public"]["Enums"]["user_status"]
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          status?: Database["public"]["Enums"]["user_status"]
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          status?: Database["public"]["Enums"]["user_status"]
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          depto: string | null
+          grupo: string | null
+          id: number
+          prod_code: string
+          prod_name: string
+          sale_date: string
+          secao: string | null
+          store_code: string
+          store_name: string
+          subgrupo: string | null
+          val_vda: number
+        }
+        Insert: {
+          depto?: string | null
+          grupo?: string | null
+          id?: number
+          prod_code: string
+          prod_name: string
+          sale_date: string
+          secao?: string | null
+          store_code: string
+          store_name: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Update: {
+          depto?: string | null
+          grupo?: string | null
+          id?: number
+          prod_code?: string
+          prod_name?: string
+          sale_date?: string
+          secao?: string | null
+          store_code?: string
+          store_name?: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          store_code: string
+          store_name: string
+        }
+        Insert: {
+          store_code: string
+          store_name: string
+        }
+        Update: {
+          store_code?: string
+          store_name?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_approved: { Args: { _user_id: string }; Returns: boolean }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      user_status: "pending" | "approved" | "blocked"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +273,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      user_status: ["pending", "approved", "blocked"],
+    },
   },
 } as const
