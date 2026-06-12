@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { searchProducts, getProductAnalysis } from "@/lib/analytics.functions";
+import { searchProducts, getProductAnalysis, getFilterOptions } from "@/lib/analytics.functions";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 import { Search, Package } from "lucide-react";
@@ -14,10 +16,14 @@ export const Route = createFileRoute("/_authenticated/produto")({
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
+interface SeriesPoint { date: string; val: number }
+interface StorePoint { code: string; name: string; val: number }
+
 function ProdutoPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
+  const [storeCode, setStoreCode] = useState<string>("__all__");
   const tRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -27,6 +33,13 @@ function ProdutoPage() {
 
   const search = useServerFn(searchProducts);
   const analysis = useServerFn(getProductAnalysis);
+  const getOpts = useServerFn(getFilterOptions);
+
+  const { data: opts } = useQuery({
+    queryKey: ["filter-options-all"],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null } }),
+  });
+  const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
 
   const { data: suggestions } = useQuery({
     queryKey: ["product-search", debounced],
@@ -35,17 +48,21 @@ function ProdutoPage() {
   });
 
   const { data: analysisData } = useQuery({
-    queryKey: ["product-analysis", selected?.prod_code],
-    queryFn: () => analysis({ data: { prodCode: selected!.prod_code, referenceDate: null } }),
+    queryKey: ["product-analysis", selected?.prod_code, storeCode],
+    queryFn: () => analysis({ data: {
+      prodCode: selected!.prod_code,
+      storeCode: storeCode === "__all__" ? null : storeCode,
+      referenceDate: null,
+    } }),
     enabled: !!selected,
   });
 
   const refWeekday = analysisData?.refDate ? WEEKDAYS[new Date(analysisData.refDate + "T00:00:00Z").getUTCDay()] : null;
   const avgSame = analysisData?.lastFourSameWeekday?.length
-    ? analysisData.lastFourSameWeekday.reduce((a, b) => a + b.val, 0) / analysisData.lastFourSameWeekday.length
+    ? analysisData.lastFourSameWeekday.reduce((a: number, b: SeriesPoint) => a + b.val, 0) / analysisData.lastFourSameWeekday.length
     : 0;
   const avgAll = analysisData?.lastFourAll?.length
-    ? analysisData.lastFourAll.reduce((a, b) => a + b.val, 0) / analysisData.lastFourAll.length
+    ? analysisData.lastFourAll.reduce((a: number, b: SeriesPoint) => a + b.val, 0) / analysisData.lastFourAll.length
     : 0;
 
   return (
@@ -54,6 +71,21 @@ function ProdutoPage() {
         <h1 className="font-display text-3xl font-bold">Análise de produto</h1>
         <p className="text-sm text-muted-foreground">Pesquise um produto para ver comparações entre lojas, evolução e benchmarks semanais.</p>
       </header>
+
+      <div className="kpi-card mb-4 grid gap-3 md:grid-cols-2">
+        <div>
+          <Label className="text-xs">Loja</Label>
+          <Select value={storeCode} onValueChange={setStoreCode}>
+            <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas as lojas</SelectItem>
+              {stores.map((s) => (
+                <SelectItem key={s.store_code} value={s.store_code}>{s.store_code} — {s.store_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <div className="kpi-card relative">
         <div className="flex items-center gap-2">
@@ -97,7 +129,7 @@ function ProdutoPage() {
               <p className="text-xs text-muted-foreground">Venda do produto por loja na data referência.</p>
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analysisData.byStore.slice(0, 12)} layout="vertical" margin={{ left: 8 }}>
+                  <BarChart data={(analysisData.byStore as StorePoint[]).slice(0, 12)} layout="vertical" margin={{ left: 8 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
                     <Tooltip formatter={(v: number) => fmtBRL(v)} />
@@ -136,7 +168,7 @@ function ProdutoPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {analysisData.lastFourSameWeekday.map((d) => (
+                    {(analysisData.lastFourSameWeekday as SeriesPoint[]).map((d) => (
                       <tr key={d.date} className="border-b border-border/60">
                         <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
                         <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
@@ -161,7 +193,7 @@ function ProdutoPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {analysisData.lastFourAll.map((d) => (
+                    {(analysisData.lastFourAll as SeriesPoint[]).map((d) => (
                       <tr key={d.date} className="border-b border-border/60">
                         <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
                         <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
