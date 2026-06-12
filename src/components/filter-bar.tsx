@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getFilterOptions } from "@/lib/analytics.functions";
@@ -24,6 +24,8 @@ interface Props {
   value: Filters;
   onChange: (f: Filters) => void;
 }
+
+interface StoreOpt { store_code: string; store_name: string }
 
 function MultiSelect({
   label, options, value, onChange,
@@ -67,7 +69,11 @@ function MultiSelect({
 
 export function FilterBar({ value, onChange }: Props) {
   const getOpts = useServerFn(getFilterOptions);
-  const { data: opts } = useQuery({ queryKey: ["filter-options"], queryFn: () => getOpts() });
+  // Filter options scoped to the selected date window (so all hierarchies present in those days are shown)
+  const { data: opts } = useQuery({
+    queryKey: ["filter-options", value.dateFrom, value.dateTo],
+    queryFn: () => getOpts({ data: { dateFrom: value.dateFrom || null, dateTo: value.dateTo || null } }),
+  });
 
   // Seed default date range from latest date once
   useEffect(() => {
@@ -78,6 +84,8 @@ export function FilterBar({ value, onChange }: Props) {
   }, [opts?.latestDate]);
 
   const setF = (patch: Partial<Filters>) => onChange({ ...value, ...patch });
+  const stores: StoreOpt[] = (opts?.stores ?? []) as StoreOpt[];
+  const strList = (arr: unknown): string[] => (arr ?? []) as string[];
 
   return (
     <div className="kpi-card mb-6 grid gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -93,26 +101,26 @@ export function FilterBar({ value, onChange }: Props) {
         <Label className="text-xs">Loja</Label>
         <MultiSelect
           label="Todas"
-          options={(opts?.stores ?? []).map((s) => ({ value: s.store_code, label: `${s.store_code} — ${s.store_name}` }))}
+          options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} — ${s.store_name}` }))}
           value={value.stores}
           onChange={(v) => setF({ stores: v })}
         />
       </div>
       <div>
         <Label className="text-xs">Departamento</Label>
-        <MultiSelect label="Todos" options={(opts?.deptos ?? []).map((s) => ({ value: s, label: s }))} value={value.deptos} onChange={(v) => setF({ deptos: v })} />
+        <MultiSelect label="Todos" options={strList(opts?.deptos).map((s) => ({ value: s, label: s }))} value={value.deptos} onChange={(v) => setF({ deptos: v })} />
       </div>
       <div>
         <Label className="text-xs">Seção</Label>
-        <MultiSelect label="Todas" options={(opts?.secoes ?? []).map((s) => ({ value: s, label: s }))} value={value.secoes} onChange={(v) => setF({ secoes: v })} />
+        <MultiSelect label="Todas" options={strList(opts?.secoes).map((s) => ({ value: s, label: s }))} value={value.secoes} onChange={(v) => setF({ secoes: v })} />
       </div>
       <div>
         <Label className="text-xs">Grupo</Label>
-        <MultiSelect label="Todos" options={(opts?.grupos ?? []).map((s) => ({ value: s, label: s }))} value={value.grupos} onChange={(v) => setF({ grupos: v })} />
+        <MultiSelect label="Todos" options={strList(opts?.grupos).map((s) => ({ value: s, label: s }))} value={value.grupos} onChange={(v) => setF({ grupos: v })} />
       </div>
       <div className="md:col-span-2">
         <Label className="text-xs">Subgrupo</Label>
-        <MultiSelect label="Todos" options={(opts?.subgrupos ?? []).map((s) => ({ value: s, label: s }))} value={value.subgrupos} onChange={(v) => setF({ subgrupos: v })} />
+        <MultiSelect label="Todos" options={strList(opts?.subgrupos).map((s) => ({ value: s, label: s }))} value={value.subgrupos} onChange={(v) => setF({ subgrupos: v })} />
       </div>
       <div className="md:col-span-2 lg:col-span-4">
         <Label className="text-xs">Comparar com</Label>
