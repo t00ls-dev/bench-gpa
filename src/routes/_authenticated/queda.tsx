@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getProductsInDecline, getFilterOptions } from "@/lib/analytics.functions";
@@ -60,8 +60,8 @@ function QuedaPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "critico" | "alerta" | "atencao" | "sem_estoque">("all");
 
   // Re-init from latest once it loads
-  useMemo(() => {
-    if (opts?.latestDate && dateTo === todayIso()) {
+  useEffect(() => {
+    if (opts?.latestDate) {
       setDateTo(opts.latestDate);
       setDateFrom(shiftIso(opts.latestDate, -6));
     }
