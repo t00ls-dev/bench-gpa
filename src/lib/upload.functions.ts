@@ -8,6 +8,8 @@ async function assertAdmin(ctx: { supabase: any; userId: string }) {
   if (!data) throw new Error("Acesso negado: apenas administradores podem importar.");
 }
 
+/* ============ SALES ============ */
+
 const SaleRow = z.object({
   store_code: z.string(),
   store_name: z.string(),
@@ -20,7 +22,6 @@ const SaleRow = z.object({
   val_vda: z.number(),
 });
 
-// Step 1: clears existing data for the date and upserts stores/products dictionaries.
 export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -48,12 +49,9 @@ export const beginImport = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Step 2: insert a chunk of sales rows. Called many times by the client.
 export const insertSalesChunk = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ sale_date: z.string(), rows: z.array(SaleRow) }).parse(d)
-  )
+  .inputValidator((d: unknown) => z.object({ sale_date: z.string(), rows: z.array(SaleRow) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -63,7 +61,6 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     return { inserted: rows.length };
   });
 
-// Step 3: finalize — write import_log entry with total row count
 export const finalizeImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -80,3 +77,74 @@ export const finalizeImport = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* ============ STOCK (Pique) ============ */
+
+const StockRow = z.object({
+  store_code: z.string(),
+  store_name: z.string(),
+  prod_code: z.string(),
+  prod_name: z.string(),
+  qtd_estoque: z.number(),
+  valor_estoq: z.number(),
+});
+
+export const beginStockImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      stock_date: z.string(),
+      stores: z.array(z.object({ store_code: z.string(), store_name: z.string() })),
+      products: z.array(z.object({ prod_code: z.string(), prod_name: z.string() })),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: delErr } = await supabaseAdmin.from("stock").delete().eq("stock_date", data.stock_date);
+    if (delErr) throw new Error(`Erro removendo estoque da data: ${delErr.message}`);
+    if (data.stores.length) {
+      const { error } = await supabaseAdmin.from("stores").upsert(data.stores, { onConflict: "store_code" });
+      if (error) throw new Error(`Erro lojas: ${error.message}`);
+    }
+    if (data.products.length) {
+      const { error } = await supabaseAdmin
+        .from("products")
+        .upsert(data.products.map((p) => ({ ...p, last_seen: data.stock_date })), { onConflict: "prod_code" });
+      if (error) throw new Error(`Erro produtos: ${error.message}`);
+    }
+    return { ok: true };
+  });
+
+export const insertStockChunk = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ stock_date: z.string(), rows: z.array(StockRow) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const rows = data.rows.map((r) => ({
+      stock_date: data.stock_date,
+      store_code: r.store_code,
+      prod_code: r.prod_code,
+      qtd_estoque: r.qtd_estoque,
+      valor_estoq: r.valor_estoq,
+    }));
+    const { error } = await supabaseAdmin.from("stock").insert(rows);
+    if (error) throw new Error(error.message);
+    return { inserted: rows.length };
+  });
+
+export const finalizeStockImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ stock_date: z.string(), row_count: z.number().int().nonnegative() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("stock_import_log").upsert(
+      { stock_date: data.stock_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId },
+      { onConflict: "stock_date" }
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
