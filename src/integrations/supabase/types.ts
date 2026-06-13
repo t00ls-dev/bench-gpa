@@ -116,6 +116,51 @@ export type Database = {
         }
         Relationships: []
       }
+      stock: {
+        Row: {
+          prod_code: string
+          qtd_estoque: number
+          stock_date: string
+          store_code: string
+          valor_estoq: number
+        }
+        Insert: {
+          prod_code: string
+          qtd_estoque?: number
+          stock_date: string
+          store_code: string
+          valor_estoq?: number
+        }
+        Update: {
+          prod_code?: string
+          qtd_estoque?: number
+          stock_date?: string
+          store_code?: string
+          valor_estoq?: number
+        }
+        Relationships: []
+      }
+      stock_import_log: {
+        Row: {
+          imported_at: string
+          imported_by: string | null
+          row_count: number
+          stock_date: string
+        }
+        Insert: {
+          imported_at?: string
+          imported_by?: string | null
+          row_count?: number
+          stock_date: string
+        }
+        Update: {
+          imported_at?: string
+          imported_by?: string | null
+          row_count?: number
+          stock_date?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           store_code: string
@@ -185,6 +230,14 @@ export type Database = {
           sale_date: string
         }[]
       }
+      imported_stock_dates: {
+        Args: never
+        Returns: {
+          imported_at: string
+          row_count: number
+          stock_date: string
+        }[]
+      }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       product_analysis: {
         Args: {
@@ -201,8 +254,35 @@ export type Database = {
           prod_name: string
         }[]
       }
+      product_stock_history: {
+        Args: { p_prod_code: string; p_store_code?: string }
+        Returns: {
+          qtd_estoque: number
+          stock_date: string
+          valor_estoq: number
+        }[]
+      }
+      products_in_decline: {
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_deptos?: string[]
+          p_prod_codes?: string[]
+          p_secoes?: string[]
+          p_stores?: string[]
+        }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      stock_at: {
+        Args: { p_date: string; p_prod: string; p_store: string }
+        Returns: {
+          qtd_estoque: number
+          stock_date: string
+          valor_estoq: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
