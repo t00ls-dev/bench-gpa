@@ -14,7 +14,19 @@ export const Route = createFileRoute("/_authenticated/queda")({
   component: QuedaPage,
 });
 
-type Row = Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getProductsInDecline>>>>[number];
+type Row = {
+  store_code: string; store_name: string;
+  prod_code: string; prod_name: string;
+  depto: string | null; secao: string | null;
+  avg_daily_hist: number | null; avg_daily_recent: number | null;
+  sum_recent: number; sum_hist: number;
+  variation: number | null;
+  days_without_sale: number | null;
+  last_sale_date: string | null;
+  current_stock: number | null;
+  stock_ref_date: string | null;
+  status: "critico" | "alerta" | "atencao" | "sem_estoque" | "ok";
+};
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   critico:     { label: "Crítico",     color: "text-red-700",    bg: "bg-red-50 border-red-300",       icon: AlertOctagon },
