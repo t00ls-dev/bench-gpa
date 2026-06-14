@@ -95,14 +95,6 @@ export const getImportedDates = createServerFn({ method: "GET" })
     return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
   });
 
-export const getImportedStockDates = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await (context.supabase as any).rpc("imported_stock_dates");
-    if (error) throw new Error(error.message);
-    return (data ?? []) as { stock_date: string; row_count: number; imported_at: string }[];
-  });
-
 export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ q: z.string().min(3) }).parse(d))
@@ -140,23 +132,6 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
     };
   });
 
-export const getProductStockHistory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ prodCode: z.string(), storeCode: z.string().nullable().optional() }).parse(d)
-  )
-  .handler(async ({ data, context }) => {
-    const { data: rows, error } = await (context.supabase as any).rpc("product_stock_history", {
-      p_prod_code: data.prodCode,
-      p_store_code: data.storeCode || null,
-    });
-    if (error) throw new Error(error.message);
-    return (rows ?? []).map((r: any) => ({
-      stock_date: r.stock_date,
-      qtd_estoque: Number(r.qtd_estoque),
-      valor_estoq: Number(r.valor_estoq),
-    })) as { stock_date: string; qtd_estoque: number; valor_estoq: number }[];
-  });
 
 export const getProductsInDecline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -189,8 +164,7 @@ export const getProductsInDecline = createServerFn({ method: "POST" })
       variation: number | null;
       days_without_sale: number | null;
       last_sale_date: string | null;
-      current_stock: number | null;
-      stock_ref_date: string | null;
-      status: "critico" | "alerta" | "atencao" | "sem_estoque" | "ok";
+      status: "critico" | "alerta" | "atencao";
     }>;
   });
+
