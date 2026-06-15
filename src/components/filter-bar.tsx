@@ -69,10 +69,16 @@ function MultiSelect({
 
 export function FilterBar({ value, onChange }: Props) {
   const getOpts = useServerFn(getFilterOptions);
-  // Filter options scoped to the selected date window (so all hierarchies present in those days are shown)
+  // Cascading filters: each level narrows the next
   const { data: opts } = useQuery({
-    queryKey: ["filter-options", value.dateFrom, value.dateTo],
-    queryFn: () => getOpts({ data: { dateFrom: value.dateFrom || null, dateTo: value.dateTo || null } }),
+    queryKey: ["filter-options", value.dateFrom, value.dateTo, value.stores, value.deptos, value.secoes, value.grupos],
+    queryFn: () => getOpts({ data: {
+      dateFrom: value.dateFrom || null,
+      dateTo: value.dateTo || null,
+      stores: value.stores, deptos: value.deptos, secoes: value.secoes, grupos: value.grupos,
+    } }),
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
 
   // Seed default date range from latest date once

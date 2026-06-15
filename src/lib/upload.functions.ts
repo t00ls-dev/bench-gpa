@@ -72,5 +72,8 @@ export const finalizeImport = createServerFn({ method: "POST" })
       { onConflict: "sale_date" }
     );
     if (error) throw new Error(error.message);
+    // Refresh pre-aggregated daily totals for the imported date
+    const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
+    if (aggErr) throw new Error(`Erro ao atualizar agregação: ${aggErr.message}`);
     return { ok: true };
   });
