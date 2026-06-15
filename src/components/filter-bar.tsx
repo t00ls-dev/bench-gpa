@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getFilterOptions } from "@/lib/analytics.functions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/date-range-picker";
 
 export interface Filters {
   dateFrom: string;
