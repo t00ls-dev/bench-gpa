@@ -22,6 +22,9 @@ function Dashboard() {
     queryKey: ["dashboard", filters],
     queryFn: () => fn({ data: filters }),
     enabled: !!filters.dateFrom && !!filters.dateTo,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const delta = (cur: number, prev: number | undefined) =>

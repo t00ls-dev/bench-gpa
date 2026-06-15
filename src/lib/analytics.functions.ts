@@ -51,12 +51,23 @@ async function callMetrics(supabase: any, f: Filters) {
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ dateFrom: z.string().nullable().optional(), dateTo: z.string().nullable().optional() }).parse(d ?? {})
+    z.object({
+      dateFrom: z.string().nullable().optional(),
+      dateTo: z.string().nullable().optional(),
+      stores: z.array(z.string()).optional().default([]),
+      deptos: z.array(z.string()).optional().default([]),
+      secoes: z.array(z.string()).optional().default([]),
+      grupos: z.array(z.string()).optional().default([]),
+    }).parse(d ?? {})
   )
   .handler(async ({ data, context }) => {
     const { data: res, error } = await (context.supabase as any).rpc("filter_options", {
       p_date_from: data.dateFrom || null,
       p_date_to: data.dateTo || null,
+      p_stores: data.stores ?? [],
+      p_deptos: data.deptos ?? [],
+      p_secoes: data.secoes ?? [],
+      p_grupos: data.grupos ?? [],
     });
     if (error) throw new Error(error.message);
     const r = res as any;
