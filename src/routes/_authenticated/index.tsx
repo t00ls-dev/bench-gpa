@@ -33,13 +33,17 @@ function Dashboard() {
 
   return (
     <div>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Visão geral de vendas por loja, departamento e período.</p>
         </div>
         {isFetching && <span className="text-xs text-muted-foreground">Atualizando…</span>}
       </header>
+
+      <div className="mb-4">
+        <LastUpdateInfo />
+      </div>
 
       <FilterBar value={filters} onChange={setFilters} />
 
