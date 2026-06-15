@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getFilterOptions } from "@/lib/analytics.functions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/date-range-picker";
 
 export interface Filters {
   dateFrom: string;
@@ -119,13 +119,16 @@ export function FilterBar({ value, onChange }: Props) {
   return (
     <div className="kpi-card mb-6 space-y-3">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <div>
-          <Label className="text-xs">De</Label>
-          <Input type="date" value={value.dateFrom} onChange={(e) => setF({ dateFrom: e.target.value })} className="mt-1 h-9" />
-        </div>
-        <div>
-          <Label className="text-xs">Até</Label>
-          <Input type="date" value={value.dateTo} onChange={(e) => setF({ dateTo: e.target.value })} className="mt-1 h-9" />
+        <div className="lg:col-span-2">
+          <Label className="text-xs">Período</Label>
+          <div className="mt-1">
+            <DateRangePicker
+              from={value.dateFrom}
+              to={value.dateTo}
+              reference={opts?.latestDate ?? undefined}
+              onChange={(r) => setF({ dateFrom: r.from, dateTo: r.to })}
+            />
+          </div>
         </div>
         <div>
           <Label className="text-xs">Loja</Label>

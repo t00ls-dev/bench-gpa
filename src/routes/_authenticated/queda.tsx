@@ -3,12 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getProductsInDecline, getFilterOptions, searchProducts } from "@/lib/analytics.functions";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, AlertCircle, AlertOctagon, TrendingDown, Loader2, Search, X } from "lucide-react";
 import { fmtBRL } from "@/components/kpi-card";
+import { DateRangePicker, computePreset } from "@/components/date-range-picker";
+import { LastUpdateInfo } from "@/components/last-update-info";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 
 export const Route = createFileRoute("/_authenticated/queda")({
   component: QuedaPage,
@@ -61,14 +62,25 @@ function QuedaPage() {
   const getDecline = useServerFn(getProductsInDecline);
   const search = useServerFn(searchProducts);
 
-  const [dateTo, setDateTo] = useState<string>(todayIso());
-  const [dateFrom, setDateFrom] = useState<string>(shiftIso(todayIso(), -6));
-  const [store, setStore] = useState("__all__");
-  const [depto, setDepto] = useState("__all__");
-  const [secao, setSecao] = useState("__all__");
+  type QFilters = {
+    dateFrom: string; dateTo: string;
+    store: string; depto: string; secao: string;
+    statusFilter: "all" | "critico" | "alerta" | "atencao";
+  };
+  const [qf, setQf] = usePersistentState<QFilters>("bench-gpa:filters:queda", {
+    dateFrom: shiftIso(todayIso(), -6),
+    dateTo: todayIso(),
+    store: "__all__", depto: "__all__", secao: "__all__",
+    statusFilter: "all",
+  });
+  const setStore = (v: string) => setQf({ ...qf, store: v, depto: "__all__", secao: "__all__" });
+  const setDepto = (v: string) => setQf({ ...qf, depto: v, secao: "__all__" });
+  const setSecao = (v: string) => setQf({ ...qf, secao: v });
+  const setRange = (r: { from: string; to: string }) => setQf({ ...qf, dateFrom: r.from, dateTo: r.to });
+  const setStatusFilter = (s: QFilters["statusFilter"]) => setQf({ ...qf, statusFilter: s });
+  const { dateFrom, dateTo, store, depto, secao, statusFilter } = qf;
   const [prodQuery, setProdQuery] = useState("");
   const [prodSelected, setProdSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "critico" | "alerta" | "atencao">("all");
 
   const { data: opts } = useQuery({
     queryKey: ["filter-options-queda", store, depto, secao],
@@ -82,9 +94,8 @@ function QuedaPage() {
   });
 
   useEffect(() => {
-    if (opts?.latestDate) {
-      setDateTo(opts.latestDate);
-      setDateFrom(shiftIso(opts.latestDate, -6));
+    if (opts?.latestDate && (!dateFrom || !dateTo)) {
+      setRange({ from: shiftIso(opts.latestDate, -6), to: opts.latestDate });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
@@ -120,11 +131,7 @@ function QuedaPage() {
     atencao: rows.filter((r) => r.status === "atencao").length,
   }), [rows]);
 
-  const setPreset = (days: number) => {
-    const to = opts?.latestDate ?? todayIso();
-    setDateTo(to);
-    setDateFrom(shiftIso(to, -(days - 1)));
-  };
+  // (Quick presets now live inside DateRangePicker)
 
   const activeChips: Array<{ label: string; onClear: () => void }> = [];
   if (store !== "__all__") {
@@ -146,19 +153,26 @@ function QuedaPage() {
         </p>
       </header>
 
+      <div className="mb-4">
+        <LastUpdateInfo />
+      </div>
+
       <div className="kpi-card mb-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-5">
-          <div>
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1 h-9" />
-          </div>
-          <div>
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1 h-9" />
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="md:col-span-1">
+            <Label className="text-xs">Período</Label>
+            <div className="mt-1">
+              <DateRangePicker
+                from={dateFrom}
+                to={dateTo}
+                reference={opts?.latestDate ?? undefined}
+                onChange={setRange}
+              />
+            </div>
           </div>
           <div>
             <Label className="text-xs">Loja</Label>
-            <Select value={store} onValueChange={(v) => { setStore(v); setDepto("__all__"); setSecao("__all__"); }}>
+            <Select value={store} onValueChange={setStore}>
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todas</SelectItem>
@@ -168,7 +182,7 @@ function QuedaPage() {
           </div>
           <div>
             <Label className="text-xs">Departamento</Label>
-            <Select value={depto} onValueChange={(v) => { setDepto(v); setSecao("__all__"); }}>
+            <Select value={depto} onValueChange={setDepto}>
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todos</SelectItem>
@@ -219,13 +233,6 @@ function QuedaPage() {
               ))}
             </ul>
           )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">Atalhos:</span>
-          <Button size="sm" variant="outline" onClick={() => setPreset(1)}>Ontem</Button>
-          <Button size="sm" variant="outline" onClick={() => setPreset(7)}>Últimos 7 dias</Button>
-          <Button size="sm" variant="outline" onClick={() => setPreset(30)}>Últimos 30 dias</Button>
         </div>
 
         {activeChips.length > 0 && (
