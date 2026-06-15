@@ -84,14 +84,16 @@ function Dashboard() {
           <p className="text-xs text-muted-foreground">Ranking por venda total no período.</p>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={(data?.current.byStore ?? []).slice(0, 10)} layout="vertical" margin={{ left: 8 }}>
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+              <BarChart data={(data?.current.byStore ?? []).slice(0, 10)} margin={{ left: 8, right: 8, bottom: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                 <Tooltip formatter={(v: number) => fmtBRL(v)} />
-                <Bar dataKey="val" fill="oklch(0.32 0.09 265)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="val" fill="oklch(0.32 0.09 265)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+
         </div>
       </section>
 
