@@ -151,6 +151,8 @@ function QuedaPage() {
         <p className="text-sm text-muted-foreground">
           Produtos com redução significativa nas vendas em relação ao próprio histórico (média 30 dias anteriores ao período).
         </p>
+      </header>
+
       <div className="mb-4">
         <LastUpdateInfo />
       </div>
