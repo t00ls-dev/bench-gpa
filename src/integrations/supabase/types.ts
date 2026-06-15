@@ -116,6 +116,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_daily_agg: {
+        Row: {
+          depto: string | null
+          grupo: string | null
+          item_count: number
+          sale_date: string
+          secao: string | null
+          store_code: string
+          store_name: string
+          subgrupo: string | null
+          val_vda: number
+        }
+        Insert: {
+          depto?: string | null
+          grupo?: string | null
+          item_count?: number
+          sale_date: string
+          secao?: string | null
+          store_code: string
+          store_name: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Update: {
+          depto?: string | null
+          grupo?: string | null
+          item_count?: number
+          sale_date?: string
+          secao?: string | null
+          store_code?: string
+          store_name?: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           store_code: string
@@ -167,7 +203,14 @@ export type Database = {
         Returns: Json
       }
       filter_options: {
-        Args: { p_date_from: string; p_date_to: string }
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_deptos?: string[]
+          p_grupos?: string[]
+          p_secoes?: string[]
+          p_stores?: string[]
+        }
         Returns: Json
       }
       has_role: {
@@ -212,6 +255,7 @@ export type Database = {
         }
         Returns: Json
       }
+      refresh_sales_daily_agg: { Args: { p_date: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
