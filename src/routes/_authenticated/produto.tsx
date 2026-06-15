@@ -97,13 +97,42 @@ function ProdutoPage() {
             onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
             className="border-0 shadow-none focus-visible:ring-0"
           />
+          {(query.length > 0 || selected) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setQuery(""); setSelected(null); setDebounced(""); }}
+              className="h-7 gap-1 text-xs text-muted-foreground"
+            >
+              <X className="size-3" /> Limpar
+            </Button>
+          )}
+          {selected && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setSelected(null); setQuery(""); setDebounced(""); }}
+              className="h-7 text-xs"
+            >
+              Trocar produto
+            </Button>
+          )}
         </div>
+        {selected && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
+              <Package className="size-3" />
+              <span className="font-mono">{selected.prod_code}</span>
+              <span className="truncate max-w-[260px]">{selected.prod_name}</span>
+            </span>
+          </div>
+        )}
         {!selected && debounced.length >= 3 && suggestions && suggestions.length > 0 && (
           <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
             {suggestions.map((s) => (
               <li key={s.prod_code}>
                 <button
-                  onClick={() => { setSelected(s); setQuery(`${s.prod_code} — ${s.prod_name}`); }}
+                  onClick={() => { setSelected(s); setQuery(""); }}
                   className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
                 >
                   <Package className="size-4 text-muted-foreground" />
@@ -115,6 +144,7 @@ function ProdutoPage() {
           </ul>
         )}
       </div>
+
 
       {selected && analysisData && (
         <>
