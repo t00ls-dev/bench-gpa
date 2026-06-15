@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { searchProducts, getProductAnalysis, getFilterOptions } from "@/lib/analytics.functions";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
-import { Search, Package, X } from "lucide-react";
+import { Search, Package, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/produto")({
@@ -240,6 +240,8 @@ function ProdutoPage() {
               </div>
             </div>
           </section>
+
+          <FullHistory evolution={analysisData.evolution as SeriesPoint[]} />
         </>
       )}
 
@@ -249,5 +251,59 @@ function ProdutoPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function FullHistory({ evolution }: { evolution: SeriesPoint[] }) {
+  const sorted = useMemo(
+    () => [...evolution].sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [evolution]
+  );
+  const PAGE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE));
+  const start = (page - 1) * PAGE;
+  const slice = sorted.slice(start, start + PAGE);
+
+  return (
+    <section className="mt-6 kpi-card">
+      <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="font-display text-lg font-semibold">Histórico completo</h2>
+        <span className="text-xs text-muted-foreground">
+          {sorted.length} registro(s) · página {page} de {totalPages}
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="py-2">Data</th>
+              <th className="py-2 text-right">Venda</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map((d) => (
+              <tr key={d.date} className="border-b border-border/60">
+                <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+                <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
+              </tr>
+            ))}
+            {sorted.length === 0 && (
+              <tr><td colSpan={2} className="py-6 text-center text-xs text-muted-foreground">Sem histórico disponível.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+            <ChevronLeft className="size-3 mr-1" /> Anterior
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+            Próxima <ChevronRight className="size-3 ml-1" />
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
