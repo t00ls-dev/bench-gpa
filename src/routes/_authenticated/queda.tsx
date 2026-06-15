@@ -62,8 +62,14 @@ function QuedaPage() {
   const search = useServerFn(searchProducts);
 
   const { data: opts } = useQuery({
-    queryKey: ["filter-options-all"],
-    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null } }),
+    queryKey: ["filter-options-queda", store, depto, secao],
+    queryFn: () => getOpts({ data: {
+      dateFrom: null, dateTo: null,
+      stores: store !== "__all__" ? [store] : [],
+      deptos: depto !== "__all__" ? [depto] : [],
+      secoes: secao !== "__all__" ? [secao] : [],
+    } }),
+    staleTime: 5 * 60_000,
   });
 
   const latest = opts?.latestDate ?? todayIso();
