@@ -131,11 +131,7 @@ function QuedaPage() {
     atencao: rows.filter((r) => r.status === "atencao").length,
   }), [rows]);
 
-  const setPreset = (days: number) => {
-    const to = opts?.latestDate ?? todayIso();
-    setDateTo(to);
-    setDateFrom(shiftIso(to, -(days - 1)));
-  };
+  // (Quick presets now live inside DateRangePicker)
 
   const activeChips: Array<{ label: string; onClear: () => void }> = [];
   if (store !== "__all__") {
