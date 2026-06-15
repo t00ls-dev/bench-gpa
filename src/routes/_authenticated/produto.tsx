@@ -159,10 +159,9 @@ function ProdutoPage() {
 
       {selected && analysisData && (
         <>
-          <section className="mt-6 grid gap-4 md:grid-cols-3">
-            <KpiCard label="Venda na data referência" value={fmtBRL(analysisData.refValue ?? 0)} hint={analysisData.refDate ? `${refWeekday}, ${new Date(analysisData.refDate + "T00:00:00").toLocaleDateString("pt-BR")}` : undefined} />
-            <KpiCard label={`Média 4 ${refWeekday?.toLowerCase() ?? "dias"}s anteriores`} value={fmtBRL(avgSame)} delta={avgSame > 0 ? ((analysisData.refValue ?? 0) - avgSame) / avgSame : null} hint="Mesmo dia da semana" />
-            <KpiCard label="Média últimas 4 datas" value={fmtBRL(avgAll)} delta={avgAll > 0 ? ((analysisData.refValue ?? 0) - avgAll) / avgAll : null} hint="Independente do dia da semana" />
+          <section className="mt-6 grid gap-4 md:grid-cols-2">
+            <KpiCard label="Venda na data referência" value={fmtBRL(analysisData.refValue ?? 0)} hint={analysisData.refDate ? `${refWeekdayFull}, ${new Date(analysisData.refDate + "T00:00:00").toLocaleDateString("pt-BR")}` : undefined} />
+            <KpiCard label={`Média de ${refWeekdayPlural?.toLowerCase() ?? "datas anteriores"}`} value={fmtBRL(avgSame)} delta={avgSame > 0 ? ((analysisData.refValue ?? 0) - avgSame) / avgSame : null} hint={`Todos os ${refWeekdayPlural?.toLowerCase() ?? ""} do histórico`} />
           </section>
 
           <section className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -183,12 +182,11 @@ function ProdutoPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-
             </div>
 
             <div className="kpi-card">
               <h2 className="font-display text-lg font-semibold">Evolução de vendas</h2>
-              <p className="text-xs text-muted-foreground">Últimas datas com venda registrada.</p>
+              <p className="text-xs text-muted-foreground">Histórico de datas com venda registrada.</p>
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analysisData.evolution}>
@@ -203,54 +201,11 @@ function ProdutoPage() {
             </div>
           </section>
 
-          <section className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="kpi-card">
-              <h2 className="font-display text-lg font-semibold">Últimas 4 {refWeekday?.toLowerCase()}s</h2>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="py-2">Data</th>
-                      <th className="py-2 text-right">Venda</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(analysisData.lastFourSameWeekday as SeriesPoint[]).map((d) => (
-                      <tr key={d.date} className="border-b border-border/60">
-                        <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
-                        <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
-                      </tr>
-                    ))}
-                    {analysisData.lastFourSameWeekday.length === 0 && (
-                      <tr><td colSpan={2} className="py-4 text-center text-xs text-muted-foreground">Sem histórico suficiente.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <PaginatedHistory
+            title={`${refArticle} ${refWeekdayPlural?.toLowerCase() ?? "datas"}`}
+            rows={sameWeekdayAll}
+          />
 
-            <div className="kpi-card">
-              <h2 className="font-display text-lg font-semibold">Últimas 4 datas</h2>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="py-2">Data</th>
-                      <th className="py-2 text-right">Venda</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(analysisData.lastFourAll as SeriesPoint[]).map((d) => (
-                      <tr key={d.date} className="border-b border-border/60">
-                        <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
-                        <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
 
           <FullHistory evolution={analysisData.evolution as SeriesPoint[]} />
         </>
