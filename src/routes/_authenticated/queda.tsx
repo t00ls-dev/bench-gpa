@@ -94,9 +94,8 @@ function QuedaPage() {
   });
 
   useEffect(() => {
-    if (opts?.latestDate) {
-      setDateTo(opts.latestDate);
-      setDateFrom(shiftIso(opts.latestDate, -6));
+    if (opts?.latestDate && (!dateFrom || !dateTo)) {
+      setRange({ from: shiftIso(opts.latestDate, -6), to: opts.latestDate });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
