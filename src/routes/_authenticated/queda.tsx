@@ -151,21 +151,26 @@ function QuedaPage() {
         <p className="text-sm text-muted-foreground">
           Produtos com redução significativa nas vendas em relação ao próprio histórico (média 30 dias anteriores ao período).
         </p>
-      </header>
+      <div className="mb-4">
+        <LastUpdateInfo />
+      </div>
 
       <div className="kpi-card mb-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-5">
-          <div>
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1 h-9" />
-          </div>
-          <div>
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1 h-9" />
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="md:col-span-1">
+            <Label className="text-xs">Período</Label>
+            <div className="mt-1">
+              <DateRangePicker
+                from={dateFrom}
+                to={dateTo}
+                reference={opts?.latestDate ?? undefined}
+                onChange={setRange}
+              />
+            </div>
           </div>
           <div>
             <Label className="text-xs">Loja</Label>
-            <Select value={store} onValueChange={(v) => { setStore(v); setDepto("__all__"); setSecao("__all__"); }}>
+            <Select value={store} onValueChange={setStore}>
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todas</SelectItem>
@@ -175,7 +180,7 @@ function QuedaPage() {
           </div>
           <div>
             <Label className="text-xs">Departamento</Label>
-            <Select value={depto} onValueChange={(v) => { setDepto(v); setSecao("__all__"); }}>
+            <Select value={depto} onValueChange={setDepto}>
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todos</SelectItem>
@@ -226,13 +231,6 @@ function QuedaPage() {
               ))}
             </ul>
           )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">Atalhos:</span>
-          <Button size="sm" variant="outline" onClick={() => setPreset(1)}>Ontem</Button>
-          <Button size="sm" variant="outline" onClick={() => setPreset(7)}>Últimos 7 dias</Button>
-          <Button size="sm" variant="outline" onClick={() => setPreset(30)}>Últimos 30 dias</Button>
         </div>
 
         {activeChips.length > 0 && (
