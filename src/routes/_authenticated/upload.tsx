@@ -8,6 +8,7 @@ import { parseAnyWorkbook } from "@/lib/xlsx-parser";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
+import { ImportCalendar } from "@/components/import-calendar";
 
 export const Route = createFileRoute("/_authenticated/upload")({
   component: UploadPage,
