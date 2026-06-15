@@ -3,12 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getProductsInDecline, getFilterOptions, searchProducts } from "@/lib/analytics.functions";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, AlertCircle, AlertOctagon, TrendingDown, Loader2, Search, X } from "lucide-react";
 import { fmtBRL } from "@/components/kpi-card";
+import { DateRangePicker, computePreset } from "@/components/date-range-picker";
+import { LastUpdateInfo } from "@/components/last-update-info";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 
 export const Route = createFileRoute("/_authenticated/queda")({
   component: QuedaPage,
