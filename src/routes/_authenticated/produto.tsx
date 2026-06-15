@@ -61,12 +61,20 @@ function ProdutoPage() {
     enabled: !!selected,
   });
 
-  const refWeekday = analysisData?.refDate ? WEEKDAYS[new Date(analysisData.refDate + "T00:00:00Z").getUTCDay()] : null;
-  const avgSame = analysisData?.lastFourSameWeekday?.length
-    ? analysisData.lastFourSameWeekday.reduce((a: number, b: SeriesPoint) => a + b.val, 0) / analysisData.lastFourSameWeekday.length
-    : 0;
-  const avgAll = analysisData?.lastFourAll?.length
-    ? analysisData.lastFourAll.reduce((a: number, b: SeriesPoint) => a + b.val, 0) / analysisData.lastFourAll.length
+  const refWeekdayIdx = analysisData?.refDate ? new Date(analysisData.refDate + "T00:00:00Z").getUTCDay() : null;
+  const refWeekdayFull = refWeekdayIdx != null ? WEEKDAYS_FULL[refWeekdayIdx] : null;
+  const refWeekdayPlural = refWeekdayIdx != null ? WEEKDAYS_PLURAL[refWeekdayIdx] : null;
+  const refArticle = refWeekdayIdx != null ? (WEEKDAY_IS_MASC[refWeekdayIdx] ? "Últimos" : "Últimas") : "Últimas";
+
+  const sameWeekdayAll = useMemo<SeriesPoint[]>(() => {
+    if (!analysisData?.evolution || refWeekdayIdx == null) return [];
+    return (analysisData.evolution as SeriesPoint[])
+      .filter((d) => new Date(d.date + "T00:00:00Z").getUTCDay() === refWeekdayIdx)
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+  }, [analysisData?.evolution, refWeekdayIdx]);
+
+  const avgSame = sameWeekdayAll.length
+    ? sameWeekdayAll.reduce((a, b) => a + b.val, 0) / sameWeekdayAll.length
     : 0;
 
   return (
