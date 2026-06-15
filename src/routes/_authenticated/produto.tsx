@@ -220,10 +220,10 @@ function ProdutoPage() {
   );
 }
 
-function FullHistory({ evolution }: { evolution: SeriesPoint[] }) {
+function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] }) {
   const sorted = useMemo(
-    () => [...evolution].sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [evolution]
+    () => [...rows].sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [rows]
   );
   const PAGE = 10;
   const [page, setPage] = useState(1);
@@ -234,7 +234,7 @@ function FullHistory({ evolution }: { evolution: SeriesPoint[] }) {
   return (
     <section className="mt-6 kpi-card">
       <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="font-display text-lg font-semibold">Histórico completo</h2>
+        <h2 className="font-display text-lg font-semibold">{title}</h2>
         <span className="text-xs text-muted-foreground">
           {sorted.length} registro(s) · página {page} de {totalPages}
         </span>
@@ -273,3 +273,4 @@ function FullHistory({ evolution }: { evolution: SeriesPoint[] }) {
     </section>
   );
 }
+
