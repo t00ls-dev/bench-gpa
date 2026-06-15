@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDashboard } from "@/lib/analytics.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
+import { LastUpdateInfo } from "@/components/last-update-info";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -16,7 +17,7 @@ const initial: Filters = {
 };
 
 function Dashboard() {
-  const [filters, setFilters] = useState<Filters>(initial);
+  const [filters, setFilters] = usePersistentState<Filters>("bench-gpa:filters:dashboard", initial);
   const fn = useServerFn(getDashboard);
   const { data, isFetching } = useQuery({
     queryKey: ["dashboard", filters],
