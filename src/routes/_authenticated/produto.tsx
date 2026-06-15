@@ -206,8 +206,8 @@ function ProdutoPage() {
             rows={sameWeekdayAll}
           />
 
+          <PaginatedHistory title="Histórico completo" rows={analysisData.evolution as SeriesPoint[]} />
 
-          <FullHistory evolution={analysisData.evolution as SeriesPoint[]} />
         </>
       )}
 
