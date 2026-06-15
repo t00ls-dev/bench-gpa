@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
-import { Search, Package } from "lucide-react";
+import { Search, Package, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/produto")({
   component: ProdutoPage,
@@ -96,13 +97,42 @@ function ProdutoPage() {
             onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
             className="border-0 shadow-none focus-visible:ring-0"
           />
+          {(query.length > 0 || selected) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setQuery(""); setSelected(null); setDebounced(""); }}
+              className="h-7 gap-1 text-xs text-muted-foreground"
+            >
+              <X className="size-3" /> Limpar
+            </Button>
+          )}
+          {selected && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setSelected(null); setQuery(""); setDebounced(""); }}
+              className="h-7 text-xs"
+            >
+              Trocar produto
+            </Button>
+          )}
         </div>
+        {selected && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
+              <Package className="size-3" />
+              <span className="font-mono">{selected.prod_code}</span>
+              <span className="truncate max-w-[260px]">{selected.prod_name}</span>
+            </span>
+          </div>
+        )}
         {!selected && debounced.length >= 3 && suggestions && suggestions.length > 0 && (
           <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
             {suggestions.map((s) => (
               <li key={s.prod_code}>
                 <button
-                  onClick={() => { setSelected(s); setQuery(`${s.prod_code} — ${s.prod_name}`); }}
+                  onClick={() => { setSelected(s); setQuery(""); }}
                   className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
                 >
                   <Package className="size-4 text-muted-foreground" />
@@ -114,6 +144,7 @@ function ProdutoPage() {
           </ul>
         )}
       </div>
+
 
       {selected && analysisData && (
         <>
@@ -129,14 +160,19 @@ function ProdutoPage() {
               <p className="text-xs text-muted-foreground">Venda do produto por loja na data referência.</p>
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={(analysisData.byStore as StorePoint[]).slice(0, 12)} layout="vertical" margin={{ left: 8 }}>
-                    <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
-                    <Tooltip formatter={(v: number) => fmtBRL(v)} />
-                    <Bar dataKey="val" fill="oklch(0.48 0.12 165)" radius={[0, 4, 4, 0]} />
+                  <BarChart data={(analysisData.byStore as StorePoint[]).slice(0, 12)} margin={{ left: 8, right: 8, bottom: 28 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
+                    <XAxis dataKey="code" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                    <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(label, payload) => {
+                      const p = payload?.[0]?.payload as StorePoint | undefined;
+                      return p ? `${p.code} — ${p.name}` : String(label);
+                    }} />
+                    <Bar dataKey="val" fill="oklch(0.48 0.12 165)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+
             </div>
 
             <div className="kpi-card">
