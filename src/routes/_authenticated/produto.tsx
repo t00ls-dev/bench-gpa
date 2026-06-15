@@ -15,7 +15,10 @@ export const Route = createFileRoute("/_authenticated/produto")({
   component: ProdutoPage,
 });
 
-const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const WEEKDAYS_FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const WEEKDAYS_PLURAL = ["Domingos", "Segundas-feiras", "Terças-feiras", "Quartas-feiras", "Quintas-feiras", "Sextas-feiras", "Sábados"];
+// Masculino: Domingo (0), Sábado (6). Demais: feminino.
+const WEEKDAY_IS_MASC = [true, false, false, false, false, false, true];
 
 interface SeriesPoint { date: string; val: number }
 interface StorePoint { code: string; name: string; val: number }
