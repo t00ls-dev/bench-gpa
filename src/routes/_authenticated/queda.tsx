@@ -61,20 +61,25 @@ function QuedaPage() {
   const getDecline = useServerFn(getProductsInDecline);
   const search = useServerFn(searchProducts);
 
-  const { data: opts } = useQuery({
-    queryKey: ["filter-options-all"],
-    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null } }),
-  });
-
-  const latest = opts?.latestDate ?? todayIso();
-  const [dateTo, setDateTo] = useState<string>(latest);
-  const [dateFrom, setDateFrom] = useState<string>(shiftIso(latest, -6));
+  const [dateTo, setDateTo] = useState<string>(todayIso());
+  const [dateFrom, setDateFrom] = useState<string>(shiftIso(todayIso(), -6));
   const [store, setStore] = useState("__all__");
   const [depto, setDepto] = useState("__all__");
   const [secao, setSecao] = useState("__all__");
   const [prodQuery, setProdQuery] = useState("");
   const [prodSelected, setProdSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "critico" | "alerta" | "atencao">("all");
+
+  const { data: opts } = useQuery({
+    queryKey: ["filter-options-queda", store, depto, secao],
+    queryFn: () => getOpts({ data: {
+      dateFrom: null, dateTo: null,
+      stores: store !== "__all__" ? [store] : [],
+      deptos: depto !== "__all__" ? [depto] : [],
+      secoes: secao !== "__all__" ? [secao] : [],
+    } }),
+    staleTime: 5 * 60_000,
+  });
 
   useEffect(() => {
     if (opts?.latestDate) {
