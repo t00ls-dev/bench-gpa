@@ -147,8 +147,13 @@ function UploadPage() {
       <div className="mt-6 kpi-card">
         <div className="mb-3 flex items-center gap-2">
           <CalendarCheck className="size-4 text-primary" />
-          <h2 className="font-display text-base font-semibold">Datas importadas</h2>
+          <h2 className="font-display text-base font-semibold">Calendário de importações</h2>
         </div>
+        <ImportCalendar records={dates ?? []} />
+      </div>
+
+      <div className="mt-6 kpi-card">
+        <h2 className="font-display text-base font-semibold mb-3">Histórico de datas importadas</h2>
         <div className="max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead>
