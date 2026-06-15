@@ -62,14 +62,25 @@ function QuedaPage() {
   const getDecline = useServerFn(getProductsInDecline);
   const search = useServerFn(searchProducts);
 
-  const [dateTo, setDateTo] = useState<string>(todayIso());
-  const [dateFrom, setDateFrom] = useState<string>(shiftIso(todayIso(), -6));
-  const [store, setStore] = useState("__all__");
-  const [depto, setDepto] = useState("__all__");
-  const [secao, setSecao] = useState("__all__");
+  type QFilters = {
+    dateFrom: string; dateTo: string;
+    store: string; depto: string; secao: string;
+    statusFilter: "all" | "critico" | "alerta" | "atencao";
+  };
+  const [qf, setQf] = usePersistentState<QFilters>("bench-gpa:filters:queda", {
+    dateFrom: shiftIso(todayIso(), -6),
+    dateTo: todayIso(),
+    store: "__all__", depto: "__all__", secao: "__all__",
+    statusFilter: "all",
+  });
+  const setStore = (v: string) => setQf({ ...qf, store: v, depto: "__all__", secao: "__all__" });
+  const setDepto = (v: string) => setQf({ ...qf, depto: v, secao: "__all__" });
+  const setSecao = (v: string) => setQf({ ...qf, secao: v });
+  const setRange = (r: { from: string; to: string }) => setQf({ ...qf, dateFrom: r.from, dateTo: r.to });
+  const setStatusFilter = (s: QFilters["statusFilter"]) => setQf({ ...qf, statusFilter: s });
+  const { dateFrom, dateTo, store, depto, secao, statusFilter } = qf;
   const [prodQuery, setProdQuery] = useState("");
   const [prodSelected, setProdSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "critico" | "alerta" | "atencao">("all");
 
   const { data: opts } = useQuery({
     queryKey: ["filter-options-queda", store, depto, secao],
