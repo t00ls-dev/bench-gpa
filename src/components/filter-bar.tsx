@@ -119,13 +119,16 @@ export function FilterBar({ value, onChange }: Props) {
   return (
     <div className="kpi-card mb-6 space-y-3">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <div>
-          <Label className="text-xs">De</Label>
-          <Input type="date" value={value.dateFrom} onChange={(e) => setF({ dateFrom: e.target.value })} className="mt-1 h-9" />
-        </div>
-        <div>
-          <Label className="text-xs">Até</Label>
-          <Input type="date" value={value.dateTo} onChange={(e) => setF({ dateTo: e.target.value })} className="mt-1 h-9" />
+        <div className="lg:col-span-2">
+          <Label className="text-xs">Período</Label>
+          <div className="mt-1">
+            <DateRangePicker
+              from={value.dateFrom}
+              to={value.dateTo}
+              reference={opts?.latestDate ?? undefined}
+              onChange={(r) => setF({ dateFrom: r.from, dateTo: r.to })}
+            />
+          </div>
         </div>
         <div>
           <Label className="text-xs">Loja</Label>
