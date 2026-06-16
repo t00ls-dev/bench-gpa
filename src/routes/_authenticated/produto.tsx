@@ -10,6 +10,7 @@ import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 import { Search, Package, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fmtBRShort } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/produto")({
   component: ProdutoPage,
@@ -160,7 +161,7 @@ function ProdutoPage() {
       {selected && analysisData && (
         <>
           <section className="mt-6 grid gap-4 md:grid-cols-2">
-            <KpiCard label="Venda na data referência" value={fmtBRL(analysisData.refValue ?? 0)} hint={analysisData.refDate ? `${refWeekdayFull}, ${new Date(analysisData.refDate + "T00:00:00").toLocaleDateString("pt-BR")}` : undefined} />
+            <KpiCard label="Venda na data referência" value={fmtBRL(analysisData.refValue ?? 0)} hint={analysisData.refDate ? `${refWeekdayFull} · ${fmtBRShort(analysisData.refDate)}` : undefined} />
             <KpiCard label={`Média de ${refWeekdayPlural?.toLowerCase() ?? "datas anteriores"}`} value={fmtBRL(avgSame)} delta={avgSame > 0 ? ((analysisData.refValue ?? 0) - avgSame) / avgSame : null} hint={`Todos os ${refWeekdayPlural?.toLowerCase() ?? ""} do histórico`} />
           </section>
 
@@ -191,9 +192,9 @@ function ProdutoPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analysisData.evolution}>
                     <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => fmtBRShort(String(v))} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                    <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                    <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
                     <Line type="monotone" dataKey="val" stroke="oklch(0.32 0.09 265)" strokeWidth={2.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -250,7 +251,7 @@ function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] 
           <tbody>
             {slice.map((d) => (
               <tr key={d.date} className="border-b border-border/60">
-                <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+                <td className="py-2 whitespace-nowrap">{fmtBRShort(d.date)}</td>
                 <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
               </tr>
             ))}

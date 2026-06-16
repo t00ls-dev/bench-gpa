@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, AlertCircle, AlertOctagon, TrendingDown, Loader2, Search, X } from "lucide-react";
 import { fmtBRL } from "@/components/kpi-card";
 import { DateRangePicker, computePreset } from "@/components/date-range-picker";
-import { LastUpdateInfo } from "@/components/last-update-info";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { fmtBRShort } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/queda")({
   component: QuedaPage,
@@ -95,10 +95,29 @@ function QuedaPage() {
 
   useEffect(() => {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
-      setRange({ from: shiftIso(opts.latestDate, -6), to: opts.latestDate });
+      const avail = (opts?.availableDates ?? []) as string[];
+      // start from latest available, walk back up to 7 days within available set
+      const latest = opts.latestDate;
+      const window = avail.filter((d) => d <= latest).slice(-7);
+      const from = window[0] ?? latest;
+      setRange({ from, to: latest });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
+
+  // Clamp selection to available dates whenever filters narrow the dataset
+  useEffect(() => {
+    const avail = (opts?.availableDates ?? []) as string[];
+    if (!avail.length || !dateFrom || !dateTo) return;
+    const within = avail.filter((d) => d >= dateFrom && d <= dateTo);
+    if (within.length === 0) {
+      const latest = opts!.latestDate!;
+      setRange({ from: latest, to: latest });
+    } else if (within[0] !== dateFrom || within[within.length - 1] !== dateTo) {
+      setRange({ from: within[0], to: within[within.length - 1] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts?.availableDates]);
 
   const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
   const deptos = (opts?.deptos ?? []) as string[];
@@ -153,10 +172,6 @@ function QuedaPage() {
         </p>
       </header>
 
-      <div className="mb-4">
-        <LastUpdateInfo />
-      </div>
-
       <div className="kpi-card mb-4 space-y-3">
         <div className="grid gap-3 md:grid-cols-4">
           <div className="md:col-span-1">
@@ -166,6 +181,7 @@ function QuedaPage() {
                 from={dateFrom}
                 to={dateTo}
                 reference={opts?.latestDate ?? undefined}
+                availableDates={opts?.availableDates ?? []}
                 onChange={setRange}
               />
             </div>
@@ -317,7 +333,7 @@ function QuedaPage() {
                     <td className={`num py-2 text-right font-semibold ${r.variation != null && r.variation < 0 ? "text-red-600" : ""}`}>
                       {r.variation != null ? `${(r.variation * 100).toFixed(1)}%` : "—"}
                     </td>
-                    <td className="py-2 text-right text-xs">{r.last_sale_date ? new Date(r.last_sale_date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="py-2 text-right text-xs whitespace-nowrap">{fmtBRShort(r.last_sale_date)}</td>
                     <td className="num py-2 text-right">{r.days_without_sale ?? "—"}</td>
                     <td className="py-2 text-xs">{trend(r.variation)}</td>
                     <td className="py-2 text-xs text-muted-foreground max-w-[260px]">{insight(r)}</td>

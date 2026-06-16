@@ -6,6 +6,7 @@ import { listUsers, setUserStatus, setUserRole } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ShieldCheck, ShieldOff, UserCheck, UserX, Loader2 } from "lucide-react";
+import { fmtBRShort } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -86,7 +87,7 @@ function AdminPage() {
                     </td>
                     <td className="px-4 py-3 text-xs">{isAdmin ? "Admin" : "Usuário"}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {new Date(u.created_at).toLocaleDateString("pt-BR")}
+                      {fmtBRShort(new Date(u.created_at))}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
