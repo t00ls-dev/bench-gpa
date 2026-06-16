@@ -165,8 +165,8 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
             onSelect={handleDayClick}
             defaultMonth={defaultMonth}
             disabled={isDisabled}
-            fromDate={minIso ? new Date(minIso + "T00:00:00") : undefined}
-            toDate={maxIso ? new Date(maxIso + "T00:00:00") : undefined}
+            startMonth={minIso ? new Date(minIso + "T00:00:00") : undefined}
+            endMonth={maxIso ? new Date(maxIso + "T00:00:00") : undefined}
             className={cn("p-2 pointer-events-auto")}
           />
           {!hasAvailable && (
