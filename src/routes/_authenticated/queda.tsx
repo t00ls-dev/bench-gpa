@@ -95,10 +95,29 @@ function QuedaPage() {
 
   useEffect(() => {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
-      setRange({ from: shiftIso(opts.latestDate, -6), to: opts.latestDate });
+      const avail = (opts?.availableDates ?? []) as string[];
+      // start from latest available, walk back up to 7 days within available set
+      const latest = opts.latestDate;
+      const window = avail.filter((d) => d <= latest).slice(-7);
+      const from = window[0] ?? latest;
+      setRange({ from, to: latest });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
+
+  // Clamp selection to available dates whenever filters narrow the dataset
+  useEffect(() => {
+    const avail = (opts?.availableDates ?? []) as string[];
+    if (!avail.length || !dateFrom || !dateTo) return;
+    const within = avail.filter((d) => d >= dateFrom && d <= dateTo);
+    if (within.length === 0) {
+      const latest = opts!.latestDate!;
+      setRange({ from: latest, to: latest });
+    } else if (within[0] !== dateFrom || within[within.length - 1] !== dateTo) {
+      setRange({ from: within[0], to: within[within.length - 1] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts?.availableDates]);
 
   const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
   const deptos = (opts?.deptos ?? []) as string[];
