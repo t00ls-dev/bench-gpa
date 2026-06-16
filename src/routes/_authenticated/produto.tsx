@@ -192,9 +192,9 @@ function ProdutoPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analysisData.evolution}>
                     <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => fmtBRShort(String(v))} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                    <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                    <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
                     <Line type="monotone" dataKey="val" stroke="oklch(0.32 0.09 265)" strokeWidth={2.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
