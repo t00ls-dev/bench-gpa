@@ -314,7 +314,7 @@ function QuedaPage() {
                     <td className={`num py-2 text-right font-semibold ${r.variation != null && r.variation < 0 ? "text-red-600" : ""}`}>
                       {r.variation != null ? `${(r.variation * 100).toFixed(1)}%` : "—"}
                     </td>
-                    <td className="py-2 text-right text-xs">{r.last_sale_date ? new Date(r.last_sale_date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="py-2 text-right text-xs whitespace-nowrap">{fmtBRShort(r.last_sale_date)}</td>
                     <td className="num py-2 text-right">{r.days_without_sale ?? "—"}</td>
                     <td className="py-2 text-xs">{trend(r.variation)}</td>
                     <td className="py-2 text-xs text-muted-foreground max-w-[260px]">{insight(r)}</td>
