@@ -13,11 +13,12 @@ const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 function fmtBR(iso: string) {
   const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
+  return `${d}/${m}/${y.slice(-2)}`;
 }
+function pad2(n: number) { return String(n).padStart(2, "0"); }
 function fmtDT(iso: string) {
   const d = new Date(iso);
-  return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 export function ImportCalendar({ records }: Props) {

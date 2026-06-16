@@ -72,12 +72,13 @@ export const getFilterOptions = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const r = res as any;
     return {
-      latestDate: r?.latestDate ?? null,
+      latestDate: (r?.latestDate ?? null) as string | null,
       stores: r?.stores ?? [],
       deptos: r?.deptos ?? [],
       secoes: r?.secoes ?? [],
       grupos: r?.grupos ?? [],
       subgrupos: r?.subgrupos ?? [],
+      availableDates: (r?.availableDates ?? []) as string[],
     };
   });
 

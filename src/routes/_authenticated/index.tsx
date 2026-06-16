@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getDashboard } from "@/lib/analytics.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
-import { LastUpdateInfo } from "@/components/last-update-info";
+import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 
@@ -41,10 +41,6 @@ function Dashboard() {
         {isFetching && <span className="text-xs text-muted-foreground">Atualizando…</span>}
       </header>
 
-      <div className="mb-4">
-        <LastUpdateInfo />
-      </div>
-
       <FilterBar value={filters} onChange={setFilters} />
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -75,9 +71,9 @@ function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data?.current.byDate ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => fmtBRShort(String(v))} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
                 <Line type="monotone" dataKey="val" stroke="oklch(0.48 0.12 165)" strokeWidth={2.5} dot={false} />
               </LineChart>
             </ResponsiveContainer>

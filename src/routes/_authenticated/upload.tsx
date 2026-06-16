@@ -24,8 +24,15 @@ interface Result {
 
 const CHUNK = 400;
 const fmtInt = (n: number) => n.toLocaleString("pt-BR");
-const fmtDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
-const fmtDT = (iso: string) => new Date(iso).toLocaleString("pt-BR");
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const fmtDate = (iso: string) => {
+  const [Y, M, D] = iso.slice(0, 10).split("-");
+  return `${D}/${M}/${Y.slice(-2)}`;
+};
+const fmtDT = (iso: string) => {
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
 
 function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
