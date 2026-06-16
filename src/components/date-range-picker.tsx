@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { cn, fmtBRShort } from "@/lib/utils";
 
 function iso(d: Date) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -20,11 +20,6 @@ function startOfMonth(date: Date) {
 function endOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
-function fmtBR(s: string) {
-  if (!s) return "—";
-  const [y, m, d] = s.split("-");
-  return `${d}/${m}/${y}`;
-}
 
 export type PresetKey =
   | "today" | "yesterday" | "last7" | "last30" | "month" | "prevMonth" | "custom";
@@ -35,6 +30,8 @@ interface Props {
   onChange: (range: { from: string; to: string }) => void;
   /** Reference date for "today" — defaults to actual today; pass latestDate for presets relative to last imported day. */
   reference?: string;
+  /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
+  availableDates?: string[];
 }
 
 const PRESETS: { key: PresetKey; label: string }[] = [
@@ -63,35 +60,80 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
   }
 }
 
-export function DateRangePicker({ from, to, onChange, reference }: Props) {
+export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
+  const [picking, setPicking] = useState<"from" | "to">("from");
+
+  const availableSet = useMemo(() => new Set(availableDates ?? []), [availableDates]);
+  const hasAvailable = availableSet.size > 0;
+  const minIso = availableDates && availableDates.length ? availableDates[0] : undefined;
+  const maxIso = availableDates && availableDates.length ? availableDates[availableDates.length - 1] : undefined;
+
+  // Clamp preset range so it only spans dates that actually exist
+  const clampRange = (r: { from: string; to: string }): { from: string; to: string } | null => {
+    if (!hasAvailable) return r;
+    // Find all available dates within range
+    const within = (availableDates ?? []).filter((d) => d >= r.from && d <= r.to);
+    if (within.length === 0) return null;
+    return { from: within[0], to: within[within.length - 1] };
+  };
 
   const label = useMemo(() => {
     if (!from && !to) return "Selecione um período";
-    if (from === to) return fmtBR(from);
-    return `${fmtBR(from)} — ${fmtBR(to)}`;
+    if (from === to) return fmtBRShort(from);
+    return `${fmtBRShort(from)} — ${fmtBRShort(to)}`;
   }, [from, to]);
 
   const apply = (key: PresetKey) => {
     const r = computePreset(key, reference);
     if (r) {
-      onChange(r);
-      setOpen(false);
+      const clamped = clampRange(r);
+      if (clamped) {
+        onChange(clamped);
+        setOpen(false);
+      }
     } else {
       setMode("custom");
     }
   };
 
+  const isDisabled = (d: Date) => {
+    if (!hasAvailable) return false;
+    return !availableSet.has(iso(d));
+  };
+
+  const handleDayClick = (d: Date | undefined) => {
+    if (!d) return;
+    const v = iso(d);
+    if (hasAvailable && !availableSet.has(v)) return;
+    if (picking === "from" || !from || v < from) {
+      onChange({ from: v, to: v });
+      setPicking("to");
+    } else {
+      onChange({ from, to: v });
+      setPicking("from");
+      setOpen(false);
+    }
+  };
+
+  const defaultMonth = from
+    ? new Date(from + "T00:00:00")
+    : reference
+      ? new Date(reference + "T00:00:00")
+      : maxIso
+        ? new Date(maxIso + "T00:00:00")
+        : new Date();
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setPicking("from"); }}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="h-9 w-full justify-start gap-2 text-left font-normal">
           <CalendarIcon className="size-4 opacity-60" />
-          <span className="truncate">{label}</span>
+          <span className="truncate whitespace-nowrap">{label}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start">
+      <PopoverContent className="w-auto p-0" align="start">
         <div className="grid grid-cols-2 gap-1 p-2">
           {PRESETS.map((p) => (
             <button
@@ -108,27 +150,30 @@ export function DateRangePicker({ from, to, onChange, reference }: Props) {
             </button>
           ))}
         </div>
-        <div className="border-t p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">De</Label>
-              <Input
-                type="date"
-                value={from}
-                onChange={(e) => onChange({ from: e.target.value, to })}
-                className="mt-1 h-8"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Até</Label>
-              <Input
-                type="date"
-                value={to}
-                onChange={(e) => onChange({ from, to: e.target.value })}
-                className="mt-1 h-8"
-              />
-            </div>
+        <div className="border-t p-2 space-y-2">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <Label className="text-xs">
+              {picking === "from" ? "Selecione a data inicial" : "Selecione a data final"}
+            </Label>
+            <span className="text-muted-foreground whitespace-nowrap">
+              {fmtBRShort(from)} → {fmtBRShort(to)}
+            </span>
           </div>
+          <Calendar
+            mode="single"
+            selected={picking === "from" && from ? new Date(from + "T00:00:00") : (to ? new Date(to + "T00:00:00") : undefined)}
+            onSelect={handleDayClick}
+            defaultMonth={defaultMonth}
+            disabled={isDisabled}
+            fromDate={minIso ? new Date(minIso + "T00:00:00") : undefined}
+            toDate={maxIso ? new Date(maxIso + "T00:00:00") : undefined}
+            className={cn("p-2 pointer-events-auto")}
+          />
+          {!hasAvailable && (
+            <p className="text-xs text-muted-foreground px-1">
+              Nenhuma data com dados disponíveis para os filtros atuais.
+            </p>
+          )}
           <Button size="sm" className="w-full" onClick={() => setOpen(false)}>Aplicar</Button>
         </div>
       </PopoverContent>
