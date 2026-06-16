@@ -10,6 +10,7 @@ import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 import { Search, Package, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fmtBRShort } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/produto")({
   component: ProdutoPage,
