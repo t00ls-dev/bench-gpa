@@ -251,7 +251,7 @@ function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] 
           <tbody>
             {slice.map((d) => (
               <tr key={d.date} className="border-b border-border/60">
-                <td className="py-2">{new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+                <td className="py-2 whitespace-nowrap">{fmtBRShort(d.date)}</td>
                 <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
               </tr>
             ))}
