@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getDashboard } from "@/lib/analytics.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
-import { LastUpdateInfo } from "@/components/last-update-info";
+import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
 
