@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, AlertCircle, AlertOctagon, TrendingDown, Loader2, Search, X } from "lucide-react";
 import { fmtBRL } from "@/components/kpi-card";
 import { DateRangePicker, computePreset } from "@/components/date-range-picker";
-import { LastUpdateInfo } from "@/components/last-update-info";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { fmtBRShort } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/queda")({
   component: QuedaPage,
