@@ -153,10 +153,6 @@ function QuedaPage() {
         </p>
       </header>
 
-      <div className="mb-4">
-        <LastUpdateInfo />
-      </div>
-
       <div className="kpi-card mb-4 space-y-3">
         <div className="grid gap-3 md:grid-cols-4">
           <div className="md:col-span-1">
@@ -166,6 +162,7 @@ function QuedaPage() {
                 from={dateFrom}
                 to={dateTo}
                 reference={opts?.latestDate ?? undefined}
+                availableDates={opts?.availableDates ?? []}
                 onChange={setRange}
               />
             </div>
