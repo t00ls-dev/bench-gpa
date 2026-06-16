@@ -63,17 +63,14 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
 export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
-  const [picking, setPicking] = useState<"from" | "to">("from");
 
   const availableSet = useMemo(() => new Set(availableDates ?? []), [availableDates]);
   const hasAvailable = availableSet.size > 0;
   const minIso = availableDates && availableDates.length ? availableDates[0] : undefined;
   const maxIso = availableDates && availableDates.length ? availableDates[availableDates.length - 1] : undefined;
 
-  // Clamp preset range so it only spans dates that actually exist
   const clampRange = (r: { from: string; to: string }): { from: string; to: string } | null => {
     if (!hasAvailable) return r;
-    // Find all available dates within range
     const within = (availableDates ?? []).filter((d) => d >= r.from && d <= r.to);
     if (within.length === 0) return null;
     return { from: within[0], to: within[within.length - 1] };
@@ -103,17 +100,24 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
     return !availableSet.has(iso(d));
   };
 
-  const handleDayClick = (d: Date | undefined) => {
-    if (!d) return;
-    const v = iso(d);
-    if (hasAvailable && !availableSet.has(v)) return;
-    if (picking === "from" || !from || v < from) {
-      onChange({ from: v, to: v });
-      setPicking("to");
-    } else {
-      onChange({ from, to: v });
-      setPicking("from");
-      setOpen(false);
+  const selectedRange = useMemo(
+    () => ({
+      from: from ? new Date(from + "T00:00:00") : undefined,
+      to: to ? new Date(to + "T00:00:00") : undefined,
+    }),
+    [from, to],
+  );
+
+  const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    if (!range || !range.from) {
+      return;
+    }
+    const f = iso(range.from);
+    const t = range.to ? iso(range.to) : f;
+    const clamped = clampRange({ from: f, to: t });
+    if (clamped) {
+      setMode("custom");
+      onChange(clamped);
     }
   };
 
@@ -126,7 +130,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
         : new Date();
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) setPicking("from"); }}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="h-9 w-full justify-start gap-2 text-left font-normal">
           <CalendarIcon className="size-4 opacity-60" />
@@ -152,23 +156,36 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
         </div>
         <div className="border-t p-2 space-y-2">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <Label className="text-xs">
-              {picking === "from" ? "Selecione a data inicial" : "Selecione a data final"}
-            </Label>
-            <span className="text-muted-foreground whitespace-nowrap">
-              {fmtBRShort(from)} → {fmtBRShort(to)}
+            <Label className="text-xs">Período selecionado</Label>
+            <span className="text-muted-foreground whitespace-nowrap font-medium">
+              {from ? fmtBRShort(from) : "—"} → {to ? fmtBRShort(to) : "—"}
             </span>
           </div>
           <Calendar
-            mode="single"
-            selected={picking === "from" && from ? new Date(from + "T00:00:00") : (to ? new Date(to + "T00:00:00") : undefined)}
-            onSelect={handleDayClick}
+            mode="range"
+            selected={selectedRange}
+            onSelect={handleRangeSelect}
             defaultMonth={defaultMonth}
             disabled={isDisabled}
             startMonth={minIso ? new Date(minIso + "T00:00:00") : undefined}
             endMonth={maxIso ? new Date(maxIso + "T00:00:00") : undefined}
+            numberOfMonths={1}
             className={cn("p-2 pointer-events-auto")}
           />
+          <div className="flex flex-wrap items-center gap-2 px-1 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2.5 rounded-sm bg-primary" />
+              Início / fim
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2.5 rounded-sm bg-primary/20" />
+              Intervalo
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block size-2.5 rounded-sm border border-dashed border-border bg-background" />
+              Indisponível
+            </span>
+          </div>
           {!hasAvailable && (
             <p className="text-xs text-muted-foreground px-1">
               Nenhuma data com dados disponíveis para os filtros atuais.
