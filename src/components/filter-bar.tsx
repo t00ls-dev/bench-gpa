@@ -81,13 +81,27 @@ export function FilterBar({ value, onChange }: Props) {
     gcTime: 10 * 60_000,
   });
 
-  // Seed default date range from latest date once
+  // Seed default date range from latest available date once
   useEffect(() => {
     if (opts?.latestDate && !value.dateFrom && !value.dateTo) {
       onChange({ ...value, dateFrom: opts.latestDate, dateTo: opts.latestDate });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
+
+  // Re-clamp current selection to available dates if filters narrowed the data set
+  useEffect(() => {
+    const avail = opts?.availableDates ?? [];
+    if (!avail.length || !value.dateFrom || !value.dateTo) return;
+    const within = avail.filter((d: string) => d >= value.dateFrom && d <= value.dateTo);
+    if (within.length === 0) {
+      const latest = opts!.latestDate!;
+      onChange({ ...value, dateFrom: latest, dateTo: latest });
+    } else if (within[0] !== value.dateFrom || within[within.length - 1] !== value.dateTo) {
+      onChange({ ...value, dateFrom: within[0], dateTo: within[within.length - 1] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts?.availableDates]);
 
   const setF = (patch: Partial<Filters>) => onChange({ ...value, ...patch });
   const stores: StoreOpt[] = (opts?.stores ?? []) as StoreOpt[];
@@ -126,6 +140,7 @@ export function FilterBar({ value, onChange }: Props) {
               from={value.dateFrom}
               to={value.dateTo}
               reference={opts?.latestDate ?? undefined}
+              availableDates={opts?.availableDates ?? []}
               onChange={(r) => setF({ dateFrom: r.from, dateTo: r.to })}
             />
           </div>
