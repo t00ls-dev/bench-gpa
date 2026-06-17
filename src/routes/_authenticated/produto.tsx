@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { fmtBRShort } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/produto")({
+  validateSearch: (s: Record<string, unknown>) => ({ plu: typeof s.plu === "string" ? s.plu : undefined }),
   component: ProdutoPage,
 });
 
