@@ -67,6 +67,7 @@ function AuthedLayout() {
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/upload", label: "Importar", icon: Upload },
     { to: "/produto", label: "Produto", icon: Package },
+    { to: "/area", label: "Área", icon: Layers },
     { to: "/queda", label: "Em Queda", icon: TrendingDown },
     ...(profile.isAdmin ? [{ to: "/admin", label: "Usuários", icon: Users }] : []),
   ] as const;
