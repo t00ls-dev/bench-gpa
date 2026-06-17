@@ -190,6 +190,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      area_analysis: {
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_depto?: string
+          p_grupo?: string
+          p_prev_from?: string
+          p_prev_to?: string
+          p_secao?: string
+          p_store?: string
+          p_subgrupo?: string
+        }
+        Returns: Json
+      }
       dashboard_metrics: {
         Args: {
           p_date_from: string
