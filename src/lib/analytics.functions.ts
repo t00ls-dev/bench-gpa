@@ -180,3 +180,58 @@ export const getProductsInDecline = createServerFn({ method: "POST" })
     }>;
   });
 
+export const getAreaAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      dateFrom: z.string(),
+      dateTo: z.string(),
+      store: z.string().nullable().optional(),
+      depto: z.string().nullable().optional(),
+      secao: z.string().nullable().optional(),
+      grupo: z.string().nullable().optional(),
+      subgrupo: z.string().nullable().optional(),
+      prevFrom: z.string().nullable().optional(),
+      prevTo: z.string().nullable().optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any).rpc("area_analysis", {
+      p_date_from: data.dateFrom,
+      p_date_to: data.dateTo,
+      p_store: data.store || null,
+      p_depto: data.depto || null,
+      p_secao: data.secao || null,
+      p_grupo: data.grupo || null,
+      p_subgrupo: data.subgrupo || null,
+      p_prev_from: data.prevFrom || null,
+      p_prev_to: data.prevTo || null,
+    });
+    if (error) throw new Error(error.message);
+    const r = res as any;
+    return {
+      total: Number(r?.total ?? 0),
+      occurrences: Number(r?.occurrences ?? 0),
+      plusTotal: Number(r?.plusTotal ?? 0),
+      plusWithSale: Number(r?.plusWithSale ?? 0),
+      plusWithoutSale: Number(r?.plusWithoutSale ?? 0),
+      avgPerPlu: Number(r?.avgPerPlu ?? 0),
+      prevTotal: Number(r?.prevTotal ?? 0),
+      prevOccurrences: Number(r?.prevOccurrences ?? 0),
+      products: ((r?.products ?? []) as any[]).map((p) => ({
+        prod_code: String(p.prod_code),
+        prod_name: String(p.prod_name ?? ""),
+        depto: p.depto ?? null,
+        secao: p.secao ?? null,
+        grupo: p.grupo ?? null,
+        subgrupo: p.subgrupo ?? null,
+        val: Number(p.val ?? 0),
+        qty: Number(p.qty ?? 0),
+        prev_val: Number(p.prev_val ?? 0),
+        cur_rank: p.cur_rank != null ? Number(p.cur_rank) : null,
+        prev_rank: p.prev_rank != null ? Number(p.prev_rank) : null,
+      })),
+      byDate: ((r?.byDate ?? []) as any[]).map((x) => ({ date: String(x.date), val: Number(x.val) })),
+    };
+  });
+
