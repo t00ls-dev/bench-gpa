@@ -26,11 +26,21 @@ interface SeriesPoint { date: string; val: number }
 interface StorePoint { code: string; name: string; val: number }
 
 function ProdutoPage() {
+  const { plu } = Route.useSearch();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
+  const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(
+    plu ? { prod_code: plu, prod_name: plu } : null
+  );
   const [debounced, setDebounced] = useState("");
   const [storeCode, setStoreCode] = useState<string>("__all__");
   const tRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (plu && (!selected || selected.prod_code !== plu)) {
+      setSelected({ prod_code: plu, prod_name: plu });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plu]);
 
   useEffect(() => {
     if (tRef.current) window.clearTimeout(tRef.current);
