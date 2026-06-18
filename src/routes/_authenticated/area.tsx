@@ -30,7 +30,7 @@ type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgru
 
 const ALL = "__all__";
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+
 
 function downloadCsv(filename: string, rows: (string | number)[][]) {
   const csv = rows
