@@ -12,7 +12,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
-  Layers, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
+  Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
   Download, FileText, Loader2,
 } from "lucide-react";
 
