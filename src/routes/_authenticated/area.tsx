@@ -150,15 +150,7 @@ function AreaPage() {
   if (grupo !== ALL) pathParts.push(grupo);
   if (subgrupo !== ALL) pathParts.push(subgrupo);
 
-  const activeChips: Array<{ label: string; onClear: () => void }> = [];
-  if (store !== ALL) {
-    const s = stores.find((x) => x.store_code === store);
-    activeChips.push({ label: `Loja: ${s ? `${s.store_code} — ${s.store_name}` : store}`, onClear: () => setStore(ALL) });
-  }
-  if (depto !== ALL) activeChips.push({ label: `Depto: ${depto}`, onClear: () => setDepto(ALL) });
-  if (secao !== ALL) activeChips.push({ label: `Seção: ${secao}`, onClear: () => setSecao(ALL) });
-  if (grupo !== ALL) activeChips.push({ label: `Grupo: ${grupo}`, onClear: () => setGrupo(ALL) });
-  if (subgrupo !== ALL) activeChips.push({ label: `Subgrupo: ${subgrupo}`, onClear: () => setSubgrupo(ALL) });
+  // (active chips removed per spec)
 
   // Table
   const [search, setSearch] = useState("");
