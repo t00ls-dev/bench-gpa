@@ -218,37 +218,10 @@ export function FilterBar({ value, onChange }: Props) {
         </div>
       </div>
 
-      {hasAny && (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <span className="text-xs text-muted-foreground">Filtros ativos:</span>
-          {value.stores.map((v) => (
-            <Chip key={`st-${v}`} label={`Loja: ${storeLabel(v)}`} onClear={() => removeFrom("stores", v)} />
-          ))}
-          {value.deptos.map((v) => (
-            <Chip key={`dp-${v}`} label={`Depto: ${v}`} onClear={() => removeFrom("deptos", v)} />
-          ))}
-          {value.secoes.map((v) => (
-            <Chip key={`sc-${v}`} label={`Seção: ${v}`} onClear={() => removeFrom("secoes", v)} />
-          ))}
-          {value.grupos.map((v) => (
-            <Chip key={`gr-${v}`} label={`Grupo: ${v}`} onClear={() => removeFrom("grupos", v)} />
-          ))}
-          {value.subgrupos.map((v) => (
-            <Chip key={`sg-${v}`} label={`Subgrupo: ${v}`} onClear={() => removeFrom("subgrupos", v)} />
-          ))}
-          <button onClick={clearAll} className="ml-1 text-xs text-muted-foreground underline hover:text-foreground">
-            Limpar tudo
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-function Chip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <button onClick={onClear} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary hover:bg-primary/10">
-      {label} <X className="size-3" />
-    </button>
-  );
+function Chip(_: { label: string; onClear: () => void }) {
+  return null;
 }
