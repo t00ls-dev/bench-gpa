@@ -424,7 +424,7 @@ function AreaPage() {
                     );
                   })}
                   {pageRows.length === 0 && !isFetching && (
-                    <tr><td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
                   )}
                 </tbody>
               </table>
