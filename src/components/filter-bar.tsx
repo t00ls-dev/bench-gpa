@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronDown, X } from "lucide-react";
+void X;
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/date-range-picker";
 
