@@ -26,7 +26,7 @@ type Product = {
   val: number; qty: number;
 };
 
-type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "qty" | "share";
+type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
 
 const ALL = "__all__";
 
