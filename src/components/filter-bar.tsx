@@ -137,22 +137,8 @@ export function FilterBar({ value, onChange }: Props) {
   const setSecoes = (v: string[]) => setF({ secoes: v, grupos: [], subgrupos: [] });
   const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
 
-  const removeFrom = (key: "stores" | "deptos" | "secoes" | "grupos" | "subgrupos", item: string) => {
-    const next = (value[key] as string[]).filter((x) => x !== item);
-    if (key === "stores") setStores(next);
-    else if (key === "deptos") setDeptos(next);
-    else if (key === "secoes") setSecoes(next);
-    else if (key === "grupos") setGrupos(next);
-    else setF({ subgrupos: next });
-  };
+  void stores;
 
-  const clearAll = () => setF({ stores: [], deptos: [], secoes: [], grupos: [], subgrupos: [] });
-  const hasAny = value.stores.length + value.deptos.length + value.secoes.length + value.grupos.length + value.subgrupos.length > 0;
-
-  const storeLabel = (code: string) => {
-    const s = stores.find((x) => x.store_code === code);
-    return s ? `${s.store_code} — ${s.store_name}` : code;
-  };
 
   return (
     <div className="kpi-card mb-6 space-y-3">
