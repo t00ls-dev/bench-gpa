@@ -12,7 +12,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
-  Layers, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
+  Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
   Download, FileText, Loader2,
 } from "lucide-react";
 
@@ -26,7 +26,7 @@ type Product = {
   val: number; qty: number;
 };
 
-type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "qty" | "share";
+type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
 
 const ALL = "__all__";
 
@@ -150,15 +150,7 @@ function AreaPage() {
   if (grupo !== ALL) pathParts.push(grupo);
   if (subgrupo !== ALL) pathParts.push(subgrupo);
 
-  const activeChips: Array<{ label: string; onClear: () => void }> = [];
-  if (store !== ALL) {
-    const s = stores.find((x) => x.store_code === store);
-    activeChips.push({ label: `Loja: ${s ? `${s.store_code} — ${s.store_name}` : store}`, onClear: () => setStore(ALL) });
-  }
-  if (depto !== ALL) activeChips.push({ label: `Depto: ${depto}`, onClear: () => setDepto(ALL) });
-  if (secao !== ALL) activeChips.push({ label: `Seção: ${secao}`, onClear: () => setSecao(ALL) });
-  if (grupo !== ALL) activeChips.push({ label: `Grupo: ${grupo}`, onClear: () => setGrupo(ALL) });
-  if (subgrupo !== ALL) activeChips.push({ label: `Subgrupo: ${subgrupo}`, onClear: () => setSubgrupo(ALL) });
+  // (active chips removed per spec)
 
   // Table
   const [search, setSearch] = useState("");
@@ -186,7 +178,6 @@ function AreaPage() {
         case "grupo": av = a.grupo ?? ""; bv = b.grupo ?? ""; break;
         case "subgrupo": av = a.subgrupo ?? ""; bv = b.subgrupo ?? ""; break;
         case "val": av = a.val; bv = b.val; break;
-        case "qty": av = a.qty; bv = b.qty; break;
         case "share": av = a.share; bv = b.share; break;
       }
       if (typeof av === "string") return sortAsc ? (av as string).localeCompare(bv as string) : (bv as string).localeCompare(av as string);
@@ -209,13 +200,13 @@ function AreaPage() {
   };
 
   const exportCsv = () => {
-    const header = ["PLU","Descrição","Departamento","Seção","Grupo","Subgrupo","Venda","Ocorrências","Participação %"];
+    const header = ["PLU","Descrição","Departamento","Seção","Grupo","Subgrupo","Venda","Participação %"];
     const rows: (string | number)[][] = [header];
     for (const p of filteredTable) {
       rows.push([
         p.prod_code, p.prod_name,
         p.depto ?? "", p.secao ?? "", p.grupo ?? "", p.subgrupo ?? "",
-        p.val.toFixed(2), p.qty,
+        p.val.toFixed(2),
         (p.share * 100).toFixed(2),
       ]);
     }
@@ -231,6 +222,7 @@ function AreaPage() {
       <tr>
         <td>${escapeHtml(p.prod_code)}</td>
         <td>${escapeHtml(p.prod_name)}</td>
+        <td class="num">${escapeHtml(fmtBRL(p.val))}</td>
         <td class="estoque"></td>
       </tr>`).join("");
     win.document.write(`<!doctype html>
@@ -244,6 +236,7 @@ function AreaPage() {
   table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #999;padding:5px 6px;text-align:left;vertical-align:top}
   th{background:#eef;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+  td.num{text-align:right;white-space:nowrap}
   td.estoque{width:90px;height:24px}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
@@ -256,8 +249,8 @@ function AreaPage() {
   <div><strong>Produtos listados:</strong> ${filteredTable.length} &nbsp;·&nbsp; <strong>Emissão:</strong> ${escapeHtml(today)}</div>
 </div>
 <table>
-  <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:120px">Estoque</th></tr></thead>
-  <tbody>${rowsHtml || `<tr><td colspan="3" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
+  <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:110px;text-align:right">Venda</th><th style="width:120px">Estoque</th></tr></thead>
+  <tbody>${rowsHtml || `<tr><td colspan="4" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
 </table>
 <script>window.onload=()=>{setTimeout(()=>window.print(),250)}<\/script>
 </body></html>`);
@@ -345,41 +338,16 @@ function AreaPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <span className="text-xs text-muted-foreground">Filtros ativos:</span>
-          {activeChips.length === 0 && <span className="text-xs italic text-muted-foreground">nenhum</span>}
-          {activeChips.map((c, i) => (
-            <button key={i} onClick={c.onClear} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary hover:bg-primary/10">
-              {c.label} <X className="size-3" />
-            </button>
-          ))}
-          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-            Período: <strong>{fmtBRShort(dateFrom)}</strong> a <strong>{fmtBRShort(dateTo)}</strong>
-          </span>
-        </div>
       </div>
 
-      {/* Caminho da área */}
-      <div className="kpi-card mb-4">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">Área analisada</div>
-        <div className="mt-1 flex flex-wrap items-center gap-1 font-display text-lg font-semibold">
-          {pathParts.map((p, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="text-muted-foreground">›</span>}
-              <span>{p}</span>
-            </span>
-          ))}
-        </div>
-      </div>
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
       ) : (
         <>
           {/* KPIs */}
-          <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <KpiCard label="Venda Total" value={fmtBRL(total)} />
-            <KpiCard label="Ocorrências de Venda" value={fmtInt(data?.occurrences ?? 0)} />
             <KpiCard label="PLUs (área)" value={fmtInt(data?.plusTotal ?? 0)} />
             <KpiCard label="PLUs com venda" value={fmtInt(data?.plusWithSale ?? 0)} />
             <KpiCard label="PLUs sem venda" value={fmtInt(noSale)} />
@@ -430,7 +398,7 @@ function AreaPage() {
                     <Th label="Grupo" k="grupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Subgrupo" k="subgrupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
-                    <Th label="Ocorr." k="qty" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
+                    
                     <Th label="Part. %" k="share" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
                   </tr>
                 </thead>
@@ -451,13 +419,13 @@ function AreaPage() {
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.grupo ?? "—"}</td>
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "—"}</td>
                         <td className="num py-2 text-right whitespace-nowrap">{fmtBRL(p.val)}</td>
-                        <td className="num py-2 text-right whitespace-nowrap">{fmtInt(p.qty)}</td>
+                        
                         <td className="num py-2 text-right whitespace-nowrap">{fmtPct(p.share)}</td>
                       </tr>
                     );
                   })}
                   {pageRows.length === 0 && !isFetching && (
-                    <tr><td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
                   )}
                 </tbody>
               </table>

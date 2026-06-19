@@ -31,6 +31,8 @@ function MultiSelect({
   label, options, value, onChange,
 }: { label: string; options: { value: string; label: string }[]; value: string[]; onChange: (v: string[]) => void }) {
   const toggle = (v: string) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  const allSelected = options.length > 0 && value.length === options.length;
+  const toggleAll = () => onChange(allSelected ? [] : options.map((o) => o.value));
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -42,23 +44,45 @@ function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0">
+        {options.length > 0 && (
+          <button
+            onClick={toggleAll}
+            className="flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <span className={cn(
+              "flex size-4 items-center justify-center rounded border",
+              allSelected ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
+            )}>
+              {allSelected && <Check className="size-3" />}
+            </span>
+            <span>Selecionar todos</span>
+          </button>
+        )}
         <div className="max-h-72 overflow-y-auto">
           {options.length === 0 && <div className="p-3 text-xs text-muted-foreground">Nenhuma opção.</div>}
-          {options.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => toggle(o.value)}
-              className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted"
-            >
-              <span className="truncate">{o.label}</span>
-              {value.includes(o.value) && <Check className="size-4 text-primary" />}
-            </button>
-          ))}
+          {options.map((o) => {
+            const checked = value.includes(o.value);
+            return (
+              <button
+                key={o.value}
+                onClick={() => toggle(o.value)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
+              >
+                <span className={cn(
+                  "flex size-4 shrink-0 items-center justify-center rounded border",
+                  checked ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
+                )}>
+                  {checked && <Check className="size-3" />}
+                </span>
+                <span className="truncate text-left flex-1">{o.label}</span>
+              </button>
+            );
+          })}
         </div>
         {value.length > 0 && (
           <div className="border-t p-2">
             <Button variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
-              <X className="mr-1 size-3" /> Limpar
+              <X className="mr-1 size-3" /> Limpar seleção
             </Button>
           </div>
         )}
@@ -113,22 +137,8 @@ export function FilterBar({ value, onChange }: Props) {
   const setSecoes = (v: string[]) => setF({ secoes: v, grupos: [], subgrupos: [] });
   const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
 
-  const removeFrom = (key: "stores" | "deptos" | "secoes" | "grupos" | "subgrupos", item: string) => {
-    const next = (value[key] as string[]).filter((x) => x !== item);
-    if (key === "stores") setStores(next);
-    else if (key === "deptos") setDeptos(next);
-    else if (key === "secoes") setSecoes(next);
-    else if (key === "grupos") setGrupos(next);
-    else setF({ subgrupos: next });
-  };
+  void stores;
 
-  const clearAll = () => setF({ stores: [], deptos: [], secoes: [], grupos: [], subgrupos: [] });
-  const hasAny = value.stores.length + value.deptos.length + value.secoes.length + value.grupos.length + value.subgrupos.length > 0;
-
-  const storeLabel = (code: string) => {
-    const s = stores.find((x) => x.store_code === code);
-    return s ? `${s.store_code} — ${s.store_name}` : code;
-  };
 
   return (
     <div className="kpi-card mb-6 space-y-3">
@@ -194,37 +204,10 @@ export function FilterBar({ value, onChange }: Props) {
         </div>
       </div>
 
-      {hasAny && (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <span className="text-xs text-muted-foreground">Filtros ativos:</span>
-          {value.stores.map((v) => (
-            <Chip key={`st-${v}`} label={`Loja: ${storeLabel(v)}`} onClear={() => removeFrom("stores", v)} />
-          ))}
-          {value.deptos.map((v) => (
-            <Chip key={`dp-${v}`} label={`Depto: ${v}`} onClear={() => removeFrom("deptos", v)} />
-          ))}
-          {value.secoes.map((v) => (
-            <Chip key={`sc-${v}`} label={`Seção: ${v}`} onClear={() => removeFrom("secoes", v)} />
-          ))}
-          {value.grupos.map((v) => (
-            <Chip key={`gr-${v}`} label={`Grupo: ${v}`} onClear={() => removeFrom("grupos", v)} />
-          ))}
-          {value.subgrupos.map((v) => (
-            <Chip key={`sg-${v}`} label={`Subgrupo: ${v}`} onClear={() => removeFrom("subgrupos", v)} />
-          ))}
-          <button onClick={clearAll} className="ml-1 text-xs text-muted-foreground underline hover:text-foreground">
-            Limpar tudo
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-function Chip({ label, onClear }: { label: string; onClear: () => void }) {
-  return (
-    <button onClick={onClear} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary hover:bg-primary/10">
-      {label} <X className="size-3" />
-    </button>
-  );
+function Chip(_: { label: string; onClear: () => void }) {
+  return null;
 }
