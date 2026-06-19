@@ -418,7 +418,7 @@ function AreaPage() {
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.grupo ?? "—"}</td>
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "—"}</td>
                         <td className="num py-2 text-right whitespace-nowrap">{fmtBRL(p.val)}</td>
-                        <td className="num py-2 text-right whitespace-nowrap">{fmtInt(p.qty)}</td>
+                        
                         <td className="num py-2 text-right whitespace-nowrap">{fmtPct(p.share)}</td>
                       </tr>
                     );
