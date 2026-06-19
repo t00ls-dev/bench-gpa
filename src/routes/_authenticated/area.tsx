@@ -200,13 +200,13 @@ function AreaPage() {
   };
 
   const exportCsv = () => {
-    const header = ["PLU","Descrição","Departamento","Seção","Grupo","Subgrupo","Venda","Ocorrências","Participação %"];
+    const header = ["PLU","Descrição","Departamento","Seção","Grupo","Subgrupo","Venda","Participação %"];
     const rows: (string | number)[][] = [header];
     for (const p of filteredTable) {
       rows.push([
         p.prod_code, p.prod_name,
         p.depto ?? "", p.secao ?? "", p.grupo ?? "", p.subgrupo ?? "",
-        p.val.toFixed(2), p.qty,
+        p.val.toFixed(2),
         (p.share * 100).toFixed(2),
       ]);
     }
@@ -222,6 +222,7 @@ function AreaPage() {
       <tr>
         <td>${escapeHtml(p.prod_code)}</td>
         <td>${escapeHtml(p.prod_name)}</td>
+        <td class="num">${escapeHtml(fmtBRL(p.val))}</td>
         <td class="estoque"></td>
       </tr>`).join("");
     win.document.write(`<!doctype html>
@@ -235,6 +236,7 @@ function AreaPage() {
   table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #999;padding:5px 6px;text-align:left;vertical-align:top}
   th{background:#eef;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+  td.num{text-align:right;white-space:nowrap}
   td.estoque{width:90px;height:24px}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
@@ -247,8 +249,8 @@ function AreaPage() {
   <div><strong>Produtos listados:</strong> ${filteredTable.length} &nbsp;·&nbsp; <strong>Emissão:</strong> ${escapeHtml(today)}</div>
 </div>
 <table>
-  <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:120px">Estoque</th></tr></thead>
-  <tbody>${rowsHtml || `<tr><td colspan="3" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
+  <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:110px;text-align:right">Venda</th><th style="width:120px">Estoque</th></tr></thead>
+  <tbody>${rowsHtml || `<tr><td colspan="4" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
 </table>
 <script>window.onload=()=>{setTimeout(()=>window.print(),250)}<\/script>
 </body></html>`);
