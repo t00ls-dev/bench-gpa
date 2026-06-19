@@ -179,7 +179,6 @@ function AreaPage() {
         case "subgrupo": av = a.subgrupo ?? ""; bv = b.subgrupo ?? ""; break;
         case "val": av = a.val; bv = b.val; break;
         case "share": av = a.share; bv = b.share; break;
-        case "share": av = a.share; bv = b.share; break;
       }
       if (typeof av === "string") return sortAsc ? (av as string).localeCompare(bv as string) : (bv as string).localeCompare(av as string);
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
