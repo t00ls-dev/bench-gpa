@@ -346,9 +346,8 @@ function AreaPage() {
       ) : (
         <>
           {/* KPIs */}
-          <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <KpiCard label="Venda Total" value={fmtBRL(total)} />
-            <KpiCard label="Ocorrências de Venda" value={fmtInt(data?.occurrences ?? 0)} />
             <KpiCard label="PLUs (área)" value={fmtInt(data?.plusTotal ?? 0)} />
             <KpiCard label="PLUs com venda" value={fmtInt(data?.plusWithSale ?? 0)} />
             <KpiCard label="PLUs sem venda" value={fmtInt(noSale)} />
