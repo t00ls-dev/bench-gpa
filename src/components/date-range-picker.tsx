@@ -174,7 +174,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
           />
           <div className="flex flex-wrap items-center gap-2 px-1 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
-              <span className="inline-block size-2.5 rounded-sm bg-green-500" />
+              <span className="inline-block size-2.5 rounded-sm bg-primary" />
               Período selecionado
             </span>
             <span className="flex items-center gap-1">
