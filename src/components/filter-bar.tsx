@@ -31,6 +31,8 @@ function MultiSelect({
   label, options, value, onChange,
 }: { label: string; options: { value: string; label: string }[]; value: string[]; onChange: (v: string[]) => void }) {
   const toggle = (v: string) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  const allSelected = options.length > 0 && value.length === options.length;
+  const toggleAll = () => onChange(allSelected ? [] : options.map((o) => o.value));
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -42,23 +44,45 @@ function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0">
+        {options.length > 0 && (
+          <button
+            onClick={toggleAll}
+            className="flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <span className={cn(
+              "flex size-4 items-center justify-center rounded border",
+              allSelected ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
+            )}>
+              {allSelected && <Check className="size-3" />}
+            </span>
+            <span>Selecionar todos</span>
+          </button>
+        )}
         <div className="max-h-72 overflow-y-auto">
           {options.length === 0 && <div className="p-3 text-xs text-muted-foreground">Nenhuma opção.</div>}
-          {options.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => toggle(o.value)}
-              className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted"
-            >
-              <span className="truncate">{o.label}</span>
-              {value.includes(o.value) && <Check className="size-4 text-primary" />}
-            </button>
-          ))}
+          {options.map((o) => {
+            const checked = value.includes(o.value);
+            return (
+              <button
+                key={o.value}
+                onClick={() => toggle(o.value)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
+              >
+                <span className={cn(
+                  "flex size-4 shrink-0 items-center justify-center rounded border",
+                  checked ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
+                )}>
+                  {checked && <Check className="size-3" />}
+                </span>
+                <span className="truncate text-left flex-1">{o.label}</span>
+              </button>
+            );
+          })}
         </div>
         {value.length > 0 && (
           <div className="border-t p-2">
             <Button variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
-              <X className="mr-1 size-3" /> Limpar
+              <X className="mr-1 size-3" /> Limpar seleção
             </Button>
           </div>
         )}
