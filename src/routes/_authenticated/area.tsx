@@ -397,7 +397,7 @@ function AreaPage() {
                     <Th label="Grupo" k="grupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Subgrupo" k="subgrupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
-                    <Th label="Ocorr." k="qty" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
+                    
                     <Th label="Part. %" k="share" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
                   </tr>
                 </thead>
