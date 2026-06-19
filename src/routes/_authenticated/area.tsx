@@ -336,32 +336,8 @@ function AreaPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <span className="text-xs text-muted-foreground">Filtros ativos:</span>
-          {activeChips.length === 0 && <span className="text-xs italic text-muted-foreground">nenhum</span>}
-          {activeChips.map((c, i) => (
-            <button key={i} onClick={c.onClear} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary hover:bg-primary/10">
-              {c.label} <X className="size-3" />
-            </button>
-          ))}
-          <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-            Período: <strong>{fmtBRShort(dateFrom)}</strong> a <strong>{fmtBRShort(dateTo)}</strong>
-          </span>
-        </div>
       </div>
 
-      {/* Caminho da área */}
-      <div className="kpi-card mb-4">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">Área analisada</div>
-        <div className="mt-1 flex flex-wrap items-center gap-1 font-display text-lg font-semibold">
-          {pathParts.map((p, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="text-muted-foreground">›</span>}
-              <span>{p}</span>
-            </span>
-          ))}
-        </div>
-      </div>
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
