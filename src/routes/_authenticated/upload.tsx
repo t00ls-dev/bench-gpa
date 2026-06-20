@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
+import { AdminGate } from "@/components/admin-gate";
 
 export const Route = createFileRoute("/_authenticated/upload")({
-  component: UploadPage,
+  component: () => <AdminGate><UploadPage /></AdminGate>,
 });
+
 
 interface Result {
   filename: string;
@@ -100,7 +102,7 @@ function UploadPage() {
       >
         <Upload className="mb-3 size-8 text-muted-foreground" />
         <div className="font-medium">Arraste arquivos ou clique para selecionar</div>
-        <div className="mt-1 text-xs text-muted-foreground">.xlsx, .xls — múltiplos arquivos</div>
+        <div className="mt-1 text-xs text-muted-foreground">.xlsx, .xls (múltiplos arquivos)</div>
         <input
           id="files" type="file" multiple accept=".xlsx,.xls"
           className="sr-only"
@@ -141,7 +143,7 @@ function UploadPage() {
                 <div className="flex-1">
                   <div className="font-medium">{r.filename}</div>
                   <div className="text-xs text-muted-foreground">
-                    {r.ok && r.date && <>Data {fmtDate(r.date)} — </>}
+                    {r.ok && r.date && <>Data {fmtDate(r.date)}: </>}
                     {r.message}
                   </div>
                 </div>

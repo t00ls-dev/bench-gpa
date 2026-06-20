@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_analyses: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      custom_analysis_items: {
+        Row: {
+          analysis_id: string
+          created_at: string
+          id: string
+          prod_code: string
+        }
+        Insert: {
+          analysis_id: string
+          created_at?: string
+          id?: string
+          prod_code: string
+        }
+        Update: {
+          analysis_id?: string
+          created_at?: string
+          id?: string
+          prod_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_analysis_items_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "custom_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_log: {
         Row: {
           imported_at: string
@@ -204,12 +257,38 @@ export type Database = {
         }
         Returns: Json
       }
+      custom_analysis_results: {
+        Args: {
+          p_analysis_id: string
+          p_date_from: string
+          p_date_to: string
+          p_deptos?: string[]
+          p_grupos?: string[]
+          p_secoes?: string[]
+          p_stores?: string[]
+          p_subgrupos?: string[]
+        }
+        Returns: Json
+      }
       dashboard_metrics: {
         Args: {
           p_date_from: string
           p_date_to: string
           p_deptos?: string[]
           p_grupos?: string[]
+          p_secoes?: string[]
+          p_stores?: string[]
+          p_subgrupos?: string[]
+        }
+        Returns: Json
+      }
+      dashboard_rankings: {
+        Args: {
+          p_date_from: string
+          p_date_to: string
+          p_deptos?: string[]
+          p_grupos?: string[]
+          p_limit?: number
           p_secoes?: string[]
           p_stores?: string[]
           p_subgrupos?: string[]
