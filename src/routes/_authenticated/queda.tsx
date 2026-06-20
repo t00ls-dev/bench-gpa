@@ -41,7 +41,7 @@ function shiftIso(iso: string, days: number) {
 }
 
 function trend(variation: number | null): string {
-  if (variation == null) return "—";
+  if (variation == null) return "(sem)";
   if (variation <= -0.7) return "📉 Forte queda";
   if (variation <= -0.4) return "📉 Em queda";
   if (variation <= -0.1) return "↘ Leve queda";
@@ -192,7 +192,7 @@ function QuedaPage() {
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todas</SelectItem>
-                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code} — {s.store_name}</SelectItem>)}
+                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code}: {s.store_name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -328,13 +328,13 @@ function QuedaPage() {
                       <div className="text-xs text-muted-foreground font-mono">{r.prod_code} · {r.depto ?? "-"}</div>
                     </td>
                     <td className="py-2 text-xs">{r.store_code}<br /><span className="text-muted-foreground">{r.store_name}</span></td>
-                    <td className="num py-2 text-right">{r.avg_daily_hist != null ? fmtBRL(r.avg_daily_hist) : "—"}</td>
-                    <td className="num py-2 text-right">{r.avg_daily_recent != null ? fmtBRL(r.avg_daily_recent) : "—"}</td>
+                    <td className="num py-2 text-right">{r.avg_daily_hist != null ? fmtBRL(r.avg_daily_hist) : "(sem)"}</td>
+                    <td className="num py-2 text-right">{r.avg_daily_recent != null ? fmtBRL(r.avg_daily_recent) : "(sem)"}</td>
                     <td className={`num py-2 text-right font-semibold ${r.variation != null && r.variation < 0 ? "text-red-600" : ""}`}>
-                      {r.variation != null ? `${(r.variation * 100).toFixed(1)}%` : "—"}
+                      {r.variation != null ? `${(r.variation * 100).toFixed(1)}%` : "(sem)"}
                     </td>
                     <td className="py-2 text-right text-xs whitespace-nowrap">{fmtBRShort(r.last_sale_date)}</td>
-                    <td className="num py-2 text-right">{r.days_without_sale ?? "—"}</td>
+                    <td className="num py-2 text-right">{r.days_without_sale ?? "(sem)"}</td>
                     <td className="py-2 text-xs">{trend(r.variation)}</td>
                     <td className="py-2 text-xs text-muted-foreground max-w-[260px]">{insight(r)}</td>
                   </tr>
