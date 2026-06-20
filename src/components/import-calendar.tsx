@@ -94,7 +94,7 @@ export function ImportCalendar({ records }: Props) {
                       : "border-dashed border-amber-200 bg-amber-50/40 text-amber-700/70",
                   isSel && !isLatest ? "ring-2 ring-primary" : "",
                 ].join(" ")}
-                title={rec ? `${fmtBR(iso)} — ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBR(iso)} — não importado`}
+                title={rec ? `${fmtBR(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBR(iso)} : não importado`}
               >
                 {day}
               </button>

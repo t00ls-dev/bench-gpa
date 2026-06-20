@@ -235,3 +235,32 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     };
   });
 
+export const getDashboardRankings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    FilterSchema.extend({ limit: z.number().int().min(1).max(50).optional().default(10) }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any).rpc("dashboard_rankings", {
+      p_date_from: data.dateFrom || null,
+      p_date_to: data.dateTo || null,
+      p_stores: data.stores ?? [],
+      p_deptos: data.deptos ?? [],
+      p_secoes: data.secoes ?? [],
+      p_grupos: data.grupos ?? [],
+      p_subgrupos: data.subgrupos ?? [],
+      p_limit: data.limit,
+    });
+    if (error) throw new Error(error.message);
+    const r = res as any;
+    const num = (xs: any[]) => xs.map((x) => ({ ...x, val: Number(x.val ?? 0) }));
+    return {
+      byDepto: num(r?.byDepto ?? []),
+      bySecao: num(r?.bySecao ?? []),
+      byGrupo: num(r?.byGrupo ?? []),
+      bySubgrupo: num(r?.bySubgrupo ?? []),
+      byProduto: num(r?.byProduto ?? []),
+    };
+  });
+
+

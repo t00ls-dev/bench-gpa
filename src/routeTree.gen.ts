@@ -15,8 +15,10 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as AuthenticatedQuedaRouteImport } from './routes/_authenticated/queda'
 import { Route as AuthenticatedProdutoRouteImport } from './routes/_authenticated/produto'
+import { Route as AuthenticatedPersonalizadaRouteImport } from './routes/_authenticated/personalizada'
 import { Route as AuthenticatedAreaRouteImport } from './routes/_authenticated/area'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedPersonalizadaIdRouteImport } from './routes/_authenticated/personalizada.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -47,6 +49,12 @@ const AuthenticatedProdutoRoute = AuthenticatedProdutoRouteImport.update({
   path: '/produto',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPersonalizadaRoute =
+  AuthenticatedPersonalizadaRouteImport.update({
+    id: '/personalizada',
+    path: '/personalizada',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAreaRoute = AuthenticatedAreaRouteImport.update({
   id: '/area',
   path: '/area',
@@ -57,24 +65,34 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPersonalizadaIdRoute =
+  AuthenticatedPersonalizadaIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedPersonalizadaRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/area': typeof AuthenticatedAreaRoute
+  '/personalizada': typeof AuthenticatedPersonalizadaRouteWithChildren
   '/produto': typeof AuthenticatedProdutoRoute
   '/queda': typeof AuthenticatedQuedaRoute
   '/upload': typeof AuthenticatedUploadRoute
+  '/personalizada/$id': typeof AuthenticatedPersonalizadaIdRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/area': typeof AuthenticatedAreaRoute
+  '/personalizada': typeof AuthenticatedPersonalizadaRouteWithChildren
   '/produto': typeof AuthenticatedProdutoRoute
   '/queda': typeof AuthenticatedQuedaRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
+  '/personalizada/$id': typeof AuthenticatedPersonalizadaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -82,10 +100,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/area': typeof AuthenticatedAreaRoute
+  '/_authenticated/personalizada': typeof AuthenticatedPersonalizadaRouteWithChildren
   '/_authenticated/produto': typeof AuthenticatedProdutoRoute
   '/_authenticated/queda': typeof AuthenticatedQuedaRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/personalizada/$id': typeof AuthenticatedPersonalizadaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -94,21 +114,34 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/area'
+    | '/personalizada'
     | '/produto'
     | '/queda'
     | '/upload'
+    | '/personalizada/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/admin' | '/area' | '/produto' | '/queda' | '/upload' | '/'
+  to:
+    | '/auth'
+    | '/admin'
+    | '/area'
+    | '/personalizada'
+    | '/produto'
+    | '/queda'
+    | '/upload'
+    | '/'
+    | '/personalizada/$id'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/area'
+    | '/_authenticated/personalizada'
     | '/_authenticated/produto'
     | '/_authenticated/queda'
     | '/_authenticated/upload'
     | '/_authenticated/'
+    | '/_authenticated/personalizada/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -160,6 +193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProdutoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/personalizada': {
+      id: '/_authenticated/personalizada'
+      path: '/personalizada'
+      fullPath: '/personalizada'
+      preLoaderRoute: typeof AuthenticatedPersonalizadaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area': {
       id: '/_authenticated/area'
       path: '/area'
@@ -174,12 +214,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/personalizada/$id': {
+      id: '/_authenticated/personalizada/$id'
+      path: '/$id'
+      fullPath: '/personalizada/$id'
+      preLoaderRoute: typeof AuthenticatedPersonalizadaIdRouteImport
+      parentRoute: typeof AuthenticatedPersonalizadaRoute
+    }
   }
 }
+
+interface AuthenticatedPersonalizadaRouteChildren {
+  AuthenticatedPersonalizadaIdRoute: typeof AuthenticatedPersonalizadaIdRoute
+}
+
+const AuthenticatedPersonalizadaRouteChildren: AuthenticatedPersonalizadaRouteChildren =
+  {
+    AuthenticatedPersonalizadaIdRoute: AuthenticatedPersonalizadaIdRoute,
+  }
+
+const AuthenticatedPersonalizadaRouteWithChildren =
+  AuthenticatedPersonalizadaRoute._addFileChildren(
+    AuthenticatedPersonalizadaRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAreaRoute: typeof AuthenticatedAreaRoute
+  AuthenticatedPersonalizadaRoute: typeof AuthenticatedPersonalizadaRouteWithChildren
   AuthenticatedProdutoRoute: typeof AuthenticatedProdutoRoute
   AuthenticatedQuedaRoute: typeof AuthenticatedQuedaRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
@@ -189,6 +251,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAreaRoute: AuthenticatedAreaRoute,
+  AuthenticatedPersonalizadaRoute: AuthenticatedPersonalizadaRouteWithChildren,
   AuthenticatedProdutoRoute: AuthenticatedProdutoRoute,
   AuthenticatedQuedaRoute: AuthenticatedQuedaRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
@@ -205,13 +268,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

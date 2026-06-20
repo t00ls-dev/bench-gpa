@@ -28,7 +28,7 @@ interface Props {
   from: string;
   to: string;
   onChange: (range: { from: string; to: string }) => void;
-  /** Reference date for "today" — defaults to actual today; pass latestDate for presets relative to last imported day. */
+  /** Reference date for "today" : defaults to actual today; pass latestDate for presets relative to last imported day. */
   reference?: string;
   /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
   availableDates?: string[];
@@ -79,7 +79,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
   const label = useMemo(() => {
     if (!from && !to) return "Selecione um período";
     if (from === to) return fmtBRShort(from);
-    return `${fmtBRShort(from)} — ${fmtBRShort(to)}`;
+    return `${fmtBRShort(from)} : ${fmtBRShort(to)}`;
   }, [from, to]);
 
   const apply = (key: PresetKey) => {
@@ -158,7 +158,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
           <div className="flex items-center justify-between gap-2 text-xs">
             <Label className="text-xs">Período selecionado</Label>
             <span className="text-muted-foreground whitespace-nowrap font-medium">
-              {from ? fmtBRShort(from) : "—"} → {to ? fmtBRShort(to) : "—"}
+              {from ? fmtBRShort(from) : "(sem)"} → {to ? fmtBRShort(to) : "(sem)"}
             </span>
           </div>
           <Calendar

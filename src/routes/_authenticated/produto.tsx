@@ -104,7 +104,7 @@ function ProdutoPage() {
             <SelectContent>
               <SelectItem value="__all__">Todas as lojas</SelectItem>
               {stores.map((s) => (
-                <SelectItem key={s.store_code} value={s.store_code}>{s.store_code} — {s.store_name}</SelectItem>
+                <SelectItem key={s.store_code} value={s.store_code}>{s.store_code}: {s.store_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -188,7 +188,7 @@ function ProdutoPage() {
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                     <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(label, payload) => {
                       const p = payload?.[0]?.payload as StorePoint | undefined;
-                      return p ? `${p.code} — ${p.name}` : String(label);
+                      return p ? `${p.code} : ${p.name}` : String(label);
                     }} />
                     <Bar dataKey="val" fill="oklch(0.48 0.12 165)" radius={[4, 4, 0, 0]} />
                   </BarChart>
