@@ -358,12 +358,10 @@ function AreaPage() {
                     <SelectItem value="250">250 / página</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={exportCsv} className="h-9">
-                  <Download className="mr-1.5 size-4" /> CSV
-                </Button>
                 <Button variant="outline" size="sm" onClick={exportPdf} className="h-9">
                   <FileText className="mr-1.5 size-4" /> PDF
                 </Button>
+
               </div>
             </div>
 
@@ -377,9 +375,9 @@ function AreaPage() {
                     <Th label="Seção" k="secao" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Grupo" k="grupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Subgrupo" k="subgrupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
-                    
-                    <Th label="Part. %" k="share" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" />
+                    <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
+                    <Th label="Part. %" k="share" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
+
                   </tr>
                 </thead>
                 <tbody>
@@ -394,13 +392,13 @@ function AreaPage() {
                       >
                         <td className="py-2 font-mono text-xs whitespace-nowrap">{p.prod_code}</td>
                         <td className="py-2 max-w-[260px] truncate">{p.prod_name}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.depto ?? "—"}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.secao ?? "—"}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.grupo ?? "—"}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "—"}</td>
-                        <td className="num py-2 text-right whitespace-nowrap">{fmtBRL(p.val)}</td>
-                        
-                        <td className="num py-2 text-right whitespace-nowrap">{fmtPct(p.share)}</td>
+                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.depto ?? "(sem)"}</td>
+                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.secao ?? "(sem)"}</td>
+                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.grupo ?? "(sem)"}</td>
+                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "(sem)"}</td>
+                        <td className="num py-2 pl-8 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
+                        <td className="num py-2 pl-8 text-right whitespace-nowrap text-muted-foreground">{fmtPct(p.share)}</td>
+
                       </tr>
                     );
                   })}
