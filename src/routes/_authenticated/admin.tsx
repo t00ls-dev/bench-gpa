@@ -8,9 +8,12 @@ import { toast } from "sonner";
 import { ShieldCheck, ShieldOff, UserCheck, UserX, Loader2 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
 
+import { AdminGate } from "@/components/admin-gate";
+
 export const Route = createFileRoute("/_authenticated/admin")({
-  component: AdminPage,
+  component: () => <AdminGate><AdminPage /></AdminGate>,
 });
+
 
 function AdminPage() {
   const list = useServerFn(listUsers);
