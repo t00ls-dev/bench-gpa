@@ -10,11 +10,11 @@ export function cn(...inputs: ClassValue[]) {
  * Aceita string ISO (YYYY-MM-DD) ou Date.
  */
 export function fmtBRShort(input: string | Date | null | undefined): string {
-  if (!input) return "—";
+  if (!input) return "(sem)";
   let y: number, m: number, d: number;
   if (typeof input === "string") {
     const [Y, M, D] = input.slice(0, 10).split("-");
-    if (!Y || !M || !D) return "—";
+    if (!Y || !M || !D) return "(sem)";
     y = Number(Y); m = Number(M); d = Number(D);
   } else {
     y = input.getFullYear(); m = input.getMonth() + 1; d = input.getDate();

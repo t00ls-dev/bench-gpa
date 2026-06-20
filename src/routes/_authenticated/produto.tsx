@@ -104,7 +104,7 @@ function ProdutoPage() {
             <SelectContent>
               <SelectItem value="__all__">Todas as lojas</SelectItem>
               {stores.map((s) => (
-                <SelectItem key={s.store_code} value={s.store_code}>{s.store_code} — {s.store_name}</SelectItem>
+                <SelectItem key={s.store_code} value={s.store_code}>{s.store_code}: {s.store_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

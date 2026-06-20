@@ -159,7 +159,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Loja</Label>
           <MultiSelect
             label="Todas"
-            options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} — ${s.store_name}` }))}
+            options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} : ${s.store_name}` }))}
             value={value.stores}
             onChange={setStores}
           />
