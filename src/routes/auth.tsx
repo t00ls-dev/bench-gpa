@@ -66,7 +66,7 @@ function AuthPage() {
             Importe relatórios diários, compare períodos e descubra o desempenho real de cada loja, departamento e produto.
           </p>
           <div className="mt-8 flex items-center gap-2 text-sm text-white/70">
-            <ShieldCheck className="size-4" /> Acesso por link mágico — sem senhas.
+            <ShieldCheck className="size-4" /> Acesso por link mágico : sem senhas.
           </div>
         </div>
         <p className="text-xs text-white/50">© Bench GPA</p>
