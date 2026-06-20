@@ -13,8 +13,10 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
-  Download, FileText, Loader2,
+  FileText, Loader2, Bookmark,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+
 
 export const Route = createFileRoute("/_authenticated/area")({
   component: AreaPage,
@@ -32,19 +34,8 @@ const ALL = "__all__";
 
 
 
-function downloadCsv(filename: string, rows: (string | number)[][]) {
-  const csv = rows
-    .map((r) => r.map((c) => {
-      const s = String(c ?? "");
-      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    }).join(";"))
-    .join("\n");
-  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
+
+
 
 function fmtPct(n: number) {
   return `${(n * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
@@ -141,7 +132,7 @@ function AreaPage() {
   const pathParts: string[] = [];
   if (store !== ALL) {
     const s = stores.find((x) => x.store_code === store);
-    pathParts.push(`Loja ${s ? `${s.store_code} — ${s.store_name}` : store}`);
+    pathParts.push(`Loja ${s ? `${s.store_code}: ${s.store_name}` : store}`);
   } else {
     pathParts.push("Todas as lojas");
   }
@@ -199,19 +190,8 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
-  const exportCsv = () => {
-    const header = ["PLU","Descrição","Departamento","Seção","Grupo","Subgrupo","Venda","Participação %"];
-    const rows: (string | number)[][] = [header];
-    for (const p of filteredTable) {
-      rows.push([
-        p.prod_code, p.prod_name,
-        p.depto ?? "", p.secao ?? "", p.grupo ?? "", p.subgrupo ?? "",
-        p.val.toFixed(2),
-        (p.share * 100).toFixed(2),
-      ]);
-    }
-    downloadCsv(`area-analise-${dateFrom}_${dateTo}.csv`, rows);
-  };
+
+
 
   const exportPdf = () => {
     const win = window.open("", "_blank", "width=900,height=1000");
@@ -226,7 +206,7 @@ function AreaPage() {
         <td class="estoque"></td>
       </tr>`).join("");
     win.document.write(`<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área — Conferência de Estoque</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área (Conferência de Estoque)</title>
 <style>
   *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
   body{margin:24px;color:#111;font-size:11px}
@@ -242,7 +222,7 @@ function AreaPage() {
   thead{display:table-header-group}
   @media print{ body{margin:12mm} }
 </style></head><body>
-<h1>Análise de Área — Conferência de Estoque</h1>
+<h1>Análise de Área (Conferência de Estoque)</h1>
 <div class="meta">
   <div><strong>Área:</strong> ${escapeHtml(area)}</div>
   <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} a ${escapeHtml(fmtBRShort(dateTo))}</div>
@@ -292,7 +272,7 @@ function AreaPage() {
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>Todas</SelectItem>
-                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code} — {s.store_name}</SelectItem>)}
+                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code}: {s.store_name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
