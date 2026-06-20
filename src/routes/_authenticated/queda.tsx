@@ -155,7 +155,7 @@ function QuedaPage() {
   const activeChips: Array<{ label: string; onClear: () => void }> = [];
   if (store !== "__all__") {
     const s = stores.find((x) => x.store_code === store);
-    activeChips.push({ label: `Loja: ${s ? `${s.store_code} — ${s.store_name}` : store}`, onClear: () => setStore("__all__") });
+    activeChips.push({ label: `Loja: ${s ? `${s.store_code} : ${s.store_name}` : store}`, onClear: () => setStore("__all__") });
   }
   if (depto !== "__all__") activeChips.push({ label: `Depto: ${depto}`, onClear: () => setDepto("__all__") });
   if (secao !== "__all__") activeChips.push({ label: `Seção: ${secao}`, onClear: () => setSecao("__all__") });
@@ -224,7 +224,7 @@ function QuedaPage() {
             <Search className="size-4 text-muted-foreground" />
             <input
               placeholder="Buscar produto (3+ caracteres)…"
-              value={prodSelected ? `${prodSelected.prod_code} — ${prodSelected.prod_name}` : prodQuery}
+              value={prodSelected ? `${prodSelected.prod_code} : ${prodSelected.prod_name}` : prodQuery}
               onChange={(e) => { setProdQuery(e.target.value); setProdSelected(null); }}
               className="h-full flex-1 bg-transparent text-sm outline-none"
             />

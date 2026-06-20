@@ -158,7 +158,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
           <div className="flex items-center justify-between gap-2 text-xs">
             <Label className="text-xs">Período selecionado</Label>
             <span className="text-muted-foreground whitespace-nowrap font-medium">
-              {from ? fmtBRShort(from) : "—"} → {to ? fmtBRShort(to) : "—"}
+              {from ? fmtBRShort(from) : "(sem)"} → {to ? fmtBRShort(to) : "(sem)"}
             </span>
           </div>
           <Calendar
