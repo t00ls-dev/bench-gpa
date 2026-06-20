@@ -439,13 +439,13 @@ function escapeHtml(s: string) {
   );
 }
 
-function Th({ label, k, sortKey, sortAsc, toggle, align = "left" }: {
+function Th({ label, k, sortKey, sortAsc, toggle, align = "left", className = "" }: {
   label: string; k: SortKey; sortKey: SortKey; sortAsc: boolean;
-  toggle: (k: SortKey) => void; align?: "left" | "right";
+  toggle: (k: SortKey) => void; align?: "left" | "right"; className?: string;
 }) {
   const active = sortKey === k;
   return (
-    <th className={`py-2 ${align === "right" ? "text-right" : ""}`}>
+    <th className={`py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
       <button
         onClick={() => toggle(k)}
         className={`inline-flex items-center gap-1 hover:text-foreground ${active ? "text-foreground" : ""}`}
@@ -456,3 +456,4 @@ function Th({ label, k, sortKey, sortAsc, toggle, align = "left" }: {
     </th>
   );
 }
+
