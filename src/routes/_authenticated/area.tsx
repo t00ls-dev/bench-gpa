@@ -242,14 +242,22 @@ function AreaPage() {
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="font-display text-2xl sm:text-3xl font-bold flex items-center gap-2">
-          <Layers className="size-7 text-primary shrink-0" /> Análise de Área
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Hierarquia Loja → Departamento → Seção → Grupo → Subgrupo. Identifique produtos com e sem venda para apoio operacional.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Layers className="size-7 text-primary shrink-0" /> Análise de Área
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Hierarquia Loja → Departamento → Seção → Grupo → Subgrupo. Identifique produtos com e sem venda para apoio operacional.
+          </p>
+        </div>
+        <Link to="/personalizada">
+          <Button variant="outline" className="h-9">
+            <Bookmark className="mr-2 size-4" /> Análises Personalizadas
+          </Button>
+        </Link>
       </header>
+
 
       {/* Filtros */}
       <div className="kpi-card mb-4 space-y-3">
