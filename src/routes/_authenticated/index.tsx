@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getDashboard } from "@/lib/analytics.functions";
+import { getDashboard, getDashboardRankings } from "@/lib/analytics.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
+import { RankingCard } from "@/components/ranking-card";
 import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
@@ -19,13 +20,21 @@ const initial: Filters = {
 function Dashboard() {
   const [filters, setFilters] = usePersistentState<Filters>("bench-gpa:filters:dashboard", initial);
   const fn = useServerFn(getDashboard);
+  const fnRank = useServerFn(getDashboardRankings);
+  const enabled = !!filters.dateFrom && !!filters.dateTo;
+
   const { data, isFetching } = useQuery({
     queryKey: ["dashboard", filters],
     queryFn: () => fn({ data: filters }),
-    enabled: !!filters.dateFrom && !!filters.dateTo,
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
+    enabled,
+    staleTime: 60_000, gcTime: 5 * 60_000, refetchOnWindowFocus: false,
+  });
+
+  const { data: rankings, isFetching: rankingLoading } = useQuery({
+    queryKey: ["dashboard-rankings", filters],
+    queryFn: () => fnRank({ data: { ...filters, limit: 10 } }),
+    enabled,
+    staleTime: 60_000, gcTime: 5 * 60_000, refetchOnWindowFocus: false,
   });
 
   const delta = (cur: number, prev: number | undefined) =>
@@ -94,38 +103,18 @@ function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-
         </div>
       </section>
 
-      <section className="mt-6 kpi-card">
-        <h2 className="font-display text-lg font-semibold">Departamentos</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="py-2">Departamento</th>
-                <th className="py-2 text-right">Venda</th>
-                <th className="py-2 text-right">% do total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.current.byDepto ?? []).map((d: { name: string; val: number }) => {
-                const pct = data!.current.total > 0 ? (d.val / data!.current.total) * 100 : 0;
-                return (
-                  <tr key={d.name} className="border-b border-border/60">
-                    <td className="py-2">{d.name}</td>
-                    <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
-                    <td className="num py-2 text-right text-muted-foreground">{pct.toFixed(1)}%</td>
-                  </tr>
-                );
-              })}
-              {(!data || data.current.byDepto.length === 0) && (
-                <tr><td colSpan={3} className="py-6 text-center text-sm text-muted-foreground">Sem dados para os filtros selecionados.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <section className="mt-6 grid gap-4 lg:grid-cols-2">
+        <RankingCard title="Top Departamentos" items={rankings?.byDepto ?? []} isLoading={rankingLoading} />
+        <RankingCard title="Top Seções" items={rankings?.bySecao ?? []} isLoading={rankingLoading} />
+        <RankingCard title="Top Grupos" items={rankings?.byGrupo ?? []} isLoading={rankingLoading} />
+        <RankingCard title="Top Subgrupos" items={rankings?.bySubgrupo ?? []} isLoading={rankingLoading} />
+      </section>
+
+      <section className="mt-6">
+        <RankingCard title="Top Produtos" items={rankings?.byProduto ?? []} isLoading={rankingLoading} />
       </section>
     </div>
   );
