@@ -2,20 +2,20 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getFilterOptions } from "@/lib/analytics.functions";
+import { getAreaAnalysis, getFilterOptions, searchProducts } from "@/lib/analytics.functions";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { MultiSelect } from "@/components/multi-select";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
-  FileText, Loader2, Bookmark,
+  FileText, Loader2,
 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 
 
 export const Route = createFileRoute("/_authenticated/area")({
