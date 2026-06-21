@@ -1,22 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getFilterOptions } from "@/lib/analytics.functions";
+import { getAreaAnalysis, getFilterOptions, searchProducts } from "@/lib/analytics.functions";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { MultiSelect } from "@/components/multi-select";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
-  FileText, Loader2, Bookmark,
+  FileText, Loader2, X, Package,
 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-
 
 export const Route = createFileRoute("/_authenticated/area")({
   component: AreaPage,
@@ -30,46 +29,41 @@ type Product = {
 
 type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
 
-const ALL = "__all__";
-
-
-
-
-
-
 function fmtPct(n: number) {
   return `${(n * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
+
+type AF = {
+  dateFrom: string; dateTo: string;
+  stores: string[]; deptos: string[]; secoes: string[]; grupos: string[]; subgrupos: string[];
+  prodCodes: string[];
+};
 
 function AreaPage() {
   const navigate = useNavigate();
   const getOpts = useServerFn(getFilterOptions);
   const getArea = useServerFn(getAreaAnalysis);
+  const searchProd = useServerFn(searchProducts);
 
-  type AF = {
-    dateFrom: string; dateTo: string;
-    store: string; depto: string; secao: string; grupo: string; subgrupo: string;
-  };
   const [af, setAf] = usePersistentState<AF>("bench-gpa:filters:area", {
     dateFrom: "", dateTo: "",
-    store: ALL, depto: ALL, secao: ALL, grupo: ALL, subgrupo: ALL,
+    stores: [], deptos: [], secoes: [], grupos: [], subgrupos: [], prodCodes: [],
   });
-  const setStore = (v: string) => setAf({ ...af, store: v, depto: ALL, secao: ALL, grupo: ALL, subgrupo: ALL });
-  const setDepto = (v: string) => setAf({ ...af, depto: v, secao: ALL, grupo: ALL, subgrupo: ALL });
-  const setSecao = (v: string) => setAf({ ...af, secao: v, grupo: ALL, subgrupo: ALL });
-  const setGrupo = (v: string) => setAf({ ...af, grupo: v, subgrupo: ALL });
-  const setSubgrupo = (v: string) => setAf({ ...af, subgrupo: v });
-  const setRange = (r: { from: string; to: string }) => setAf({ ...af, dateFrom: r.from, dateTo: r.to });
-  const { dateFrom, dateTo, store, depto, secao, grupo, subgrupo } = af;
+  const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
+  const setStores = (v: string[]) => patch({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
+  const setDeptos = (v: string[]) => patch({ deptos: v, secoes: [], grupos: [], subgrupos: [] });
+  const setSecoes = (v: string[]) => patch({ secoes: v, grupos: [], subgrupos: [] });
+  const setGrupos = (v: string[]) => patch({ grupos: v, subgrupos: [] });
+  const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
+  const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
+
+  const { dateFrom, dateTo, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos, prodCodes } = af;
 
   const { data: opts } = useQuery({
-    queryKey: ["filter-options-area", store, depto, secao, grupo],
+    queryKey: ["filter-options-area", fStores, fDeptos, fSecoes, fGrupos],
     queryFn: () => getOpts({ data: {
       dateFrom: null, dateTo: null,
-      stores: store !== ALL ? [store] : [],
-      deptos: depto !== ALL ? [depto] : [],
-      secoes: secao !== ALL ? [secao] : [],
-      grupos: grupo !== ALL ? [grupo] : [],
+      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos,
     } }),
     staleTime: 5 * 60_000,
   });
@@ -78,8 +72,8 @@ function AreaPage() {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
       const avail = (opts?.availableDates ?? []) as string[];
       const latest = opts.latestDate;
-      const window = avail.filter((d) => d <= latest).slice(-7);
-      setRange({ from: window[0] ?? latest, to: latest });
+      const win = avail.filter((d) => d <= latest).slice(-7);
+      setRange({ from: win[0] ?? latest, to: latest });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
@@ -103,16 +97,11 @@ function AreaPage() {
   const subgrupos = (opts?.subgrupos ?? []) as string[];
 
   const { data, isFetching } = useQuery({
-    queryKey: ["area-analysis", dateFrom, dateTo, store, depto, secao, grupo, subgrupo],
+    queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
     queryFn: () => getArea({ data: {
       dateFrom, dateTo,
-      store: store !== ALL ? store : null,
-      depto: depto !== ALL ? depto : null,
-      secao: secao !== ALL ? secao : null,
-      grupo: grupo !== ALL ? grupo : null,
-      subgrupo: subgrupo !== ALL ? subgrupo : null,
-      prevFrom: null,
-      prevTo: null,
+      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
+      prodCodes,
     } }),
     enabled: !!dateFrom && !!dateTo,
   });
@@ -120,28 +109,45 @@ function AreaPage() {
   const products = (data?.products ?? []) as Product[];
   const total = data?.total ?? 0;
 
-  // Add participation share per product
-  const enriched = useMemo(() => {
-    return products.map((p) => ({
-      ...p,
-      share: total > 0 ? p.val / total : 0,
-    }));
-  }, [products, total]);
+  const enriched = useMemo(() => products.map((p) => ({
+    ...p, share: total > 0 ? p.val / total : 0,
+  })), [products, total]);
 
-  // Breadcrumb path
+  // Breadcrumb
   const pathParts: string[] = [];
-  if (store !== ALL) {
-    const s = stores.find((x) => x.store_code === store);
-    pathParts.push(`Loja ${s ? `${s.store_code}: ${s.store_name}` : store}`);
-  } else {
-    pathParts.push("Todas as lojas");
-  }
-  if (depto !== ALL) pathParts.push(depto);
-  if (secao !== ALL) pathParts.push(secao);
-  if (grupo !== ALL) pathParts.push(grupo);
-  if (subgrupo !== ALL) pathParts.push(subgrupo);
+  if (fStores.length === 0) pathParts.push("Todas as lojas");
+  else if (fStores.length === 1) {
+    const s = stores.find((x) => x.store_code === fStores[0]);
+    pathParts.push(`Loja ${s ? `${s.store_code} - ${s.store_name}` : fStores[0]}`);
+  } else pathParts.push(`${fStores.length} lojas`);
+  const summarize = (arr: string[], one: string, many: string) =>
+    arr.length === 1 ? arr[0] : arr.length > 1 ? `${arr.length} ${many}` : null;
+  const dp = summarize(fDeptos, "depto", "departamentos"); if (dp) pathParts.push(dp);
+  const sc = summarize(fSecoes, "seção", "seções"); if (sc) pathParts.push(sc);
+  const gp = summarize(fGrupos, "grupo", "grupos"); if (gp) pathParts.push(gp);
+  const sg = summarize(fSubgrupos, "subgrupo", "subgrupos"); if (sg) pathParts.push(sg);
+  if (prodCodes.length) pathParts.push(`${prodCodes.length} produto(s)`);
 
-  // (active chips removed per spec)
+  // Product search-add
+  const [prodQuery, setProdQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const tRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (tRef.current) window.clearTimeout(tRef.current);
+    tRef.current = window.setTimeout(() => setDebounced(prodQuery), 250);
+  }, [prodQuery]);
+
+  const { data: suggestions } = useQuery({
+    queryKey: ["area-product-search", debounced],
+    queryFn: () => searchProd({ data: { q: debounced } }),
+    enabled: debounced.length >= 3,
+  });
+
+  const addProd = (code: string) => {
+    if (!prodCodes.includes(code)) patch({ prodCodes: [...prodCodes, code] });
+    setProdQuery(""); setDebounced("");
+  };
+  const removeProd = (code: string) => patch({ prodCodes: prodCodes.filter((c) => c !== code) });
 
   // Table
   const [search, setSearch] = useState("");
@@ -150,7 +156,7 @@ function AreaPage() {
   const [pageSize, setPageSize] = useState<25 | 50 | 100 | 250>(50);
   const [page, setPage] = useState(1);
 
-  useEffect(() => { setPage(1); }, [search, pageSize, sortKey, sortAsc, dateFrom, dateTo, store, depto, secao, grupo, subgrupo]);
+  useEffect(() => { setPage(1); }, [search, pageSize, sortKey, sortAsc, dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes]);
 
   const filteredTable = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -190,9 +196,6 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
-
-
-
   const exportPdf = () => {
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;
@@ -225,7 +228,7 @@ function AreaPage() {
 <h1>Análise de Área (Conferência de Estoque)</h1>
 <div class="meta">
   <div><strong>Área:</strong> ${escapeHtml(area)}</div>
-  <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} a ${escapeHtml(fmtBRShort(dateTo))}</div>
+  <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} - ${escapeHtml(fmtBRShort(dateTo))}</div>
   <div><strong>Produtos listados:</strong> ${filteredTable.length} &nbsp;·&nbsp; <strong>Emissão:</strong> ${escapeHtml(today)}</div>
 </div>
 <table>
@@ -242,27 +245,19 @@ function AreaPage() {
 
   return (
     <div>
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <Layers className="size-7 text-primary shrink-0" /> Análise de Área
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Hierarquia Loja → Departamento → Seção → Grupo → Subgrupo. Identifique produtos com e sem venda para apoio operacional.
-          </p>
-        </div>
-        <Link to="/personalizada">
-          <Button variant="outline" className="h-9">
-            <Bookmark className="mr-2 size-4" /> Análises Personalizadas
-          </Button>
-        </Link>
+      <header className="mb-6">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold flex items-center gap-2">
+          <Layers className="size-7 text-primary shrink-0" /> Análise de Área
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Hierarquia Loja → Departamento → Seção → Grupo → Subgrupo. Identifique produtos com e sem venda para apoio operacional.
+        </p>
       </header>
-
 
       {/* Filtros */}
       <div className="kpi-card mb-4 space-y-3">
         <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <div>
+          <div className="lg:col-span-2">
             <Label className="text-xs">Período</Label>
             <div className="mt-1">
               <DateRangePicker
@@ -276,64 +271,89 @@ function AreaPage() {
           </div>
           <div>
             <Label className="text-xs">Loja</Label>
-            <Select value={store} onValueChange={setStore}>
-              <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todas</SelectItem>
-                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code}: {s.store_name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect
+              label="Todas"
+              options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} - ${s.store_name}` }))}
+              value={fStores}
+              onChange={setStores}
+            />
           </div>
           <div>
             <Label className="text-xs">Departamento</Label>
-            <Select value={depto} onValueChange={setDepto}>
-              <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {deptos.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect label="Todos" options={deptos.map((d) => ({ value: d, label: d }))} value={fDeptos} onChange={setDeptos} />
           </div>
           <div>
             <Label className="text-xs">Seção</Label>
-            <Select value={secao} onValueChange={setSecao} disabled={depto === ALL && secoes.length === 0}>
-              <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todas</SelectItem>
-                {secoes.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect label="Todas" options={secoes.map((s) => ({ value: s, label: s }))} value={fSecoes} onChange={setSecoes} />
           </div>
           <div>
             <Label className="text-xs">Grupo</Label>
-            <Select value={grupo} onValueChange={setGrupo} disabled={grupos.length === 0}>
-              <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {grupos.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect label="Todos" options={grupos.map((g) => ({ value: g, label: g }))} value={fGrupos} onChange={setGrupos} />
           </div>
-          <div>
+          <div className="md:col-span-2">
             <Label className="text-xs">Subgrupo</Label>
-            <Select value={subgrupo} onValueChange={setSubgrupo} disabled={subgrupos.length === 0}>
-              <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>
-                {subgrupos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <MultiSelect label="Todos" options={subgrupos.map((s) => ({ value: s, label: s }))} value={fSubgrupos} onChange={setSubgrupos} />
           </div>
         </div>
 
+        {/* Produtos filter */}
+        <div className="relative border-t pt-3">
+          <Label className="text-xs">Produtos (opcional)</Label>
+          <div className="mt-1 flex items-center gap-2 rounded-md border border-input bg-background px-2 h-9">
+            <Search className="size-4 text-muted-foreground" />
+            <input
+              placeholder="Buscar PLU ou descrição (3+ caracteres) para adicionar…"
+              value={prodQuery}
+              onChange={(e) => setProdQuery(e.target.value)}
+              className="h-full flex-1 bg-transparent text-sm outline-none"
+            />
+            {prodCodes.length > 0 && (
+              <button
+                onClick={() => patch({ prodCodes: [] })}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Limpar todos
+              </button>
+            )}
+          </div>
+          {debounced.length >= 3 && suggestions && suggestions.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+              {suggestions.map((s) => {
+                const already = prodCodes.includes(s.prod_code);
+                return (
+                  <li key={s.prod_code}>
+                    <button
+                      onClick={() => !already && addProd(s.prod_code)}
+                      disabled={already}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
+                    >
+                      <Package className="size-3.5 text-muted-foreground" />
+                      <span className="font-mono text-xs text-muted-foreground">{s.prod_code}</span>
+                      <span className="truncate">{s.prod_name}</span>
+                      {already && <span className="ml-auto text-xs text-muted-foreground">selecionado</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {prodCodes.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {prodCodes.map((c) => (
+                <span key={c} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
+                  <span className="font-mono">{c}</span>
+                  <button onClick={() => removeProd(c)}><X className="size-3" /></button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
       ) : (
         <>
-          {/* KPIs */}
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <KpiCard label="Venda Total" value={fmtBRL(total)} />
             <KpiCard label="PLUs (área)" value={fmtInt(data?.plusTotal ?? 0)} />
@@ -342,8 +362,7 @@ function AreaPage() {
             <KpiCard label="Venda média por PLU" value={fmtBRL(data?.avgPerPlu ?? 0)} />
           </section>
 
-          {/* Tabela */}
-          <div className="kpi-card">
+          <div className="kpi-card min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h2 className="font-display text-lg font-semibold">Produtos da área</h2>
               {isFetching && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
@@ -369,7 +388,6 @@ function AreaPage() {
                 <Button variant="outline" size="sm" onClick={exportPdf} className="h-9">
                   <FileText className="mr-1.5 size-4" /> PDF
                 </Button>
-
               </div>
             </div>
 
@@ -385,7 +403,6 @@ function AreaPage() {
                     <Th label="Subgrupo" k="subgrupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
                     <Th label="Part. %" k="share" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
-
                   </tr>
                 </thead>
                 <tbody>
@@ -406,7 +423,6 @@ function AreaPage() {
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "(sem)"}</td>
                         <td className="num py-2 pl-8 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
                         <td className="num py-2 pl-8 text-right whitespace-nowrap text-muted-foreground">{fmtPct(p.share)}</td>
-
                       </tr>
                     );
                   })}
@@ -464,4 +480,3 @@ function Th({ label, k, sortKey, sortAsc, toggle, align = "left", className = ""
     </th>
   );
 }
-
