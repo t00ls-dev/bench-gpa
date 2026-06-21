@@ -30,8 +30,6 @@ type Product = {
 
 type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
 
-const ALL = "__all__";
-
 
 
 
