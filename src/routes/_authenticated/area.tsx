@@ -132,7 +132,7 @@ function AreaPage() {
   const pathParts: string[] = [];
   if (store !== ALL) {
     const s = stores.find((x) => x.store_code === store);
-    pathParts.push(`Loja ${s ? `${s.store_code}: ${s.store_name}` : store}`);
+    pathParts.push(`Loja ${s ? `${s.store_code} - ${s.store_name}` : store}`);
   } else {
     pathParts.push("Todas as lojas");
   }
@@ -280,7 +280,7 @@ function AreaPage() {
               <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>Todas</SelectItem>
-                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code}: {s.store_name}</SelectItem>)}
+                {stores.map((s) => <SelectItem key={s.store_code} value={s.store_code}>{s.store_code} - {s.store_name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

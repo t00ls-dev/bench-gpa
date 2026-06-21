@@ -19,7 +19,7 @@ export function RankingCard({ title, items, isLoading }: { title: string; items:
           <tbody>
             {items.map((it, i) => {
               const pct = total > 0 ? (it.val / total) * 100 : 0;
-              const label = it.code ? `${it.code}: ${it.name ?? ""}` : (it.name ?? "");
+              const label = it.code ? `${it.code} - ${it.name ?? ""}` : (it.name ?? "");
               return (
                 <tr key={`${label}-${i}`} className="border-b border-border/60">
                   <td className="py-2 pr-3 truncate max-w-[280px]" title={label}>{label}</td>
