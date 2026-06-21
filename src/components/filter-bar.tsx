@@ -2,12 +2,10 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getFilterOptions } from "@/lib/analytics.functions";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { MultiSelect } from "@/components/multi-select";
 
 export interface Filters {
   dateFrom: string;
@@ -26,70 +24,6 @@ interface Props {
 }
 
 interface StoreOpt { store_code: string; store_name: string }
-
-function MultiSelect({
-  label, options, value, onChange,
-}: { label: string; options: { value: string; label: string }[]; value: string[]; onChange: (v: string[]) => void }) {
-  const toggle = (v: string) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
-  const allSelected = options.length > 0 && value.length === options.length;
-  const toggleAll = () => onChange(allSelected ? [] : options.map((o) => o.value));
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="h-9 w-full justify-between text-left font-normal">
-          <span className="truncate">
-            {label}{value.length > 0 && <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">{value.length}</span>}
-          </span>
-          <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0">
-        {options.length > 0 && (
-          <button
-            onClick={toggleAll}
-            className="flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            <span className={cn(
-              "flex size-4 items-center justify-center rounded border",
-              allSelected ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
-            )}>
-              {allSelected && <Check className="size-3" />}
-            </span>
-            <span>Selecionar todos</span>
-          </button>
-        )}
-        <div className="max-h-72 overflow-y-auto">
-          {options.length === 0 && <div className="p-3 text-xs text-muted-foreground">Nenhuma opção.</div>}
-          {options.map((o) => {
-            const checked = value.includes(o.value);
-            return (
-              <button
-                key={o.value}
-                onClick={() => toggle(o.value)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-              >
-                <span className={cn(
-                  "flex size-4 shrink-0 items-center justify-center rounded border",
-                  checked ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
-                )}>
-                  {checked && <Check className="size-3" />}
-                </span>
-                <span className="truncate text-left flex-1">{o.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        {value.length > 0 && (
-          <div className="border-t p-2">
-            <Button variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
-              <X className="mr-1 size-3" /> Limpar seleção
-            </Button>
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 export function FilterBar({ value, onChange }: Props) {
   const getOpts = useServerFn(getFilterOptions);
@@ -159,7 +93,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Loja</Label>
           <MultiSelect
             label="Todas"
-            options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} : ${s.store_name}` }))}
+            options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} - ${s.store_name}` }))}
             value={value.stores}
             onChange={setStores}
           />
