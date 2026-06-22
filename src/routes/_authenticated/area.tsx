@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getFilterOptions, searchProducts } from "@/lib/analytics.functions";
+import { getAreaAnalysis, getFilterOptions } from "@/lib/analytics.functions";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
-  FileText, Loader2, X, Package,
+  FileText, Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/area")({
@@ -43,7 +43,6 @@ function AreaPage() {
   const navigate = useNavigate();
   const getOpts = useServerFn(getFilterOptions);
   const getArea = useServerFn(getAreaAnalysis);
-  const searchProd = useServerFn(searchProducts);
 
   const [af, setAf] = usePersistentState<AF>("bench-gpa:filters:area", {
     dateFrom: "", dateTo: "",
