@@ -95,6 +95,33 @@ function AreaPage() {
   const grupos = (opts?.grupos ?? []) as string[];
   const subgrupos = (opts?.subgrupos ?? []) as string[];
 
+  // Lista de produtos disponíveis (sem filtro de prodCodes) - alimenta o MultiSelect de Produtos.
+  const { data: prodOptsData } = useQuery({
+    queryKey: ["area-product-options", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
+    queryFn: () => getArea({ data: {
+      dateFrom, dateTo,
+      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
+      prodCodes: [],
+    } }),
+    enabled: !!dateFrom && !!dateTo,
+    staleTime: 60_000,
+  });
+  const productOptions = useMemo(() => {
+    const list = (prodOptsData?.products ?? []) as Product[];
+    return list
+      .map((p) => ({ value: p.prod_code, label: `${p.prod_code} - ${p.prod_name}` }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [prodOptsData]);
+
+  // Reconcilia prodCodes selecionados quando filtros pais mudarem - remove códigos que não existem mais.
+  useEffect(() => {
+    if (!prodOptsData) return;
+    const valid = new Set((prodOptsData.products as Product[]).map((p) => p.prod_code));
+    const next = prodCodes.filter((c) => valid.has(c));
+    if (next.length !== prodCodes.length) patch({ prodCodes: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prodOptsData]);
+
   const { data, isFetching } = useQuery({
     queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
     queryFn: () => getArea({ data: {
@@ -126,27 +153,6 @@ function AreaPage() {
   const gp = summarize(fGrupos, "grupo", "grupos"); if (gp) pathParts.push(gp);
   const sg = summarize(fSubgrupos, "subgrupo", "subgrupos"); if (sg) pathParts.push(sg);
   if (prodCodes.length) pathParts.push(`${prodCodes.length} produto(s)`);
-
-  // Product search-add
-  const [prodQuery, setProdQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const tRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (tRef.current) window.clearTimeout(tRef.current);
-    tRef.current = window.setTimeout(() => setDebounced(prodQuery), 250);
-  }, [prodQuery]);
-
-  const { data: suggestions } = useQuery({
-    queryKey: ["area-product-search", debounced],
-    queryFn: () => searchProd({ data: { q: debounced } }),
-    enabled: debounced.length >= 3,
-  });
-
-  const addProd = (code: string) => {
-    if (!prodCodes.includes(code)) patch({ prodCodes: [...prodCodes, code] });
-    setProdQuery(""); setDebounced("");
-  };
-  const removeProd = (code: string) => patch({ prodCodes: prodCodes.filter((c) => c !== code) });
 
   // Table
   const [search, setSearch] = useState("");
