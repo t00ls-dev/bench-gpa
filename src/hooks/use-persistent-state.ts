@@ -10,7 +10,16 @@ export function usePersistentState<T>(key: string, initial: T) {
     try {
       const raw = window.localStorage.getItem(key);
       if (raw == null) return initial;
-      return JSON.parse(raw) as T;
+      const parsed = JSON.parse(raw);
+      // Shallow-merge stored object with defaults so fields added later
+      // don't read back as `undefined` (e.g. when new array fields are introduced).
+      if (
+        parsed && typeof parsed === "object" && !Array.isArray(parsed) &&
+        initial && typeof initial === "object" && !Array.isArray(initial)
+      ) {
+        return { ...(initial as object), ...(parsed as object) } as T;
+      }
+      return parsed as T;
     } catch {
       return initial;
     }
