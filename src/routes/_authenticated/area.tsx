@@ -225,7 +225,7 @@ function AreaPage() {
   thead{display:table-header-group}
   @media print{ body{margin:12mm} }
 </style></head><body>
-<h1>Análise de Área (Conferência de Estoque)</h1>
+<h1>Análise de Área</h1>
 <div class="meta">
   <div><strong>Área:</strong> ${escapeHtml(area)}</div>
   <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} - ${escapeHtml(fmtBRShort(dateTo))}</div>
