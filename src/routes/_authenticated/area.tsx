@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getFilterOptions, searchProducts } from "@/lib/analytics.functions";
+import { getAreaAnalysis, getFilterOptions } from "@/lib/analytics.functions";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
-  FileText, Loader2, X, Package,
+  FileText, Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/area")({
@@ -43,7 +43,6 @@ function AreaPage() {
   const navigate = useNavigate();
   const getOpts = useServerFn(getFilterOptions);
   const getArea = useServerFn(getAreaAnalysis);
-  const searchProd = useServerFn(searchProducts);
 
   const [af, setAf] = usePersistentState<AF>("bench-gpa:filters:area", {
     dateFrom: "", dateTo: "",
@@ -96,6 +95,33 @@ function AreaPage() {
   const grupos = (opts?.grupos ?? []) as string[];
   const subgrupos = (opts?.subgrupos ?? []) as string[];
 
+  // Lista de produtos disponíveis (sem filtro de prodCodes) - alimenta o MultiSelect de Produtos.
+  const { data: prodOptsData } = useQuery({
+    queryKey: ["area-product-options", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
+    queryFn: () => getArea({ data: {
+      dateFrom, dateTo,
+      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
+      prodCodes: [],
+    } }),
+    enabled: !!dateFrom && !!dateTo,
+    staleTime: 60_000,
+  });
+  const productOptions = useMemo(() => {
+    const list = (prodOptsData?.products ?? []) as Product[];
+    return list
+      .map((p) => ({ value: p.prod_code, label: `${p.prod_code} - ${p.prod_name}` }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [prodOptsData]);
+
+  // Reconcilia prodCodes selecionados quando filtros pais mudarem - remove códigos que não existem mais.
+  useEffect(() => {
+    if (!prodOptsData) return;
+    const valid = new Set((prodOptsData.products as Product[]).map((p) => p.prod_code));
+    const next = prodCodes.filter((c) => valid.has(c));
+    if (next.length !== prodCodes.length) patch({ prodCodes: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prodOptsData]);
+
   const { data, isFetching } = useQuery({
     queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
     queryFn: () => getArea({ data: {
@@ -127,27 +153,6 @@ function AreaPage() {
   const gp = summarize(fGrupos, "grupo", "grupos"); if (gp) pathParts.push(gp);
   const sg = summarize(fSubgrupos, "subgrupo", "subgrupos"); if (sg) pathParts.push(sg);
   if (prodCodes.length) pathParts.push(`${prodCodes.length} produto(s)`);
-
-  // Product search-add
-  const [prodQuery, setProdQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const tRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (tRef.current) window.clearTimeout(tRef.current);
-    tRef.current = window.setTimeout(() => setDebounced(prodQuery), 250);
-  }, [prodQuery]);
-
-  const { data: suggestions } = useQuery({
-    queryKey: ["area-product-search", debounced],
-    queryFn: () => searchProd({ data: { q: debounced } }),
-    enabled: debounced.length >= 3,
-  });
-
-  const addProd = (code: string) => {
-    if (!prodCodes.includes(code)) patch({ prodCodes: [...prodCodes, code] });
-    setProdQuery(""); setDebounced("");
-  };
-  const removeProd = (code: string) => patch({ prodCodes: prodCodes.filter((c) => c !== code) });
 
   // Table
   const [search, setSearch] = useState("");
@@ -200,7 +205,7 @@ function AreaPage() {
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;
     const area = pathParts.join(" › ");
-    const today = new Date().toLocaleDateString("pt-BR");
+    
     const rowsHtml = filteredTable.map((p) => `
       <tr>
         <td>${escapeHtml(p.prod_code)}</td>
@@ -229,7 +234,7 @@ function AreaPage() {
 <div class="meta">
   <div><strong>Área:</strong> ${escapeHtml(area)}</div>
   <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} - ${escapeHtml(fmtBRShort(dateTo))}</div>
-  <div><strong>Produtos listados:</strong> ${filteredTable.length} &nbsp;·&nbsp; <strong>Emissão:</strong> ${escapeHtml(today)}</div>
+  <div><strong>Produtos listados:</strong> ${filteredTable.length}</div>
 </div>
 <table>
   <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:110px;text-align:right">Venda</th><th style="width:120px">Estoque</th></tr></thead>
@@ -296,57 +301,21 @@ function AreaPage() {
           </div>
         </div>
 
-        {/* Produtos filter */}
-        <div className="relative border-t pt-3">
+        {/* Produtos filter (cascata) */}
+        <div className="border-t pt-3">
           <Label className="text-xs">Produtos (opcional)</Label>
-          <div className="mt-1 flex items-center gap-2 rounded-md border border-input bg-background px-2 h-9">
-            <Search className="size-4 text-muted-foreground" />
-            <input
-              placeholder="Buscar PLU ou descrição (3+ caracteres) para adicionar…"
-              value={prodQuery}
-              onChange={(e) => setProdQuery(e.target.value)}
-              className="h-full flex-1 bg-transparent text-sm outline-none"
+          <div className="mt-1">
+            <MultiSelect
+              label="Todos"
+              options={productOptions}
+              value={prodCodes}
+              onChange={(v) => patch({ prodCodes: v })}
+              searchable
             />
-            {prodCodes.length > 0 && (
-              <button
-                onClick={() => patch({ prodCodes: [] })}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Limpar todos
-              </button>
-            )}
           </div>
-          {debounced.length >= 3 && suggestions && suggestions.length > 0 && (
-            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
-              {suggestions.map((s) => {
-                const already = prodCodes.includes(s.prod_code);
-                return (
-                  <li key={s.prod_code}>
-                    <button
-                      onClick={() => !already && addProd(s.prod_code)}
-                      disabled={already}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
-                    >
-                      <Package className="size-3.5 text-muted-foreground" />
-                      <span className="font-mono text-xs text-muted-foreground">{s.prod_code}</span>
-                      <span className="truncate">{s.prod_name}</span>
-                      {already && <span className="ml-auto text-xs text-muted-foreground">selecionado</span>}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {prodCodes.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {prodCodes.map((c) => (
-                <span key={c} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
-                  <span className="font-mono">{c}</span>
-                  <button onClick={() => removeProd(c)}><X className="size-3" /></button>
-                </span>
-              ))}
-            </div>
-          )}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Lista derivada dos filtros acima (Loja, Departamento, Seção, Grupo, Subgrupo).
+          </p>
         </div>
       </div>
 
