@@ -234,7 +234,7 @@ function AreaPage() {
 <div class="meta">
   <div><strong>Área:</strong> ${escapeHtml(area)}</div>
   <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} - ${escapeHtml(fmtBRShort(dateTo))}</div>
-  <div><strong>Produtos listados:</strong> ${filteredTable.length} &nbsp;·&nbsp; <strong>Emissão:</strong> ${escapeHtml(today)}</div>
+  <div><strong>Produtos listados:</strong> ${filteredTable.length}</div>
 </div>
 <table>
   <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:110px;text-align:right">Venda</th><th style="width:120px">Estoque</th></tr></thead>
