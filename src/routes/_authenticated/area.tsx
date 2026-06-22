@@ -205,7 +205,7 @@ function AreaPage() {
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;
     const area = pathParts.join(" › ");
-    void today;
+    
     const rowsHtml = filteredTable.map((p) => `
       <tr>
         <td>${escapeHtml(p.prod_code)}</td>
