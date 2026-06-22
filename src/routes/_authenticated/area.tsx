@@ -209,7 +209,7 @@ function AreaPage() {
         <td class="estoque"></td>
       </tr>`).join("");
     win.document.write(`<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área (Conferência de Estoque)</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área</title>
 <style>
   *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
   body{margin:24px;color:#111;font-size:11px}
