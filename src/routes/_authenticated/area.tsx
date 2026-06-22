@@ -301,57 +301,21 @@ function AreaPage() {
           </div>
         </div>
 
-        {/* Produtos filter */}
-        <div className="relative border-t pt-3">
+        {/* Produtos filter (cascata) */}
+        <div className="border-t pt-3">
           <Label className="text-xs">Produtos (opcional)</Label>
-          <div className="mt-1 flex items-center gap-2 rounded-md border border-input bg-background px-2 h-9">
-            <Search className="size-4 text-muted-foreground" />
-            <input
-              placeholder="Buscar PLU ou descrição (3+ caracteres) para adicionar…"
-              value={prodQuery}
-              onChange={(e) => setProdQuery(e.target.value)}
-              className="h-full flex-1 bg-transparent text-sm outline-none"
+          <div className="mt-1">
+            <MultiSelect
+              label="Todos"
+              options={productOptions}
+              value={prodCodes}
+              onChange={(v) => patch({ prodCodes: v })}
+              searchable
             />
-            {prodCodes.length > 0 && (
-              <button
-                onClick={() => patch({ prodCodes: [] })}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Limpar todos
-              </button>
-            )}
           </div>
-          {debounced.length >= 3 && suggestions && suggestions.length > 0 && (
-            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
-              {suggestions.map((s) => {
-                const already = prodCodes.includes(s.prod_code);
-                return (
-                  <li key={s.prod_code}>
-                    <button
-                      onClick={() => !already && addProd(s.prod_code)}
-                      disabled={already}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
-                    >
-                      <Package className="size-3.5 text-muted-foreground" />
-                      <span className="font-mono text-xs text-muted-foreground">{s.prod_code}</span>
-                      <span className="truncate">{s.prod_name}</span>
-                      {already && <span className="ml-auto text-xs text-muted-foreground">selecionado</span>}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {prodCodes.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {prodCodes.map((c) => (
-                <span key={c} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
-                  <span className="font-mono">{c}</span>
-                  <button onClick={() => removeProd(c)}><X className="size-3" /></button>
-                </span>
-              ))}
-            </div>
-          )}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Lista derivada dos filtros acima (Loja, Departamento, Seção, Grupo, Subgrupo).
+          </p>
         </div>
       </div>
 
