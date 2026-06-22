@@ -209,7 +209,7 @@ function AreaPage() {
         <td class="estoque"></td>
       </tr>`).join("");
     win.document.write(`<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área (Conferência de Estoque)</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área</title>
 <style>
   *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
   body{margin:24px;color:#111;font-size:11px}
@@ -225,7 +225,7 @@ function AreaPage() {
   thead{display:table-header-group}
   @media print{ body{margin:12mm} }
 </style></head><body>
-<h1>Análise de Área (Conferência de Estoque)</h1>
+<h1>Análise de Área</h1>
 <div class="meta">
   <div><strong>Área:</strong> ${escapeHtml(area)}</div>
   <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} - ${escapeHtml(fmtBRShort(dateTo))}</div>
