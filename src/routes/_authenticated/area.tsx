@@ -255,7 +255,7 @@ function AreaPage() {
           <Layers className="size-7 text-primary shrink-0" /> Análise de Área
         </h1>
         <p className="text-sm text-muted-foreground">
-          Hierarquia Loja → Departamento → Seção → Grupo → Subgrupo. Identifique produtos com e sem venda para apoio operacional.
+          Identifique produtos com e sem venda para apoio operacional.
         </p>
       </header>
 
