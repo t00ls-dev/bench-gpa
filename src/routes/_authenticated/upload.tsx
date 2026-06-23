@@ -92,7 +92,7 @@ function UploadPage() {
       <header className="mb-6">
         <h1 className="font-display text-3xl font-bold">Importar planilhas</h1>
         <p className="text-sm text-muted-foreground">
-          Envie planilhas de vendas (DTA_VENDA). Dados existentes na mesma data são substituídos integralmente.
+          Dados existentes na mesma data são substituídos integralmente.
         </p>
       </header>
 
