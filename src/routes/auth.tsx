@@ -69,7 +69,7 @@ function AuthPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             {sent
               ? `Enviamos um link de acesso para ${email}. Abra o e-mail no mesmo dispositivo para entrar.`
-              : "Informe seu e-mail corporativo para receber um link de acesso."}
+              : "Informe seu e-mail para receber um link de acesso."}
           </p>
 
           <form onSubmit={sendLink} className="mt-6 space-y-4">
@@ -79,7 +79,7 @@ function AuthPage() {
                 id="email"
                 type="email"
                 required
-                placeholder="voce@empresa.com"
+                placeholder="nome@tld.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1.5"
