@@ -61,15 +61,12 @@ function AuthPage() {
           <div className="font-display text-2xl font-bold">
             Bench<span className="text-primary">GPA</span>
           </div>
-          <p className="text-xs text-muted-foreground">Business Intelligence</p>
         </div>
 
         <div className="kpi-card">
           <h2 className="font-display text-xl font-semibold">Entrar</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {sent
-              ? `Enviamos um link de acesso para ${email}. Abra o e-mail no mesmo dispositivo para entrar.`
-              : "Informe seu e-mail para receber um link de acesso."}
+            {sent && `Enviamos um link de acesso para ${email}. Abra o e-mail no mesmo dispositivo para entrar.`}
           </p>
 
           <form onSubmit={sendLink} className="mt-6 space-y-4">
