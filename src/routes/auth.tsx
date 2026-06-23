@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Mail, Loader2, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -52,29 +52,20 @@ function AuthPage() {
   };
 
   return (
-    <div className="grid min-h-screen md:grid-cols-2">
-      <div className="hidden gradient-hero md:flex md:flex-col md:justify-between md:p-12 text-white">
-        <div className="flex items-center gap-3 font-display text-xl font-bold">
-          <span className="grid size-10 place-items-center rounded-xl bg-white/10 backdrop-blur">B</span>
-          Bench<span className="text-accent">GPA</span>
-        </div>
-        <div>
-          <h1 className="font-display text-4xl font-extrabold leading-tight">
-            Inteligência operacional<br />para o varejo.
-          </h1>
-          <p className="mt-4 max-w-md text-white/80">
-            Importe relatórios diários, compare períodos e descubra o desempenho real de cada loja, departamento e produto.
-          </p>
-          <div className="mt-8 flex items-center gap-2 text-sm text-white/70">
-            <ShieldCheck className="size-4" /> Acesso por link mágico : sem senhas.
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <span className="grid size-14 place-items-center rounded-2xl bg-[image:var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-card)] font-display text-2xl font-bold">
+            B
+          </span>
+          <div className="font-display text-2xl font-bold">
+            Bench<span className="text-primary">GPA</span>
           </div>
+          <p className="text-xs text-muted-foreground">Business Intelligence</p>
         </div>
-        <p className="text-xs text-white/50">© Bench GPA</p>
-      </div>
 
-      <div className="flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-2xl font-bold">Entrar</h2>
+        <div className="kpi-card">
+          <h2 className="font-display text-xl font-semibold">Entrar</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {sent
               ? `Enviamos um link de acesso para ${email}. Abra o e-mail no mesmo dispositivo para entrar.`
@@ -103,7 +94,7 @@ function AuthPage() {
               ) : sent ? (
                 <><Mail className="mr-2 size-4" /> Reenviar link</>
               ) : (
-                <><Mail className="mr-2 size-4" /> Enviar link de acesso</>
+                <><Mail className="mr-2 size-4" /> Entrar</>
               )}
             </Button>
           </form>
@@ -111,16 +102,14 @@ function AuthPage() {
           {sent && (
             <div className="mt-6 flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-              <span>
-                Não encontrou? Verifique a caixa de spam. O link expira em 1 hora.
-              </span>
+              <span>Não encontrou? Verifique a caixa de spam. O link expira em 1 hora.</span>
             </div>
           )}
-
-          <p className="mt-8 text-xs text-muted-foreground">
-            Novos cadastros aguardam aprovação de um administrador.
-          </p>
         </div>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Sistema de uso interno. Novos cadastros aguardam aprovação.
+        </p>
       </div>
     </div>
   );
