@@ -162,7 +162,7 @@ function UploadPage() {
       </div>
 
       <div className="mt-6 kpi-card">
-        <h2 className="font-display text-base font-semibold mb-3">Histórico de datas importadas</h2>
+        <h2 className="font-display text-base font-semibold mb-3">Histórico de importações</h2>
         <div className="max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead>
