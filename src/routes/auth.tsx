@@ -79,7 +79,7 @@ function AuthPage() {
                 id="email"
                 type="email"
                 required
-                placeholder="nome@tld.com"
+                placeholder="nome@dominio.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1.5"
@@ -108,7 +108,7 @@ function AuthPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Sistema de uso interno. Novos cadastros aguardam aprovação.
+          Sistema de uso interno.
         </p>
       </div>
     </div>
