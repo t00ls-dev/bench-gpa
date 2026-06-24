@@ -206,6 +206,18 @@ export const getFilterOptions = createServerFn({ method: "POST" })
     };
   });
 
+export const getStores = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StoreOption[]> => {
+    const supabase = context.supabase as DB;
+    const { data, error } = await supabase
+      .from("stores")
+      .select("store_code, store_name")
+      .order("store_name", { ascending: true });
+    if (error) throw safeError("analytics", error);
+    return (data ?? []) as StoreOption[];
+  });
+
 export const getDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
