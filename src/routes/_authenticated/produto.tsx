@@ -49,13 +49,13 @@ function ProdutoPage() {
 
   const search = useServerFn(searchProducts);
   const analysis = useServerFn(getProductAnalysis);
-  const getOpts = useServerFn(getFilterOptions);
+  const getStoresFn = useServerFn(getStores);
 
-  const { data: opts } = useQuery({
-    queryKey: ["filter-options-all"],
-    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null } }),
+  const { data: stores = [] } = useQuery({
+    queryKey: ["stores-all"],
+    queryFn: () => getStoresFn({}),
+    staleTime: 10 * 60_000,
   });
-  const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
 
   const { data: suggestions } = useQuery({
     queryKey: ["product-search", debounced],
