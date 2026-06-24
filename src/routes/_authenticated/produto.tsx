@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { searchProducts, getProductAnalysis, getFilterOptions } from "@/lib/analytics.functions";
+import { searchProducts, getProductAnalysis, getStores } from "@/lib/analytics.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,13 +49,13 @@ function ProdutoPage() {
 
   const search = useServerFn(searchProducts);
   const analysis = useServerFn(getProductAnalysis);
-  const getOpts = useServerFn(getFilterOptions);
+  const getStoresFn = useServerFn(getStores);
 
-  const { data: opts } = useQuery({
-    queryKey: ["filter-options-all"],
-    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null } }),
+  const { data: stores = [] } = useQuery({
+    queryKey: ["stores-all"],
+    queryFn: () => getStoresFn({}),
+    staleTime: 10 * 60_000,
   });
-  const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
 
   const { data: suggestions } = useQuery({
     queryKey: ["product-search", debounced],
