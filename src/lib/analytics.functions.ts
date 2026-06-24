@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { safeError } from "./safe-error";
+import type { Database } from "@/integrations/supabase/types";
+
+type DB = SupabaseClient<Database>;
 
 const FilterSchema = z.object({
   dateFrom: z.string().optional().nullable(),
@@ -14,6 +18,121 @@ const FilterSchema = z.object({
 });
 
 type Filters = z.infer<typeof FilterSchema>;
+
+// ---- RPC result interfaces ----
+interface NameVal { name: string; val: number }
+interface CodeNameVal { code: string; name: string; val: number }
+interface DateVal { date: string; val: number }
+
+interface DashboardMetricsResult {
+  total: number;
+  count: number;
+  byStore: CodeNameVal[];
+  byDepto: NameVal[];
+  byDate: DateVal[];
+}
+
+interface StoreOption { store_code: string; store_name: string }
+interface FilterOptionsResult {
+  latestDate: string | null;
+  stores: StoreOption[];
+  deptos: string[];
+  secoes: string[];
+  grupos: string[];
+  subgrupos: string[];
+  availableDates: string[];
+}
+
+interface DashboardRankingsResult {
+  byDepto: NameVal[];
+  bySecao: NameVal[];
+  byGrupo: NameVal[];
+  bySubgrupo: NameVal[];
+  byProduto: Array<{ code: string; name: string; val: number }>;
+}
+
+interface AreaProduct {
+  prod_code: string;
+  prod_name: string;
+  depto: string | null;
+  secao: string | null;
+  grupo: string | null;
+  subgrupo: string | null;
+  val: number;
+  qty: number;
+}
+interface AreaAnalysisResult {
+  total: number;
+  plusTotal: number;
+  plusWithSale: number;
+  plusWithoutSale: number;
+  avgPerPlu: number;
+  products: AreaProduct[];
+  byDate: DateVal[];
+}
+
+interface ProductAnalysisResult {
+  product: { prod_code: string; prod_name: string } | null;
+  refDate: string | null;
+  refValue: number;
+  byStore: CodeNameVal[];
+  evolution: DateVal[];
+  lastFourSameWeekday: DateVal[];
+  lastFourAll: DateVal[];
+}
+
+type DeclineStatus = "critico" | "alerta" | "atencao";
+interface ProductsInDeclineRow {
+  store_code: string; store_name: string;
+  prod_code: string; prod_name: string;
+  depto: string | null; secao: string | null;
+  avg_daily_hist: number | null; avg_daily_recent: number | null;
+  sum_recent: number; sum_hist: number;
+  variation: number | null;
+  days_without_sale: number | null;
+  last_sale_date: string | null;
+  status: DeclineStatus;
+}
+type ProductsInDeclineResult = ProductsInDeclineRow[];
+
+// ---- helpers ----
+function asRecord(v: unknown): Record<string, unknown> {
+  return (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+}
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+function num(v: unknown): number {
+  return Number(v ?? 0);
+}
+function str(v: unknown): string {
+  return String(v ?? "");
+}
+function strOrNull(v: unknown): string | null {
+  return v == null ? null : String(v);
+}
+function numOrNull(v: unknown): number | null {
+  return v == null ? null : Number(v);
+}
+
+function parseNameVal(xs: unknown): NameVal[] {
+  return asArray(xs).map((x) => {
+    const r = asRecord(x);
+    return { name: str(r.name), val: num(r.val) };
+  });
+}
+function parseCodeNameVal(xs: unknown): CodeNameVal[] {
+  return asArray(xs).map((x) => {
+    const r = asRecord(x);
+    return { code: str(r.code), name: str(r.name), val: num(r.val) };
+  });
+}
+function parseDateVal(xs: unknown): DateVal[] {
+  return asArray(xs).map((x) => {
+    const r = asRecord(x);
+    return { date: str(r.date), val: num(r.val) };
+  });
+}
 
 function shiftPeriod(from: string, to: string, mode: "prev_period" | "prev_week" | "prev_month") {
   const f = new Date(from + "T00:00:00Z");
@@ -28,10 +147,10 @@ function shiftPeriod(from: string, to: string, mode: "prev_period" | "prev_week"
   return { dateFrom: iso(nf), dateTo: iso(nt) };
 }
 
-async function callMetrics(supabase: any, f: Filters) {
-  const { data, error } = await (supabase as any).rpc("dashboard_metrics", {
-    p_date_from: f.dateFrom || null,
-    p_date_to: f.dateTo || null,
+async function callMetrics(supabase: DB, f: Filters): Promise<DashboardMetricsResult> {
+  const { data, error } = await supabase.rpc("dashboard_metrics", {
+    p_date_from: f.dateFrom || (null as unknown as string),
+    p_date_to: f.dateTo || (null as unknown as string),
     p_stores: f.stores ?? [],
     p_deptos: f.deptos ?? [],
     p_secoes: f.secoes ?? [],
@@ -39,13 +158,13 @@ async function callMetrics(supabase: any, f: Filters) {
     p_subgrupos: f.subgrupos ?? [],
   });
   if (error) throw safeError("analytics", error);
-  const d = data as any;
+  const d = asRecord(data);
   return {
-    total: Number(d?.total ?? 0),
-    count: Number(d?.count ?? 0),
-    byStore: (d?.byStore ?? []).map((x: any) => ({ code: x.code, name: x.name, val: Number(x.val) })),
-    byDepto: (d?.byDepto ?? []).map((x: any) => ({ name: x.name, val: Number(x.val) })),
-    byDate: (d?.byDate ?? []).map((x: any) => ({ date: x.date, val: Number(x.val) })),
+    total: num(d.total),
+    count: num(d.count),
+    byStore: parseCodeNameVal(d.byStore),
+    byDepto: parseNameVal(d.byDepto),
+    byDate: parseDateVal(d.byDate),
   };
 }
 
@@ -61,25 +180,29 @@ export const getFilterOptions = createServerFn({ method: "POST" })
       grupos: z.array(z.string()).optional().default([]),
     }).parse(d ?? {})
   )
-  .handler(async ({ data, context }) => {
-    const { data: res, error } = await (context.supabase as any).rpc("filter_options", {
-      p_date_from: data.dateFrom || null,
-      p_date_to: data.dateTo || null,
+  .handler(async ({ data, context }): Promise<FilterOptionsResult> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("filter_options", {
+      p_date_from: data.dateFrom || (null as unknown as string),
+      p_date_to: data.dateTo || (null as unknown as string),
       p_stores: data.stores ?? [],
       p_deptos: data.deptos ?? [],
       p_secoes: data.secoes ?? [],
       p_grupos: data.grupos ?? [],
     });
     if (error) throw safeError("analytics", error);
-    const r = res as any;
+    const r = asRecord(res);
     return {
-      latestDate: (r?.latestDate ?? null) as string | null,
-      stores: r?.stores ?? [],
-      deptos: r?.deptos ?? [],
-      secoes: r?.secoes ?? [],
-      grupos: r?.grupos ?? [],
-      subgrupos: r?.subgrupos ?? [],
-      availableDates: (r?.availableDates ?? []) as string[],
+      latestDate: strOrNull(r.latestDate),
+      stores: asArray(r.stores).map((x) => {
+        const o = asRecord(x);
+        return { store_code: str(o.store_code), store_name: str(o.store_name) };
+      }),
+      deptos: asArray(r.deptos).map(str),
+      secoes: asArray(r.secoes).map(str),
+      grupos: asArray(r.grupos).map(str),
+      subgrupos: asArray(r.subgrupos).map(str),
+      availableDates: asArray(r.availableDates).map(str),
     };
   });
 
@@ -91,11 +214,12 @@ export const getDashboard = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const current = await callMetrics(context.supabase, data);
-    let previous: typeof current | null = null;
+    const supabase = context.supabase as DB;
+    const current = await callMetrics(supabase, data);
+    let previous: DashboardMetricsResult | null = null;
     if (data.compare !== "none" && data.dateFrom && data.dateTo) {
       const prev = shiftPeriod(data.dateFrom, data.dateTo, data.compare);
-      previous = await callMetrics(context.supabase, { ...data, dateFrom: prev.dateFrom, dateTo: prev.dateTo });
+      previous = await callMetrics(supabase, { ...data, dateFrom: prev.dateFrom, dateTo: prev.dateTo });
     }
     return { current, previous };
   });
@@ -103,7 +227,8 @@ export const getDashboard = createServerFn({ method: "POST" })
 export const getImportedDates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await (context.supabase as any).rpc("imported_dates");
+    const supabase = context.supabase as DB;
+    const { data, error } = await supabase.rpc("imported_dates");
     if (error) throw safeError("analytics", error);
     return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
   });
@@ -112,7 +237,8 @@ export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ q: z.string().min(3) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await (context.supabase as any).rpc("product_search", { p_q: data.q.trim() });
+    const supabase = context.supabase as DB;
+    const { data: rows, error } = await supabase.rpc("product_search", { p_q: data.q.trim() });
     if (error) throw safeError("analytics", error);
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
   });
@@ -126,25 +252,31 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       referenceDate: z.string().optional().nullable(),
     }).parse(d)
   )
-  .handler(async ({ data, context }) => {
-    const { data: res, error } = await (context.supabase as any).rpc("product_analysis", {
+  .handler(async ({ data, context }): Promise<ProductAnalysisResult> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("product_analysis", {
       p_prod_code: data.prodCode,
-      p_store_code: data.storeCode || null,
-      p_ref_date: data.referenceDate || null,
+      p_store_code: data.storeCode || undefined,
+      p_ref_date: data.referenceDate || undefined,
     });
     if (error) throw safeError("analytics", error);
-    const r = res as any;
+    const r = asRecord(res);
+    const product = r.product == null
+      ? null
+      : (() => {
+          const p = asRecord(r.product);
+          return { prod_code: str(p.prod_code), prod_name: str(p.prod_name) };
+        })();
     return {
-      product: r?.product ?? null,
-      refDate: r?.refDate ?? null,
-      refValue: Number(r?.refValue ?? 0),
-      byStore: (r?.byStore ?? []).map((x: any) => ({ code: x.code, name: x.name, val: Number(x.val) })),
-      evolution: (r?.evolution ?? []).map((x: any) => ({ date: x.date, val: Number(x.val) })),
-      lastFourSameWeekday: (r?.lastFourSameWeekday ?? []).map((x: any) => ({ date: x.date, val: Number(x.val) })),
-      lastFourAll: (r?.lastFourAll ?? []).map((x: any) => ({ date: x.date, val: Number(x.val) })),
+      product,
+      refDate: strOrNull(r.refDate),
+      refValue: num(r.refValue),
+      byStore: parseCodeNameVal(r.byStore),
+      evolution: parseDateVal(r.evolution),
+      lastFourSameWeekday: parseDateVal(r.lastFourSameWeekday),
+      lastFourAll: parseDateVal(r.lastFourAll),
     };
   });
-
 
 export const getProductsInDecline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -158,8 +290,9 @@ export const getProductsInDecline = createServerFn({ method: "POST" })
       prodCodes: z.array(z.string()).optional().default([]),
     }).parse(d)
   )
-  .handler(async ({ data, context }) => {
-    const { data: res, error } = await (context.supabase as any).rpc("products_in_decline", {
+  .handler(async ({ data, context }): Promise<ProductsInDeclineResult> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("products_in_decline", {
       p_date_from: data.dateFrom,
       p_date_to: data.dateTo,
       p_stores: data.stores ?? [],
@@ -168,17 +301,26 @@ export const getProductsInDecline = createServerFn({ method: "POST" })
       p_prod_codes: data.prodCodes ?? [],
     });
     if (error) throw safeError("analytics", error);
-    return (res ?? []) as Array<{
-      store_code: string; store_name: string;
-      prod_code: string; prod_name: string;
-      depto: string | null; secao: string | null;
-      avg_daily_hist: number | null; avg_daily_recent: number | null;
-      sum_recent: number; sum_hist: number;
-      variation: number | null;
-      days_without_sale: number | null;
-      last_sale_date: string | null;
-      status: "critico" | "alerta" | "atencao";
-    }>;
+    return asArray(res).map((x) => {
+      const r = asRecord(x);
+      const status = r.status as DeclineStatus;
+      return {
+        store_code: str(r.store_code),
+        store_name: str(r.store_name),
+        prod_code: str(r.prod_code),
+        prod_name: str(r.prod_name),
+        depto: strOrNull(r.depto),
+        secao: strOrNull(r.secao),
+        avg_daily_hist: numOrNull(r.avg_daily_hist),
+        avg_daily_recent: numOrNull(r.avg_daily_recent),
+        sum_recent: num(r.sum_recent),
+        sum_hist: num(r.sum_hist),
+        variation: numOrNull(r.variation),
+        days_without_sale: numOrNull(r.days_without_sale),
+        last_sale_date: strOrNull(r.last_sale_date),
+        status,
+      };
+    });
   });
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })
@@ -195,8 +337,9 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       prodCodes: z.array(z.string()).optional().default([]),
     }).parse(d)
   )
-  .handler(async ({ data, context }) => {
-    const { data: res, error } = await (context.supabase as any).rpc("area_analysis", {
+  .handler(async ({ data, context }): Promise<AreaAnalysisResult> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("area_analysis", {
       p_date_from: data.dateFrom,
       p_date_to: data.dateTo,
       p_stores: data.stores ?? [],
@@ -207,37 +350,40 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       p_prod_codes: data.prodCodes ?? [],
     });
     if (error) throw safeError("analytics", error);
-    const r = res as any;
+    const r = asRecord(res);
     return {
-      total: Number(r?.total ?? 0),
-      plusTotal: Number(r?.plusTotal ?? 0),
-      plusWithSale: Number(r?.plusWithSale ?? 0),
-      plusWithoutSale: Number(r?.plusWithoutSale ?? 0),
-      avgPerPlu: Number(r?.avgPerPlu ?? 0),
-      products: ((r?.products ?? []) as any[]).map((p) => ({
-        prod_code: String(p.prod_code),
-        prod_name: String(p.prod_name ?? ""),
-        depto: p.depto ?? null,
-        secao: p.secao ?? null,
-        grupo: p.grupo ?? null,
-        subgrupo: p.subgrupo ?? null,
-        val: Number(p.val ?? 0),
-        qty: Number(p.qty ?? 0),
-      })),
-      byDate: ((r?.byDate ?? []) as any[]).map((x) => ({ date: String(x.date), val: Number(x.val) })),
+      total: num(r.total),
+      plusTotal: num(r.plusTotal),
+      plusWithSale: num(r.plusWithSale),
+      plusWithoutSale: num(r.plusWithoutSale),
+      avgPerPlu: num(r.avgPerPlu),
+      products: asArray(r.products).map((p) => {
+        const o = asRecord(p);
+        return {
+          prod_code: str(o.prod_code),
+          prod_name: str(o.prod_name),
+          depto: strOrNull(o.depto),
+          secao: strOrNull(o.secao),
+          grupo: strOrNull(o.grupo),
+          subgrupo: strOrNull(o.subgrupo),
+          val: num(o.val),
+          qty: num(o.qty),
+        };
+      }),
+      byDate: parseDateVal(r.byDate),
     };
   });
-
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     FilterSchema.extend({ limit: z.number().int().min(1).max(50).optional().default(10) }).parse(d)
   )
-  .handler(async ({ data, context }) => {
-    const { data: res, error } = await (context.supabase as any).rpc("dashboard_rankings", {
-      p_date_from: data.dateFrom || null,
-      p_date_to: data.dateTo || null,
+  .handler(async ({ data, context }): Promise<DashboardRankingsResult> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("dashboard_rankings", {
+      p_date_from: data.dateFrom || (null as unknown as string),
+      p_date_to: data.dateTo || (null as unknown as string),
       p_stores: data.stores ?? [],
       p_deptos: data.deptos ?? [],
       p_secoes: data.secoes ?? [],
@@ -246,15 +392,15 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
       p_limit: data.limit,
     });
     if (error) throw safeError("analytics", error);
-    const r = res as any;
-    const num = (xs: any[]) => xs.map((x) => ({ ...x, val: Number(x.val ?? 0) }));
+    const r = asRecord(res);
     return {
-      byDepto: num(r?.byDepto ?? []),
-      bySecao: num(r?.bySecao ?? []),
-      byGrupo: num(r?.byGrupo ?? []),
-      bySubgrupo: num(r?.bySubgrupo ?? []),
-      byProduto: num(r?.byProduto ?? []),
+      byDepto: parseNameVal(r.byDepto),
+      bySecao: parseNameVal(r.bySecao),
+      byGrupo: parseNameVal(r.byGrupo),
+      bySubgrupo: parseNameVal(r.bySubgrupo),
+      byProduto: asArray(r.byProduto).map((x) => {
+        const o = asRecord(x);
+        return { code: str(o.code), name: str(o.name), val: num(o.val) };
+      }),
     };
   });
-
-
