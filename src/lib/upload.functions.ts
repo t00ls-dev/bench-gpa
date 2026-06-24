@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { safeError } from "./safe-error";
 
 async function assertAdmin(ctx: { supabase: any; userId: string }) {
   const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
-  if (error) throw new Error(error.message);
+  if (error) throw safeError("upload.assertAdmin", error);
   if (!data) throw new Error("Acesso negado: apenas administradores podem importar.");
 }
 
@@ -33,16 +34,16 @@ export const beginImport = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: delErr } = await supabaseAdmin.from("sales").delete().eq("sale_date", data.sale_date);
-    if (delErr) throw new Error(`Erro removendo dados da data: ${delErr.message}`);
+    if (delErr) throw safeError("beginImport.delete", delErr);
     if (data.stores.length) {
       const { error } = await supabaseAdmin.from("stores").upsert(data.stores, { onConflict: "store_code" });
-      if (error) throw new Error(`Erro lojas: ${error.message}`);
+      if (error) throw safeError("beginImport.stores", error);
     }
     if (data.products.length) {
       const { error } = await supabaseAdmin
         .from("products")
         .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
-      if (error) throw new Error(`Erro produtos: ${error.message}`);
+      if (error) throw safeError("beginImport.products", error);
     }
     return { ok: true };
   });
@@ -55,7 +56,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({ ...r, sale_date: data.sale_date }));
     const { error } = await supabaseAdmin.from("sales").insert(rows);
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("insertSalesChunk", error);
     return { inserted: rows.length };
   });
 
@@ -71,9 +72,8 @@ export const finalizeImport = createServerFn({ method: "POST" })
       { sale_date: data.sale_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId },
       { onConflict: "sale_date" }
     );
-    if (error) throw new Error(error.message);
-    // Refresh pre-aggregated daily totals for the imported date
+    if (error) throw safeError("finalizeImport.log", error);
     const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
-    if (aggErr) throw new Error(`Erro ao atualizar agregação: ${aggErr.message}`);
+    if (aggErr) throw safeError("finalizeImport.agg", aggErr);
     return { ok: true };
   });
