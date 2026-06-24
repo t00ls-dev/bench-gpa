@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { safeError } from "./safe-error";
 
 const FilterSchema = z.object({
   dateFrom: z.string().optional().nullable(),
@@ -37,7 +38,7 @@ async function callMetrics(supabase: any, f: Filters) {
     p_grupos: f.grupos ?? [],
     p_subgrupos: f.subgrupos ?? [],
   });
-  if (error) throw new Error(error.message);
+  if (error) throw safeError("analytics", error);
   const d = data as any;
   return {
     total: Number(d?.total ?? 0),
@@ -69,7 +70,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
       p_secoes: data.secoes ?? [],
       p_grupos: data.grupos ?? [],
     });
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     const r = res as any;
     return {
       latestDate: (r?.latestDate ?? null) as string | null,
@@ -103,7 +104,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await (context.supabase as any).rpc("imported_dates");
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
   });
 
@@ -112,7 +113,7 @@ export const searchProducts = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ q: z.string().min(3) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await (context.supabase as any).rpc("product_search", { p_q: data.q.trim() });
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
   });
 
@@ -131,7 +132,7 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       p_store_code: data.storeCode || null,
       p_ref_date: data.referenceDate || null,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     const r = res as any;
     return {
       product: r?.product ?? null,
@@ -166,7 +167,7 @@ export const getProductsInDecline = createServerFn({ method: "POST" })
       p_secoes: data.secoes ?? [],
       p_prod_codes: data.prodCodes ?? [],
     });
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     return (res ?? []) as Array<{
       store_code: string; store_name: string;
       prod_code: string; prod_name: string;
@@ -205,7 +206,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       p_subgrupos: data.subgrupos ?? [],
       p_prod_codes: data.prodCodes ?? [],
     });
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     const r = res as any;
     return {
       total: Number(r?.total ?? 0),
@@ -244,7 +245,7 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
       p_subgrupos: data.subgrupos ?? [],
       p_limit: data.limit,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw safeError("analytics", error);
     const r = res as any;
     const num = (xs: any[]) => xs.map((x) => ({ ...x, val: Number(x.val ?? 0) }));
     return {
