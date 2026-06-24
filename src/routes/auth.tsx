@@ -103,10 +103,7 @@ function AuthPage() {
             </div>
           )}
         </div>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Sistema de uso interno.
-        </p>
+        
       </div>
     </div>
   );
