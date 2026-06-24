@@ -299,25 +299,18 @@ function AreaPage() {
             <Label className="text-xs">Subgrupo</Label>
             <MultiSelect label="Todos" options={subgrupos.map((s) => ({ value: s, label: s }))} value={fSubgrupos} onChange={setSubgrupos} />
           </div>
-        </div>
-
-        {/* Produtos filter (cascata) */}
-        <div className="border-t pt-3">
-          <Label className="text-xs">Produtos (opcional)</Label>
-          <div className="mt-1">
+          <div className="md:col-span-3 lg:col-span-2">
+            <Label className="text-xs">Produtos</Label>
             <MultiSelect
               label="Todos"
               options={productOptions}
               value={prodCodes}
               onChange={(v) => patch({ prodCodes: v })}
-              searchable
             />
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Lista derivada dos filtros acima (Loja, Departamento, Seção, Grupo, Subgrupo).
-          </p>
         </div>
       </div>
+
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
