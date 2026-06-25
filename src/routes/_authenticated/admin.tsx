@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,10 +7,20 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ShieldCheck, ShieldOff, UserCheck, UserX, Loader2 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 import { AdminGate } from "@/components/admin-gate";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  beforeLoad: async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) throw redirect({ to: "/auth" });
+    const { data: roles } = await supabase
+      .from("user_roles").select("role").eq("user_id", u.user.id);
+    if (!(roles ?? []).some((r) => r.role === "admin")) {
+      throw redirect({ to: "/" });
+    }
+  },
   component: () => <AdminGate><AdminPage /></AdminGate>,
 });
 
