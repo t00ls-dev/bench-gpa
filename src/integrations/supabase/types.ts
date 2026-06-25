@@ -37,19 +37,31 @@ export type Database = {
       }
       products: {
         Row: {
+          depto: string | null
+          grupo: string | null
           last_seen: string | null
           prod_code: string
           prod_name: string
+          secao: string | null
+          subgrupo: string | null
         }
         Insert: {
+          depto?: string | null
+          grupo?: string | null
           last_seen?: string | null
           prod_code: string
           prod_name: string
+          secao?: string | null
+          subgrupo?: string | null
         }
         Update: {
+          depto?: string | null
+          grupo?: string | null
           last_seen?: string | null
           prod_code?: string
           prod_name?: string
+          secao?: string | null
+          subgrupo?: string | null
         }
         Relationships: []
       }
