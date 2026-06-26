@@ -43,7 +43,7 @@ export const beginImport = createServerFn({ method: "POST" })
     if (data.products.length) {
       const { error } = await supabaseAdmin
         .from("products")
-        .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })) as any, { onConflict: "prod_code" });
+        .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
       if (error) throw safeError("beginImport.products", error);
     }
     return { ok: true };
@@ -56,7 +56,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({ ...r, sale_date: data.sale_date }));
-    const { error } = await supabaseAdmin.from("sales").insert(rows as any);
+    const { error } = await supabaseAdmin.from("sales").insert(rows);
     if (error) throw safeError("insertSalesChunk", error);
     return { inserted: rows.length };
   });

@@ -1,1 +1,0 @@
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS depto text, ADD COLUMN IF NOT EXISTS secao text, ADD COLUMN IF NOT EXISTS grupo text, ADD COLUMN IF NOT EXISTS subgrupo text;

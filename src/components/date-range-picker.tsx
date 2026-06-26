@@ -32,8 +32,6 @@ interface Props {
   reference?: string;
   /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
   availableDates?: string[];
-  /** Lista de presets a esconder (ex: ["today"]). */
-  excludePresets?: PresetKey[];
 }
 
 const PRESETS: { key: PresetKey; label: string }[] = [
@@ -62,7 +60,7 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
   }
 }
 
-export function DateRangePicker({ from, to, onChange, reference, availableDates, excludePresets }: Props) {
+export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
 
@@ -141,7 +139,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates,
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <div className="grid grid-cols-2 gap-1 p-2">
-          {PRESETS.filter((p) => !(excludePresets ?? []).includes(p.key)).map((p) => (
+          {PRESETS.map((p) => (
             <button
               key={p.key}
               onClick={() => { setMode(p.key); apply(p.key); }}
