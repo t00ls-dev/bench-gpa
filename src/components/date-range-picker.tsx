@@ -60,9 +60,14 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
   }
 }
 
-export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
+export function DateRangePicker({ from, to, onChange, reference, availableDates, excludePresets }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
+  const PRESETS = useMemo(
+    () => ALL_PRESETS.filter((p) => !(excludePresets ?? []).includes(p.key)),
+    [excludePresets],
+  );
+
 
   const availableSet = useMemo(() => new Set(availableDates ?? []), [availableDates]);
   const hasAvailable = availableSet.size > 0;
