@@ -26,7 +26,7 @@ interface Props {
 
 interface StoreOpt { store_code: string; store_name: string }
 
-export function FilterBar({ value, onChange }: Props) {
+export function FilterBar({ value, onChange, excludePresets }: Props) {
   const getOpts = useServerFn(getFilterOptions);
   // Cascading filters: each level narrows the next
   const { data: opts } = useQuery({
