@@ -277,6 +277,7 @@ function AreaPage() {
                 to={dateTo}
                 reference={opts?.latestDate ?? undefined}
                 availableDates={opts?.availableDates ?? []}
+                excludePresets={["today"]}
                 onChange={setRange}
               />
             </div>
