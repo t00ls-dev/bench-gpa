@@ -21,6 +21,7 @@ export interface Filters {
 interface Props {
   value: Filters;
   onChange: (f: Filters) => void;
+  excludePresets?: Array<"today" | "yesterday" | "last7" | "last30" | "month" | "prevMonth" | "custom">;
 }
 
 interface StoreOpt { store_code: string; store_name: string }
