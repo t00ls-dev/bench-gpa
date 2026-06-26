@@ -50,7 +50,7 @@ function Dashboard() {
         {isFetching && <span className="text-xs text-muted-foreground">Atualizando…</span>}
       </header>
 
-      <FilterBar value={filters} onChange={setFilters} />
+      <FilterBar value={filters} onChange={setFilters} excludePresets={["today"]} />
 
       <section className="grid gap-4 md:grid-cols-3">
         <KpiCard
