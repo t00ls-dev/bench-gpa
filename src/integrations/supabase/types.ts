@@ -37,19 +37,31 @@ export type Database = {
       }
       products: {
         Row: {
+          depto: string | null
+          grupo: string | null
           last_seen: string | null
           prod_code: string
           prod_name: string
+          secao: string | null
+          subgrupo: string | null
         }
         Insert: {
+          depto?: string | null
+          grupo?: string | null
           last_seen?: string | null
           prod_code: string
           prod_name: string
+          secao?: string | null
+          subgrupo?: string | null
         }
         Update: {
+          depto?: string | null
+          grupo?: string | null
           last_seen?: string | null
           prod_code?: string
           prod_name?: string
+          secao?: string | null
+          subgrupo?: string | null
         }
         Relationships: []
       }
@@ -80,11 +92,11 @@ export type Database = {
           grupo: string | null
           id: number
           prod_code: string
-          prod_name: string
+          prod_name: string | null
           sale_date: string
           secao: string | null
           store_code: string
-          store_name: string
+          store_name: string | null
           subgrupo: string | null
           val_vda: number
         }
@@ -93,11 +105,11 @@ export type Database = {
           grupo?: string | null
           id?: number
           prod_code: string
-          prod_name: string
+          prod_name?: string | null
           sale_date: string
           secao?: string | null
           store_code: string
-          store_name: string
+          store_name?: string | null
           subgrupo?: string | null
           val_vda?: number
         }
@@ -106,11 +118,11 @@ export type Database = {
           grupo?: string | null
           id?: number
           prod_code?: string
-          prod_name?: string
+          prod_name?: string | null
           sale_date?: string
           secao?: string | null
           store_code?: string
-          store_name?: string
+          store_name?: string | null
           subgrupo?: string | null
           val_vda?: number
         }

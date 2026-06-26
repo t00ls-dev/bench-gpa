@@ -28,14 +28,13 @@ interface Props {
   from: string;
   to: string;
   onChange: (range: { from: string; to: string }) => void;
-  /** Reference date for "today" : defaults to actual today; pass latestDate for presets relative to last imported day. */
   reference?: string;
-  /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
   availableDates?: string[];
+  /** Atalhos a serem ocultados (ex.: ["today"]). */
+  excludePresets?: PresetKey[];
 }
 
-const PRESETS: { key: PresetKey; label: string }[] = [
-  { key: "today",     label: "Hoje" },
+const ALL_PRESETS: { key: PresetKey; label: string }[] = [
   { key: "yesterday", label: "Ontem" },
   { key: "last7",     label: "Últimos 7 dias" },
   { key: "last30",    label: "Últimos 30 dias" },
@@ -60,9 +59,14 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
   }
 }
 
-export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
+export function DateRangePicker({ from, to, onChange, reference, availableDates, excludePresets }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
+  const PRESETS = useMemo(
+    () => ALL_PRESETS.filter((p) => !(excludePresets ?? []).includes(p.key)),
+    [excludePresets],
+  );
+
 
   const availableSet = useMemo(() => new Set(availableDates ?? []), [availableDates]);
   const hasAvailable = availableSet.size > 0;
