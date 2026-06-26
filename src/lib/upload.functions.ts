@@ -11,7 +11,13 @@ async function assertAdmin(ctx: { supabase: any; userId: string }) {
 
 const SaleRow = z.object({
   store_code: z.string(),
+  store_name: z.string(),
+  depto: z.string().nullable(),
+  secao: z.string().nullable(),
+  grupo: z.string().nullable(),
+  subgrupo: z.string().nullable(),
   prod_code: z.string(),
+  prod_name: z.string(),
   val_vda: z.number(),
 });
 
@@ -21,14 +27,7 @@ export const beginImport = createServerFn({ method: "POST" })
     z.object({
       sale_date: z.string(),
       stores: z.array(z.object({ store_code: z.string(), store_name: z.string() })),
-      products: z.array(z.object({
-        prod_code: z.string(),
-        prod_name: z.string(),
-        depto:     z.string().nullable(),
-        secao:     z.string().nullable(),
-        grupo:     z.string().nullable(),
-        subgrupo:  z.string().nullable(),
-      })),
+      products: z.array(z.object({ prod_code: z.string(), prod_name: z.string() })),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
@@ -69,8 +68,9 @@ export const finalizeImport = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("import_log").insert(
-      { sale_date: data.sale_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId }
+    const { error } = await supabaseAdmin.from("import_log").upsert(
+      { sale_date: data.sale_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId },
+      { onConflict: "sale_date" }
     );
     if (error) throw safeError("finalizeImport.log", error);
     const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
