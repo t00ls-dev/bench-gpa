@@ -56,7 +56,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({ ...r, sale_date: data.sale_date }));
-    const { error } = await supabaseAdmin.from("sales").insert(rows);
+    const { error } = await supabaseAdmin.from("sales").insert(rows as any);
     if (error) throw safeError("insertSalesChunk", error);
     return { inserted: rows.length };
   });
