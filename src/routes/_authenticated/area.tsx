@@ -95,20 +95,7 @@ function AreaPage() {
   const grupos = (opts?.grupos ?? []) as string[];
   const subgrupos = (opts?.subgrupos ?? []) as string[];
 
-  const { data, isFetching, isLoading, error, refetch } = useQuery({
-    queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
-    queryFn: () => getArea({ data: {
-      dateFrom, dateTo,
-      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
-      prodCodes,
-    } }),
-    enabled: !!dateFrom && !!dateTo,
-    retry: 1,
-  });
-
-  // Lista de produtos disponíveis para o MultiSelect.
-  // Quando nenhum produto está selecionado, reutiliza os resultados da consulta principal,
-  // evitando uma segunda chamada pesada que duplica o tempo de carregamento.
+  // Lista de produtos disponíveis (sem filtro de prodCodes) - alimenta o MultiSelect de Produtos.
   const { data: prodOptsData } = useQuery({
     queryKey: ["area-product-options", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
     queryFn: () => getArea({ data: {
@@ -116,28 +103,34 @@ function AreaPage() {
       stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
       prodCodes: [],
     } }),
-    enabled: !!dateFrom && !!dateTo && prodCodes.length > 0,
+    enabled: !!dateFrom && !!dateTo,
     staleTime: 60_000,
-    retry: 1,
   });
   const productOptions = useMemo(() => {
-    const source = prodCodes.length > 0 ? prodOptsData : data;
-    const list = (source?.products ?? []) as Product[];
+    const list = (prodOptsData?.products ?? []) as Product[];
     return list
       .map((p) => ({ value: p.prod_code, label: `${p.prod_code} - ${p.prod_name}` }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [prodOptsData, data, prodCodes]);
+  }, [prodOptsData]);
 
   // Reconcilia prodCodes selecionados quando filtros pais mudarem - remove códigos que não existem mais.
   useEffect(() => {
-    const src = prodCodes.length > 0 ? prodOptsData : data;
-    if (!src) return;
-    const valid = new Set((src.products as Product[]).map((p) => p.prod_code));
+    if (!prodOptsData) return;
+    const valid = new Set((prodOptsData.products as Product[]).map((p) => p.prod_code));
     const next = prodCodes.filter((c) => valid.has(c));
     if (next.length !== prodCodes.length) patch({ prodCodes: next });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prodOptsData, data]);
+  }, [prodOptsData]);
 
+  const { data, isFetching } = useQuery({
+    queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
+    queryFn: () => getArea({ data: {
+      dateFrom, dateTo,
+      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
+      prodCodes,
+    } }),
+    enabled: !!dateFrom && !!dateTo,
+  });
 
   const products = (data?.products ?? []) as Product[];
   const total = data?.total ?? 0;
@@ -277,7 +270,6 @@ function AreaPage() {
                 to={dateTo}
                 reference={opts?.latestDate ?? undefined}
                 availableDates={opts?.availableDates ?? []}
-                excludePresets={["today"]}
                 onChange={setRange}
               />
             </div>
@@ -322,18 +314,6 @@ function AreaPage() {
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
-      ) : error ? (
-        <div className="kpi-card text-center space-y-3">
-          <p className="text-sm font-medium text-destructive">Não foi possível carregar a análise.</p>
-          <p className="text-xs text-muted-foreground">
-            A consulta pode ter expirado por excesso de dados. Reduza o período ou aplique filtros (loja, departamento, seção) e tente novamente.
-          </p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
-        </div>
-      ) : isLoading ? (
-        <div className="kpi-card flex items-center justify-center gap-2 text-sm text-muted-foreground py-10">
-          <Loader2 className="size-4 animate-spin" /> Carregando análise…
-        </div>
       ) : (
         <>
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
