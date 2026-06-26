@@ -315,6 +315,20 @@ function AreaPage() {
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
+      ) : error ? (
+        <div className="kpi-card border-destructive/40 bg-destructive/5 text-center">
+          <p className="mb-3 text-sm font-medium text-destructive">
+            Não foi possível carregar a Análise de Área.
+          </p>
+          <p className="mb-4 text-xs text-muted-foreground">
+            {(error as Error)?.message ?? "Erro desconhecido."} Verifique sua conexão ou tente reduzir o período/filtros.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
+      ) : isLoading ? (
+        <div className="kpi-card flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" /> Carregando análise…
+        </div>
       ) : (
         <>
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
