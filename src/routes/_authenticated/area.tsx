@@ -122,7 +122,7 @@ function AreaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prodOptsData]);
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isLoading, error, refetch } = useQuery({
     queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
     queryFn: () => getArea({ data: {
       dateFrom, dateTo,
@@ -130,6 +130,7 @@ function AreaPage() {
       prodCodes,
     } }),
     enabled: !!dateFrom && !!dateTo,
+    retry: 1,
   });
 
   const products = (data?.products ?? []) as Product[];
