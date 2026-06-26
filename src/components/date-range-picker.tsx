@@ -35,7 +35,6 @@ interface Props {
 }
 
 const ALL_PRESETS: { key: PresetKey; label: string }[] = [
-  { key: "today",     label: "Hoje" },
   { key: "yesterday", label: "Ontem" },
   { key: "last7",     label: "Últimos 7 dias" },
   { key: "last30",    label: "Últimos 30 dias" },
