@@ -21,11 +21,12 @@ export interface Filters {
 interface Props {
   value: Filters;
   onChange: (f: Filters) => void;
+  excludePresets?: Array<"today" | "yesterday" | "last7" | "last30" | "month" | "prevMonth" | "custom">;
 }
 
 interface StoreOpt { store_code: string; store_name: string }
 
-export function FilterBar({ value, onChange }: Props) {
+export function FilterBar({ value, onChange, excludePresets }: Props) {
   const getOpts = useServerFn(getFilterOptions);
   // Cascading filters: each level narrows the next
   const { data: opts } = useQuery({
@@ -85,6 +86,7 @@ export function FilterBar({ value, onChange }: Props) {
               to={value.dateTo}
               reference={opts?.latestDate ?? undefined}
               availableDates={opts?.availableDates ?? []}
+              excludePresets={excludePresets}
               onChange={(r) => setF({ dateFrom: r.from, dateTo: r.to })}
             />
           </div>
