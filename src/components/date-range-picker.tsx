@@ -32,6 +32,8 @@ interface Props {
   reference?: string;
   /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
   availableDates?: string[];
+  /** Lista de presets a esconder (ex: ["today"]). */
+  excludePresets?: PresetKey[];
 }
 
 const PRESETS: { key: PresetKey; label: string }[] = [
