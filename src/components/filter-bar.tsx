@@ -86,6 +86,7 @@ export function FilterBar({ value, onChange, excludePresets }: Props) {
               to={value.dateTo}
               reference={opts?.latestDate ?? undefined}
               availableDates={opts?.availableDates ?? []}
+              excludePresets={excludePresets}
               onChange={(r) => setF({ dateFrom: r.from, dateTo: r.to })}
             />
           </div>
