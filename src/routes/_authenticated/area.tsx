@@ -322,6 +322,18 @@ function AreaPage() {
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
+      ) : error ? (
+        <div className="kpi-card text-center space-y-3">
+          <p className="text-sm font-medium text-destructive">Não foi possível carregar a análise.</p>
+          <p className="text-xs text-muted-foreground">
+            A consulta pode ter expirado por excesso de dados. Reduza o período ou aplique filtros (loja, departamento, seção) e tente novamente.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
+      ) : isLoading ? (
+        <div className="kpi-card flex items-center justify-center gap-2 text-sm text-muted-foreground py-10">
+          <Loader2 className="size-4 animate-spin" /> Carregando análise…
+        </div>
       ) : (
         <>
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
