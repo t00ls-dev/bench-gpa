@@ -43,7 +43,7 @@ export const beginImport = createServerFn({ method: "POST" })
     if (data.products.length) {
       const { error } = await supabaseAdmin
         .from("products")
-        .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
+        .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })) as any, { onConflict: "prod_code" });
       if (error) throw safeError("beginImport.products", error);
     }
     return { ok: true };
