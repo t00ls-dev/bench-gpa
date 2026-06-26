@@ -1,0 +1,2 @@
+ALTER TABLE public.sales ALTER COLUMN prod_name DROP NOT NULL;
+ALTER TABLE public.sales ALTER COLUMN store_name DROP NOT NULL;

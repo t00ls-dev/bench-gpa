@@ -92,11 +92,11 @@ export type Database = {
           grupo: string | null
           id: number
           prod_code: string
-          prod_name: string
+          prod_name: string | null
           sale_date: string
           secao: string | null
           store_code: string
-          store_name: string
+          store_name: string | null
           subgrupo: string | null
           val_vda: number
         }
@@ -105,11 +105,11 @@ export type Database = {
           grupo?: string | null
           id?: number
           prod_code: string
-          prod_name: string
+          prod_name?: string | null
           sale_date: string
           secao?: string | null
           store_code: string
-          store_name: string
+          store_name?: string | null
           subgrupo?: string | null
           val_vda?: number
         }
@@ -118,11 +118,11 @@ export type Database = {
           grupo?: string | null
           id?: number
           prod_code?: string
-          prod_name?: string
+          prod_name?: string | null
           sale_date?: string
           secao?: string | null
           store_code?: string
-          store_name?: string
+          store_name?: string | null
           subgrupo?: string | null
           val_vda?: number
         }
