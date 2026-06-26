@@ -62,7 +62,7 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
   }
 }
 
-export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
+export function DateRangePicker({ from, to, onChange, reference, availableDates, excludePresets }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
 
