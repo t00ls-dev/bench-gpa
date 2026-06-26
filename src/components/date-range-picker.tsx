@@ -141,7 +141,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates,
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <div className="grid grid-cols-2 gap-1 p-2">
-          {PRESETS.map((p) => (
+          {PRESETS.filter((p) => !(excludePresets ?? []).includes(p.key)).map((p) => (
             <button
               key={p.key}
               onClick={() => { setMode(p.key); apply(p.key); }}
