@@ -81,19 +81,6 @@ interface ProductAnalysisResult {
   lastFourAll: DateVal[];
 }
 
-type DeclineStatus = "critico" | "alerta" | "atencao";
-interface ProductsInDeclineRow {
-  store_code: string; store_name: string;
-  prod_code: string; prod_name: string;
-  depto: string | null; secao: string | null;
-  avg_daily_hist: number | null; avg_daily_recent: number | null;
-  sum_recent: number; sum_hist: number;
-  variation: number | null;
-  days_without_sale: number | null;
-  last_sale_date: string | null;
-  status: DeclineStatus;
-}
-type ProductsInDeclineResult = ProductsInDeclineRow[];
 
 // ---- helpers ----
 function asRecord(v: unknown): Record<string, unknown> {
@@ -290,50 +277,6 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
     };
   });
 
-export const getProductsInDecline = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({
-      dateFrom: z.string(),
-      dateTo: z.string(),
-      stores: z.array(z.string()).optional().default([]),
-      deptos: z.array(z.string()).optional().default([]),
-      secoes: z.array(z.string()).optional().default([]),
-      prodCodes: z.array(z.string()).optional().default([]),
-    }).parse(d)
-  )
-  .handler(async ({ data, context }): Promise<ProductsInDeclineResult> => {
-    const supabase = context.supabase as DB;
-    const { data: res, error } = await supabase.rpc("products_in_decline", {
-      p_date_from: data.dateFrom,
-      p_date_to: data.dateTo,
-      p_stores: data.stores ?? [],
-      p_deptos: data.deptos ?? [],
-      p_secoes: data.secoes ?? [],
-      p_prod_codes: data.prodCodes ?? [],
-    });
-    if (error) throw safeError("analytics", error);
-    return asArray(res).map((x) => {
-      const r = asRecord(x);
-      const status = r.status as DeclineStatus;
-      return {
-        store_code: str(r.store_code),
-        store_name: str(r.store_name),
-        prod_code: str(r.prod_code),
-        prod_name: str(r.prod_name),
-        depto: strOrNull(r.depto),
-        secao: strOrNull(r.secao),
-        avg_daily_hist: numOrNull(r.avg_daily_hist),
-        avg_daily_recent: numOrNull(r.avg_daily_recent),
-        sum_recent: num(r.sum_recent),
-        sum_hist: num(r.sum_hist),
-        variation: numOrNull(r.variation),
-        days_without_sale: numOrNull(r.days_without_sale),
-        last_sale_date: strOrNull(r.last_sale_date),
-        status,
-      };
-    });
-  });
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
