@@ -3,11 +3,11 @@
 // localStorage. The cache is invalidated when the app version or the
 // browser user-agent changes.
 
-const KEY = "bench-gpa:chunk-bench:v1";
-const VERSION = 1;
+const KEY = "bench-gpa:chunk-bench:v2";
+const VERSION = 2;
 
-export const CANDIDATE_SIZES = [200, 400, 800, 1500] as const;
-export const DEFAULT_CHUNK = 400;
+export const CANDIDATE_SIZES = [100, 200, 350, 500] as const;
+export const DEFAULT_CHUNK = 200;
 
 interface ChunkBenchCache {
   version: number;
