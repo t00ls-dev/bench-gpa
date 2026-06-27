@@ -13,7 +13,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
-import { Route as AuthenticatedQuedaRouteImport } from './routes/_authenticated/queda'
 import { Route as AuthenticatedProdutoRouteImport } from './routes/_authenticated/produto'
 import { Route as AuthenticatedAreaRouteImport } from './routes/_authenticated/area'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -35,11 +34,6 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
   id: '/upload',
   path: '/upload',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedQuedaRoute = AuthenticatedQuedaRouteImport.update({
-  id: '/queda',
-  path: '/queda',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProdutoRoute = AuthenticatedProdutoRouteImport.update({
@@ -64,7 +58,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/area': typeof AuthenticatedAreaRoute
   '/produto': typeof AuthenticatedProdutoRoute
-  '/queda': typeof AuthenticatedQuedaRoute
   '/upload': typeof AuthenticatedUploadRoute
 }
 export interface FileRoutesByTo {
@@ -72,7 +65,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/area': typeof AuthenticatedAreaRoute
   '/produto': typeof AuthenticatedProdutoRoute
-  '/queda': typeof AuthenticatedQuedaRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
 }
@@ -83,22 +75,14 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/area': typeof AuthenticatedAreaRoute
   '/_authenticated/produto': typeof AuthenticatedProdutoRoute
-  '/_authenticated/queda': typeof AuthenticatedQuedaRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/auth'
-    | '/admin'
-    | '/area'
-    | '/produto'
-    | '/queda'
-    | '/upload'
+  fullPaths: '/' | '/auth' | '/admin' | '/area' | '/produto' | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/admin' | '/area' | '/produto' | '/queda' | '/upload' | '/'
+  to: '/auth' | '/admin' | '/area' | '/produto' | '/upload' | '/'
   id:
     | '__root__'
     | '/_authenticated'
@@ -106,7 +90,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/area'
     | '/_authenticated/produto'
-    | '/_authenticated/queda'
     | '/_authenticated/upload'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
@@ -146,13 +129,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUploadRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/queda': {
-      id: '/_authenticated/queda'
-      path: '/queda'
-      fullPath: '/queda'
-      preLoaderRoute: typeof AuthenticatedQuedaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/produto': {
       id: '/_authenticated/produto'
       path: '/produto'
@@ -181,7 +157,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAreaRoute: typeof AuthenticatedAreaRoute
   AuthenticatedProdutoRoute: typeof AuthenticatedProdutoRoute
-  AuthenticatedQuedaRoute: typeof AuthenticatedQuedaRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
@@ -190,7 +165,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAreaRoute: AuthenticatedAreaRoute,
   AuthenticatedProdutoRoute: AuthenticatedProdutoRoute,
-  AuthenticatedQuedaRoute: AuthenticatedQuedaRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }

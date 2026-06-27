@@ -5,6 +5,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
 import { getImportedDates } from "@/lib/analytics.functions";
 import { parseAnyWorkbook } from "@/lib/xlsx-parser";
+import {
+  CANDIDATE_SIZES,
+  DEFAULT_CHUNK,
+  loadChunkSize,
+  pickBest,
+  saveChunkSize,
+  type BenchSample,
+} from "@/lib/chunk-bench";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
@@ -34,7 +42,6 @@ interface Result {
   rows?: number;
 }
 
-const CHUNK = 400;
 const fmtInt = (n: number) => n.toLocaleString("pt-BR");
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const fmtDate = (iso: string) => {
@@ -64,6 +71,14 @@ function UploadPage() {
     setBusy(true);
     setResults([]);
     const r: Result[] = [];
+
+    const cached = loadChunkSize();
+    let chunkSize = cached ?? DEFAULT_CHUNK;
+    const benching = cached == null;
+    const benchSamples: BenchSample[] = [];
+    let benchIdx = 0;
+    let benchDone = !benching;
+
     for (const f of files) {
       try {
         setProgress(`${f.name}: lendo arquivo…`);
@@ -74,10 +89,33 @@ function UploadPage() {
         setProgress(`${f.name}: preparando ${parsed.sale_date}…`);
         await begin({ data: { sale_date: parsed.sale_date, stores: parsed.stores, products: parsed.products } });
         const total = parsed.sales.length;
-        for (let i = 0; i < total; i += CHUNK) {
-          const chunk = parsed.sales.slice(i, i + CHUNK);
-          setProgress(`${f.name}: ${Math.min(i + CHUNK, total).toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}…`);
+        let i = 0;
+        while (i < total) {
+          const useSize =
+            !benchDone && benchIdx < CANDIDATE_SIZES.length
+              ? CANDIDATE_SIZES[benchIdx]
+              : chunkSize;
+          const chunk = parsed.sales.slice(i, i + useSize);
+          setProgress(`${f.name}: ${Math.min(i + useSize, total).toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}…`);
+          const t0 = performance.now();
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
+          const dt = performance.now() - t0;
+          if (!benchDone && benchIdx < CANDIDATE_SIZES.length) {
+            benchSamples.push({ size: useSize, rowsPerMs: chunk.length / Math.max(dt, 1) });
+            benchIdx++;
+            if (benchIdx >= CANDIDATE_SIZES.length) {
+              chunkSize = pickBest(benchSamples);
+              saveChunkSize(chunkSize);
+              benchDone = true;
+            }
+          }
+          i += useSize;
+        }
+        // Finish the benchmark even if the first file was small enough to not exhaust all sizes.
+        if (!benchDone && benchSamples.length > 0) {
+          chunkSize = pickBest(benchSamples);
+          saveChunkSize(chunkSize);
+          benchDone = true;
         }
         await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
         r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} vendas`, date: parsed.sale_date, rows: total });
