@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Upload, Package, Users, LogOut, Menu, X, TrendingDown, Layers } from "lucide-react";
+import { LayoutDashboard, Upload, Package, Users, LogOut, Menu, X, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -65,11 +65,14 @@ function AuthedLayout() {
 
   const nav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    ...(profile.isAdmin ? [{ to: "/upload", label: "Importar", icon: Upload }] : []),
     { to: "/produto", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
-    { to: "/queda", label: "Em Queda", icon: TrendingDown },
-    ...(profile.isAdmin ? [{ to: "/admin", label: "Usuários", icon: Users }] : []),
+    ...(profile.isAdmin
+      ? [
+          { to: "/upload", label: "Importar", icon: Upload },
+          { to: "/admin", label: "Usuários", icon: Users },
+        ]
+      : []),
   ] as const;
 
 
