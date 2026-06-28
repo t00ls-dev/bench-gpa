@@ -5,20 +5,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
 import { getImportedDates } from "@/lib/analytics.functions";
 import { parseAnyWorkbook } from "@/lib/xlsx-parser";
-import {
-  CANDIDATE_SIZES,
-  DEFAULT_CHUNK,
-  loadChunkSize,
-  pickBest,
-  saveChunkSize,
-  type BenchSample,
-} from "@/lib/chunk-bench";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
 import { AdminGate } from "@/components/admin-gate";
 import { supabase } from "@/integrations/supabase/client";
+
+const CHUNK_MIN = 100;
+const CHUNK_MAX = 2000;
+const CHUNK_STEP = 100;
+const CHUNK_DEFAULT = 500;
 
 export const Route = createFileRoute("/_authenticated/upload")({
   beforeLoad: async () => {
