@@ -22,20 +22,20 @@ function endOfMonth(date: Date) {
 }
 
 export type PresetKey =
-  | "today" | "yesterday" | "last7" | "last30" | "month" | "prevMonth" | "custom";
+  | "yesterday" | "last7" | "last30" | "month" | "prevMonth" | "custom";
 
 interface Props {
   from: string;
   to: string;
   onChange: (range: { from: string; to: string }) => void;
-  /** Reference date for "today" : defaults to actual today; pass latestDate for presets relative to last imported day. */
+  /** Reference date for relative presets (last7/last30/month). Defaults to actual today.
+   *  "Ontem" sempre usa o dia anterior ao dia atual real, ignorando esta referência. */
   reference?: string;
   /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
   availableDates?: string[];
 }
 
 const PRESETS: { key: PresetKey; label: string }[] = [
-  { key: "today",     label: "Hoje" },
   { key: "yesterday", label: "Ontem" },
   { key: "last7",     label: "Últimos 7 dias" },
   { key: "last30",    label: "Últimos 30 dias" },
@@ -47,8 +47,11 @@ const PRESETS: { key: PresetKey; label: string }[] = [
 export function computePreset(key: PresetKey, refIso?: string): { from: string; to: string } | null {
   const ref = refIso ? new Date(refIso + "T00:00:00") : new Date();
   switch (key) {
-    case "today":     return { from: iso(ref), to: iso(ref) };
-    case "yesterday": { const y = shift(ref, -1); return { from: iso(y), to: iso(y) }; }
+    case "yesterday": {
+      // Sempre o dia anterior ao dia atual real, independente do reference.
+      const y = shift(new Date(), -1);
+      return { from: iso(y), to: iso(y) };
+    }
     case "last7":     return { from: iso(shift(ref, -6)),  to: iso(ref) };
     case "last30":    return { from: iso(shift(ref, -29)), to: iso(ref) };
     case "month":     return { from: iso(startOfMonth(ref)), to: iso(ref) };
@@ -59,6 +62,7 @@ export function computePreset(key: PresetKey, refIso?: string): { from: string; 
     default: return null;
   }
 }
+
 
 export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
   const [open, setOpen] = useState(false);
