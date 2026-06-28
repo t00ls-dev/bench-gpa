@@ -92,7 +92,7 @@ function UploadPage() {
           i += useSize;
         }
         await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
-        r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} vendas`, date: parsed.sale_date, rows: total });
+        r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} linhas`, date: parsed.sale_date, rows: total });
       } catch (e: any) {
         r.push({ filename: f.name, ok: false, message: e?.message ?? "Erro desconhecido" });
       }
