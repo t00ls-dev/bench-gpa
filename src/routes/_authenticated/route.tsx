@@ -75,14 +75,13 @@ function AuthedLayout() {
       : []),
   ] as const;
 
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
           <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
-            <span className="grid size-9 place-items-center rounded-xl bg-[image:var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-card)]">B</span>
-            Bench<span className="text-primary">GPA</span>
+            <img src="/gpa-logo.png" alt="GPA" className="h-9 w-auto" />
+            <span>Bench</span>
           </Link>
           <nav className="ml-6 hidden items-center gap-1 md:flex">
             {nav.map((n) => (
