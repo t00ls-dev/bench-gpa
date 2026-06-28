@@ -58,7 +58,7 @@ function AuthPage() {
           <img
             src="/gpa-logo.png"
             alt="Grupo Pão de Açúcar"
-            className="h-16 w-auto"
+            className="h-24 w-auto"
           />
         </div>
 
