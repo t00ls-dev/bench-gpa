@@ -112,7 +112,9 @@ function UploadPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold">Importar planilhas</h1>
+        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+          <Upload className="size-7 text-primary shrink-0" /> Importar planilhas
+        </h1>
         <p className="text-sm text-muted-foreground">
           Dados existentes na mesma data são substituídos integralmente.
         </p>
