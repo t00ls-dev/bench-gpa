@@ -81,7 +81,6 @@ function AuthedLayout() {
         <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
           <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
             <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
-            <span>Bench</span>
           </Link>
           <nav className="ml-6 hidden items-center gap-1 md:flex">
             {nav.map((n) => (
