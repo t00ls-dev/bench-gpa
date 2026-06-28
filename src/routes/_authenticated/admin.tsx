@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listUsers, setUserStatus, setUserRole } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldOff, UserCheck, UserX, Loader2 } from "lucide-react";
+import { ShieldCheck, ShieldOff, UserCheck, UserX, Loader2, Users } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -63,7 +63,9 @@ function AdminPage() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold">Usuários</h1>
+        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+          <Users className="size-7 text-primary shrink-0" /> Usuários
+        </h1>
         <p className="text-sm text-muted-foreground">Aprove, bloqueie ou conceda permissão de administrador.</p>
       </header>
 
