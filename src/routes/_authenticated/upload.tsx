@@ -57,6 +57,7 @@ function UploadPage() {
   const [results, setResults] = useState<Result[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
+  const [chunkSize, setChunkSize] = usePersistentState<number>("bench-gpa:import-chunk-size", CHUNK_DEFAULT);
   const begin = useServerFn(beginImport);
   const insertChunk = useServerFn(insertSalesChunk);
   const finalize = useServerFn(finalizeImport);
@@ -71,12 +72,7 @@ function UploadPage() {
     setResults([]);
     const r: Result[] = [];
 
-    const cached = loadChunkSize();
-    let chunkSize = cached ?? DEFAULT_CHUNK;
-    const benching = cached == null;
-    const benchSamples: BenchSample[] = [];
-    let benchIdx = 0;
-    let benchDone = !benching;
+    const useSize = Math.min(CHUNK_MAX, Math.max(CHUNK_MIN, chunkSize || CHUNK_DEFAULT));
 
     for (const f of files) {
       try {
@@ -90,31 +86,10 @@ function UploadPage() {
         const total = parsed.sales.length;
         let i = 0;
         while (i < total) {
-          const useSize =
-            !benchDone && benchIdx < CANDIDATE_SIZES.length
-              ? CANDIDATE_SIZES[benchIdx]
-              : chunkSize;
           const chunk = parsed.sales.slice(i, i + useSize);
           setProgress(`${f.name}: ${Math.min(i + useSize, total).toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}…`);
-          const t0 = performance.now();
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
-          const dt = performance.now() - t0;
-          if (!benchDone && benchIdx < CANDIDATE_SIZES.length) {
-            benchSamples.push({ size: useSize, rowsPerMs: chunk.length / Math.max(dt, 1) });
-            benchIdx++;
-            if (benchIdx >= CANDIDATE_SIZES.length) {
-              chunkSize = pickBest(benchSamples);
-              saveChunkSize(chunkSize);
-              benchDone = true;
-            }
-          }
           i += useSize;
-        }
-        // Finish the benchmark even if the first file was small enough to not exhaust all sizes.
-        if (!benchDone && benchSamples.length > 0) {
-          chunkSize = pickBest(benchSamples);
-          saveChunkSize(chunkSize);
-          benchDone = true;
         }
         await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
         r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} vendas`, date: parsed.sale_date, rows: total });
