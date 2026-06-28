@@ -5,20 +5,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
 import { getImportedDates } from "@/lib/analytics.functions";
 import { parseAnyWorkbook } from "@/lib/xlsx-parser";
-import {
-  CANDIDATE_SIZES,
-  DEFAULT_CHUNK,
-  loadChunkSize,
-  pickBest,
-  saveChunkSize,
-  type BenchSample,
-} from "@/lib/chunk-bench";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
 import { AdminGate } from "@/components/admin-gate";
 import { supabase } from "@/integrations/supabase/client";
+
+const CHUNK_MIN = 100;
+const CHUNK_MAX = 2000;
+const CHUNK_STEP = 100;
+const CHUNK_DEFAULT = 500;
 
 export const Route = createFileRoute("/_authenticated/upload")({
   beforeLoad: async () => {
@@ -58,6 +57,7 @@ function UploadPage() {
   const [results, setResults] = useState<Result[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string>("");
+  const [chunkSize, setChunkSize] = usePersistentState<number>("bench-gpa:import-chunk-size", CHUNK_DEFAULT);
   const begin = useServerFn(beginImport);
   const insertChunk = useServerFn(insertSalesChunk);
   const finalize = useServerFn(finalizeImport);
@@ -72,12 +72,7 @@ function UploadPage() {
     setResults([]);
     const r: Result[] = [];
 
-    const cached = loadChunkSize();
-    let chunkSize = cached ?? DEFAULT_CHUNK;
-    const benching = cached == null;
-    const benchSamples: BenchSample[] = [];
-    let benchIdx = 0;
-    let benchDone = !benching;
+    const useSize = Math.min(CHUNK_MAX, Math.max(CHUNK_MIN, chunkSize || CHUNK_DEFAULT));
 
     for (const f of files) {
       try {
@@ -91,31 +86,10 @@ function UploadPage() {
         const total = parsed.sales.length;
         let i = 0;
         while (i < total) {
-          const useSize =
-            !benchDone && benchIdx < CANDIDATE_SIZES.length
-              ? CANDIDATE_SIZES[benchIdx]
-              : chunkSize;
           const chunk = parsed.sales.slice(i, i + useSize);
           setProgress(`${f.name}: ${Math.min(i + useSize, total).toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}…`);
-          const t0 = performance.now();
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
-          const dt = performance.now() - t0;
-          if (!benchDone && benchIdx < CANDIDATE_SIZES.length) {
-            benchSamples.push({ size: useSize, rowsPerMs: chunk.length / Math.max(dt, 1) });
-            benchIdx++;
-            if (benchIdx >= CANDIDATE_SIZES.length) {
-              chunkSize = pickBest(benchSamples);
-              saveChunkSize(chunkSize);
-              benchDone = true;
-            }
-          }
           i += useSize;
-        }
-        // Finish the benchmark even if the first file was small enough to not exhaust all sizes.
-        if (!benchDone && benchSamples.length > 0) {
-          chunkSize = pickBest(benchSamples);
-          saveChunkSize(chunkSize);
-          benchDone = true;
         }
         await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
         r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} vendas`, date: parsed.sale_date, rows: total });
@@ -165,6 +139,27 @@ function UploadPage() {
             <Button onClick={process} disabled={busy}>
               {busy ? <><Loader2 className="mr-2 size-4 animate-spin" /> Importando…</> : "Iniciar importação"}
             </Button>
+          </div>
+          <div className="mb-3 rounded-md border bg-muted/30 px-3 py-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="chunk-size" className="text-xs font-medium text-muted-foreground">
+                Linhas por chunk
+              </label>
+              <span className="text-sm font-semibold tabular-nums">{chunkSize}</span>
+            </div>
+            <Slider
+              id="chunk-size"
+              min={CHUNK_MIN}
+              max={CHUNK_MAX}
+              step={CHUNK_STEP}
+              value={[chunkSize]}
+              onValueChange={(v) => setChunkSize(v[0] ?? CHUNK_DEFAULT)}
+              disabled={busy}
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+              <span>{CHUNK_MIN}</span>
+              <span>{CHUNK_MAX}</span>
+            </div>
           </div>
           {busy && progress && (
             <div className="mb-3 rounded-md bg-primary/5 px-3 py-2 text-xs text-primary">{progress}</div>
