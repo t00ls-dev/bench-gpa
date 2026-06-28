@@ -317,6 +317,11 @@ function AreaPage() {
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
+      ) : isError ? (
+        <div className="kpi-card text-center">
+          <p className="text-sm text-destructive mb-3">Não foi possível carregar a análise: {(error as Error)?.message ?? "erro desconhecido"}.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
       ) : (
         <>
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
