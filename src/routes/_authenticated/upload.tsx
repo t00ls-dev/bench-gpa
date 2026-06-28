@@ -140,6 +140,27 @@ function UploadPage() {
               {busy ? <><Loader2 className="mr-2 size-4 animate-spin" /> Importando…</> : "Iniciar importação"}
             </Button>
           </div>
+          <div className="mb-3 rounded-md border bg-muted/30 px-3 py-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label htmlFor="chunk-size" className="text-xs font-medium text-muted-foreground">
+                Linhas por chunk
+              </label>
+              <span className="text-sm font-semibold tabular-nums">{chunkSize}</span>
+            </div>
+            <Slider
+              id="chunk-size"
+              min={CHUNK_MIN}
+              max={CHUNK_MAX}
+              step={CHUNK_STEP}
+              value={[chunkSize]}
+              onValueChange={(v) => setChunkSize(v[0] ?? CHUNK_DEFAULT)}
+              disabled={busy}
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+              <span>{CHUNK_MIN}</span>
+              <span>{CHUNK_MAX}</span>
+            </div>
+          </div>
           {busy && progress && (
             <div className="mb-3 rounded-md bg-primary/5 px-3 py-2 text-xs text-primary">{progress}</div>
           )}
