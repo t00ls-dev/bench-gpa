@@ -95,9 +95,11 @@ function AreaPage() {
   const grupos = (opts?.grupos ?? []) as string[];
   const subgrupos = (opts?.subgrupos ?? []) as string[];
 
-  // Lista de produtos disponíveis (sem filtro de prodCodes) - alimenta o MultiSelect de Produtos.
-  const { data: prodOptsData } = useQuery({
-    queryKey: ["area-product-options", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
+  // Uma única consulta ao servidor: traz o universo de produtos da área
+  // (com e sem venda). O filtro de prodCodes é aplicado no cliente para
+  // evitar uma segunda chamada idêntica ao banco.
+  const { data, isFetching, isError, error, refetch } = useQuery({
+    queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
     queryFn: () => getArea({ data: {
       dateFrom, dateTo,
       stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
@@ -105,35 +107,36 @@ function AreaPage() {
     } }),
     enabled: !!dateFrom && !!dateTo,
     staleTime: 60_000,
+    retry: 1,
   });
-  const productOptions = useMemo(() => {
-    const list = (prodOptsData?.products ?? []) as Product[];
-    return list
-      .map((p) => ({ value: p.prod_code, label: `${p.prod_code} - ${p.prod_name}` }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [prodOptsData]);
 
-  // Reconcilia prodCodes selecionados quando filtros pais mudarem - remove códigos que não existem mais.
+  const allProducts = (data?.products ?? []) as Product[];
+
+  const productOptions = useMemo(() =>
+    allProducts
+      .map((p) => ({ value: p.prod_code, label: `${p.prod_code} - ${p.prod_name}` }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    [allProducts]
+  );
+
+  // Reconcilia prodCodes selecionados quando os filtros pais mudam.
   useEffect(() => {
-    if (!prodOptsData) return;
-    const valid = new Set((prodOptsData.products as Product[]).map((p) => p.prod_code));
+    if (!data) return;
+    const valid = new Set(allProducts.map((p) => p.prod_code));
     const next = prodCodes.filter((c) => valid.has(c));
     if (next.length !== prodCodes.length) patch({ prodCodes: next });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prodOptsData]);
+  }, [data]);
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, prodCodes],
-    queryFn: () => getArea({ data: {
-      dateFrom, dateTo,
-      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
-      prodCodes,
-    } }),
-    enabled: !!dateFrom && !!dateTo,
-  });
-
-  const products = (data?.products ?? []) as Product[];
-  const total = data?.total ?? 0;
+  // Aplica filtro de produtos no cliente.
+  const products = useMemo(
+    () => prodCodes.length === 0 ? allProducts : allProducts.filter((p) => prodCodes.includes(p.prod_code)),
+    [allProducts, prodCodes]
+  );
+  const total = useMemo(
+    () => prodCodes.length === 0 ? (data?.total ?? 0) : products.reduce((s, p) => s + p.val, 0),
+    [data, products, prodCodes]
+  );
 
   const enriched = useMemo(() => products.map((p) => ({
     ...p, share: total > 0 ? p.val / total : 0,
