@@ -52,15 +52,14 @@ function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-[image:var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-card)] font-display text-2xl font-bold">
-            B
-          </span>
-          <div className="font-display text-2xl font-bold">
-            Bench<span className="text-primary">GPA</span>
-          </div>
+          <img
+            src="/gpa-logo.webp"
+            alt="Grupo Pão de Açúcar"
+            className="h-16 w-auto"
+          />
         </div>
 
         <div className="kpi-card">
@@ -103,7 +102,7 @@ function AuthPage() {
             </div>
           )}
         </div>
-        
+
       </div>
     </div>
   );
