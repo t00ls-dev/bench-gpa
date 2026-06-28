@@ -56,7 +56,7 @@ function AuthPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <img
-            src="/gpa-logo.webp"
+            src="/gpa-logo.png"
             alt="Grupo Pão de Açúcar"
             className="h-16 w-auto"
           />
