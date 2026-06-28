@@ -1,3 +1,4 @@
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,6 +9,7 @@ import { RankingCard } from "@/components/ranking-card";
 import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
+import { LayoutDashboard } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -44,7 +46,9 @@ function Dashboard() {
     <div>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold">Dashboard</h1>
+          <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+            <LayoutDashboard className="size-7 text-primary shrink-0" /> Dashboard
+          </h1>
           <p className="text-sm text-muted-foreground">Visão geral de vendas por loja, departamento e período.</p>
         </div>
         {isFetching && <span className="text-xs text-muted-foreground">Atualizando…</span>}
