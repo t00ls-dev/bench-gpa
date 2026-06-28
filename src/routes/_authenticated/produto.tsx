@@ -19,7 +19,6 @@ export const Route = createFileRoute("/_authenticated/produto")({
 
 const WEEKDAYS_FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 const WEEKDAYS_PLURAL = ["Domingos", "Segundas-feiras", "Terças-feiras", "Quartas-feiras", "Quintas-feiras", "Sextas-feiras", "Sábados"];
-// Masculino: Domingo (0), Sábado (6). Demais: feminino.
 const WEEKDAY_IS_MASC = [true, false, false, false, false, false, true];
 
 interface SeriesPoint { date: string; val: number }
@@ -92,7 +91,9 @@ function ProdutoPage() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold">Análise de produto</h1>
+        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+          <Package className="size-7 text-primary shrink-0" /> Análise de produto
+        </h1>
         <p className="text-sm text-muted-foreground">Pesquise um produto para ver comparações entre lojas, evolução e benchmarks semanais.</p>
       </header>
 
@@ -168,7 +169,6 @@ function ProdutoPage() {
         )}
       </div>
 
-
       {selected && analysisData && (
         <>
           <section className="mt-6 grid gap-4 md:grid-cols-2">
@@ -219,7 +219,6 @@ function ProdutoPage() {
           />
 
           <PaginatedHistory title="Histórico completo" rows={analysisData.evolution as SeriesPoint[]} />
-
         </>
       )}
 
@@ -285,4 +284,3 @@ function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] 
     </section>
   );
 }
-
