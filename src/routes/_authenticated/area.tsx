@@ -284,7 +284,8 @@ function AreaPage() {
           <div>
             <Label className="text-xs">Loja</Label>
             <MultiSelect
-              label="Todas"
+              single
+              label="Selecione"
               options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} - ${s.store_name}` }))}
               value={fStores}
               onChange={setStores}
@@ -292,8 +293,9 @@ function AreaPage() {
           </div>
           <div>
             <Label className="text-xs">Departamento</Label>
-            <MultiSelect label="Todos" options={deptos.map((d) => ({ value: d, label: d }))} value={fDeptos} onChange={setDeptos} />
+            <MultiSelect single label="Selecione" options={deptos.map((d) => ({ value: d, label: d }))} value={fDeptos} onChange={setDeptos} />
           </div>
+
           <div>
             <Label className="text-xs">Seção</Label>
             <MultiSelect label="Todas" options={secoes.map((s) => ({ value: s, label: s }))} value={fSecoes} onChange={setSecoes} />
