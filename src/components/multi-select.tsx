@@ -8,29 +8,46 @@ import { cn } from "@/lib/utils";
 export interface MSOption { value: string; label: string }
 
 export function MultiSelect({
-  label, options, value, onChange, searchable = false,
+  label, options, value, onChange, searchable = false, single = false,
 }: {
   label: string;
   options: MSOption[];
   value: string[];
   onChange: (v: string[]) => void;
   searchable?: boolean;
+  /** When true, behaves as a single-select: replaces selection and closes on pick. */
+  single?: boolean;
 }) {
   const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
   const filtered = useMemo(() => {
     if (!searchable || !q.trim()) return options;
     const t = q.toLowerCase();
     return options.filter((o) => o.label.toLowerCase().includes(t) || o.value.toLowerCase().includes(t));
   }, [options, q, searchable]);
-  const allSelected = options.length > 0 && value.length === options.length;
-  const toggle = (v: string) =>
+  const allSelected = !single && options.length > 0 && value.length === options.length;
+
+  const handleToggle = (v: string) => {
+    if (single) {
+      // Single-select: replace and close
+      if (value.length === 1 && value[0] === v) {
+        onChange([]);
+      } else {
+        onChange([v]);
+      }
+      setOpen(false);
+      return;
+    }
+    // Multi-select: keep popover open, toggle item using latest value
     onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  };
+
   const toggleAll = () => onChange(allSelected ? [] : options.map((o) => o.value));
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="h-9 w-full justify-between text-left font-normal">
+        <Button type="button" variant="outline" className="h-9 w-full justify-between text-left font-normal">
           <span className="truncate">
             {label}
             {value.length > 0 && (
@@ -42,7 +59,11 @@ export function MultiSelect({
           <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0">
+      <PopoverContent
+        className="w-72 p-0"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         {searchable && (
           <div className="flex items-center gap-2 border-b px-2 py-1.5">
             <Search className="size-3.5 text-muted-foreground" />
@@ -55,9 +76,10 @@ export function MultiSelect({
             />
           </div>
         )}
-        {options.length > 0 && (
+        {!single && options.length > 0 && (
           <button
-            onClick={toggleAll}
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAll(); }}
             className="flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium hover:bg-muted"
           >
             <span className={cn(
@@ -78,11 +100,13 @@ export function MultiSelect({
             return (
               <button
                 key={o.value}
-                onClick={() => toggle(o.value)}
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggle(o.value); }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
               >
                 <span className={cn(
-                  "flex size-4 shrink-0 items-center justify-center rounded border",
+                  "flex size-4 shrink-0 items-center justify-center border",
+                  single ? "rounded-full" : "rounded",
                   checked ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
                 )}>
                   {checked && <Check className="size-3" />}
@@ -92,9 +116,9 @@ export function MultiSelect({
             );
           })}
         </div>
-        {value.length > 0 && (
+        {!single && value.length > 0 && (
           <div className="border-t p-2">
-            <Button variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
+            <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
               <X className="mr-1 size-3" /> Limpar seleção
             </Button>
           </div>
