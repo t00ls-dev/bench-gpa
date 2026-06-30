@@ -252,8 +252,8 @@ function AreaPage() {
     win.document.close();
   };
 
-  const ready = !!dateFrom && !!dateTo;
   const noSale = data?.plusWithoutSale ?? 0;
+
 
   return (
     <div>
