@@ -98,6 +98,9 @@ function AreaPage() {
   // Uma única consulta ao servidor: traz o universo de produtos da área
   // (com e sem venda). O filtro de prodCodes é aplicado no cliente para
   // evitar uma segunda chamada idêntica ao banco.
+  // Gate: Loja + Departamento são obrigatórios para evitar varredura excessiva.
+  const ready = !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0;
+
   const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
     queryFn: () => getArea({ data: {
@@ -105,10 +108,11 @@ function AreaPage() {
       stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
       prodCodes: [],
     } }),
-    enabled: !!dateFrom && !!dateTo,
+    enabled: ready,
     staleTime: 60_000,
     retry: 1,
   });
+
 
   const allProducts = (data?.products ?? []) as Product[];
 
