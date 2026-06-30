@@ -98,6 +98,9 @@ function AreaPage() {
   // Uma única consulta ao servidor: traz o universo de produtos da área
   // (com e sem venda). O filtro de prodCodes é aplicado no cliente para
   // evitar uma segunda chamada idêntica ao banco.
+  // Gate: Loja + Departamento são obrigatórios para evitar varredura excessiva.
+  const ready = !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0;
+
   const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
     queryFn: () => getArea({ data: {
@@ -105,10 +108,11 @@ function AreaPage() {
       stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos,
       prodCodes: [],
     } }),
-    enabled: !!dateFrom && !!dateTo,
+    enabled: ready,
     staleTime: 60_000,
     retry: 1,
   });
+
 
   const allProducts = (data?.products ?? []) as Product[];
 
@@ -248,8 +252,8 @@ function AreaPage() {
     win.document.close();
   };
 
-  const ready = !!dateFrom && !!dateTo;
   const noSale = data?.plusWithoutSale ?? 0;
+
 
   return (
     <div>
@@ -316,8 +320,13 @@ function AreaPage() {
 
 
       {!ready ? (
-        <div className="kpi-card text-center text-muted-foreground">Selecione um período para iniciar a análise.</div>
+        <div className="kpi-card text-center text-muted-foreground">
+          {(!dateFrom || !dateTo)
+            ? "Selecione um período para iniciar a análise."
+            : "Selecione ao menos uma Loja e um Departamento para iniciar a análise."}
+        </div>
       ) : isError ? (
+
         <div className="kpi-card text-center">
           <p className="text-sm text-destructive mb-3">Não foi possível carregar a análise: {(error as Error)?.message ?? "erro desconhecido"}.</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
