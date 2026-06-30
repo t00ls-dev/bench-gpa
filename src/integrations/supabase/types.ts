@@ -101,6 +101,33 @@ export type Database = {
         }
         Relationships: []
       }
+      filter_hierarchy: {
+        Row: {
+          depto: string | null
+          grupo: string | null
+          secao: string | null
+          store_code: string
+          store_name: string
+          subgrupo: string | null
+        }
+        Insert: {
+          depto?: string | null
+          grupo?: string | null
+          secao?: string | null
+          store_code: string
+          store_name: string
+          subgrupo?: string | null
+        }
+        Update: {
+          depto?: string | null
+          grupo?: string | null
+          secao?: string | null
+          store_code?: string
+          store_name?: string
+          subgrupo?: string | null
+        }
+        Relationships: []
+      }
       import_log: {
         Row: {
           imported_at: string
@@ -417,6 +444,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refresh_filter_hierarchy: { Args: never; Returns: undefined }
       refresh_sales_daily_agg: { Args: { p_date: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
