@@ -306,4 +306,3 @@ function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] 
     </section>
   );
 }
- tv
