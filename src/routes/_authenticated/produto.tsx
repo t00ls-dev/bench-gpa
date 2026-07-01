@@ -33,14 +33,14 @@ function ProductHierarchyTrail({ product }: {
   );
   if (levels.length === 0) return null;
 
+  const parents = levels.slice(0, -1).join(" › ");
+  const last = levels[levels.length - 1];
+
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-500">
-      {levels.map((level, i) => (
-        <span key={i} className="inline-flex items-center gap-1.5">
-          {i > 0 && <span className="text-slate-300">›</span>}
-          <span className={i === levels.length - 1 ? "text-slate-600 font-medium" : undefined}>{level}</span>
-        </span>
-      ))}
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-500">
+      {parents && <span className="min-w-0 truncate">{parents}</span>}
+      {parents && <span className="shrink-0 text-slate-300">›</span>}
+      <span className="max-w-[45vw] shrink-0 truncate font-medium text-slate-600 sm:max-w-[200px]">{last}</span>
     </span>
   );
 }
@@ -306,3 +306,4 @@ function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] 
     </section>
   );
 }
+ tv
