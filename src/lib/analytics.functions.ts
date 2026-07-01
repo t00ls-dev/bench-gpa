@@ -72,7 +72,14 @@ interface AreaAnalysisResult {
 }
 
 interface ProductAnalysisResult {
-  product: { prod_code: string; prod_name: string } | null;
+  product: {
+    prod_code: string;
+    prod_name: string;
+    depto: string | null;
+    secao: string | null;
+    grupo: string | null;
+    subgrupo: string | null;
+  } | null;
   refDate: string | null;
   refValue: number;
   byStore: CodeNameVal[];
@@ -263,7 +270,14 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       ? null
       : (() => {
           const p = asRecord(r.product);
-          return { prod_code: str(p.prod_code), prod_name: str(p.prod_name) };
+          return {
+            prod_code: str(p.prod_code),
+            prod_name: str(p.prod_name),
+            depto: strOrNull(p.depto),
+            secao: strOrNull(p.secao),
+            grupo: strOrNull(p.grupo),
+            subgrupo: strOrNull(p.subgrupo),
+          };
         })();
     return {
       product,
