@@ -232,12 +232,15 @@ function AreaPage() {
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;
     const area = pathParts.join(" › ");
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // "Data da base": os dados sempre correspondem ao dia anterior, então
+    // usamos a última data disponível na base (não a data atual do sistema)
+    // como referência para não contar um dia a mais artificialmente.
+    const baseDateIso = opts?.latestDate ?? dateTo;
     const daysSince = (iso: string | null) => {
-      if (!iso) return "-";
+      if (!iso || !baseDateIso) return "-";
+      const base = new Date(baseDateIso + "T00:00:00");
       const d = new Date(iso + "T00:00:00");
-      const diff = Math.floor((today.getTime() - d.getTime()) / 86400000);
+      const diff = Math.floor((base.getTime() - d.getTime()) / 86400000);
       return diff < 0 ? "0" : String(diff);
     };
 
@@ -269,9 +272,9 @@ function AreaPage() {
   col.c-plu{width:10%}
   col.c-prod{width:34%}
   col.c-val{width:12%}
-  col.c-dias{width:10%}
+  col.c-dias{width:16%}
   col.c-qtd{width:12%}
-  col.c-val-date{width:22%}
+  col.c-val-date{width:16%}
 </style></head><body>
 <h1>Análise de Área</h1>
 <div class="meta">
