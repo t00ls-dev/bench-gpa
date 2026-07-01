@@ -218,24 +218,30 @@ function AreaPage() {
         <td>${escapeHtml(p.prod_code)}</td>
         <td>${escapeHtml(p.prod_name)}</td>
         <td class="num">${escapeHtml(fmtBRL(p.val))}</td>
-        <td class="estoque"></td>
+        <td class="fill"></td>
+        <td class="fill"></td>
       </tr>`).join("");
     win.document.write(`<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área</title>
 <style>
+  @page { size: A4 portrait; margin: 10mm; }
   *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-  body{margin:24px;color:#111;font-size:11px}
-  h1{font-size:16px;margin:0 0 4px}
-  .meta{color:#555;font-size:10px;margin-bottom:12px}
+  body{margin:0;color:#111;font-size:10px}
+  h1{font-size:14px;margin:0 0 4px}
+  .meta{color:#555;font-size:9px;margin-bottom:8px}
   .meta strong{color:#111}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #999;padding:5px 6px;text-align:left;vertical-align:top}
-  th{background:#eef;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{border:1px solid #999;padding:3px 4px;text-align:left;vertical-align:top;word-wrap:break-word;overflow-wrap:break-word}
+  th{background:#eef;font-size:9px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
   td.num{text-align:right;white-space:nowrap}
-  td.estoque{width:90px;height:24px}
+  td.fill{height:20px}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
-  @media print{ body{margin:12mm} }
+  col.c-plu{width:12%}
+  col.c-prod{width:38%}
+  col.c-val{width:14%}
+  col.c-qtd{width:14%}
+  col.c-val-date{width:22%}
 </style></head><body>
 <h1>Análise de Área</h1>
 <div class="meta">
@@ -244,8 +250,15 @@ function AreaPage() {
   <div><strong>Produtos listados:</strong> ${filteredTable.length}</div>
 </div>
 <table>
-  <thead><tr><th style="width:90px">PLU</th><th>Produto</th><th style="width:110px;text-align:right">Venda</th><th style="width:120px">Estoque</th></tr></thead>
-  <tbody>${rowsHtml || `<tr><td colspan="4" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
+  <colgroup>
+    <col class="c-plu" />
+    <col class="c-prod" />
+    <col class="c-val" />
+    <col class="c-qtd" />
+    <col class="c-val-date" />
+  </colgroup>
+  <thead><tr><th>PLU</th><th>Produto</th><th style="text-align:right">Venda</th><th>Quantidade</th><th>Data de Validade</th></tr></thead>
+  <tbody>${rowsHtml || `<tr><td colspan="5" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
 </table>
 <script>window.onload=()=>{setTimeout(()=>window.print(),250)}<\/script>
 </body></html>`);
