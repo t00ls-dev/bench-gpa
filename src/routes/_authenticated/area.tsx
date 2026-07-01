@@ -58,14 +58,34 @@ function AreaPage() {
 
   const { dateFrom, dateTo, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos, prodCodes } = af;
 
-  const { data: opts } = useQuery({
-    queryKey: ["filter-options-area", fStores, fDeptos, fSecoes, fGrupos],
-    queryFn: () => getOpts({ data: {
-      dateFrom: null, dateTo: null,
-      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos,
-    } }),
+  // Cada dropdown consulta opções considerando apenas seus filtros ANCESTRAIS.
+  // Isso evita que selecionar em Seção/Grupo restrinja o próprio conjunto de opções.
+  const baseOpts = useQuery({
+    queryKey: ["filter-options-area:base"],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: [], deptos: [], secoes: [], grupos: [] } }),
     staleTime: 5 * 60_000,
   });
+  const deptosOpts = useQuery({
+    queryKey: ["filter-options-area:deptos", fStores],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: [], secoes: [], grupos: [] } }),
+    staleTime: 5 * 60_000,
+  });
+  const secoesOpts = useQuery({
+    queryKey: ["filter-options-area:secoes", fStores, fDeptos],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: fDeptos, secoes: [], grupos: [] } }),
+    staleTime: 5 * 60_000,
+  });
+  const gruposOpts = useQuery({
+    queryKey: ["filter-options-area:grupos", fStores, fDeptos, fSecoes],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: [] } }),
+    staleTime: 5 * 60_000,
+  });
+  const subgruposOpts = useQuery({
+    queryKey: ["filter-options-area:subgrupos", fStores, fDeptos, fSecoes, fGrupos],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos } }),
+    staleTime: 5 * 60_000,
+  });
+  const opts = baseOpts.data;
 
   useEffect(() => {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
@@ -89,11 +109,11 @@ function AreaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.availableDates]);
 
-  const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
-  const deptos = (opts?.deptos ?? []) as string[];
-  const secoes = (opts?.secoes ?? []) as string[];
-  const grupos = (opts?.grupos ?? []) as string[];
-  const subgrupos = (opts?.subgrupos ?? []) as string[];
+  const stores = (baseOpts.data?.stores ?? []) as { store_code: string; store_name: string }[];
+  const deptos = (deptosOpts.data?.deptos ?? []) as string[];
+  const secoes = (secoesOpts.data?.secoes ?? []) as string[];
+  const grupos = (gruposOpts.data?.grupos ?? []) as string[];
+  const subgrupos = (subgruposOpts.data?.subgrupos ?? []) as string[];
 
   // Uma única consulta ao servidor: traz o universo de produtos da área
   // (com e sem venda). O filtro de prodCodes é aplicado no cliente para
