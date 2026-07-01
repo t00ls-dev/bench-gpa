@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/area")({
 type Product = {
   prod_code: string; prod_name: string;
   depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null;
-  val: number; qty: number;
+  val: number; qty: number; lastSaleDate: string | null;
 };
 
 type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
