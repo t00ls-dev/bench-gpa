@@ -29,11 +29,7 @@ type Product = {
   val: number; qty: number; lastSaleDate: string | null;
 };
 
-type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
-
-function fmtPct(n: number) {
-  return `${(n * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-}
+type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val";
 
 type AF = {
   dateFrom: string; dateTo: string;
@@ -164,10 +160,6 @@ function AreaPage() {
     [data, products, prodCodes]
   );
 
-  const enriched = useMemo(() => products.map((p) => ({
-    ...p, share: total > 0 ? p.val / total : 0,
-  })), [products, total]);
-
   // Breadcrumb
   const pathParts: string[] = [];
   if (fStores.length === 0) pathParts.push("Todas as lojas");
@@ -194,7 +186,7 @@ function AreaPage() {
 
   const filteredTable = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = enriched;
+    let list = products;
     if (q) list = list.filter((p) =>
       p.prod_code.toLowerCase().includes(q) ||
       p.prod_name.toLowerCase().includes(q)
@@ -209,13 +201,12 @@ function AreaPage() {
         case "grupo": av = a.grupo ?? ""; bv = b.grupo ?? ""; break;
         case "subgrupo": av = a.subgrupo ?? ""; bv = b.subgrupo ?? ""; break;
         case "val": av = a.val; bv = b.val; break;
-        case "share": av = a.share; bv = b.share; break;
       }
       if (typeof av === "string") return sortAsc ? (av as string).localeCompare(bv as string) : (bv as string).localeCompare(av as string);
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
     return sorted;
-  }, [enriched, search, sortKey, sortAsc]);
+  }, [products, search, sortKey, sortAsc]);
 
   const totalRows = filteredTable.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -445,7 +436,6 @@ function AreaPage() {
                     <Th label="Grupo" k="grupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Subgrupo" k="subgrupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
                     <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
-                    <Th label="Part. %" k="share" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
                   </tr>
                 </thead>
                 <tbody>
@@ -465,12 +455,11 @@ function AreaPage() {
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.grupo ?? "(sem)"}</td>
                         <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "(sem)"}</td>
                         <td className="num py-2 pl-8 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
-                        <td className="num py-2 pl-8 text-right whitespace-nowrap text-muted-foreground">{fmtPct(p.share)}</td>
                       </tr>
                     );
                   })}
                   {pageRows.length === 0 && !isFetching && (
-                    <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
                   )}
                 </tbody>
               </table>
