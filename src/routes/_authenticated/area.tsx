@@ -12,6 +12,8 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
   FileText, Loader2,
@@ -228,9 +230,10 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
+  // Gera um PDF de verdade em A4 (210x297mm), via jsPDF + autoTable.
+  // Diferente da abordagem anterior (window.print()), o tamanho da página
+  // não depende do diálogo de impressão do navegador — é fixado no arquivo.
   const exportPdf = () => {
-    const win = window.open("", "_blank", "width=900,height=1000");
-    if (!win) return;
     const area = pathParts.join(" › ");
     // "Data da base": os dados sempre correspondem ao dia anterior, então
     // usamos a última data disponível na base (não a data atual do sistema)
@@ -244,59 +247,71 @@ function AreaPage() {
       return diff < 0 ? "0" : String(diff);
     };
 
-    const rowsHtml = filteredTable.map((p) => `
-      <tr>
-        <td>${escapeHtml(p.prod_code)}</td>
-        <td>${escapeHtml(p.prod_name)}</td>
-        <td class="num">${escapeHtml(fmtBRL(p.val))}</td>
-        <td class="num">${daysSince(p.lastSaleDate)}</td>
-        <td class="fill"></td>
-        <td class="fill"></td>
-      </tr>`).join("");
-    win.document.write(`<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>Análise de Área</title>
-<style>
-  @page { size: A4 portrait; margin: 10mm; }
-  *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-  body{margin:0;color:#111;font-size:9px}
-  h1{font-size:14px;margin:0 0 4px}
-  .meta{color:#555;font-size:9px;margin-bottom:8px}
-  .meta strong{color:#111}
-  table{width:100%;border-collapse:collapse;table-layout:fixed}
-  th,td{border:1px solid #999;padding:3px 4px;text-align:left;vertical-align:top;word-wrap:break-word;overflow-wrap:break-word}
-  th{background:#eef;font-size:8px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;text-align:center}
-  td.num{text-align:right;white-space:nowrap}
-  td.fill{height:20px}
-  tr{page-break-inside:avoid}
-  thead{display:table-header-group}
-  col.c-plu{width:10%}
-  col.c-prod{width:34%}
-  col.c-val{width:12%}
-  col.c-dias{width:16%}
-  col.c-qtd{width:12%}
-  col.c-val-date{width:16%}
-</style></head><body>
-<h1>Análise de Área</h1>
-<div class="meta">
-  <div><strong>Área:</strong> ${escapeHtml(area)}</div>
-  <div><strong>Período:</strong> ${escapeHtml(fmtBRShort(dateFrom))} - ${escapeHtml(fmtBRShort(dateTo))}</div>
-  <div><strong>Produtos listados:</strong> ${filteredTable.length}</div>
-</div>
-<table>
-  <colgroup>
-    <col class="c-plu" />
-    <col class="c-prod" />
-    <col class="c-val" />
-    <col class="c-dias" />
-    <col class="c-qtd" />
-    <col class="c-val-date" />
-  </colgroup>
-  <thead><tr><th>PLU</th><th>Produto</th><th>Venda</th><th>Dias s/ Venda</th><th>Quantidade</th><th>Data de Validade</th></tr></thead>
-  <tbody>${rowsHtml || `<tr><td colspan="6" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
-</table>
-<script>window.onload=()=>{setTimeout(()=>window.print(),250)}<\/script>
-</body></html>`);
-    win.document.close();
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const marginX = 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(17, 17, 17);
+    doc.text("Análise de Área", marginX, 12);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(85, 85, 85);
+    doc.text(`Área: ${area}`, marginX, 18);
+    doc.text(`Período: ${fmtBRShort(dateFrom)} - ${fmtBRShort(dateTo)}`, marginX, 22.5);
+    doc.text(`Produtos listados: ${filteredTable.length}`, marginX, 27);
+
+    autoTable(doc, {
+      startY: 31,
+      margin: { left: marginX, right: marginX },
+      head: [["PLU", "Produto", "Venda", "Dias s/ Venda", "Quantidade", "Data de Validade"]],
+      body: filteredTable.length
+        ? filteredTable.map((p) => [
+            p.prod_code,
+            p.prod_name,
+            fmtBRL(p.val),
+            daysSince(p.lastSaleDate),
+            "",
+            "",
+          ])
+        : [["", "Nenhum produto.", "", "", "", ""]],
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 8,
+        cellPadding: 1.5,
+        overflow: "linebreak",
+        valign: "top",
+        lineColor: [153, 153, 153],
+        lineWidth: 0.1,
+        textColor: [17, 17, 17],
+      },
+      headStyles: {
+        fillColor: [238, 238, 255],
+        textColor: [17, 17, 17],
+        fontStyle: "bold",
+        fontSize: 7.5,
+        halign: "center",
+      },
+      columnStyles: {
+        0: { cellWidth: 18 },                     // PLU
+        1: { cellWidth: 73 },                     // Produto
+        2: { cellWidth: 22, halign: "right" },     // Venda
+        3: { cellWidth: 26, halign: "right" },     // Dias s/ Venda
+        4: { cellWidth: 22, minCellHeight: 7 },    // Quantidade (preenchimento manual)
+        5: { cellWidth: 29, minCellHeight: 7 },    // Data de Validade (preenchimento manual)
+      },
+      didParseCell: (hookData) => {
+        // Nas linhas de dados, deixa as duas últimas colunas em branco com
+        // altura mínima para preenchimento manual no papel.
+        if (hookData.section === "body" && (hookData.column.index === 4 || hookData.column.index === 5)) {
+          hookData.cell.text = [];
+        }
+      },
+    });
+
+    doc.save(`analise-area_${dateFrom}_${dateTo}.pdf`);
   };
 
   const noSale = data?.plusWithoutSale ?? 0;
@@ -482,12 +497,6 @@ function AreaPage() {
         </>
       )}
     </div>
-  );
-}
-
-function escapeHtml(s: string) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
   );
 }
 
