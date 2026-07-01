@@ -26,7 +26,6 @@ interface DateVal { date: string; val: number }
 
 interface DashboardMetricsResult {
   total: number;
-  count: number;
   byStore: CodeNameVal[];
   byDepto: NameVal[];
   byDate: DateVal[];
@@ -149,7 +148,6 @@ async function callMetrics(supabase: DB, f: Filters): Promise<DashboardMetricsRe
   const d = asRecord(data);
   return {
     total: num(d.total),
-    count: num(d.count),
     byStore: parseCodeNameVal(d.byStore),
     byDepto: parseNameVal(d.byDepto),
     byDate: parseDateVal(d.byDate),
