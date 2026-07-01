@@ -24,6 +24,27 @@ const WEEKDAY_IS_MASC = [true, false, false, false, false, false, true];
 interface SeriesPoint { date: string; val: number }
 interface StorePoint { code: string; name: string; val: number }
 
+function ProductHierarchyTrail({ product }: {
+  product: { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null } | null | undefined;
+}) {
+  if (!product) return null;
+  const levels = [product.depto, product.secao, product.grupo, product.subgrupo].filter(
+    (v): v is string => !!v && v.trim().length > 0
+  );
+  if (levels.length === 0) return null;
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-500">
+      {levels.map((level, i) => (
+        <span key={i} className="inline-flex items-center gap-1.5">
+          {i > 0 && <span className="text-slate-300">›</span>}
+          <span className={i === levels.length - 1 ? "text-slate-600 font-medium" : undefined}>{level}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function ProdutoPage() {
   const { plu } = Route.useSearch();
   const [query, setQuery] = useState("");
@@ -149,6 +170,7 @@ function ProdutoPage() {
               <span className="font-mono">{selected.prod_code}</span>
               <span className="truncate max-w-[260px]">{selected.prod_name}</span>
             </span>
+            <ProductHierarchyTrail product={analysisData?.product} />
           </div>
         )}
         {!selected && debounced.length >= 3 && suggestions && suggestions.length > 0 && (
