@@ -1,10 +1,9 @@
-
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDashboard, getDashboardRankings } from "@/lib/analytics.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
-import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
+import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { RankingCard } from "@/components/ranking-card";
 import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -56,23 +55,12 @@ function Dashboard() {
 
       <FilterBar value={filters} onChange={setFilters} />
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-1 md:max-w-xs">
         <KpiCard
           label="Venda total"
           value={fmtBRL(data?.current.total ?? 0)}
           delta={data?.previous ? delta(data.current.total, data.previous.total) : null}
           hint={data?.previous ? `Anterior: ${fmtBRL(data.previous.total)}` : undefined}
-        />
-        <KpiCard
-          label="Itens vendidos"
-          value={fmtInt(data?.current.count ?? 0)}
-          delta={data?.previous ? delta(data.current.count, data.previous.count) : null}
-          hint={data?.previous ? `Anterior: ${fmtInt(data.previous.count)}` : undefined}
-        />
-        <KpiCard
-          label="Lojas com venda"
-          value={fmtInt(data?.current.byStore.length ?? 0)}
-          delta={data?.previous ? delta(data.current.byStore.length, data.previous.byStore.length) : null}
         />
       </section>
 
