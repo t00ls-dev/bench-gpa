@@ -60,6 +60,7 @@ interface AreaProduct {
   subgrupo: string | null;
   val: number;
   qty: number;
+  lastSaleDate: string | null;
 }
 interface AreaAnalysisResult {
   total: number;
@@ -323,6 +324,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
           subgrupo: strOrNull(o.subgrupo),
           val: num(o.val),
           qty: num(o.qty),
+          lastSaleDate: strOrNull(o.lastSaleDate),
         };
       }),
       byDate: parseDateVal(r.byDate),
