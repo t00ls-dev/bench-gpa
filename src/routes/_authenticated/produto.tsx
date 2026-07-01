@@ -92,7 +92,7 @@ function ProdutoPage() {
     <div>
       <header className="mb-6">
         <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-          <Package className="size-7 text-primary shrink-0" /> Análise de produto
+          <Package className="size-7 text-primary shrink-0" /> Análise de Produto
         </h1>
         <p className="text-sm text-muted-foreground">Pesquise um produto para ver comparações entre lojas, evolução e benchmarks semanais.</p>
       </header>
