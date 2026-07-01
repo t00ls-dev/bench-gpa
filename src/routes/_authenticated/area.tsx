@@ -265,7 +265,7 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "Produto", "Venda", "Dias s/ Venda", "Quantidade", "Data de Validade"]],
+      head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QUANTIDADE", "DATA DE VALIDADE"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
