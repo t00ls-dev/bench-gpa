@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/area")({
 type Product = {
   prod_code: string; prod_name: string;
   depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null;
-  val: number; qty: number;
+  val: number; qty: number; lastSaleDate: string | null;
 };
 
 type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val" | "share";
@@ -58,14 +58,34 @@ function AreaPage() {
 
   const { dateFrom, dateTo, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos, prodCodes } = af;
 
-  const { data: opts } = useQuery({
-    queryKey: ["filter-options-area", fStores, fDeptos, fSecoes, fGrupos],
-    queryFn: () => getOpts({ data: {
-      dateFrom: null, dateTo: null,
-      stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos,
-    } }),
+  // Cada dropdown consulta opções considerando apenas seus filtros ANCESTRAIS.
+  // Isso evita que selecionar em Seção/Grupo restrinja o próprio conjunto de opções.
+  const baseOpts = useQuery({
+    queryKey: ["filter-options-area:base"],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: [], deptos: [], secoes: [], grupos: [] } }),
     staleTime: 5 * 60_000,
   });
+  const deptosOpts = useQuery({
+    queryKey: ["filter-options-area:deptos", fStores],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: [], secoes: [], grupos: [] } }),
+    staleTime: 5 * 60_000,
+  });
+  const secoesOpts = useQuery({
+    queryKey: ["filter-options-area:secoes", fStores, fDeptos],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: fDeptos, secoes: [], grupos: [] } }),
+    staleTime: 5 * 60_000,
+  });
+  const gruposOpts = useQuery({
+    queryKey: ["filter-options-area:grupos", fStores, fDeptos, fSecoes],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: [] } }),
+    staleTime: 5 * 60_000,
+  });
+  const subgruposOpts = useQuery({
+    queryKey: ["filter-options-area:subgrupos", fStores, fDeptos, fSecoes, fGrupos],
+    queryFn: () => getOpts({ data: { dateFrom: null, dateTo: null, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos } }),
+    staleTime: 5 * 60_000,
+  });
+  const opts = baseOpts.data;
 
   useEffect(() => {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
@@ -89,11 +109,11 @@ function AreaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.availableDates]);
 
-  const stores = (opts?.stores ?? []) as { store_code: string; store_name: string }[];
-  const deptos = (opts?.deptos ?? []) as string[];
-  const secoes = (opts?.secoes ?? []) as string[];
-  const grupos = (opts?.grupos ?? []) as string[];
-  const subgrupos = (opts?.subgrupos ?? []) as string[];
+  const stores = (baseOpts.data?.stores ?? []) as { store_code: string; store_name: string }[];
+  const deptos = (deptosOpts.data?.deptos ?? []) as string[];
+  const secoes = (secoesOpts.data?.secoes ?? []) as string[];
+  const grupos = (gruposOpts.data?.grupos ?? []) as string[];
+  const subgrupos = (subgruposOpts.data?.subgrupos ?? []) as string[];
 
   // Uma única consulta ao servidor: traz o universo de produtos da área
   // (com e sem venda). O filtro de prodCodes é aplicado no cliente para
@@ -212,12 +232,21 @@ function AreaPage() {
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;
     const area = pathParts.join(" › ");
-    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysSince = (iso: string | null) => {
+      if (!iso) return "-";
+      const d = new Date(iso + "T00:00:00");
+      const diff = Math.floor((today.getTime() - d.getTime()) / 86400000);
+      return diff < 0 ? "0" : String(diff);
+    };
+
     const rowsHtml = filteredTable.map((p) => `
       <tr>
         <td>${escapeHtml(p.prod_code)}</td>
         <td>${escapeHtml(p.prod_name)}</td>
         <td class="num">${escapeHtml(fmtBRL(p.val))}</td>
+        <td class="num">${daysSince(p.lastSaleDate)}</td>
         <td class="fill"></td>
         <td class="fill"></td>
       </tr>`).join("");
@@ -226,21 +255,22 @@ function AreaPage() {
 <style>
   @page { size: A4 portrait; margin: 10mm; }
   *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-  body{margin:0;color:#111;font-size:10px}
+  body{margin:0;color:#111;font-size:9px}
   h1{font-size:14px;margin:0 0 4px}
   .meta{color:#555;font-size:9px;margin-bottom:8px}
   .meta strong{color:#111}
   table{width:100%;border-collapse:collapse;table-layout:fixed}
   th,td{border:1px solid #999;padding:3px 4px;text-align:left;vertical-align:top;word-wrap:break-word;overflow-wrap:break-word}
-  th{background:#eef;font-size:9px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+  th{background:#eef;font-size:8px;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;text-align:center}
   td.num{text-align:right;white-space:nowrap}
   td.fill{height:20px}
   tr{page-break-inside:avoid}
   thead{display:table-header-group}
-  col.c-plu{width:12%}
-  col.c-prod{width:38%}
-  col.c-val{width:14%}
-  col.c-qtd{width:14%}
+  col.c-plu{width:10%}
+  col.c-prod{width:34%}
+  col.c-val{width:12%}
+  col.c-dias{width:10%}
+  col.c-qtd{width:12%}
   col.c-val-date{width:22%}
 </style></head><body>
 <h1>Análise de Área</h1>
@@ -254,11 +284,12 @@ function AreaPage() {
     <col class="c-plu" />
     <col class="c-prod" />
     <col class="c-val" />
+    <col class="c-dias" />
     <col class="c-qtd" />
     <col class="c-val-date" />
   </colgroup>
-  <thead><tr><th>PLU</th><th>Produto</th><th style="text-align:right">Venda</th><th>Quantidade</th><th>Data de Validade</th></tr></thead>
-  <tbody>${rowsHtml || `<tr><td colspan="5" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
+  <thead><tr><th>PLU</th><th>Produto</th><th>Venda</th><th>Dias s/ Venda</th><th>Quantidade</th><th>Data de Validade</th></tr></thead>
+  <tbody>${rowsHtml || `<tr><td colspan="6" style="text-align:center;padding:24px">Nenhum produto.</td></tr>`}</tbody>
 </table>
 <script>window.onload=()=>{setTimeout(()=>window.print(),250)}<\/script>
 </body></html>`);
