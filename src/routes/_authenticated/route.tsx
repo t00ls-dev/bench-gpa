@@ -17,21 +17,24 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthedLayout() {
   const router = useRouter();
   const { user } = Route.useRouteContext();
-  const [profile, setProfile] = useState<{ status: string; isAdmin: boolean } | null>(null);
+  const [profile, setProfile] = useState<{ isActive: boolean; isAdmin: boolean } | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [{ data: p }, { data: r }] = await Promise.all([
-        supabase.from("profiles").select("status").eq("id", user.id).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-      ]);
-      setProfile({
-        status: p?.status ?? "pending",
-        isAdmin: (r ?? []).some((x) => x.role === "admin"),
-      });
+      const { data } = await supabase
+        .from("users")
+        .select("is_active, role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!data || !data.is_active) {
+        await supabase.auth.signOut();
+        router.navigate({ to: "/auth", replace: true });
+        return;
+      }
+      setProfile({ isActive: true, isAdmin: data.role === "admin" });
     })();
-  }, [user.id]);
+  }, [user.id, router]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -40,27 +43,6 @@ function AuthedLayout() {
 
   if (!profile) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
-  }
-
-  if (profile.status !== "approved") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-6">
-        <div className="kpi-card max-w-md text-center">
-          <h1 className="text-2xl font-semibold">
-            {profile.status === "blocked" ? "Acesso bloqueado" : "Aguardando aprovação"}
-          </h1>
-          <p className="mt-3 text-muted-foreground">
-            {profile.status === "blocked"
-              ? "Seu acesso foi bloqueado por um administrador."
-              : "Seu cadastro foi recebido. Aguarde a liberação por um administrador."}
-          </p>
-          <p className="mt-4 text-sm text-muted-foreground">Conta: {user.email}</p>
-          <Button variant="outline" className="mt-6" onClick={signOut}>
-            <LogOut className="mr-2 size-4" /> Sair
-          </Button>
-        </div>
-      </div>
-    );
   }
 
   const nav = [
