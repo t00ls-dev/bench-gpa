@@ -1,133 +1,170 @@
 
-## Visão geral
+# Refatoração do sistema de login — Bench GPA
 
-Esta entrega cobre três blocos de trabalho:
-
-1. **Ajustes gerais de UI/UX** em toda a aplicação.
-2. **Expansão dos rankings do Dashboard** (Seções, Grupos, Subgrupos e Produtos, além de Departamentos).
-3. **Nova funcionalidade "Análises Personalizadas"** dentro de Análise de Área, com persistência por usuário no backend.
+Objetivo: substituir o login por magic link por **e-mail sintético + senha**, unificar `profiles` + `user_roles` em uma única tabela `public.users`, restringir criação/gestão de usuários ao admin e remover toda a infraestrutura de e-mail.
 
 ---
 
-## 1. Ajustes gerais
+## 1. Migração de banco (única migration, revisada antes de rodar)
 
-### 1.1 Remoção de travessões (—)
-- Varredura em todo `src/` substituindo `—` por:
-  - **dois pontos** (`:`) quando separa rótulo de valor (ex.: "1513 — Loja Centro" → "1513: Loja Centro");
-  - **parênteses** quando é informação acessória;
-  - **quebra de linha** ou separador visual (border/spacing) quando estrutural.
+### 1.1 Criar `public.users`
 
-### 1.2 Filtros padronizados
-- O `MultiSelect` do `FilterBar` (checkbox + "Selecionar todos" + "Limpar seleção") já é o padrão. Garantir que **todas as páginas** (Dashboard, Produto, Queda, Área) usem `FilterBar` ou o mesmo `MultiSelect`, sem variações locais.
+```sql
+CREATE TABLE public.users (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text NOT NULL UNIQUE CHECK (email ~ '@gpabr\.com$'),
+  name text NOT NULL,
+  role public.app_role NOT NULL DEFAULT 'user',
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-### 1.3 Restrição de acesso administrativo
-- Páginas **Importar** (`/upload`) e **Usuários** (`/admin`) só para administradores.
-- Implementação: `beforeLoad` em cada rota chama `has_role(uid, 'admin')` via server function; usuários não-admin recebem `redirect({ to: '/' })`.
-- Esconder também os itens do menu lateral para não-admins.
+GRANT SELECT ON public.users TO authenticated;
+GRANT ALL ON public.users TO service_role;
 
-### 1.4 Tabelas: espaçamento e larguras
-- Revisar paddings (`px-3`/`py-2`) e larguras mínimas em todas as tabelas do projeto.
-- Em **Análise de Área**, aumentar a separação entre as colunas **Vendas** e **Part. %** (espaçamento maior + alinhamento à direita com largura fixa).
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
-### 1.5 Exportar CSV
-- Remover botão e função de export CSV da página Análise de Área. PDF permanece.
+-- usuário lê a própria linha (para checar is_active pós-login)
+CREATE POLICY "users_self_select" ON public.users
+  FOR SELECT TO authenticated
+  USING (id = auth.uid());
 
----
-
-## 2. Dashboard: rankings expandidos
-
-Hoje existe apenas **Top Departamentos**. Vamos adicionar, com o mesmo componente visual, filtros e ordenação:
-
-- Top Seções
-- Top Grupos
-- Top Subgrupos
-- Top Produtos
-
-**Backend:** estender `dashboard_metrics` (ou criar `dashboard_rankings`) para retornar `bySecao`, `byGrupo`, `bySubgrupo`, `byProduto` (top N por `val_vda`).
-
-**Frontend:** abstrair o card atual em um componente `RankingCard` reutilizável e renderizar 5 cards (Departamento, Seção, Grupo, Subgrupo, Produto).
-
----
-
-## 3. Análises Personalizadas (nova funcionalidade)
-
-### 3.1 Modelo de dados (migration)
-
-```text
-custom_analyses
-  id uuid pk
-  user_id uuid fk auth.users
-  name text
-  created_at, updated_at
-
-custom_analysis_items
-  id uuid pk
-  analysis_id uuid fk custom_analyses on delete cascade
-  prod_code text
-  created_at
-  unique(analysis_id, prod_code)
+-- admin lê tudo (via has_role, sem recursão pois has_role é SECURITY INVOKER + STABLE)
+CREATE POLICY "users_admin_select" ON public.users
+  FOR SELECT TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 ```
 
-- RLS: `user_id = auth.uid()` em todas as operações.
-- GRANTs para `authenticated` e `service_role`.
-- Trigger `updated_at` em `custom_analyses` (inclusive quando itens mudam — atualizar via server fn).
+Escritas em `public.users` ficam restritas ao `service_role` (via server functions do admin) — nenhuma policy de INSERT/UPDATE/DELETE para `authenticated`.
 
-### 3.2 Server functions (`src/lib/custom-analyses.functions.ts`)
-- `listCustomAnalyses()` → nome, contagem de itens, updated_at.
-- `createCustomAnalysis({ name })`.
-- `renameCustomAnalysis({ id, name })`.
-- `deleteCustomAnalysis({ id })`.
-- `duplicateCustomAnalysis({ id })`.
-- `getCustomAnalysis({ id })` → itens com info de produto (join `products` + última hierarquia conhecida em `sales`).
-- `addProductToAnalysis({ id, prodCode })` → valida existência em `products`, retorna info; erro amigável se inexistente ou duplicado.
-- `removeProductFromAnalysis({ id, prodCode })`.
-- `customAnalysisResults({ id, dateFrom, dateTo, stores, ... })` → reaproveita lógica de `area_analysis`, filtrando por `prod_code IN (itens)`.
+### 1.2 Atualizar funções de autorização
 
-Todas com `requireSupabaseAuth`.
+```sql
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
+RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = _user_id AND role = _role AND is_active = true
+  )
+$$;
 
-### 3.3 UI
+-- Renomeia is_approved -> is_active_user (para não colidir com a coluna)
+DROP FUNCTION IF EXISTS public.is_approved(uuid);
+CREATE OR REPLACE FUNCTION public.is_active_user(_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM public.users WHERE id = _user_id AND is_active = true)
+$$;
 
-Dentro de `/area`, adicionar um topo com duas abas: **Análise de Área** (atual) e **Análises Personalizadas**.
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_active_user(uuid) TO authenticated;
+```
 
-**Lista de análises personalizadas:**
-- Botão "Nova Análise Personalizada" (modal pedindo nome).
-- Cards/linhas: nome, qtd produtos, última atualização.
-- Ações: Abrir, Renomear, Duplicar, Favoritar, Excluir (com `AlertDialog` de confirmação irreversível).
-- Seção "Últimas acessadas" (persistida em `localStorage` por usuário).
+### 1.3 Atualizar RLS de todas as tabelas de dados
 
-**Editor da análise:**
-- Cabeçalho: nome editável + contador de produtos em tempo real.
-- Campo "Adicionar PLU" com validação inline (aparece descrição após inclusão).
-- Campo de busca por PLU/descrição dentro da análise.
-- Tabela: PLU, Descrição, Depto, Seção, Grupo, Subgrupo, ação Remover.
-- Ordenação por PLU, descrição, venda, participação.
-- Paginação (50/página).
-- Indicador visual quando PLU não existe mais em `products` (badge "Inexistente").
+Substituir `public.is_approved(auth.uid())` por `public.is_active_user(auth.uid())` em: `sales`, `sales_daily_agg`, `products`, `stores`, `import_log`, `filter_hierarchy`. Atualizar também RPCs (`product_search`, `imported_dates`, `dashboard_metrics`, `dashboard_rankings`, `filter_options`, `area_analysis`, `product_analysis`, `products_in_decline`) para chamar `is_active_user`.
 
-**Visualização de resultados:**
-- Mesma estrutura visual de Análise de Área (KPIs, tabela detalhada).
-- Filtros: período + loja/depto/seção (cascata como hoje).
-- Botão "Exportar PDF" (sem CSV).
+### 1.4 Limpeza do modelo antigo
 
-### 3.4 Persistência e segurança
-- RLS força isolamento por `user_id`.
-- Frontend usa apenas server functions autenticadas; nenhuma query direta no client.
+```sql
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+DROP TABLE IF EXISTS public.user_roles CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TYPE  IF EXISTS public.user_status;
+```
+
+### 1.5 Reset de usuários + admin inicial
+
+```sql
+DELETE FROM auth.users;  -- limpeza pontual da migração
+-- admin criado pela mesma migration via extensão pgcrypto:
+-- INSERT em auth.users com senha bcrypt + INSERT em public.users
+-- email: 0001@gpabr.com  senha inicial: definir na hora (informar ao usuário)
+```
+(Se preferir, criar o admin depois via `supabase.auth.admin.createUser` num script one-shot; a migration deixa apenas a estrutura pronta.)
+
+### 1.6 Remover infraestrutura de e-mail
+
+```sql
+DROP FUNCTION IF EXISTS public.enqueue_email(text, jsonb);
+DROP FUNCTION IF EXISTS public.email_queue_dispatch();
+DROP FUNCTION IF EXISTS public.email_queue_wake();
+DROP FUNCTION IF EXISTS public.read_email_batch(text, int, int);
+DROP FUNCTION IF EXISTS public.move_to_dlq(text, text, bigint, jsonb);
+DROP FUNCTION IF EXISTS public.delete_email(text, bigint);
+DROP TABLE IF EXISTS public.email_send_log;
+DROP TABLE IF EXISTS public.email_send_state;
+DROP TABLE IF EXISTS public.suppressed_emails;
+DROP TABLE IF EXISTS public.email_unsubscribe_tokens;
+-- unschedule cron 'process-email-queue'
+```
+
+Auth Hook de "Send Email" desativado via `supabase--configure_auth` / painel (nota: pode exigir passo manual).
 
 ---
 
-## Técnico (resumo)
+## 2. Server functions (`src/lib/admin.functions.ts`)
 
-- **Migrations:** 1 migration criando `custom_analyses`, `custom_analysis_items`, GRANTs, RLS, triggers; 1 migration atualizando `dashboard_metrics` (ou nova `dashboard_rankings`).
-- **Server fns:** `src/lib/custom-analyses.functions.ts` + extensão de `analytics.functions.ts` para rankings.
-- **Rotas:** mover gates em `_authenticated/upload.tsx` e `_authenticated/admin.tsx` (admin only); manter `/area` e adicionar subview de análises personalizadas (abas internas, não rota nova, para preservar filtros e estado).
-- **Componentes:** `RankingCard` reutilizável; ajustes em `FilterBar`/tabelas.
-- **Varredura:** script `rg "—"` em `src/` para localizar travessões e substituir caso a caso.
+Substituir `listUsers`, `setUserStatus`, `setUserRole` por:
+
+- `listUsers()` — `SELECT id, email, name, role, is_active, created_at FROM public.users ORDER BY created_at DESC`
+- `createUser({ email, name, password, role })` — valida domínio `@gpabr.com`; chama `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true })`; INSERT em `public.users`.
+- `setUserRole({ userId, role })` — `UPDATE public.users SET role = ...` (impede auto-rebaixamento do último admin).
+- `setUserActive({ userId, isActive })` — `UPDATE public.users SET is_active = ...` (impede auto-desativação).
+- `resetPassword({ userId, password })` — `supabaseAdmin.auth.admin.updateUserById(userId, { password })`.
+
+**Não existe** `deleteUser`.
 
 ---
 
-## Pontos para confirmação antes de iniciar
+## 3. Página de login (`src/routes/auth.tsx`)
 
-1. **Travessões:** confirmo a regra de substituição "X — Y" → "X: Y" (ex.: "1513 — Loja Centro" vira "1513: Loja Centro")?
-2. **Top Produtos no Dashboard:** quantos itens por ranking? Sugiro top 10, igual ao padrão atual.
-3. **Análises Personalizadas:** abas internas dentro de `/area`, ou rota separada `/area/personalizadas`? Sugiro abas para manter contexto.
-4. **Favoritos / últimas acessadas:** ok manter em `localStorage` (sem persistência cross-device)?
+Reescrever com formulário e-mail + senha:
+- `supabase.auth.signInWithPassword({ email, password })`
+- Após sucesso: `select is_active from public.users where id = auth.uid()`. Se `false` → `signOut()` + toast "Usuário inativo, procure o administrador".
+- Sem magic link, sem cooldown, sem "reenviar".
+
+---
+
+## 4. Página de admin (`src/routes/_authenticated/admin.tsx`)
+
+- Botão "Novo usuário" abre dialog com: E-mail (sufixo `@gpabr.com` fixo na UI), Nome, Senha inicial, Papel.
+- Tabela lista: E-mail · Nome · Papel · Ativo · Cadastro · Ações.
+- Ações por linha: toggle Ativo/Inativo, alternar Admin/Usuário, botão "Redefinir senha" (dialog com nova senha).
+- Remover qualquer ação de exclusão.
+
+---
+
+## 5. Remoções de arquivos
+
+- `src/lib/email-templates/` (todos os 6 templates + `registry.ts` se existir)
+- `src/routes/lovable/email/**` (webhook, preview, queue/process)
+- Referências a `@lovable.dev/email-js`, `@lovable.dev/webhooks-js`, `@react-email/components`, `react-email` no `package.json` (`bun remove`).
+- Migration antiga `20260629000154_email_infra.sql`: **não** deletar arquivo histórico; a nova migration faz o `DROP` correspondente (revert efetivo em runtime).
+
+---
+
+## 6. Ajustes menores
+
+- `src/integrations/supabase/types.ts` — regenerado automaticamente após a migration.
+- Referências a `profiles`/`user_roles`/`status`/`is_approved` no código: atualizar para `users`/`is_active`/`is_active_user`.
+- `beforeLoad` de `/admin` e `/upload`: trocar consulta de `user_roles` por `users`.
+
+---
+
+## Ordem de execução (após aprovação)
+
+1. Rodar **migration única** (seções 1.1–1.6) via `supabase--migration`.
+2. Criar admin inicial (`0001@gpabr.com`) via server-side script one-shot ou `INSERT` embutido na migration — confirmar senha inicial com o usuário.
+3. Reescrever `auth.tsx`, `admin.functions.ts`, `admin.tsx`.
+4. Deletar diretórios/arquivos de e-mail + `bun remove` das libs.
+5. Desativar Auth Hook de envio de e-mail no Supabase Auth.
+6. Verificar typecheck e testar login manualmente.
+
+---
+
+**Pendências para confirmar antes de executar:**
+
+1. **Senha inicial do admin `0001@gpabr.com`**: qual valor usar? (Sugestão: gerar aleatória e mostrar uma única vez.)
+2. Confirmar que posso **apagar todos os usuários atuais** em `auth.users` (não há dados de usuário a preservar).
+3. Confirmar que a **migration `20260629000154_email_infra.sql` fica no histórico** (apenas revertida por DROP) — padrão Supabase, não deleto o arquivo.
