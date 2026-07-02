@@ -9,43 +9,57 @@ async function assertAdmin(ctx: { supabase: any; userId: string }) {
   if (!data) throw new Error("Apenas administradores.");
 }
 
+const emailSchema = z.string().trim().toLowerCase()
+  .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
+const passwordSchema = z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(128);
+
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profiles, error } = await supabaseAdmin
-      .from("profiles")
-      .select("id, email, status, created_at")
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("id, email, name, role, is_active, created_at")
       .order("created_at", { ascending: false });
     if (error) throw safeError("listUsers", error);
-    const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id, role");
-    const rmap = new Map<string, string[]>();
-    (roles ?? []).forEach((r) => {
-      const a = rmap.get(r.user_id) ?? [];
-      a.push(r.role);
-      rmap.set(r.user_id, a);
-    });
-    return (profiles ?? []).map((p) => ({ ...p, roles: rmap.get(p.id) ?? [] }));
+    return data ?? [];
   });
 
-export const setUserStatus = createServerFn({ method: "POST" })
+export const createUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
     z.object({
-      userId: z.string().uuid(),
-      status: z.enum(["pending", "approved", "blocked"]),
+      email: emailSchema,
+      name: z.string().trim().min(1, "Nome obrigatório").max(120),
+      password: passwordSchema,
+      role: z.enum(["admin", "user"]),
     }).parse(data)
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({ status: data.status })
-      .eq("id", data.userId);
-    if (error) throw safeError("setUserStatus", error);
-    return { ok: true };
+
+    const { data: created, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+    });
+    if (authErr || !created?.user) throw safeError("createUser.auth", authErr);
+
+    const { error: insErr } = await supabaseAdmin.from("users").insert({
+      id: created.user.id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      is_active: true,
+    });
+    if (insErr) {
+      // rollback: apaga auth user órfão
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id).catch(() => {});
+      throw safeError("createUser.insert", insErr);
+    }
+    return { ok: true, id: created.user.id };
   });
 
 export const setUserRole = createServerFn({ method: "POST" })
@@ -54,27 +68,58 @@ export const setUserRole = createServerFn({ method: "POST" })
     z.object({
       userId: z.string().uuid(),
       role: z.enum(["admin", "user"]),
-      grant: z.boolean(),
     }).parse(data)
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    if (context.userId === data.userId && data.role === "admin" && !data.grant) {
-      throw new Error("Você não pode remover o próprio acesso de administrador.");
+    if (context.userId === data.userId && data.role !== "admin") {
+      throw new Error("Você não pode remover seu próprio acesso de administrador.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.grant) {
-      const { error } = await supabaseAdmin
-        .from("user_roles")
-        .upsert({ user_id: data.userId, role: data.role }, { onConflict: "user_id,role" });
-      if (error) throw safeError("setUserRole.grant", error);
-    } else {
-      const { error } = await supabaseAdmin
-        .from("user_roles")
-        .delete()
-        .eq("user_id", data.userId)
-        .eq("role", data.role);
-      if (error) throw safeError("setUserRole.revoke", error);
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ role: data.role })
+      .eq("id", data.userId);
+    if (error) throw safeError("setUserRole", error);
+    return { ok: true };
+  });
+
+export const setUserActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({
+      userId: z.string().uuid(),
+      isActive: z.boolean(),
+    }).parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    if (context.userId === data.userId && !data.isActive) {
+      throw new Error("Você não pode inativar sua própria conta.");
     }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ is_active: data.isActive })
+      .eq("id", data.userId);
+    if (error) throw safeError("setUserActive", error);
+    return { ok: true };
+  });
+
+export const resetPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({
+      userId: z.string().uuid(),
+      password: passwordSchema,
+    }).parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      password: data.password,
+    });
+    if (error) throw safeError("resetPassword", error);
     return { ok: true };
   });
