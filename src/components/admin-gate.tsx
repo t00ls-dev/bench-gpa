@@ -8,10 +8,11 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return setState("deny");
-      const { data: roles } = await supabase
-        .from("user_roles").select("role").eq("user_id", u.user.id);
-      const ok = (roles ?? []).some((r: any) => r.role === "admin");
-      setState(ok ? "allow" : "deny");
+      const { data, error } = await supabase.rpc("has_role", {
+        _user_id: u.user.id,
+        _role: "admin",
+      });
+      setState(!error && data === true ? "allow" : "deny");
     })();
   }, []);
   if (state === "loading") {
