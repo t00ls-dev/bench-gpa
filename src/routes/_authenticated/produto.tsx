@@ -201,7 +201,7 @@ function ProdutoPage() {
           <section className="mt-6 grid gap-4 md:grid-cols-3">
             <KpiCard label="Venda na data referência" value={fmtBRL(analysisData.refValue ?? 0)} hint={analysisData.refDate ? `${refWeekdayFull} · ${fmtBRShort(analysisData.refDate)}` : undefined} />
             <KpiCard label={`Média de ${refWeekdayPlural?.toLowerCase() ?? "datas anteriores"}`} value={fmtBRL(avgSame)} delta={avgSame > 0 ? ((analysisData.refValue ?? 0) - avgSame) / avgSame : null} hint={`Todos os ${refWeekdayPlural?.toLowerCase() ?? ""} do histórico`} />
-            <KpiCard label="Média diária" value={fmtBRL(avgDaily)} hint="Considerando todo o histórico disponível" />
+            <KpiCard label="Média diária" value={fmtBRL(avgDaily)} delta={avgDaily > 0 ? ((analysisData.refValue ?? 0) - avgDaily) / avgDaily : null} hint="Considerando todo o histórico disponível" />
           </section>
 
           <section className="mt-6 grid gap-4 lg:grid-cols-2">
