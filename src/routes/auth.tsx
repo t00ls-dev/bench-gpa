@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { LogIn, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -19,15 +19,8 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -36,73 +29,87 @@ function AuthPage() {
     return () => sub.subscription.unsubscribe();
   }, [router]);
 
-  const sendLink = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || loading || cooldown > 0) return;
+    if (!email || !password || loading) return;
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
+    const normalized = email.trim().toLowerCase();
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({
+      email: normalized,
+      password,
     });
+    if (error || !signInData.user) {
+      setLoading(false);
+      toast.error("E-mail ou senha inválidos.");
+      return;
+    }
+
+    // Verifica se o usuário está ativo em public.users
+    const { data: u } = await supabase
+      .from("users")
+      .select("is_active")
+      .eq("id", signInData.user.id)
+      .maybeSingle();
+
+    if (!u || !u.is_active) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      toast.error("Usuário inativo, procure o administrador.");
+      return;
+    }
+
     setLoading(false);
-    if (error) return toast.error(error.message);
-    setSent(true);
-    setCooldown(45);
-    toast.success("Link de acesso enviado para seu e-mail.");
+    router.navigate({ to: "/" });
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <img
-            src="/gpa-logo.png"
-            alt="Grupo Pão de Açúcar"
-            className="h-24 w-auto"
-          />
+          <img src="/gpa-logo.png" alt="Grupo Pão de Açúcar" className="h-24 w-auto" />
         </div>
 
         <div className="kpi-card">
           <h2 className="font-display text-xl font-semibold">Entrar</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {sent && `Enviamos um link de acesso para ${email}. Abra o e-mail no mesmo dispositivo para entrar.`}
+            Acesse com seu e-mail e senha.
           </p>
 
-          <form onSubmit={sendLink} className="mt-6 space-y-4">
+          <form onSubmit={submit} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
                 required
-                placeholder="nome@dominio.com"
+                placeholder="0001@gpabr.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1.5"
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading || cooldown > 0}>
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1.5"
+                autoComplete="current-password"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <Loader2 className="size-4 animate-spin" />
-              ) : cooldown > 0 ? (
-                `Reenviar em ${cooldown}s`
-              ) : sent ? (
-                <><Mail className="mr-2 size-4" /> Reenviar link</>
               ) : (
-                <><Mail className="mr-2 size-4" /> Entrar</>
+                <><LogIn className="mr-2 size-4" /> Entrar</>
               )}
             </Button>
           </form>
-
-          {sent && (
-            <div className="mt-6 flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-              <span>Não encontrou? Verifique a caixa de spam. O link expira em 1 hora.</span>
-            </div>
-          )}
         </div>
-
       </div>
     </div>
   );
