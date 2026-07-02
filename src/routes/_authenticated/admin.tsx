@@ -150,7 +150,7 @@ function AdminPage() {
                   <Input
                     value={nEmailLocal}
                     onChange={(e) => setNEmailLocal(e.target.value)}
-                    placeholder="ex.: 0002 ou nome.sobrenome"
+                    placeholder="ex.: uilton.leite"
                     className="rounded-r-none"
                     autoComplete="off"
                   />
