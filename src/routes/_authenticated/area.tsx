@@ -250,7 +250,7 @@ function AreaPage() {
   const exportPdf = () => {
     const area = pathParts.join(" › ");
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const marginX = 10;
 
     doc.setFont("helvetica", "bold");
@@ -283,10 +283,10 @@ function AreaPage() {
       theme: "grid",
       styles: {
         font: "helvetica",
-        fontSize: 8,
-        cellPadding: 1.5,
+        fontSize: 9,
+        cellPadding: 2,
         overflow: "linebreak",
-        valign: "top",
+        valign: "middle",
         lineColor: [153, 153, 153],
         lineWidth: 0.1,
         textColor: [17, 17, 17],
@@ -295,17 +295,17 @@ function AreaPage() {
         fillColor: [238, 238, 255],
         textColor: [17, 17, 17],
         fontStyle: "bold",
-        fontSize: 7.5,
+        fontSize: 9,
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 15 },                      // PLU
-        1: { cellWidth: 50 },                      // Produto
-        2: { cellWidth: 28 },                      // Grupo
-        3: { cellWidth: 20, halign: "right" },      // Venda
-        4: { cellWidth: 22, halign: "right" },      // Dias s/ Venda
-        5: { cellWidth: 25, minCellHeight: 7 },     // Quantidade (preenchimento manual)
-        6: { cellWidth: 30, minCellHeight: 7 },     // Data de Validade (preenchimento manual)
+        0: { cellWidth: 20 },                       // PLU
+        1: { cellWidth: 95 },                       // Produto
+        2: { cellWidth: 40 },                       // Grupo
+        3: { cellWidth: 25, halign: "right" },      // Venda
+        4: { cellWidth: 25, halign: "right" },      // Dias s/ Venda
+        5: { cellWidth: 30, minCellHeight: 8 },     // Quantidade (manual)
+        6: { cellWidth: 42, minCellHeight: 8 },     // Data de Validade (manual)
       },
       didParseCell: (hookData) => {
         // Nas linhas de dados, deixa as duas últimas colunas em branco com
