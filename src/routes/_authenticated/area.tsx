@@ -313,6 +313,22 @@ function AreaPage() {
         if (hookData.section === "body" && (hookData.column.index === 5 || hookData.column.index === 6)) {
           hookData.cell.text = [];
         }
+        // Coluna GRUPO: trunca com reticências para caber em uma única linha,
+        // evitando quebra que aumenta a altura da linha.
+        if (hookData.section === "body" && hookData.column.index === 2) {
+          hookData.cell.styles.overflow = "hidden";
+          const raw = Array.isArray(hookData.cell.text) ? hookData.cell.text.join(" ") : String(hookData.cell.text ?? "");
+          const maxWidth = (hookData.cell.width ?? 40) - (hookData.cell.padding("horizontal") ?? 4);
+          const doc2 = hookData.doc;
+          let text = raw;
+          if (doc2.getTextWidth(text) > maxWidth) {
+            while (text.length > 1 && doc2.getTextWidth(text + "…") > maxWidth) {
+              text = text.slice(0, -1);
+            }
+            text = text.trimEnd() + "…";
+          }
+          hookData.cell.text = [text];
+        }
       },
     });
 
