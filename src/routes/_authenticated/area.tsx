@@ -29,7 +29,7 @@ type Product = {
   val: number; qty: number; lastSaleDate: string | null;
 };
 
-type SortKey = "prod_code" | "prod_name" | "depto" | "secao" | "grupo" | "subgrupo" | "val";
+type SortKey = "prod_code" | "prod_name" | "val" | "daysSince";
 
 type AF = {
   dateFrom: string; dateTo: string;
@@ -84,6 +84,23 @@ function AreaPage() {
     staleTime: 5 * 60_000,
   });
   const opts = baseOpts.data;
+
+  // "Data da base": os dados sempre correspondem ao dia anterior, então
+  // usamos a última data disponível na base (não a data atual do sistema)
+  // como referência para não contar um dia a mais artificialmente.
+  // Reaproveitado tanto na tabela da tela quanto no export em PDF.
+  const baseDateIso = opts?.latestDate ?? dateTo;
+  const daysSinceNum = (iso: string | null): number | null => {
+    if (!iso || !baseDateIso) return null;
+    const base = new Date(baseDateIso + "T00:00:00");
+    const d = new Date(iso + "T00:00:00");
+    const diff = Math.floor((base.getTime() - d.getTime()) / 86400000);
+    return diff < 0 ? 0 : diff;
+  };
+  const daysSinceLabel = (iso: string | null): string => {
+    const n = daysSinceNum(iso);
+    return n === null ? "-" : String(n);
+  };
 
   useEffect(() => {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
@@ -196,11 +213,17 @@ function AreaPage() {
       switch (sortKey) {
         case "prod_code": av = a.prod_code; bv = b.prod_code; break;
         case "prod_name": av = a.prod_name; bv = b.prod_name; break;
-        case "depto": av = a.depto ?? ""; bv = b.depto ?? ""; break;
-        case "secao": av = a.secao ?? ""; bv = b.secao ?? ""; break;
-        case "grupo": av = a.grupo ?? ""; bv = b.grupo ?? ""; break;
-        case "subgrupo": av = a.subgrupo ?? ""; bv = b.subgrupo ?? ""; break;
         case "val": av = a.val; bv = b.val; break;
+        case "daysSince": {
+          // Produtos sem nenhuma venda no histórico (lastSaleDate nulo) são
+          // tratados como "infinito" para irem sempre para o extremo de
+          // maior tempo sem venda, independente da direção da ordenação.
+          const an = daysSinceNum(a.lastSaleDate);
+          const bn = daysSinceNum(b.lastSaleDate);
+          av = an === null ? Infinity : an;
+          bv = bn === null ? Infinity : bn;
+          break;
+        }
       }
       if (typeof av === "string") return sortAsc ? (av as string).localeCompare(bv as string) : (bv as string).localeCompare(av as string);
       return sortAsc ? (av as number) - (bv as number) : (bv as number) - (av as number);
@@ -214,7 +237,7 @@ function AreaPage() {
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortAsc(!sortAsc);
-    else { setSortKey(k); setSortAsc(k === "prod_code" || k === "prod_name" || k === "depto" || k === "secao" || k === "grupo" || k === "subgrupo"); }
+    else { setSortKey(k); setSortAsc(k === "prod_code" || k === "prod_name"); }
   };
 
   const openProduct = (code: string) => {
@@ -226,17 +249,6 @@ function AreaPage() {
   // não depende do diálogo de impressão do navegador — é fixado no arquivo.
   const exportPdf = () => {
     const area = pathParts.join(" › ");
-    // "Data da base": os dados sempre correspondem ao dia anterior, então
-    // usamos a última data disponível na base (não a data atual do sistema)
-    // como referência para não contar um dia a mais artificialmente.
-    const baseDateIso = opts?.latestDate ?? dateTo;
-    const daysSince = (iso: string | null) => {
-      if (!iso || !baseDateIso) return "-";
-      const base = new Date(baseDateIso + "T00:00:00");
-      const d = new Date(iso + "T00:00:00");
-      const diff = Math.floor((base.getTime() - d.getTime()) / 86400000);
-      return diff < 0 ? "0" : String(diff);
-    };
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const marginX = 10;
@@ -256,17 +268,18 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QUANTIDADE", "DATA DE VALIDADE"]],
+      head: [["PLU", "PRODUTO", "GRUPO", "VENDA", "DIAS S/ VENDA", "QUANTIDADE", "DATA DE VALIDADE"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
             p.prod_name,
+            p.grupo ?? "-",
             fmtBRL(p.val),
-            daysSince(p.lastSaleDate),
+            daysSinceLabel(p.lastSaleDate),
             "",
             "",
           ])
-        : [["", "Nenhum produto.", "", "", "", ""]],
+        : [["", "Nenhum produto.", "", "", "", "", ""]],
       theme: "grid",
       styles: {
         font: "helvetica",
@@ -286,17 +299,18 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18 },                     // PLU
-        1: { cellWidth: 73 },                     // Produto
-        2: { cellWidth: 22, halign: "right" },     // Venda
-        3: { cellWidth: 26, halign: "right" },     // Dias s/ Venda
-        4: { cellWidth: 22, minCellHeight: 7 },    // Quantidade (preenchimento manual)
-        5: { cellWidth: 29, minCellHeight: 7 },    // Data de Validade (preenchimento manual)
+        0: { cellWidth: 15 },                      // PLU
+        1: { cellWidth: 50 },                      // Produto
+        2: { cellWidth: 28 },                      // Grupo
+        3: { cellWidth: 20, halign: "right" },      // Venda
+        4: { cellWidth: 22, halign: "right" },      // Dias s/ Venda
+        5: { cellWidth: 25, minCellHeight: 7 },     // Quantidade (preenchimento manual)
+        6: { cellWidth: 30, minCellHeight: 7 },     // Data de Validade (preenchimento manual)
       },
       didParseCell: (hookData) => {
         // Nas linhas de dados, deixa as duas últimas colunas em branco com
         // altura mínima para preenchimento manual no papel.
-        if (hookData.section === "body" && (hookData.column.index === 4 || hookData.column.index === 5)) {
+        if (hookData.section === "body" && (hookData.column.index === 5 || hookData.column.index === 6)) {
           hookData.cell.text = [];
         }
       },
@@ -425,17 +439,18 @@ function AreaPage() {
               </div>
             </div>
 
+            {/* Só 4 colunas agora: a tabela fica leve o suficiente para não
+                precisar de scroll horizontal na maioria das telas. table-fixed
+                garante que "Produto" trunque de forma previsível em vez de
+                estourar a largura em nomes longos. */}
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <table className="min-w-[860px] w-full text-sm">
+              <table className="w-full min-w-[420px] table-fixed text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                    <Th label="PLU" k="prod_code" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Descrição" k="prod_name" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Depto" k="depto" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Seção" k="secao" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Grupo" k="grupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Subgrupo" k="subgrupo" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} />
-                    <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="pl-8" />
+                    <Th label="PLU" k="prod_code" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} className="w-[18%]" />
+                    <Th label="Produto" k="prod_name" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} className="w-[42%]" />
+                    <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="w-[20%]" />
+                    <Th label="Dias S/ Venda" k="daysSince" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="w-[20%]" />
                   </tr>
                 </thead>
                 <tbody>
@@ -448,18 +463,15 @@ function AreaPage() {
                         className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-amber-50/40" : ""}`}
                         title="Abrir Análise de Produto"
                       >
-                        <td className="py-2 font-mono text-xs whitespace-nowrap">{p.prod_code}</td>
-                        <td className="py-2 max-w-[260px] truncate">{p.prod_name}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.depto ?? "(sem)"}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.secao ?? "(sem)"}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.grupo ?? "(sem)"}</td>
-                        <td className="py-2 text-xs text-muted-foreground max-w-[120px] truncate">{p.subgrupo ?? "(sem)"}</td>
-                        <td className="num py-2 pl-8 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
+                        <td className="py-2 font-mono text-xs whitespace-nowrap truncate">{p.prod_code}</td>
+                        <td className="py-2 truncate">{p.prod_name}</td>
+                        <td className="num py-2 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
+                        <td className="num py-2 text-right whitespace-nowrap text-muted-foreground">{daysSinceLabel(p.lastSaleDate)}</td>
                       </tr>
                     );
                   })}
                   {pageRows.length === 0 && !isFetching && (
-                    <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
+                    <tr><td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -498,7 +510,7 @@ function Th({ label, k, sortKey, sortAsc, toggle, align = "left", className = ""
     <th className={`py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
       <button
         onClick={() => toggle(k)}
-        className={`inline-flex items-center gap-1 hover:text-foreground ${active ? "text-foreground" : ""}`}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
       >
         {label}
         {active && (sortAsc ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
