@@ -267,18 +267,17 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "PRODUTO", "GRUPO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
+      head: [["PLU", "PRODUTO / GRUPO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
-            p.prod_name,
-            p.grupo ?? "-",
+            `${p.prod_name} / ${p.grupo ?? "-"}`,
             fmtBRL(p.val),
             daysSinceLabel(p.lastSaleDate),
             "",
             "",
           ])
-        : [["", "Nenhum produto.", "", "", "", "", ""]],
+        : [["", "Nenhum produto.", "", "", "", ""]],
       theme: "grid",
       styles: {
         font: "helvetica",
@@ -299,20 +298,19 @@ function AreaPage() {
       },
       columnStyles: {
         0: { cellWidth: 16 },
-        1: { cellWidth: 92 },
-        2: { cellWidth: 77, overflow: "hidden" },
-        3: { cellWidth: 23, halign: "right" },
-        4: { cellWidth: 24, halign: "right" },
-        5: { cellWidth: 20 },
-        6: { cellWidth: 25 },
+        1: { cellWidth: 169, overflow: "hidden" },
+        2: { cellWidth: 23, halign: "right" },
+        3: { cellWidth: 24, halign: "right" },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 25 },
       },
       didParseCell: (hookData) => {
-        if (hookData.section === "body" && (hookData.column.index === 5 || hookData.column.index === 6)) {
+        if (hookData.section === "body" && (hookData.column.index === 4 || hookData.column.index === 5)) {
           hookData.cell.text = [];
         }
       },
       willDrawCell: (hookData) => {
-        if (hookData.section === "body" && hookData.column.index === 2) {
+        if (hookData.section === "body" && hookData.column.index === 1) {
           const cell = hookData.cell;
           const doc2 = hookData.doc;
           const raw = Array.isArray(cell.text) ? cell.text.join(" ") : String(cell.text ?? "");
