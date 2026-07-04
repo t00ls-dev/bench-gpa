@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getFilterOptions } from "@/lib/analytics.functions";
@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
@@ -244,11 +247,11 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
-  // Gera um PDF de verdade em A4 (297x210mm) PAISAGEM, via jsPDF + autoTable.
-  // Área útil = 297 - 2*10mm de margem = 277mm. Larguras de coluna abaixo
-  // medidas com doc.getTextWidth() (métricas reais do Helvetica) para que
-  // nenhum cabeçalho quebre linha e "Grupo" raramente precise truncar.
-  const exportPdf = () => {
+  // Preview PDF
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const pdfDocRef = useRef<jsPDF | null>(null);
+
+  const openPdfPreview = () => {
     const area = pathParts.join(" › ");
 
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -300,26 +303,20 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18 },                                 // PLU
-        1: { cellWidth: 108 },                                // Produto
-        2: { cellWidth: 48, overflow: "hidden" },             // Grupo: 1 linha só, truncado em willDrawCell (raramente necessário nesta largura)
-        3: { cellWidth: 24, halign: "right" },                // Venda
-        4: { cellWidth: 28, halign: "right" },                // Dias s/ Venda
-        5: { cellWidth: 20, minCellHeight: 8 },               // Qtd (manual)
-        6: { cellWidth: 31, minCellHeight: 8 },               // Validade (manual)
+        0: { cellWidth: 18 },
+        1: { cellWidth: 108 },
+        2: { cellWidth: 48, overflow: "hidden" },
+        3: { cellWidth: 24, halign: "right" },
+        4: { cellWidth: 28, halign: "right" },
+        5: { cellWidth: 20, minCellHeight: 8 },
+        6: { cellWidth: 31, minCellHeight: 8 },
       },
       didParseCell: (hookData) => {
-        // Nas linhas de dados, deixa as duas últimas colunas em branco com
-        // altura mínima para preenchimento manual no papel.
         if (hookData.section === "body" && (hookData.column.index === 5 || hookData.column.index === 6)) {
           hookData.cell.text = [];
         }
       },
       willDrawCell: (hookData) => {
-        // Truncamento do Grupo só pode acontecer aqui: é o único hook em que
-        // hookData.cell.width já reflete a largura FINAL da coluna (48mm).
-        // Em didParseCell essa largura ainda não existe (fica indefinida),
-        // o que fazia o maxWidth vir errado e cortar quase todo o texto.
         if (hookData.section === "body" && hookData.column.index === 2) {
           const cell = hookData.cell;
           const doc2 = hookData.doc;
@@ -337,7 +334,22 @@ function AreaPage() {
       },
     });
 
-    doc.save(`analise-area_${dateFrom}_${dateTo}.pdf`);
+    const url = doc.output("bloburl");
+    pdfDocRef.current = doc;
+    setPdfUrl(url);
+  };
+
+  const downloadPdf = () => {
+    if (pdfDocRef.current) {
+      pdfDocRef.current.save(`analise-area_${dateFrom}_${dateTo}.pdf`);
+    }
+    closePdfPreview();
+  };
+
+  const closePdfPreview = () => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    setPdfUrl(null);
+    pdfDocRef.current = null;
   };
 
   const noSale = data?.plusWithoutSale ?? 0;
@@ -454,7 +466,7 @@ function AreaPage() {
                     <SelectItem value="250">250 / página</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={exportPdf} className="h-9">
+                <Button variant="outline" size="sm" onClick={openPdfPreview} className="h-9">
                   <FileText className="mr-1.5 size-4" /> PDF
                 </Button>
               </div>
@@ -518,6 +530,25 @@ function AreaPage() {
           </div>
         </>
       )}
+
+      <Dialog open={!!pdfUrl} onOpenChange={(o) => { if (!o) closePdfPreview(); }}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Visualizar PDF</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 rounded border bg-muted/20">
+            {pdfUrl && (
+              <iframe src={pdfUrl} className="h-full w-full rounded" title="Preview PDF" />
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closePdfPreview}>Fechar</Button>
+            <Button onClick={downloadPdf}>
+              <FileText className="mr-2 size-4" /> Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
