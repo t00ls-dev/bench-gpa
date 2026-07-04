@@ -299,9 +299,9 @@ function AreaPage() {
       },
       columnStyles: {
         0: { cellWidth: 16 },
-        1: { cellWidth: 115 },
-        2: { cellWidth: 50, overflow: "hidden" },
-        3: { cellWidth: 27, halign: "right" },
+        1: { cellWidth: 92 },
+        2: { cellWidth: 77, overflow: "hidden" },
+        3: { cellWidth: 23, halign: "right" },
         4: { cellWidth: 24, halign: "right" },
         5: { cellWidth: 20 },
         6: { cellWidth: 25 },
