@@ -1,4 +1,5 @@
 import { fmtBRL } from "@/components/kpi-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Item { name?: string; code?: string; val: number }
 
@@ -24,10 +25,17 @@ export function RankingCard({ title, items, isLoading }: { title: string; items:
                 </tr>
               );
             })}
-            {items.length === 0 && (
-              <tr><td colSpan={2} className="py-6 text-center text-xs text-muted-foreground">
-                {isLoading ? "Carregando…" : "Sem dados."}
+            {items.length === 0 && isLoading && (
+              <tr><td colSpan={2}>
+                <div className="space-y-2 py-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-5 w-full" />
+                  ))}
+                </div>
               </td></tr>
+            )}
+            {items.length === 0 && !isLoading && (
+              <tr><td colSpan={2} className="py-6 text-center text-xs text-muted-foreground">Sem dados.</td></tr>
             )}
           </tbody>
         </table>

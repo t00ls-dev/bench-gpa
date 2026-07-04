@@ -1,8 +1,10 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Upload, Package, Users, LogOut, Menu, X, Layers } from "lucide-react";
+import { LayoutDashboard, Upload, Package, Users, LogOut, Menu, X, Layers, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/hooks/use-theme";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthedLayout() {
   const router = useRouter();
   const { user } = Route.useRouteContext();
+  const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ isActive: boolean; isAdmin: boolean } | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -42,7 +45,14 @@ function AuthedLayout() {
   };
 
   if (!profile) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="size-10 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+    );
   }
 
   const nav = [
@@ -79,6 +89,9 @@ function AuthedLayout() {
           </nav>
           <div className="ml-auto hidden items-center gap-3 md:flex">
             <span className="text-xs text-muted-foreground">{user.email}</span>
+            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
+              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="size-4" />
             </Button>
