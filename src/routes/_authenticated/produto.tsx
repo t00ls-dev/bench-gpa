@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
-import { Search, Package, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Package, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fmtBRShort } from "@/lib/utils";
 
@@ -77,7 +77,7 @@ function ProdutoPage() {
     staleTime: 10 * 60_000,
   });
 
-  const { data: suggestions } = useQuery({
+  const { data: suggestions, isFetching: searchFetching } = useQuery({
     queryKey: ["product-search", debounced],
     queryFn: () => search({ data: { q: debounced } }),
     enabled: debounced.length >= 3 && !selected,
@@ -178,9 +178,14 @@ function ProdutoPage() {
             <ProductHierarchyTrail product={analysisData?.product} />
           </div>
         )}
-        {!selected && debounced.length >= 3 && suggestions && suggestions.length > 0 && (
+        {!selected && debounced.length >= 3 && (searchFetching || (suggestions && suggestions.length > 0)) && (
           <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
-            {suggestions.map((s) => (
+            {searchFetching && (
+              <li className="flex items-center justify-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" /> Buscando…
+              </li>
+            )}
+            {!searchFetching && suggestions?.map((s) => (
               <li key={s.prod_code}>
                 <button
                   onClick={() => { setSelected(s); setQuery(""); }}
