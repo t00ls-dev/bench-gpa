@@ -267,15 +267,17 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA"]],
+      head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
             p.prod_name,
             fmtBRL(p.val),
             daysSinceLabel(p.lastSaleDate),
+            "",
+            "",
           ])
-        : [["", "Nenhum produto.", "", ""]],
+        : [["", "Nenhum produto.", "", "", "", ""]],
       theme: "grid",
       styles: {
         font: "helvetica",
@@ -295,10 +297,17 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 110, overflow: "hidden" },
-        2: { cellWidth: 30, halign: "right" },
-        3: { cellWidth: 32, halign: "right" },
+        0: { cellWidth: 16 },
+        1: { cellWidth: 85, overflow: "hidden" },
+        2: { cellWidth: 23, halign: "right" },
+        3: { cellWidth: 24, halign: "right" },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 22 },
+      },
+      didParseCell: (hookData) => {
+        if (hookData.section === "body" && (hookData.column.index === 4 || hookData.column.index === 5)) {
+          hookData.cell.text = [];
+        }
       },
       willDrawCell: (hookData) => {
         if (hookData.section === "body" && hookData.column.index === 1) {
