@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getFilterOptions } from "@/lib/analytics.functions";
@@ -7,9 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
 import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
@@ -247,11 +244,9 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
-  // Preview PDF
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const pdfDocRef = useRef<jsPDF | null>(null);
+  const noSale = data?.plusWithoutSale ?? 0;
 
-  const openPdfPreview = () => {
+  const openPdfInNewTab = () => {
     const area = pathParts.join(" › ");
 
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -334,25 +329,8 @@ function AreaPage() {
       },
     });
 
-    const url = doc.output("bloburl");
-    pdfDocRef.current = doc;
-    setPdfUrl(url);
+    window.open(doc.output("bloburl"), "_blank");
   };
-
-  const downloadPdf = () => {
-    if (pdfDocRef.current) {
-      pdfDocRef.current.save(`analise-area_${dateFrom}_${dateTo}.pdf`);
-    }
-    closePdfPreview();
-  };
-
-  const closePdfPreview = () => {
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-    setPdfUrl(null);
-    pdfDocRef.current = null;
-  };
-
-  const noSale = data?.plusWithoutSale ?? 0;
 
 
   return (
@@ -466,7 +444,7 @@ function AreaPage() {
                     <SelectItem value="250">250 / página</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={openPdfPreview} className="h-9">
+                <Button variant="outline" size="sm" onClick={openPdfInNewTab} className="h-9">
                   <FileText className="mr-1.5 size-4" /> PDF
                 </Button>
               </div>
@@ -531,24 +509,6 @@ function AreaPage() {
         </>
       )}
 
-      <Dialog open={!!pdfUrl} onOpenChange={(o) => { if (!o) closePdfPreview(); }}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Visualizar PDF</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 rounded border bg-muted/20">
-            {pdfUrl && (
-              <iframe src={pdfUrl} className="h-full w-full rounded" title="Preview PDF" />
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closePdfPreview}>Fechar</Button>
-            <Button onClick={downloadPdf}>
-              <FileText className="mr-2 size-4" /> Download
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
