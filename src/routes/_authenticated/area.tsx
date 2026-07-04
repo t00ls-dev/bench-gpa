@@ -246,8 +246,7 @@ function AreaPage() {
 
   // Gera um PDF de verdade em A4 (210x297mm) RETRATO, via jsPDF + autoTable.
   // Área útil = 210 - 2*10mm de margem = 190mm. As larguras das colunas abaixo
-  // somam exatamente 190mm (antes, em paisagem, somavam 277mm — por isso a
-  // troca simples de orientação sem recalcular as colunas quebrava o layout).
+  // somam exatamente 190mm.
   const exportPdf = () => {
     const area = pathParts.join(" › ");
 
@@ -300,13 +299,13 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18 },                       // PLU
-        1: { cellWidth: 65 },                       // Produto
-        2: { cellWidth: 30 },                       // Grupo
-        3: { cellWidth: 22, halign: "right" },      // Venda
-        4: { cellWidth: 20, halign: "right" },      // Dias s/ Venda
-        5: { cellWidth: 15, minCellHeight: 8 },     // Quantidade (manual)
-        6: { cellWidth: 20, minCellHeight: 8 },     // Data de Validade (manual)
+        0: { cellWidth: 18 },                                // PLU
+        1: { cellWidth: 65 },                                // Produto
+        2: { cellWidth: 30, overflow: "hidden" },            // Grupo: 1 linha só, truncado em willDrawCell
+        3: { cellWidth: 22, halign: "right" },                // Venda
+        4: { cellWidth: 20, halign: "right" },                // Dias s/ Venda
+        5: { cellWidth: 15, minCellHeight: 8 },               // Quantidade (manual)
+        6: { cellWidth: 20, minCellHeight: 8 },               // Data de Validade (manual)
       },
       didParseCell: (hookData) => {
         // Nas linhas de dados, deixa as duas últimas colunas em branco com
@@ -314,13 +313,17 @@ function AreaPage() {
         if (hookData.section === "body" && (hookData.column.index === 5 || hookData.column.index === 6)) {
           hookData.cell.text = [];
         }
-        // Coluna GRUPO: trunca com reticências para caber em uma única linha,
-        // evitando quebra que aumenta a altura da linha.
+      },
+      willDrawCell: (hookData) => {
+        // Truncamento do Grupo só pode acontecer aqui: é o único hook em que
+        // hookData.cell.width já reflete a largura FINAL da coluna (30mm).
+        // Em didParseCell essa largura ainda não existe (fica indefinida),
+        // o que fazia o maxWidth vir errado e cortar quase todo o texto.
         if (hookData.section === "body" && hookData.column.index === 2) {
-          hookData.cell.styles.overflow = "hidden";
-          const raw = Array.isArray(hookData.cell.text) ? hookData.cell.text.join(" ") : String(hookData.cell.text ?? "");
-          const maxWidth = (hookData.cell.width ?? 30) - (hookData.cell.padding("horizontal") ?? 4);
+          const cell = hookData.cell;
           const doc2 = hookData.doc;
+          const raw = Array.isArray(cell.text) ? cell.text.join(" ") : String(cell.text ?? "");
+          const maxWidth = cell.width - cell.padding("horizontal");
           let text = raw;
           if (doc2.getTextWidth(text) > maxWidth) {
             while (text.length > 1 && doc2.getTextWidth(text + "…") > maxWidth) {
@@ -328,7 +331,7 @@ function AreaPage() {
             }
             text = text.trimEnd() + "…";
           }
-          hookData.cell.text = [text];
+          cell.text = [text];
         }
       },
     });
