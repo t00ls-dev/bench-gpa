@@ -258,7 +258,7 @@ function AreaPage() {
     doc.text("Análise de Área", marginX, 12);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(85, 85, 85);
     doc.text(`Área: ${area}`, marginX, 18);
     doc.text(`Período: ${fmtBRShort(dateFrom)} - ${fmtBRShort(dateTo)}`, marginX, 22.5);
@@ -267,7 +267,7 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "PRODUTO", "GRUPO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
+      head: [["PLU", "PRODUTO", "GRUPO", "VENDA", "DIAS", "QTD", "VALIDADE"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
@@ -282,9 +282,9 @@ function AreaPage() {
       theme: "grid",
       styles: {
         font: "helvetica",
-        fontSize: 9,
-        cellPadding: 2,
-        overflow: "linebreak",
+        fontSize: 8,
+        cellPadding: 1.5,
+        overflow: "hidden",
         valign: "middle",
         lineColor: [153, 153, 153],
         lineWidth: 0.1,
@@ -294,17 +294,17 @@ function AreaPage() {
         fillColor: [238, 238, 255],
         textColor: [17, 17, 17],
         fontStyle: "bold",
-        fontSize: 9,
+        fontSize: 8,
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 108 },
-        2: { cellWidth: 48, overflow: "hidden" },
-        3: { cellWidth: 24, halign: "right" },
-        4: { cellWidth: 28, halign: "right" },
-        5: { cellWidth: 20, minCellHeight: 8 },
-        6: { cellWidth: 31, minCellHeight: 8 },
+        0: { cellWidth: 16 },
+        1: { cellWidth: 115 },
+        2: { cellWidth: 50, overflow: "hidden" },
+        3: { cellWidth: 27, halign: "right" },
+        4: { cellWidth: 24, halign: "right" },
+        5: { cellWidth: 20 },
+        6: { cellWidth: 25 },
       },
       didParseCell: (hookData) => {
         if (hookData.section === "body" && (hookData.column.index === 5 || hookData.column.index === 6)) {
