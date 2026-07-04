@@ -244,13 +244,14 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
-  // Gera um PDF de verdade em A4 (210x297mm) RETRATO, via jsPDF + autoTable.
-  // Área útil = 210 - 2*10mm de margem = 190mm. As larguras das colunas abaixo
-  // somam exatamente 190mm.
+  // Gera um PDF de verdade em A4 (297x210mm) PAISAGEM, via jsPDF + autoTable.
+  // Área útil = 297 - 2*10mm de margem = 277mm. Larguras de coluna abaixo
+  // medidas com doc.getTextWidth() (métricas reais do Helvetica) para que
+  // nenhum cabeçalho quebre linha e "Grupo" raramente precise truncar.
   const exportPdf = () => {
     const area = pathParts.join(" › ");
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const marginX = 10;
 
     doc.setFont("helvetica", "bold");
@@ -268,7 +269,7 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "PRODUTO", "GRUPO", "VENDA", "DIAS S/ VENDA", "QUANTIDADE", "DATA DE VALIDADE"]],
+      head: [["PLU", "PRODUTO", "GRUPO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
@@ -299,13 +300,13 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 18 },                                // PLU
-        1: { cellWidth: 65 },                                // Produto
-        2: { cellWidth: 30, overflow: "hidden" },            // Grupo: 1 linha só, truncado em willDrawCell
-        3: { cellWidth: 22, halign: "right" },                // Venda
-        4: { cellWidth: 20, halign: "right" },                // Dias s/ Venda
-        5: { cellWidth: 15, minCellHeight: 8 },               // Quantidade (manual)
-        6: { cellWidth: 20, minCellHeight: 8 },               // Data de Validade (manual)
+        0: { cellWidth: 18 },                                 // PLU
+        1: { cellWidth: 108 },                                // Produto
+        2: { cellWidth: 48, overflow: "hidden" },             // Grupo: 1 linha só, truncado em willDrawCell (raramente necessário nesta largura)
+        3: { cellWidth: 24, halign: "right" },                // Venda
+        4: { cellWidth: 28, halign: "right" },                // Dias s/ Venda
+        5: { cellWidth: 20, minCellHeight: 8 },               // Qtd (manual)
+        6: { cellWidth: 31, minCellHeight: 8 },               // Validade (manual)
       },
       didParseCell: (hookData) => {
         // Nas linhas de dados, deixa as duas últimas colunas em branco com
@@ -316,7 +317,7 @@ function AreaPage() {
       },
       willDrawCell: (hookData) => {
         // Truncamento do Grupo só pode acontecer aqui: é o único hook em que
-        // hookData.cell.width já reflete a largura FINAL da coluna (30mm).
+        // hookData.cell.width já reflete a largura FINAL da coluna (48mm).
         // Em didParseCell essa largura ainda não existe (fica indefinida),
         // o que fazia o maxWidth vir errado e cortar quase todo o texto.
         if (hookData.section === "body" && hookData.column.index === 2) {
