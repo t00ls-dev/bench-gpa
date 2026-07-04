@@ -7,27 +7,52 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LogIn, Loader2 } from "lucide-react";
 
+function sanitizeNext(next: unknown): string {
+  if (typeof next !== "string") return "/";
+  // Only allow same-origin relative paths.
+  if (!next.startsWith("/") || next.startsWith("//")) return "/";
+  return next;
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  beforeLoad: async () => {
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/" });
+    if (data.user) {
+      const target = sanitizeNext(search.next);
+      if (target !== "/") throw redirect({ href: target });
+      throw redirect({ to: "/" });
+    }
   },
   component: AuthPage,
 });
 
 function AuthPage() {
   const router = useRouter();
+  const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const goNext = () => {
+    const target = sanitizeNext(next);
+    if (target !== "/") {
+      window.location.href = target;
+    } else {
+      router.navigate({ to: "/" });
+    }
+  };
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") router.navigate({ to: "/" });
+      if (event === "SIGNED_IN") goNext();
     });
     return () => sub.subscription.unsubscribe();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, next]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +84,7 @@ function AuthPage() {
     }
 
     setLoading(false);
-    router.navigate({ to: "/" });
+    goNext();
   };
 
   return (
