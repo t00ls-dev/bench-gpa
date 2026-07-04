@@ -329,7 +329,14 @@ function AreaPage() {
       },
     });
 
-    window.open(doc.output("bloburl"), "_blank");
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
 
