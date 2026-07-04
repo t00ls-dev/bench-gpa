@@ -298,11 +298,11 @@ function AreaPage() {
       },
       columnStyles: {
         0: { cellWidth: 16 },
-        1: { cellWidth: 85, overflow: "hidden" },
+        1: { cellWidth: 82, overflow: "hidden" },
         2: { cellWidth: 23, halign: "right" },
         3: { cellWidth: 24, halign: "right" },
         4: { cellWidth: 20 },
-        5: { cellWidth: 22 },
+        5: { cellWidth: 25 },
       },
       didParseCell: (hookData) => {
         if (hookData.section === "body" && (hookData.column.index === 4 || hookData.column.index === 5)) {
