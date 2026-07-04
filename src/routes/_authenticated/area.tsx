@@ -249,7 +249,7 @@ function AreaPage() {
   const openPdfInNewTab = () => {
     const area = pathParts.join(" › ");
 
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const marginX = 10;
 
     doc.setFont("helvetica", "bold");
@@ -267,17 +267,15 @@ function AreaPage() {
     autoTable(doc, {
       startY: 31,
       margin: { left: marginX, right: marginX },
-      head: [["PLU", "PRODUTO / GRUPO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
+      head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA"]],
       body: filteredTable.length
         ? filteredTable.map((p) => [
             p.prod_code,
-            `${p.prod_name} / ${p.grupo ?? "-"}`,
+            p.prod_name,
             fmtBRL(p.val),
             daysSinceLabel(p.lastSaleDate),
-            "",
-            "",
           ])
-        : [["", "Nenhum produto.", "", "", "", ""]],
+        : [["", "Nenhum produto.", "", ""]],
       theme: "grid",
       styles: {
         font: "helvetica",
@@ -297,17 +295,10 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 16 },
-        1: { cellWidth: 169, overflow: "hidden" },
-        2: { cellWidth: 23, halign: "right" },
-        3: { cellWidth: 24, halign: "right" },
-        4: { cellWidth: 20 },
-        5: { cellWidth: 25 },
-      },
-      didParseCell: (hookData) => {
-        if (hookData.section === "body" && (hookData.column.index === 4 || hookData.column.index === 5)) {
-          hookData.cell.text = [];
-        }
+        0: { cellWidth: 18 },
+        1: { cellWidth: 110, overflow: "hidden" },
+        2: { cellWidth: 30, halign: "right" },
+        3: { cellWidth: 32, halign: "right" },
       },
       willDrawCell: (hookData) => {
         if (hookData.section === "body" && hookData.column.index === 1) {
