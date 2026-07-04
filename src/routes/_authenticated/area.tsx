@@ -244,13 +244,14 @@ function AreaPage() {
     navigate({ to: "/produto", search: { plu: code } });
   };
 
-  // Gera um PDF de verdade em A4 (210x297mm), via jsPDF + autoTable.
-  // Diferente da abordagem anterior (window.print()), o tamanho da página
-  // não depende do diálogo de impressão do navegador — é fixado no arquivo.
+  // Gera um PDF de verdade em A4 (210x297mm) RETRATO, via jsPDF + autoTable.
+  // Área útil = 210 - 2*10mm de margem = 190mm. As larguras das colunas abaixo
+  // somam exatamente 190mm (antes, em paisagem, somavam 277mm — por isso a
+  // troca simples de orientação sem recalcular as colunas quebrava o layout).
   const exportPdf = () => {
     const area = pathParts.join(" › ");
 
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const marginX = 10;
 
     doc.setFont("helvetica", "bold");
@@ -299,13 +300,13 @@ function AreaPage() {
         halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 20 },                       // PLU
-        1: { cellWidth: 95 },                       // Produto
-        2: { cellWidth: 40 },                       // Grupo
-        3: { cellWidth: 25, halign: "right" },      // Venda
-        4: { cellWidth: 25, halign: "right" },      // Dias s/ Venda
-        5: { cellWidth: 30, minCellHeight: 8 },     // Quantidade (manual)
-        6: { cellWidth: 42, minCellHeight: 8 },     // Data de Validade (manual)
+        0: { cellWidth: 18 },                       // PLU
+        1: { cellWidth: 65 },                       // Produto
+        2: { cellWidth: 30 },                       // Grupo
+        3: { cellWidth: 22, halign: "right" },      // Venda
+        4: { cellWidth: 20, halign: "right" },      // Dias s/ Venda
+        5: { cellWidth: 15, minCellHeight: 8 },     // Quantidade (manual)
+        6: { cellWidth: 20, minCellHeight: 8 },     // Data de Validade (manual)
       },
       didParseCell: (hookData) => {
         // Nas linhas de dados, deixa as duas últimas colunas em branco com
@@ -318,7 +319,7 @@ function AreaPage() {
         if (hookData.section === "body" && hookData.column.index === 2) {
           hookData.cell.styles.overflow = "hidden";
           const raw = Array.isArray(hookData.cell.text) ? hookData.cell.text.join(" ") : String(hookData.cell.text ?? "");
-          const maxWidth = (hookData.cell.width ?? 40) - (hookData.cell.padding("horizontal") ?? 4);
+          const maxWidth = (hookData.cell.width ?? 30) - (hookData.cell.padding("horizontal") ?? 4);
           const doc2 = hookData.doc;
           let text = raw;
           if (doc2.getTextWidth(text) > maxWidth) {
