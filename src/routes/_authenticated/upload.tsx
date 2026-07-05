@@ -200,10 +200,12 @@ function UploadPage() {
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span className="tabular-nums font-medium text-foreground">{progressLabel}</span>
-                <span className="flex items-center gap-1"><Gauge className="size-3" /> {fmtInt(speed)} linhas/s</span>
-                <span className="flex items-center gap-1"><Clock className="size-3" /> ~{eta}s restantes</span>
+              <div className="mt-2 flex flex-nowrap items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="tabular-nums font-medium text-foreground whitespace-nowrap">{progressLabel}</span>
+                <span className="shrink-0">·</span>
+                <span className="flex items-center gap-1 shrink-0"><Gauge className="size-3" /> {fmtInt(speed)} l/s</span>
+                <span className="shrink-0">·</span>
+                <span className="flex items-center gap-1 shrink-0 whitespace-nowrap"><Clock className="size-3" /> ~{eta}s</span>
               </div>
             </div>
           )}
