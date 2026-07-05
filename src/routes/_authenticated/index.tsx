@@ -63,6 +63,10 @@ function Dashboard() {
             <Skeleton className="mt-2 h-8 w-40" />
             <Skeleton className="mt-2 h-3 w-32" />
           </div>
+        ) : data && data.current.total === 0 ? (
+          <div className="kpi-card text-center py-10">
+            <p className="text-sm text-muted-foreground">Nenhuma venda encontrada para o período e filtros selecionados.</p>
+          </div>
         ) : (
           <KpiCard
             label="Venda total"
