@@ -93,7 +93,18 @@ export const finalizeImport = createServerFn({ method: "POST" })
     if (queryErr) throw safeError("finalizeImport.querySales", queryErr, "Falha ao consultar vendas para agregação.");
 
     if (salesRows && salesRows.length > 0) {
-      const grouped = new Map<string, Record<string, any>>();
+      interface AggRow {
+        sale_date: string;
+        store_code: string;
+        store_name: string;
+        depto: string | null;
+        secao: string | null;
+        grupo: string | null;
+        subgrupo: string | null;
+        val_vda: number;
+        item_count: number;
+      }
+      const grouped = new Map<string, AggRow>();
       for (const r of salesRows) {
         const key = `${r.store_code}|${r.depto ?? ""}|${r.secao ?? ""}|${r.grupo ?? ""}|${r.subgrupo ?? ""}`;
         const g = grouped.get(key);
