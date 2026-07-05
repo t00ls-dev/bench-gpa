@@ -1,10 +1,23 @@
-import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Upload, Package, Users, LogOut, Menu, X, Layers, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Upload, Package, Users, LogOut, Layers, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/hooks/use-theme";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  SidebarTrigger,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -21,10 +34,10 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthedLayout() {
   const router = useRouter();
+  const loc = useLocation();
   const { user } = Route.useRouteContext();
   const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ isActive: boolean; isAdmin: boolean } | null>(null);
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -71,61 +84,64 @@ function AuthedLayout() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
-          <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
+    <SidebarProvider defaultOpen={true}>
+      <Sidebar collapsible="offcanvas">
+        <SidebarHeader>
+          <Link to="/" className="flex items-center gap-2 px-3 py-2 font-display text-lg font-bold">
             <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
           </Link>
-          <nav className="ml-6 hidden items-center gap-1 md:flex">
-            {nav.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                activeProps={{ className: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-primary/10 text-primary" }}
-                activeOptions={{ exact: n.to === "/" }}
-              >
-                <n.icon className="size-4" /> {n.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto hidden items-center gap-3 md:flex">
-            <span className="text-xs text-muted-foreground">{user.email}</span>
-            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              {nav.map((n) => (
+                <SidebarMenuItem key={n.to}>
+                  <SidebarMenuButton asChild isActive={loc.pathname === n.to}>
+                    <Link to={n.to}>
+                      <n.icon />
+                      <span>{n.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="flex items-center gap-2 px-3 py-2">
+            <span className="flex-1 truncate text-xs text-sidebar-foreground/60">{user.email}</span>
+            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema" className="size-7">
               {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair" className="size-7">
               <LogOut className="size-4" />
             </Button>
           </div>
-          <button className="ml-auto md:hidden" onClick={() => setOpen(!open)} aria-label="Menu">
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
-        </div>
-        {open && (
-          <nav className="border-t border-border bg-card px-4 py-3 md:hidden">
-            {nav.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
-                activeProps={{ className: "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-primary/10 text-primary" }}
-                activeOptions={{ exact: n.to === "/" }}
-              >
-                <n.icon className="size-4" /> {n.label}
-              </Link>
-            ))}
-            <button onClick={signOut} className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground">
-              <LogOut className="size-4" /> Sair ({user.email})
-            </button>
-          </nav>
-        )}
-      </header>
-      <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-10">
-        <Outlet />
-      </main>
-    </div>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+          <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
+            <SidebarTrigger className="md:hidden" />
+            <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold md:hidden">
+              <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
+            </Link>
+            <div className="ml-auto flex items-center gap-3">
+              <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
+              <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema" className="hidden md:inline-flex size-7">
+                {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair" className="hidden md:inline-flex size-7">
+                <LogOut className="size-4" />
+              </Button>
+              <SidebarTrigger className="hidden md:flex" />
+            </div>
+          </div>
+        </header>
+        <main className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
