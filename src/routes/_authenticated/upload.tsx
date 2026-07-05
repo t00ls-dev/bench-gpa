@@ -46,11 +46,11 @@ function UploadPage() {
   const [results, setResults] = useState<Result[]>([]);
   const [busy, setBusy] = useState(false);
   const [statuses, setStatuses] = useState<Record<string, FileStatus>>({});
-  const [progressLabel, setProgressLabel] = useState<string>("");
   const [progressPct, setProgressPct] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [eta, setEta] = useState(0);
   const [processed, setProcessed] = useState(0);
+  const [fileTotals, setFileTotals] = useState<Record<string, number>>({});
   const [currentFile, setCurrentFile] = useState("");
   const begin = useServerFn(beginImport);
   const insertChunk = useServerFn(insertSalesChunk);
@@ -72,8 +72,8 @@ function UploadPage() {
     setSpeed(0);
     setEta(0);
     setProcessed(0);
+    setFileTotals({});
     setCurrentFile("");
-    setProgressLabel("");
     const r: Result[] = [];
 
     const allNames = files.map((f) => f.name);
@@ -87,19 +87,17 @@ function UploadPage() {
       setFileStatus(f.name, "processing");
 
       try {
-        setProgressLabel("Lendo arquivo…");
         setProgressPct(0);
         setProcessed(0);
         const buf = await f.arrayBuffer();
-        setProgressLabel("Processando planilha…");
         const parsed = parseAnyWorkbook(buf);
 
         totalLines = parsed.sales.length;
         if (totalLines > MAX_TOTAL_ROWS) {
           throw new Error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
         }
+        setFileTotals((s) => ({ ...s, [f.name]: totalLines }));
 
-        setProgressLabel("Preparando…");
         setProgressPct(0);
         await begin({ data: { sale_date: parsed.sale_date, stores: parsed.stores, products: parsed.products } });
 
@@ -114,13 +112,11 @@ function UploadPage() {
           setEta(rem);
           setProcessed(Math.min(i + CHUNK_SIZE, totalLines));
           setProgressPct(totalLines > 0 ? Math.round((done / totalLines) * 100) : 0);
-          setProgressLabel(`${fmtInt(Math.min(i + CHUNK_SIZE, totalLines))} / ${fmtInt(totalLines)} linhas`);
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
           i += CHUNK_SIZE;
           done = i;
         }
 
-        setProgressLabel("Finalizando…");
         setProgressPct(100);
         await finalize({ data: { sale_date: parsed.sale_date, row_count: totalLines } });
 
@@ -133,7 +129,6 @@ function UploadPage() {
       setResults([...r]);
     }
 
-    setProgressLabel("");
     setProgressPct(0);
     setCurrentFile("");
     setBusy(false);
@@ -201,8 +196,6 @@ function UploadPage() {
                 />
               </div>
               <div className="mt-2 flex flex-nowrap items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="tabular-nums font-medium text-foreground whitespace-nowrap">{progressLabel}</span>
-                <span className="shrink-0">·</span>
                 <span className="flex items-center gap-1 shrink-0"><Gauge className="size-3" /> {fmtInt(speed)} l/s</span>
                 <span className="shrink-0">·</span>
                 <span className="flex items-center gap-1 shrink-0 whitespace-nowrap"><Clock className="size-3" /> ~{eta}s</span>
@@ -233,8 +226,8 @@ function UploadPage() {
                     <FileSpreadsheet className="size-4 shrink-0 text-muted-foreground" />
                   )}
                   <span className="truncate">{f.name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {st === "processing" ? `${fmtInt(processed)} linhas` : `${(f.size / 1024).toFixed(0)} KB`}
+                  <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
+                    {st === "processing" ? `${fmtInt(processed)} / ${fmtInt(fileTotals[f.name] ?? 0)} linhas` : `${(f.size / 1024).toFixed(0)} KB`}
                   </span>
                 </li>
               );
