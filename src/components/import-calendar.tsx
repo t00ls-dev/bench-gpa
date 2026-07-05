@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fmtBRShort, fmtDT } from "@/lib/utils";
 
 interface ImportRecord { sale_date: string; row_count: number; imported_at: string }
 
@@ -10,16 +11,6 @@ interface Props {
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
-
-function fmtBR(iso: string) {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y.slice(-2)}`;
-}
-function pad2(n: number) { return String(n).padStart(2, "0"); }
-function fmtDT(iso: string) {
-  const d = new Date(iso);
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
 
 export function ImportCalendar({ records }: Props) {
   const byDate = useMemo(() => {
@@ -94,7 +85,7 @@ export function ImportCalendar({ records }: Props) {
                       : "border-dashed border-amber-200 bg-amber-50/40 text-amber-700/70",
                   isSel && !isLatest ? "ring-2 ring-primary" : "",
                 ].join(" ")}
-                title={rec ? `${fmtBR(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBR(iso)} : não importado`}
+                title={rec ? `${fmtBRShort(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBRShort(iso)} : não importado`}
               >
                 {day}
               </button>
@@ -112,7 +103,7 @@ export function ImportCalendar({ records }: Props) {
         {selectedRecord ? (
           <div>
             <div className="text-xs text-muted-foreground">Detalhes da importação</div>
-            <div className="mt-1 font-display text-base font-semibold">{fmtBR(selectedRecord.sale_date)}</div>
+            <div className="mt-1 font-display text-base font-semibold">{fmtBRShort(selectedRecord.sale_date)}</div>
             <dl className="mt-3 space-y-1.5 text-xs">
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-foreground">Linhas</dt>

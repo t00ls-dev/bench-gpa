@@ -34,16 +34,16 @@ export const beginImport = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: delErr } = await supabaseAdmin.from("sales").delete().eq("sale_date", data.sale_date);
-    if (delErr) throw safeError("beginImport.delete", delErr);
+    if (delErr) throw safeError("beginImport.delete", delErr, "Falha ao limpar dados existentes.");
     if (data.stores.length) {
       const { error } = await supabaseAdmin.from("stores").upsert(data.stores, { onConflict: "store_code" });
-      if (error) throw safeError("beginImport.stores", error);
+      if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.");
     }
     if (data.products.length) {
       const { error } = await supabaseAdmin
         .from("products")
         .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
-      if (error) throw safeError("beginImport.products", error);
+      if (error) throw safeError("beginImport.products", error, "Falha ao cadastrar produtos.");
     }
     return { ok: true };
   });
@@ -56,7 +56,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({ ...r, sale_date: data.sale_date }));
     const { error } = await supabaseAdmin.from("sales").insert(rows);
-    if (error) throw safeError("insertSalesChunk", error);
+    if (error) throw safeError("insertSalesChunk", error, "Falha ao inserir lote de vendas.");
     return { inserted: rows.length };
   });
 
@@ -72,8 +72,8 @@ export const finalizeImport = createServerFn({ method: "POST" })
       { sale_date: data.sale_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId },
       { onConflict: "sale_date" }
     );
-    if (error) throw safeError("finalizeImport.log", error);
+    if (error) throw safeError("finalizeImport.log", error, "Falha ao registrar importação.");
     const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
-    if (aggErr) throw safeError("finalizeImport.agg", aggErr);
+    if (aggErr) throw safeError("finalizeImport.agg", aggErr, "Falha ao atualizar agregados.");
     return { ok: true };
   });
