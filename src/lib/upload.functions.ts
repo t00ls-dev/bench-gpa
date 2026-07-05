@@ -26,15 +26,18 @@ export const beginImport = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       sale_date: z.string(),
+      batch_id: z.string(),
+      total_rows: z.number().int().nonnegative(),
       stores: z.array(z.object({ store_code: z.string(), store_name: z.string() })),
       products: z.array(z.object({ prod_code: z.string(), prod_name: z.string() })),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error: delErr } = await supabaseAdmin.from("sales").delete().eq("sale_date", data.sale_date);
-    if (delErr) throw safeError("beginImport.delete", delErr, "Falha ao limpar dados existentes.");
+    const { error: cleanErr } = await supabaseAdmin.from("staging_sales").delete().eq("sale_date", data.sale_date);
+    if (cleanErr) throw safeError("beginImport.cleanStaging", cleanErr, "Falha ao limpar staging anterior.");
     if (data.stores.length) {
       const { error } = await supabaseAdmin.from("stores").upsert(data.stores, { onConflict: "store_code" });
       if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.");
@@ -45,17 +48,19 @@ export const beginImport = createServerFn({ method: "POST" })
         .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
       if (error) throw safeError("beginImport.products", error, "Falha ao cadastrar produtos.");
     }
-    return { ok: true };
+    return { ok: true, batch_id: data.batch_id };
   });
 
 export const insertSalesChunk = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ sale_date: z.string(), rows: z.array(SaleRow) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRow) }).parse(d)
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const rows = data.rows.map((r) => ({ ...r, sale_date: data.sale_date }));
-    const { error } = await supabaseAdmin.from("sales").insert(rows);
+    const rows = data.rows.map((r) => ({ ...r, batch_id: data.batch_id, sale_date: data.sale_date }));
+    const { error } = await supabaseAdmin.from("staging_sales").insert(rows);
     if (error) throw safeError("insertSalesChunk", error, "Falha ao inserir lote de vendas.");
     return { inserted: rows.length };
   });
@@ -63,24 +68,30 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
 export const finalizeImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ sale_date: z.string(), row_count: z.number().int().nonnegative() }).parse(d)
+    z.object({ sale_date: z.string(), batch_id: z.string(), row_count: z.number().int().nonnegative() }).parse(d)
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1) Registrar importação
-    const { error: logErr } = await supabaseAdmin.from("import_log").upsert(
-      { sale_date: data.sale_date, row_count: data.row_count, imported_at: new Date().toISOString(), imported_by: context.userId },
-      { onConflict: "sale_date" }
-    );
-    if (logErr) throw safeError("finalizeImport.log", logErr, "Falha ao registrar importação.");
+    // 1) Swap atômico via RPC (valida staging, deleta dados antigos, insere novos, registra log)
+    const { error: swapErr } = await supabaseAdmin.rpc("finalize_import", {
+      p_batch_id: data.batch_id,
+      p_sale_date: data.sale_date,
+      p_row_count: data.row_count,
+      p_imported_by: context.userId,
+    });
+    if (swapErr) throw safeError("finalizeImport.swap", swapErr, "Falha ao finalizar importação.");
 
-    // 2) Tenta o RPC completo (agg + hierarquia)
+    // 2) Tenta refresh da agg via RPC
     const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
-    if (!aggErr) return { ok: true };
+    if (!aggErr) {
+      const { error: hierErr } = await supabaseAdmin.rpc("refresh_filter_hierarchy");
+      if (hierErr) console.error("[finalizeImport] refresh_filter_hierarchy failed:", hierErr);
+      return { ok: true };
+    }
 
-    // 3) Se falhou, faz passo a passo com mensagens específicas
+    // 3) Se falhou, faz passo a passo
     console.error("[finalizeImport] refresh_sales_daily_agg failed, stepping manually:", aggErr);
 
     const { error: delErr } = await supabaseAdmin.from("sales_daily_agg").delete().eq("sale_date", data.sale_date);
