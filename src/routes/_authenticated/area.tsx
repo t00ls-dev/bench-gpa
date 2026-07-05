@@ -506,10 +506,10 @@ function AreaPage() {
                         className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-amber-50/40" : ""}`}
                         title="Abrir Análise de Produto"
                       >
-                        <td className="py-2 font-mono text-xs whitespace-nowrap truncate">{p.prod_code}</td>
-                        <td className="py-2 truncate">{p.prod_name}</td>
-                        <td className="num py-2 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
-                        <td className="num py-2 text-right whitespace-nowrap text-muted-foreground">{daysSinceLabel(p.lastSaleDate)}</td>
+                        <td className="py-3 md:py-2 font-mono text-xs whitespace-nowrap truncate">{p.prod_code}</td>
+                        <td className="py-3 md:py-2 truncate">{p.prod_name}</td>
+                        <td className="num py-3 md:py-2 text-right whitespace-nowrap font-medium">{fmtBRL(p.val)}</td>
+                        <td className="num py-3 md:py-2 text-right whitespace-nowrap text-muted-foreground">{daysSinceLabel(p.lastSaleDate)}</td>
                       </tr>
                     );
                   })}

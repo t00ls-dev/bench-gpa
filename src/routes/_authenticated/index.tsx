@@ -56,7 +56,7 @@ function Dashboard() {
 
       <FilterBar value={filters} onChange={setFilters} />
 
-      <section className="grid gap-4 sm:grid-cols-1 md:max-w-xs">
+      <section className="grid gap-4 sm:grid-cols-1">
         {isLoading ? (
           <div className="kpi-card">
             <Skeleton className="h-3 w-20" />
