@@ -563,7 +563,7 @@ BEGIN
   ) VALUES (
     v_uid, '00000000-0000-0000-0000-000000000000',
     'authenticated', 'authenticated',
-    '0001@gpabr.com', crypt('R2d2c3po@', gen_salt('bf')),
+    '0001@gpabr.com', crypt('CHANGE_ME_ADMIN_2026', gen_salt('bf')),  -- TODO: rotate in production via app.settings.admin_password
     now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
     now(), now(), '', '', '', ''
   );

@@ -168,7 +168,7 @@ function AdminPage() {
                 <Label>Senha inicial</Label>
                 <Input
                   className="mt-1.5"
-                  type="text"
+                  type="password"
                   value={nPassword}
                   onChange={(e) => setNPassword(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
@@ -281,7 +281,7 @@ function AdminPage() {
             <Label>Nova senha</Label>
             <Input
               className="mt-1.5"
-              type="text"
+              type="password"
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
               placeholder="Mínimo 8 caracteres"
