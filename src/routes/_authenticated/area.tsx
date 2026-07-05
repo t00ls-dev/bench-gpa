@@ -247,7 +247,11 @@ function AreaPage() {
 
   const noSale = data?.plusWithoutSale ?? 0;
 
-  const openPdfInNewTab = () => {
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const openPdfInNewTab = async () => {
+    setPdfLoading(true);
+    try {
     const area = pathParts.join(" › ");
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -336,6 +340,7 @@ function AreaPage() {
     a.rel = "noopener noreferrer";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } finally { setPdfLoading(false); }
   };
 
 
@@ -476,8 +481,8 @@ function AreaPage() {
                     <SelectItem value="250">250 / página</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={openPdfInNewTab} className="h-9">
-                  <FileText className="mr-1.5 size-4" /> PDF
+                <Button variant="outline" size="sm" onClick={openPdfInNewTab} className="h-9" disabled={pdfLoading}>
+                  {pdfLoading ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <FileText className="mr-1.5 size-4" />} PDF
                 </Button>
               </div>
             </div>
@@ -493,7 +498,7 @@ function AreaPage() {
                     <Th label="PLU" k="prod_code" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} className="w-[18%]" />
                     <Th label="Produto" k="prod_name" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} className="w-[42%]" />
                     <Th label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="w-[20%]" />
-                    <Th label="Dias S/ Venda" k="daysSince" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="w-[20%]" />
+                    <Th label="Dias S/ Venda" k="daysSince" sortKey={sortKey} sortAsc={sortAsc} toggle={toggleSort} align="right" className="w-[20%]" hint={`Referência: ${baseDateIso ?? "—"}`} />
                   </tr>
                 </thead>
                 <tbody>
@@ -545,15 +550,16 @@ function AreaPage() {
   );
 }
 
-function Th({ label, k, sortKey, sortAsc, toggle, align = "left", className = "" }: {
+function Th({ label, k, sortKey, sortAsc, toggle, align = "left", className = "", hint }: {
   label: string; k: SortKey; sortKey: SortKey; sortAsc: boolean;
-  toggle: (k: SortKey) => void; align?: "left" | "right"; className?: string;
+  toggle: (k: SortKey) => void; align?: "left" | "right"; className?: string; hint?: string;
 }) {
   const active = sortKey === k;
   return (
     <th className={`py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
       <button
         onClick={() => toggle(k)}
+        title={hint}
         className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
       >
         {label}
