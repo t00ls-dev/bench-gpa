@@ -90,7 +90,7 @@ function AreaPage() {
   // usamos a última data disponível na base (não a data atual do sistema)
   // como referência para não contar um dia a mais artificialmente.
   // Reaproveitado tanto na tabela da tela quanto no export em PDF.
-  const baseDateIso = opts?.latestDate ?? dateTo;
+  const baseDateIso = dateTo || opts?.latestDate;
   const daysSinceNum = (iso: string | null): number | null => {
     if (!iso || !baseDateIso) return null;
     const base = new Date(baseDateIso + "T00:00:00");
