@@ -147,9 +147,10 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   border: 1px solid var(--border);
-  padding: 1.25rem;
+  padding: 1rem;
   transition: box-shadow 200ms ease, transform 200ms ease;
   &:hover { box-shadow: var(--shadow-elevated); }
+  @media (width >= 48rem) { padding: 1.25rem; }
 }
 
 @utility gradient-hero {
