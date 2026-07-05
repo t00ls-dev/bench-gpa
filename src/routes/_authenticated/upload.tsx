@@ -96,10 +96,14 @@ function UploadPage() {
         if (totalLines > MAX_TOTAL_ROWS) {
           throw new Error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
         }
+        if (totalLines === 0) {
+          throw new Error("Nenhuma linha de venda encontrada no arquivo.");
+        }
         setFileTotals((s) => ({ ...s, [f.name]: totalLines }));
 
+        const batchId = crypto.randomUUID();
         setProgressPct(0);
-        await begin({ data: { sale_date: parsed.sale_date, stores: parsed.stores, products: parsed.products } });
+        await begin({ data: { sale_date: parsed.sale_date, batch_id: batchId, total_rows: totalLines, stores: parsed.stores, products: parsed.products } });
 
         let i = 0;
         let done = 0;
@@ -112,13 +116,13 @@ function UploadPage() {
           setEta(rem);
           setProcessed(Math.min(i + CHUNK_SIZE, totalLines));
           setProgressPct(totalLines > 0 ? Math.round((done / totalLines) * 100) : 0);
-          await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
+          await insertChunk({ data: { sale_date: parsed.sale_date, batch_id: batchId, rows: chunk } });
           i += CHUNK_SIZE;
           done = i;
         }
 
         setProgressPct(100);
-        await finalize({ data: { sale_date: parsed.sale_date, row_count: totalLines } });
+        await finalize({ data: { sale_date: parsed.sale_date, batch_id: batchId, row_count: totalLines } });
 
         r.push({ filename: f.name, ok: true, message: `${fmtInt(totalLines)} linhas`, date: parsed.sale_date, rows: totalLines });
         setFileStatus(f.name, "done");
