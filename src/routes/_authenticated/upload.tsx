@@ -13,11 +13,14 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCh
 import { ImportCalendar } from "@/components/import-calendar";
 import { AdminGate } from "@/components/admin-gate";
 import { supabase } from "@/integrations/supabase/client";
+import { fmtBRShort, fmtInt, fmtDT } from "@/lib/utils";
 
 const CHUNK_MIN = 100;
 const CHUNK_MAX = 2000;
 const CHUNK_STEP = 100;
 const CHUNK_DEFAULT = 500;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_TOTAL_ROWS = 500_000;
 
 export const Route = createFileRoute("/_authenticated/upload")({
   beforeLoad: async () => {
@@ -40,17 +43,6 @@ interface Result {
   date?: string;
   rows?: number;
 }
-
-const fmtInt = (n: number) => n.toLocaleString("pt-BR");
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const fmtDate = (iso: string) => {
-  const [Y, M, D] = iso.slice(0, 10).split("-");
-  return `${D}/${M}/${Y.slice(-2)}`;
-};
-const fmtDT = (iso: string) => {
-  const d = new Date(iso);
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-};
 
 function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -75,21 +67,32 @@ function UploadPage() {
     const useSize = Math.min(CHUNK_MAX, Math.max(CHUNK_MIN, chunkSize || CHUNK_DEFAULT));
 
     for (const f of files) {
+      const startTime = Date.now();
       try {
         setProgress(`${f.name}: lendo arquivo…`);
         const buf = await f.arrayBuffer();
         setProgress(`${f.name}: processando planilha…`);
         const parsed = parseAnyWorkbook(buf);
 
+        const total = parsed.sales.length;
+        if (total > MAX_TOTAL_ROWS) {
+          throw new Error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(total)}).`);
+        }
+
         setProgress(`${f.name}: preparando ${parsed.sale_date}…`);
         await begin({ data: { sale_date: parsed.sale_date, stores: parsed.stores, products: parsed.products } });
-        const total = parsed.sales.length;
         let i = 0;
+        let totalProcessed = 0;
         while (i < total) {
           const chunk = parsed.sales.slice(i, i + useSize);
-          setProgress(`${f.name}: ${Math.min(i + useSize, total).toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}…`);
+          const elapsed = (Date.now() - startTime) / 1000;
+          const rate = elapsed > 0 ? Math.round(totalProcessed / elapsed) : 0;
+          const eta = rate > 0 ? Math.round((total - totalProcessed) / rate) : 0;
+          const etaStr = eta > 0 ? ` • ~${eta}s restantes` : "";
+          setProgress(`${f.name}: ${fmtInt(Math.min(i + useSize, total))}/${fmtInt(total)} linhas • ${fmtInt(rate)} linhas/s${etaStr}`);
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
           i += useSize;
+          totalProcessed = i;
         }
         await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
         r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} linhas`, date: parsed.sale_date, rows: total });
@@ -126,11 +129,18 @@ function UploadPage() {
       >
         <Upload className="mb-3 size-8 text-muted-foreground" />
         <div className="font-medium">Arraste arquivos ou clique para selecionar</div>
-        <div className="mt-1 text-xs text-muted-foreground">.xlsx, .xls (múltiplos arquivos)</div>
+        <div className="mt-1 text-xs text-muted-foreground">.xlsx, .xls (múltiplos arquivos, máx. 50 MB cada)</div>
         <input
           id="files" type="file" multiple accept=".xlsx,.xls"
           className="sr-only"
-          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          onChange={(e) => {
+            const selected = Array.from(e.target.files ?? []);
+            const oversized = selected.filter((f) => f.size > MAX_FILE_SIZE);
+            if (oversized.length > 0) {
+              toast.error(`${oversized.length} arquivo(s) excedem o limite de 50 MB.`);
+            }
+            setFiles(selected.filter((f) => f.size <= MAX_FILE_SIZE));
+          }}
         />
       </label>
 
@@ -183,12 +193,12 @@ function UploadPage() {
           <h2 className="font-display text-lg font-semibold">Resultado</h2>
           <ul className="mt-3 space-y-2">
             {results.map((r, i) => (
-              <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-[oklch(0.85_0.08_155)] bg-[oklch(0.96_0.04_155)]" : "border-destructive/30 bg-destructive/5"}`}>
-                {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-[oklch(0.45_0.13_155)]" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
+              <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-emerald-400 bg-emerald-50" : "border-destructive/30 bg-destructive/5"}`}>
+                {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-600" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
                 <div className="flex-1">
                   <div className="font-medium">{r.filename}</div>
                   <div className="text-xs text-muted-foreground">
-                    {r.ok && r.date && <>Data {fmtDate(r.date)}: </>}
+                    {r.ok && r.date && <>Data {fmtBRShort(r.date)}: </>}
                     {r.message}
                   </div>
                 </div>
@@ -220,7 +230,7 @@ function UploadPage() {
             <tbody>
               {(dates ?? []).map((d) => (
                 <tr key={d.sale_date} className="border-b border-border/60">
-                  <td className="py-2 font-medium">{fmtDate(d.sale_date)}</td>
+                  <td className="py-2 font-medium">{fmtBRShort(d.sale_date)}</td>
                   <td className="num py-2 text-right">{fmtInt(d.row_count)}</td>
                   <td className="py-2 text-right text-xs text-muted-foreground">{fmtDT(d.imported_at)}</td>
                 </tr>

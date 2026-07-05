@@ -5,6 +5,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+export function fmtInt(n: number): string {
+  return n.toLocaleString("pt-BR");
+}
+
+export function fmtDT(iso: string): string {
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 /**
  * Formato compacto padrão para exibição visual: DD/MM/AA.
  * Aceita string ISO (YYYY-MM-DD) ou Date.
@@ -19,6 +32,5 @@ export function fmtBRShort(input: string | Date | null | undefined): string {
   } else {
     y = input.getFullYear(); m = input.getMonth() + 1; d = input.getDate();
   }
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d)}/${pad(m)}/${String(y).slice(-2)}`;
+  return `${pad2(d)}/${pad2(m)}/${String(y).slice(-2)}`;
 }
