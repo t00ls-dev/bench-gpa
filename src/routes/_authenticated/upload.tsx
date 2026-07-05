@@ -5,20 +5,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
 import { getImportedDates } from "@/lib/analytics.functions";
 import { parseAnyWorkbook } from "@/lib/xlsx-parser";
-import { usePersistentState } from "@/hooks/use-persistent-state";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck, Clock, Gauge } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
 import { AdminGate } from "@/components/admin-gate";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtBRShort, fmtInt, fmtDT } from "@/lib/utils";
 
-const CHUNK_MIN = 100;
-const CHUNK_MAX = 2000;
-const CHUNK_STEP = 100;
-const CHUNK_DEFAULT = 500;
+const CHUNK_SIZE = 1000;
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_TOTAL_ROWS = 500_000;
 
@@ -36,6 +31,8 @@ export const Route = createFileRoute("/_authenticated/upload")({
 });
 
 
+type FileStatus = "pending" | "processing" | "done" | "error";
+
 interface Result {
   filename: string;
   ok: boolean;
@@ -48,8 +45,13 @@ function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [results, setResults] = useState<Result[]>([]);
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<string>("");
-  const [chunkSize, setChunkSize] = usePersistentState<number>("bench-gpa:import-chunk-size", CHUNK_DEFAULT);
+  const [statuses, setStatuses] = useState<Record<string, FileStatus>>({});
+  const [progressLabel, setProgressLabel] = useState<string>("");
+  const [progressPct, setProgressPct] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [eta, setEta] = useState(0);
+  const [processed, setProcessed] = useState(0);
+  const [currentFile, setCurrentFile] = useState("");
   const begin = useServerFn(beginImport);
   const insertChunk = useServerFn(insertSalesChunk);
   const finalize = useServerFn(finalizeImport);
@@ -58,54 +60,87 @@ function UploadPage() {
 
   const { data: dates } = useQuery({ queryKey: ["imported-dates"], queryFn: () => importedDates() });
 
-  const process = async () => {
+  const setFileStatus = (name: string, st: FileStatus) =>
+    setStatuses((s) => ({ ...s, [name]: st }));
+
+  const processFiles = async () => {
     if (files.length === 0) return;
     setBusy(true);
     setResults([]);
+    setStatuses({});
+    setProgressPct(0);
+    setSpeed(0);
+    setEta(0);
+    setProcessed(0);
+    setCurrentFile("");
+    setProgressLabel("");
     const r: Result[] = [];
 
-    const useSize = Math.min(CHUNK_MAX, Math.max(CHUNK_MIN, chunkSize || CHUNK_DEFAULT));
+    const allNames = files.map((f) => f.name);
+    setStatuses(Object.fromEntries(allNames.map((n) => [n, "pending"])));
 
-    for (const f of files) {
+    for (let fi = 0; fi < files.length; fi++) {
+      const f = files[fi];
       const startTime = Date.now();
+      let totalLines = 0;
+      setCurrentFile(f.name);
+      setFileStatus(f.name, "processing");
+
       try {
-        setProgress(`${f.name}: lendo arquivo…`);
+        setProgressLabel("Lendo arquivo…");
+        setProgressPct(0);
+        setProcessed(0);
         const buf = await f.arrayBuffer();
-        setProgress(`${f.name}: processando planilha…`);
+        setProgressLabel("Processando planilha…");
         const parsed = parseAnyWorkbook(buf);
 
-        const total = parsed.sales.length;
-        if (total > MAX_TOTAL_ROWS) {
-          throw new Error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(total)}).`);
+        totalLines = parsed.sales.length;
+        if (totalLines > MAX_TOTAL_ROWS) {
+          throw new Error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
         }
 
-        setProgress(`${f.name}: preparando ${parsed.sale_date}…`);
+        setProgressLabel("Preparando…");
+        setProgressPct(0);
         await begin({ data: { sale_date: parsed.sale_date, stores: parsed.stores, products: parsed.products } });
+
         let i = 0;
-        let totalProcessed = 0;
-        while (i < total) {
-          const chunk = parsed.sales.slice(i, i + useSize);
+        let done = 0;
+        while (i < totalLines) {
+          const chunk = parsed.sales.slice(i, i + CHUNK_SIZE);
           const elapsed = (Date.now() - startTime) / 1000;
-          const rate = elapsed > 0 ? Math.round(totalProcessed / elapsed) : 0;
-          const eta = rate > 0 ? Math.round((total - totalProcessed) / rate) : 0;
-          const etaStr = eta > 0 ? ` • ~${eta}s restantes` : "";
-          setProgress(`${f.name}: ${fmtInt(Math.min(i + useSize, total))}/${fmtInt(total)} linhas • ${fmtInt(rate)} linhas/s${etaStr}`);
+          const rate = elapsed > 0 ? Math.round(done / elapsed) : 0;
+          const rem = rate > 0 ? Math.round((totalLines - done) / rate) : 0;
+          setSpeed(rate);
+          setEta(rem);
+          setProcessed(Math.min(i + CHUNK_SIZE, totalLines));
+          setProgressPct(totalLines > 0 ? Math.round((done / totalLines) * 100) : 0);
+          setProgressLabel(`${fmtInt(Math.min(i + CHUNK_SIZE, totalLines))} / ${fmtInt(totalLines)} linhas`);
           await insertChunk({ data: { sale_date: parsed.sale_date, rows: chunk } });
-          i += useSize;
-          totalProcessed = i;
+          i += CHUNK_SIZE;
+          done = i;
         }
-        await finalize({ data: { sale_date: parsed.sale_date, row_count: total } });
-        r.push({ filename: f.name, ok: true, message: `${fmtInt(total)} linhas`, date: parsed.sale_date, rows: total });
+
+        setProgressLabel("Finalizando…");
+        setProgressPct(100);
+        await finalize({ data: { sale_date: parsed.sale_date, row_count: totalLines } });
+
+        r.push({ filename: f.name, ok: true, message: `${fmtInt(totalLines)} linhas`, date: parsed.sale_date, rows: totalLines });
+        setFileStatus(f.name, "done");
       } catch (e: any) {
         r.push({ filename: f.name, ok: false, message: e?.message ?? "Erro desconhecido" });
+        setFileStatus(f.name, "error");
       }
       setResults([...r]);
     }
-    setProgress("");
+
+    setProgressLabel("");
+    setProgressPct(0);
+    setCurrentFile("");
     setBusy(false);
     qc.invalidateQueries({ queryKey: ["imported-dates"] });
     qc.invalidateQueries({ queryKey: ["filter-options"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+
     const ok = r.filter((x) => x.ok).length;
     if (ok === r.length) toast.success(`${ok} arquivo(s) importado(s).`);
     else if (ok > 0) toast.warning(`${ok} de ${r.length} importados.`);
@@ -148,42 +183,60 @@ function UploadPage() {
         <div className="mt-4 kpi-card">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-medium">{files.length} arquivo(s) selecionado(s)</div>
-            <Button onClick={process} disabled={busy}>
+            <Button onClick={processFiles} disabled={busy}>
               {busy ? <><Loader2 className="mr-2 size-4 animate-spin" /> Importando…</> : "Iniciar importação"}
             </Button>
           </div>
-          <div className="mb-3 rounded-md border bg-muted/30 px-3 py-3">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <label htmlFor="chunk-size" className="text-xs font-medium text-muted-foreground">
-                Linhas por chunk
-              </label>
-              <span className="text-sm font-semibold tabular-nums">{chunkSize}</span>
+
+          {busy && (
+            <div className="mb-3 rounded-md border bg-muted/30 p-3">
+              <div className="flex items-center gap-3 text-sm">
+                <FileSpreadsheet className="size-4 shrink-0 text-primary" />
+                <span className="truncate font-medium">{currentFile}</span>
+              </div>
+              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="tabular-nums font-medium text-foreground">{progressLabel}</span>
+                <span className="flex items-center gap-1"><Gauge className="size-3" /> {fmtInt(speed)} linhas/s</span>
+                <span className="flex items-center gap-1"><Clock className="size-3" /> ~{eta}s restantes</span>
+              </div>
             </div>
-            <Slider
-              id="chunk-size"
-              min={CHUNK_MIN}
-              max={CHUNK_MAX}
-              step={CHUNK_STEP}
-              value={[chunkSize]}
-              onValueChange={(v) => setChunkSize(v[0] ?? CHUNK_DEFAULT)}
-              disabled={busy}
-            />
-            <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-              <span>{CHUNK_MIN}</span>
-              <span>{CHUNK_MAX}</span>
-            </div>
-          </div>
-          {busy && progress && (
-            <div className="mb-3 rounded-md bg-primary/5 px-3 py-2 text-xs text-primary">{progress}</div>
           )}
+
           <ul className="space-y-2">
-            {files.map((f) => (
-              <li key={f.name} className="flex items-center gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
-                <FileSpreadsheet className="size-4 text-muted-foreground" />
-                <span className="truncate">{f.name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{(f.size / 1024).toFixed(0)} KB</span>
-              </li>
-            ))}
+            {files.map((f) => {
+              const st = statuses[f.name] ?? "pending";
+              return (
+                <li
+                  key={f.name}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
+                    st === "processing" ? "bg-primary/5 ring-1 ring-primary/20" :
+                    st === "done" ? "bg-emerald-50" :
+                    st === "error" ? "bg-destructive/5" :
+                    "bg-muted/40"
+                  }`}
+                >
+                  {st === "processing" ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                  ) : st === "done" ? (
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                  ) : st === "error" ? (
+                    <AlertCircle className="size-4 shrink-0 text-destructive" />
+                  ) : (
+                    <FileSpreadsheet className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="truncate">{f.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {st === "processing" ? `${fmtInt(processed)} linhas` : `${(f.size / 1024).toFixed(0)} KB`}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
