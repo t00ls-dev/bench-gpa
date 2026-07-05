@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Package, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fmtBRShort } from "@/lib/utils";
@@ -83,7 +84,7 @@ function ProdutoPage() {
     enabled: debounced.length >= 3 && !selected,
   });
 
-  const { data: analysisData } = useQuery({
+  const { data: analysisData, isFetching: analysisLoading } = useQuery({
     queryKey: ["product-analysis", selected?.prod_code, storeCode],
     queryFn: () => analysis({ data: {
       prodCode: selected!.prod_code,
@@ -200,6 +201,29 @@ function ProdutoPage() {
           </ul>
         )}
       </div>
+
+      {selected && analysisLoading && !analysisData && (
+        <>
+          <section className="mt-6 grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="kpi-card">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="mt-2 h-8 w-28" />
+                <Skeleton className="mt-2 h-3 w-20" />
+              </div>
+            ))}
+          </section>
+          <section className="mt-6 grid gap-4 lg:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="kpi-card">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="mt-2 h-3 w-64" />
+                <Skeleton className="mt-4 h-72 w-full rounded-lg" />
+              </div>
+            ))}
+          </section>
+        </>
+      )}
 
       {selected && analysisData && (
         <>
