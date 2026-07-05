@@ -1,10 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Upload, Package, Users, LogOut, Layers, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Upload, Package, Users, LogOut, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTheme } from "@/hooks/use-theme";
 import {
   SidebarProvider,
   Sidebar,
@@ -36,7 +35,6 @@ function AuthedLayout() {
   const router = useRouter();
   const loc = useLocation();
   const { user } = Route.useRouteContext();
-  const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ isActive: boolean; isAdmin: boolean } | null>(null);
 
   useEffect(() => {
@@ -110,9 +108,6 @@ function AuthedLayout() {
         <SidebarFooter>
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="flex-1 truncate text-xs text-sidebar-foreground/60">{user.email}</span>
-            <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema" className="size-7">
-              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </Button>
             <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair" className="size-7">
               <LogOut className="size-4" />
             </Button>
@@ -128,9 +123,6 @@ function AuthedLayout() {
             </Link>
             <div className="ml-auto flex items-center gap-3">
               <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
-              <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema" className="hidden md:inline-flex size-7">
-                {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              </Button>
               <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair" className="hidden md:inline-flex size-7">
                 <LogOut className="size-4" />
               </Button>
