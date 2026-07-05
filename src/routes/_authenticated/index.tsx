@@ -8,6 +8,7 @@ import { RankingCard } from "@/components/ranking-card";
 import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid } from "recharts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutDashboard } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -24,7 +25,7 @@ function Dashboard() {
   const fnRank = useServerFn(getDashboardRankings);
   const enabled = !!filters.dateFrom && !!filters.dateTo;
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isLoading } = useQuery({
     queryKey: ["dashboard", filters],
     queryFn: () => fn({ data: filters }),
     enabled,
@@ -56,12 +57,20 @@ function Dashboard() {
       <FilterBar value={filters} onChange={setFilters} />
 
       <section className="grid gap-4 sm:grid-cols-1 md:max-w-xs">
-        <KpiCard
-          label="Venda total"
-          value={fmtBRL(data?.current.total ?? 0)}
-          delta={data?.previous ? delta(data.current.total, data.previous.total) : null}
-          hint={data?.previous ? `Anterior: ${fmtBRL(data.previous.total)}` : undefined}
-        />
+        {isLoading ? (
+          <div className="kpi-card">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="mt-2 h-8 w-40" />
+            <Skeleton className="mt-2 h-3 w-32" />
+          </div>
+        ) : (
+          <KpiCard
+            label="Venda total"
+            value={fmtBRL(data?.current.total ?? 0)}
+            delta={data?.previous ? delta(data.current.total, data.previous.total) : null}
+            hint={data?.previous ? `Anterior: ${fmtBRL(data.previous.total)}` : undefined}
+          />
+        )}
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -69,15 +78,19 @@ function Dashboard() {
           <h2 className="font-display text-lg font-semibold">Evolução diária</h2>
           <p className="text-xs text-muted-foreground">Soma das vendas por data no período filtrado.</p>
           <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data?.current.byDate ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => fmtBRShort(String(v))} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
-                <Line type="monotone" dataKey="val" stroke="oklch(0.48 0.12 165)" strokeWidth={2.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <Skeleton className="h-full w-full rounded-lg" />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data?.current.byDate ?? []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => fmtBRShort(String(v))} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
+                  <Line type="monotone" dataKey="val" stroke="oklch(0.48 0.12 165)" strokeWidth={2.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -85,15 +98,19 @@ function Dashboard() {
           <h2 className="font-display text-lg font-semibold">Top lojas</h2>
           <p className="text-xs text-muted-foreground">Ranking por venda total no período.</p>
           <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={(data?.current.byStore ?? []).slice(0, 10)} margin={{ left: 8, right: 8, bottom: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <Tooltip formatter={(v: number) => fmtBRL(v)} />
-                <Bar dataKey="val" fill="oklch(0.32 0.09 265)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <Skeleton className="h-full w-full rounded-lg" />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={(data?.current.byStore ?? []).slice(0, 10)} margin={{ left: 8, right: 8, bottom: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                  <Bar dataKey="val" fill="oklch(0.32 0.09 265)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </section>
