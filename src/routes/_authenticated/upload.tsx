@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
@@ -60,12 +60,45 @@ function UploadPage() {
 
   const { data: dates } = useQuery({ queryKey: ["imported-dates"], queryFn: () => importedDates() });
 
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const busyRef = useRef(false);
+
+  const acquireWakeLock = useRef(async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+      }
+    } catch {
+      /* browser may deny request — proceed without wake lock */
+    }
+  }).current;
+
+  const releaseWakeLock = useRef(() => {
+    wakeLockRef.current?.release();
+    wakeLockRef.current = null;
+  }).current;
+
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === 'visible' && busyRef.current) {
+        acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => {
+      document.removeEventListener('visibilitychange', handler);
+      releaseWakeLock();
+    };
+  }, [acquireWakeLock, releaseWakeLock]);
+
   const setFileStatus = (name: string, st: FileStatus) =>
     setStatuses((s) => ({ ...s, [name]: st }));
 
   const processFiles = async () => {
     if (files.length === 0) return;
+    busyRef.current = true;
     setBusy(true);
+    await acquireWakeLock();
     setResults([]);
     setStatuses({});
     setProgressPct(0);
@@ -136,6 +169,8 @@ function UploadPage() {
     setProgressPct(0);
     setCurrentFile("");
     setBusy(false);
+    busyRef.current = false;
+    releaseWakeLock();
     qc.invalidateQueries({ queryKey: ["imported-dates"] });
     qc.invalidateQueries({ queryKey: ["filter-options"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
