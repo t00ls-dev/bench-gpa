@@ -71,9 +71,6 @@ export function FilterBar({ value, onChange }: Props) {
   const setSecoes = (v: string[]) => setF({ secoes: v, grupos: [], subgrupos: [] });
   const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
 
-  void stores;
-
-
   return (
     <div className="kpi-card mb-6 space-y-3">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -142,6 +139,3 @@ export function FilterBar({ value, onChange }: Props) {
   );
 }
 
-function Chip(_: { label: string; onClear: () => void }) {
-  return null;
-}

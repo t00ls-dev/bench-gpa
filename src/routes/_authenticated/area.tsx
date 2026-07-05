@@ -14,6 +14,7 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Layers, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Search,
   FileText, Loader2,
@@ -136,7 +137,7 @@ function AreaPage() {
   // Gate: Loja + Departamento são obrigatórios para evitar varredura excessiva.
   const ready = !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0;
 
-  const { data, isFetching, isError, error, refetch } = useQuery({
+  const { data, isFetching, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
     queryFn: () => getArea({ data: {
       dateFrom, dateTo,
@@ -416,6 +417,32 @@ function AreaPage() {
           <p className="text-sm text-destructive mb-3">Não foi possível carregar a análise: {(error as Error)?.message ?? "erro desconhecido"}.</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
         </div>
+      ) : isLoading ? (
+        <>
+          <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="kpi-card">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="mt-2 h-8 w-28" />
+              </div>
+            ))}
+          </section>
+          <div className="kpi-card min-w-0">
+            <div className="mb-3 flex items-center gap-2">
+              <Skeleton className="h-5 w-44" />
+              <div className="ml-auto flex items-center gap-2">
+                <Skeleton className="h-9 w-40 rounded-md" />
+                <Skeleton className="h-9 w-[110px] rounded-md" />
+                <Skeleton className="h-9 w-16 rounded-md" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
