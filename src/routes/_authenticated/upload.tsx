@@ -132,6 +132,15 @@ function UploadPage() {
         if (totalLines === 0) {
           throw new Error("Nenhuma linha de venda encontrada no arquivo.");
         }
+
+        const existing = dates?.find((d) => d.sale_date === parsed.sale_date);
+        if (existing) {
+          const ok = confirm(
+            `Data ${fmtBRShort(parsed.sale_date)} já foi importada com ${fmtInt(existing.row_count)} linhas em ${fmtDT(existing.imported_at)}. Deseja substituir?`
+          );
+          if (!ok) throw new Error("Importação cancelada para este arquivo.");
+        }
+
         setFileTotals((s) => ({ ...s, [f.name]: totalLines }));
 
         const batchId = crypto.randomUUID();

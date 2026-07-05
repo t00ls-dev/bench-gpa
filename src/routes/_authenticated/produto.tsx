@@ -225,6 +225,12 @@ function ProdutoPage() {
         </>
       )}
 
+      {selected && !analysisLoading && !analysisData && (
+        <div className="kpi-card text-center py-10 mt-6">
+          <p className="text-sm text-muted-foreground">Nenhum dado de venda encontrado para este produto no período disponível.</p>
+        </div>
+      )}
+
       {selected && analysisData && (
         <>
           <section className="mt-6 grid gap-4 md:grid-cols-3">
