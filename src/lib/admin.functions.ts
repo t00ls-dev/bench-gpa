@@ -123,3 +123,106 @@ export const resetPassword = createServerFn({ method: "POST" })
     if (error) throw safeError("resetPassword", error);
     return { ok: true };
   });
+
+type TableName = "sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
+
+async function countRows(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName) {
+  const { count, error } = await sa.from(table).select("*", { count: "exact", head: true });
+  if (error) throw safeError(`count.${table}`, error);
+  return count ?? 0;
+}
+
+async function fetchDistinctDates(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName, column: string) {
+  const { data, error } = await sa.from(table).select(column);
+  if (error) throw safeError(`distinct.${table}.${column}`, error);
+  const vals = [...new Set((data ?? []).map((r) => String((r as unknown as Record<string, unknown>)[column])))].sort();
+  return vals;
+}
+
+export const diagnoseData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const tables: TableName[] = ["sales", "sales_daily_agg", "products", "stores", "filter_hierarchy", "import_log"];
+    const counts: Record<string, number> = {};
+    for (const t of tables) {
+      counts[t] = await countRows(supabaseAdmin, t);
+    }
+    const datesInSales = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
+    return { ...counts, dates_in_sales: datesInSales };
+  });
+
+export const repairAggregations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Busca datas distintas de public.sales
+    const dates = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
+    if (dates.length === 0) {
+      return { ok: false, message: "Nenhuma data encontrada em public.sales" };
+    }
+
+    let refreshed = 0;
+    let errors = 0;
+
+    for (const dateStr of dates) {
+      try {
+        // Deleta agregação existente para a data
+        await supabaseAdmin.from("sales_daily_agg").delete().eq("sale_date", dateStr);
+
+        // Busca vendas brutas da data
+        const { data: rows, error: qErr } = await supabaseAdmin
+          .from("sales")
+          .select("store_code, store_name, depto, secao, grupo, subgrupo, val_vda")
+          .eq("sale_date", dateStr);
+        if (qErr) throw qErr;
+        if (!rows || rows.length === 0) continue;
+
+        // Agrupa por store_code + depto + secao + grupo + subgrupo
+        const grouped = new Map<string, {
+          store_code: string; store_name: string;
+          depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null;
+          val_vda: number; item_count: number;
+        }>();
+        for (const r of rows) {
+          const key = `${r.store_code}|${r.depto ?? ""}|${r.secao ?? ""}|${r.grupo ?? ""}|${r.subgrupo ?? ""}`;
+          const g = grouped.get(key);
+          if (g) {
+            g.val_vda += Number(r.val_vda);
+            g.item_count += 1;
+          } else {
+            grouped.set(key, {
+              store_code: r.store_code, store_name: r.store_name,
+              depto: r.depto, secao: r.secao, grupo: r.grupo, subgrupo: r.subgrupo,
+              val_vda: Number(r.val_vda), item_count: 1,
+            });
+          }
+        }
+
+        // Insere agregados
+        const { error: iErr } = await supabaseAdmin.from("sales_daily_agg").insert(
+          Array.from(grouped.values()).map((g) => ({ ...g, sale_date: dateStr }))
+        );
+        if (iErr) throw iErr;
+        refreshed++;
+      } catch (e) {
+        console.error(`[repair] erro na data ${dateStr}:`, e);
+        errors++;
+      }
+    }
+
+    // Atualiza hierarquia de filtros
+    const { error: hErr } = await supabaseAdmin.rpc("refresh_filter_hierarchy");
+    if (hErr) console.error("[repair] refresh_filter_hierarchy failed:", hErr);
+
+    return {
+      ok: true,
+      dates_refreshed: refreshed,
+      errors,
+      total_dates: dates.length,
+      hierarchy_refreshed: !hErr,
+    };
+  });
