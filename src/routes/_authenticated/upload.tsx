@@ -6,6 +6,16 @@ import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.func
 import { getImportedDates } from "@/lib/analytics.functions";
 import { parseAnyWorkbook } from "@/lib/xlsx-parser";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, CalendarCheck, Clock, Gauge } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
@@ -52,6 +62,12 @@ function UploadPage() {
   const [processed, setProcessed] = useState(0);
   const [fileTotals, setFileTotals] = useState<Record<string, number>>({});
   const [currentFile, setCurrentFile] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<{
+    date: string;
+    rowCount: number;
+    importedAt: string;
+    resolve: (v: boolean) => void;
+  } | null>(null);
   const begin = useServerFn(beginImport);
   const insertChunk = useServerFn(insertSalesChunk);
   const finalize = useServerFn(finalizeImport);
@@ -135,9 +151,15 @@ function UploadPage() {
 
         const existing = dates?.find((d) => d.sale_date === parsed.sale_date);
         if (existing) {
-          const ok = confirm(
-            `Data ${fmtBRShort(parsed.sale_date)} já foi importada com ${fmtInt(existing.row_count)} linhas em ${fmtDT(existing.imported_at)}. Deseja substituir?`
-          );
+          const ok = await new Promise<boolean>((resolve) => {
+            setConfirmDialog({
+              date: parsed.sale_date,
+              rowCount: existing.row_count,
+              importedAt: existing.imported_at,
+              resolve,
+            });
+          });
+          setConfirmDialog(null);
           if (!ok) throw new Error("Importação cancelada para este arquivo.");
         }
 
@@ -221,6 +243,21 @@ function UploadPage() {
           }}
         />
       </label>
+
+      <AlertDialog open={confirmDialog !== null}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Substituir dados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Data {fmtBRShort(confirmDialog?.date)} já foi importada com {fmtInt(confirmDialog?.rowCount ?? 0)} linhas em {confirmDialog?.importedAt ? fmtDT(confirmDialog.importedAt) : ""}. Deseja substituir?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => confirmDialog?.resolve(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmDialog?.resolve(true)}>Substituir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {files.length > 0 && (
         <div className="mt-4 kpi-card">
