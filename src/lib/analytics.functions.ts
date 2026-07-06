@@ -20,9 +20,19 @@ const FilterSchema = z.object({
 type Filters = z.infer<typeof FilterSchema>;
 
 // ---- RPC result interfaces ----
-interface NameVal { name: string; val: number }
-interface CodeNameVal { code: string; name: string; val: number }
-interface DateVal { date: string; val: number }
+interface NameVal {
+  name: string;
+  val: number;
+}
+interface CodeNameVal {
+  code: string;
+  name: string;
+  val: number;
+}
+interface DateVal {
+  date: string;
+  val: number;
+}
 
 interface DashboardMetricsResult {
   total: number;
@@ -31,7 +41,10 @@ interface DashboardMetricsResult {
   byDate: DateVal[];
 }
 
-interface StoreOption { store_code: string; store_name: string }
+interface StoreOption {
+  store_code: string;
+  store_name: string;
+}
 interface FilterOptionsResult {
   latestDate: string | null;
   stores: StoreOption[];
@@ -69,6 +82,24 @@ interface AreaAnalysisResult {
   avgPerPlu: number;
   products: AreaProduct[];
   byDate: DateVal[];
+  totalProducts?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
+}
+
+export interface AreaHierarchyItem {
+  store_code: string;
+  store_name: string;
+  depto: string | null;
+  secao: string | null;
+  grupo: string | null;
+  subgrupo: string | null;
+}
+interface AreaFilterHierarchyResult {
+  latestDate: string | null;
+  hierarchy: AreaHierarchyItem[];
+  availableDates: string[];
 }
 
 interface ProductAnalysisResult {
@@ -87,7 +118,6 @@ interface ProductAnalysisResult {
   lastFourSameWeekday: DateVal[];
   lastFourAll: DateVal[];
 }
-
 
 // ---- helpers ----
 function asRecord(v: unknown): Record<string, unknown> {
@@ -164,14 +194,16 @@ async function callMetrics(supabase: DB, f: Filters): Promise<DashboardMetricsRe
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      dateFrom: z.string().nullable().optional(),
-      dateTo: z.string().nullable().optional(),
-      stores: z.array(z.string()).optional().default([]),
-      deptos: z.array(z.string()).optional().default([]),
-      secoes: z.array(z.string()).optional().default([]),
-      grupos: z.array(z.string()).optional().default([]),
-    }).parse(d ?? {})
+    z
+      .object({
+        dateFrom: z.string().nullable().optional(),
+        dateTo: z.string().nullable().optional(),
+        stores: z.array(z.string()).optional().default([]),
+        deptos: z.array(z.string()).optional().default([]),
+        secoes: z.array(z.string()).optional().default([]),
+        grupos: z.array(z.string()).optional().default([]),
+      })
+      .parse(d ?? {}),
   )
   .handler(async ({ data, context }): Promise<FilterOptionsResult> => {
     const supabase = context.supabase as DB;
@@ -215,8 +247,11 @@ export const getDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     FilterSchema.extend({
-      compare: z.enum(["prev_period", "prev_week", "prev_month", "none"]).optional().default("prev_period"),
-    }).parse(d)
+      compare: z
+        .enum(["prev_period", "prev_week", "prev_month", "none"])
+        .optional()
+        .default("prev_period"),
+    }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
@@ -224,7 +259,11 @@ export const getDashboard = createServerFn({ method: "POST" })
     let previous: DashboardMetricsResult | null = null;
     if (data.compare !== "none" && data.dateFrom && data.dateTo) {
       const prev = shiftPeriod(data.dateFrom, data.dateTo, data.compare);
-      previous = await callMetrics(supabase, { ...data, dateFrom: prev.dateFrom, dateTo: prev.dateTo });
+      previous = await callMetrics(supabase, {
+        ...data,
+        dateFrom: prev.dateFrom,
+        dateTo: prev.dateTo,
+      });
     }
     return { current, previous };
   });
@@ -251,11 +290,13 @@ export const searchProducts = createServerFn({ method: "POST" })
 export const getProductAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      prodCode: z.string(),
-      storeCode: z.string().optional().nullable(),
-      referenceDate: z.string().optional().nullable(),
-    }).parse(d)
+    z
+      .object({
+        prodCode: z.string(),
+        storeCode: z.string().optional().nullable(),
+        referenceDate: z.string().optional().nullable(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }): Promise<ProductAnalysisResult> => {
     const supabase = context.supabase as DB;
@@ -266,19 +307,20 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
     });
     if (error) throw safeError("analytics", error);
     const r = asRecord(res);
-    const product = r.product == null
-      ? null
-      : (() => {
-          const p = asRecord(r.product);
-          return {
-            prod_code: str(p.prod_code),
-            prod_name: str(p.prod_name),
-            depto: strOrNull(p.depto),
-            secao: strOrNull(p.secao),
-            grupo: strOrNull(p.grupo),
-            subgrupo: strOrNull(p.subgrupo),
-          };
-        })();
+    const product =
+      r.product == null
+        ? null
+        : (() => {
+            const p = asRecord(r.product);
+            return {
+              prod_code: str(p.prod_code),
+              prod_name: str(p.prod_name),
+              depto: strOrNull(p.depto),
+              secao: strOrNull(p.secao),
+              grupo: strOrNull(p.grupo),
+              subgrupo: strOrNull(p.subgrupo),
+            };
+          })();
     return {
       product,
       refDate: strOrNull(r.refDate),
@@ -290,20 +332,26 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
     };
   });
 
-
 export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      dateFrom: z.string(),
-      dateTo: z.string(),
-      stores: z.array(z.string()).optional().default([]),
-      deptos: z.array(z.string()).optional().default([]),
-      secoes: z.array(z.string()).optional().default([]),
-      grupos: z.array(z.string()).optional().default([]),
-      subgrupos: z.array(z.string()).optional().default([]),
-      prodCodes: z.array(z.string()).optional().default([]),
-    }).parse(d)
+    z
+      .object({
+        dateFrom: z.string(),
+        dateTo: z.string(),
+        stores: z.array(z.string()).optional().default([]),
+        deptos: z.array(z.string()).optional().default([]),
+        secoes: z.array(z.string()).optional().default([]),
+        grupos: z.array(z.string()).optional().default([]),
+        subgrupos: z.array(z.string()).optional().default([]),
+        prodCodes: z.array(z.string()).optional().default([]),
+        page: z.number().int().optional(),
+        pageSize: z.number().int().optional().default(50),
+        search: z.string().optional().default(""),
+        sortBy: z.enum(["val", "prod_code", "prod_name", "daysSince"]).optional().default("val"),
+        sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }): Promise<AreaAnalysisResult> => {
     const supabase = context.supabase as DB;
@@ -316,6 +364,11 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       p_grupos: data.grupos ?? [],
       p_subgrupos: data.subgrupos ?? [],
       p_prod_codes: data.prodCodes ?? [],
+      p_page: data.page ?? null,
+      p_page_size: data.pageSize,
+      p_search: data.search,
+      p_sort_by: data.sortBy,
+      p_sort_dir: data.sortDir,
     });
     if (error) throw safeError("analytics", error);
     const r = asRecord(res);
@@ -340,13 +393,41 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
         };
       }),
       byDate: parseDateVal(r.byDate),
+      totalProducts: numOrNull(r.totalProducts) ?? undefined,
+      page: numOrNull(r.page) ?? undefined,
+      pageSize: numOrNull(r.pageSize) ?? undefined,
+      totalPages: numOrNull(r.totalPages) ?? undefined,
+    };
+  });
+
+export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AreaFilterHierarchyResult> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("area_filter_hierarchy");
+    if (error) throw safeError("analytics", error);
+    const r = asRecord(res);
+    return {
+      latestDate: strOrNull(r.latestDate),
+      hierarchy: asArray(r.hierarchy).map((x) => {
+        const o = asRecord(x);
+        return {
+          store_code: str(o.store_code),
+          store_name: str(o.store_name),
+          depto: strOrNull(o.depto),
+          secao: strOrNull(o.secao),
+          grupo: strOrNull(o.grupo),
+          subgrupo: strOrNull(o.subgrupo),
+        };
+      }),
+      availableDates: asArray(r.availableDates).map(str),
     };
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    FilterSchema.extend({ limit: z.number().int().min(1).max(50).optional().default(10) }).parse(d)
+    FilterSchema.extend({ limit: z.number().int().min(1).max(50).optional().default(10) }).parse(d),
   )
   .handler(async ({ data, context }): Promise<DashboardRankingsResult> => {
     const supabase = context.supabase as DB;
