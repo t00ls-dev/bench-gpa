@@ -1,0 +1,1 @@
+COMMENT ON FUNCTION public.area_filter_hierarchy() IS 'Hierarchy of filters for the area analysis page.';
