@@ -122,6 +122,54 @@ export type Database = {
         }
         Relationships: []
       }
+      staging_sales: {
+        Row: {
+          batch_id: string
+          created_at: string
+          depto: string | null
+          grupo: string | null
+          id: number
+          prod_code: string
+          prod_name: string
+          sale_date: string
+          secao: string | null
+          store_code: string
+          store_name: string
+          subgrupo: string | null
+          val_vda: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          depto?: string | null
+          grupo?: string | null
+          id?: number
+          prod_code: string
+          prod_name: string
+          sale_date: string
+          secao?: string | null
+          store_code: string
+          store_name: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          depto?: string | null
+          grupo?: string | null
+          id?: number
+          prod_code?: string
+          prod_name?: string
+          sale_date?: string
+          secao?: string | null
+          store_code?: string
+          store_name?: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Relationships: []
+      }
       sales_daily_agg: {
         Row: {
           depto: string | null
@@ -251,6 +299,15 @@ export type Database = {
           p_grupos?: string[]
           p_secoes?: string[]
           p_stores?: string[]
+        }
+        Returns: Json
+      }
+      finalize_import: {
+        Args: {
+          p_batch_id: string
+          p_sale_date: string
+          p_row_count: number
+          p_imported_by: string
         }
         Returns: Json
       }
