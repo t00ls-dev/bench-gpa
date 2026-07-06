@@ -253,19 +253,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      area_analysis: {
-        Args: {
-          p_date_from: string
-          p_date_to: string
-          p_deptos?: string[]
-          p_grupos?: string[]
-          p_prod_codes?: string[]
-          p_secoes?: string[]
-          p_stores?: string[]
-          p_subgrupos?: string[]
-        }
-        Returns: Json
-      }
+      area_analysis:
+        | {
+            Args: {
+              p_date_from: string
+              p_date_to: string
+              p_deptos?: string[]
+              p_grupos?: string[]
+              p_prod_codes?: string[]
+              p_secoes?: string[]
+              p_stores?: string[]
+              p_subgrupos?: string[]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_date_from: string
+              p_date_to: string
+              p_deptos?: string[]
+              p_grupos?: string[]
+              p_page?: number
+              p_page_size?: number
+              p_prod_codes?: string[]
+              p_search?: string
+              p_secoes?: string[]
+              p_sort_by?: string
+              p_sort_dir?: string
+              p_stores?: string[]
+              p_subgrupos?: string[]
+            }
+            Returns: Json
+          }
+      area_filter_hierarchy: { Args: never; Returns: Json }
       dashboard_metrics: {
         Args: {
           p_date_from: string
