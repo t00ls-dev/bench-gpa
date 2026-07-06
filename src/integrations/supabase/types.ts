@@ -122,6 +122,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_daily_agg: {
+        Row: {
+          depto: string | null
+          grupo: string | null
+          item_count: number
+          sale_date: string
+          secao: string | null
+          store_code: string
+          store_name: string
+          subgrupo: string | null
+          val_vda: number
+        }
+        Insert: {
+          depto?: string | null
+          grupo?: string | null
+          item_count?: number
+          sale_date: string
+          secao?: string | null
+          store_code: string
+          store_name: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Update: {
+          depto?: string | null
+          grupo?: string | null
+          item_count?: number
+          sale_date?: string
+          secao?: string | null
+          store_code?: string
+          store_name?: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Relationships: []
+      }
       staging_sales: {
         Row: {
           batch_id: string
@@ -161,42 +197,6 @@ export type Database = {
           id?: number
           prod_code?: string
           prod_name?: string
-          sale_date?: string
-          secao?: string | null
-          store_code?: string
-          store_name?: string
-          subgrupo?: string | null
-          val_vda?: number
-        }
-        Relationships: []
-      }
-      sales_daily_agg: {
-        Row: {
-          depto: string | null
-          grupo: string | null
-          item_count: number
-          sale_date: string
-          secao: string | null
-          store_code: string
-          store_name: string
-          subgrupo: string | null
-          val_vda: number
-        }
-        Insert: {
-          depto?: string | null
-          grupo?: string | null
-          item_count?: number
-          sale_date: string
-          secao?: string | null
-          store_code: string
-          store_name: string
-          subgrupo?: string | null
-          val_vda?: number
-        }
-        Update: {
-          depto?: string | null
-          grupo?: string | null
-          item_count?: number
           sale_date?: string
           secao?: string | null
           store_code?: string
@@ -305,9 +305,9 @@ export type Database = {
       finalize_import: {
         Args: {
           p_batch_id: string
-          p_sale_date: string
-          p_row_count: number
           p_imported_by: string
+          p_row_count: number
+          p_sale_date: string
         }
         Returns: Json
       }
