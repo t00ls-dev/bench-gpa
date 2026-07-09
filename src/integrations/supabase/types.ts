@@ -158,6 +158,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_prod_daily_agg: {
+        Row: {
+          depto: string | null
+          grupo: string | null
+          item_count: number
+          prod_code: string
+          prod_name: string
+          sale_date: string
+          secao: string | null
+          store_code: string
+          store_name: string
+          subgrupo: string | null
+          val_vda: number
+        }
+        Insert: {
+          depto?: string | null
+          grupo?: string | null
+          item_count?: number
+          prod_code: string
+          prod_name: string
+          sale_date: string
+          secao?: string | null
+          store_code: string
+          store_name: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Update: {
+          depto?: string | null
+          grupo?: string | null
+          item_count?: number
+          prod_code?: string
+          prod_name?: string
+          sale_date?: string
+          secao?: string | null
+          store_code?: string
+          store_name?: string
+          subgrupo?: string | null
+          val_vda?: number
+        }
+        Relationships: []
+      }
       staging_sales: {
         Row: {
           batch_id: string
