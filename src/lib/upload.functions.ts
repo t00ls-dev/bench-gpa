@@ -43,15 +43,41 @@ export const beginImport = createServerFn({ method: "POST" })
       if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.");
     }
     if (data.products.length) {
-      // Upsert em lotes para evitar timeout e updates desnecessários.
-      // ignoreDuplicates: só insere produtos novos; nomes existentes são preservados
-      // (last_seen é atualizado abaixo via UPDATE em massa).
+      // Estratégia 2 passos para evitar UPDATE massivo desnecessário:
+      // 1) INSERT ignorando duplicados (só cria produtos novos);
+      // 2) UPDATE em massa somente onde nome mudou ou last_seen é anterior.
       const rows = data.products.map((p) => ({ ...p, last_seen: data.sale_date }));
-      const { error } = await supabaseAdmin
+      const { error: insErr } = await supabaseAdmin
         .from("products")
-        .upsert(rows, { onConflict: "prod_code", ignoreDuplicates: false });
-      if (error) throw safeError("beginImport.products", error, "Falha ao cadastrar produtos.");
+        .upsert(rows, { onConflict: "prod_code", ignoreDuplicates: true });
+      if (insErr) throw safeError("beginImport.products.insert", insErr, "Falha ao cadastrar produtos.");
+
+      const codes = rows.map((r) => r.prod_code);
+      const nameByCode = new Map(rows.map((r) => [r.prod_code, r.prod_name] as const));
+      const { data: existing, error: selErr } = await supabaseAdmin
+        .from("products")
+        .select("prod_code, prod_name, last_seen")
+        .in("prod_code", codes);
+      if (selErr) throw safeError("beginImport.products.select", selErr, "Falha ao consultar produtos.");
+
+      const toUpdate: { prod_code: string; prod_name: string; last_seen: string }[] = [];
+      for (const row of existing ?? []) {
+        const newName = nameByCode.get(row.prod_code);
+        if (newName == null) continue;
+        const nameChanged = row.prod_name !== newName;
+        const dateNewer = !row.last_seen || row.last_seen < data.sale_date;
+        if (nameChanged || dateNewer) {
+          toUpdate.push({ prod_code: row.prod_code, prod_name: newName, last_seen: data.sale_date });
+        }
+      }
+      if (toUpdate.length) {
+        const { error: updErr } = await supabaseAdmin
+          .from("products")
+          .upsert(toUpdate, { onConflict: "prod_code" });
+        if (updErr) throw safeError("beginImport.products.update", updErr, "Falha ao atualizar produtos.");
+      }
     }
+
 
     return { ok: true, batch_id: data.batch_id };
   });
