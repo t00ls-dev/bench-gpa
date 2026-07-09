@@ -74,7 +74,7 @@ function UploadPage() {
   const importedDates = useServerFn(getImportedDates);
   const qc = useQueryClient();
 
-  const { data: dates } = useQuery({ queryKey: ["imported-dates"], queryFn: () => importedDates() });
+  const { data: dates } = useQuery({ queryKey: ["imported-dates"], queryFn: () => importedDates(), staleTime: 5 * 60_000, gcTime: 30 * 60_000 });
 
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const busyRef = useRef(false);
