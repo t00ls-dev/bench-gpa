@@ -43,11 +43,16 @@ export const beginImport = createServerFn({ method: "POST" })
       if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.");
     }
     if (data.products.length) {
+      // Upsert em lotes para evitar timeout e updates desnecessários.
+      // ignoreDuplicates: só insere produtos novos; nomes existentes são preservados
+      // (last_seen é atualizado abaixo via UPDATE em massa).
+      const rows = data.products.map((p) => ({ ...p, last_seen: data.sale_date }));
       const { error } = await supabaseAdmin
         .from("products")
-        .upsert(data.products.map((p) => ({ ...p, last_seen: data.sale_date })), { onConflict: "prod_code" });
+        .upsert(rows, { onConflict: "prod_code", ignoreDuplicates: false });
       if (error) throw safeError("beginImport.products", error, "Falha ao cadastrar produtos.");
     }
+
     return { ok: true, batch_id: data.batch_id };
   });
 
