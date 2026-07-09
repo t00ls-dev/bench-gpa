@@ -119,7 +119,9 @@ function AreaPage() {
   const hierQ = useQuery({
     queryKey: ["area-filter-hierarchy"],
     queryFn: () => getHierarchy({}),
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+
   });
   const hierData = hierQ.data;
 
