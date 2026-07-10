@@ -79,10 +79,10 @@ export function ImportCalendar({ records }: Props) {
                   rec
                     ? isLatest
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 cursor-pointer"
+                      : "border-success/30 bg-success/10 text-success hover:bg-success/20 cursor-pointer"
                     : isFuture
                       ? "border-dashed border-border bg-background text-muted-foreground/40"
-                      : "border-dashed border-amber-200 bg-amber-50/40 text-amber-700/70",
+                      : "border-dashed border-warning/30 bg-warning/10 text-warning",
                   isSel && !isLatest ? "ring-2 ring-primary" : "",
                 ].join(" ")}
                 title={rec ? `${fmtBRShort(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBRShort(iso)} : não importado`}
@@ -94,8 +94,8 @@ export function ImportCalendar({ records }: Props) {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-primary bg-primary" /> Mais recente</span>
-          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-emerald-300 bg-emerald-50" /> Importado</span>
-          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-dashed border-amber-200 bg-amber-50/40" /> Ausente</span>
+          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-success/30 bg-success/10" /> Importado</span>
+          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-dashed border-warning/30 bg-warning/10" /> Ausente</span>
         </div>
       </div>
 

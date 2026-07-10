@@ -381,7 +381,7 @@ function DiagnoseRepairSection({
       </div>
 
       {repairResult && (
-        <p className="text-xs text-emerald-600 flex items-center gap-1">
+        <p className="text-xs text-success flex items-center gap-1">
           <CheckCircle2 className="size-3.5" /> {repairResult}
         </p>
       )}
