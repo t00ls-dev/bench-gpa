@@ -19,8 +19,6 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Layers,
@@ -337,6 +335,8 @@ function AreaPage() {
           )
         : allProducts;
 
+      const jsPDF = (await import("jspdf")).default;
+      const autoTable = (await import("jspdf-autotable")).default;
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const marginX = 10;
 

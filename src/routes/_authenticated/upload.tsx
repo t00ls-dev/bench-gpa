@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
 import { getImportedDates } from "@/lib/analytics.functions";
-import { parseAnyWorkbook } from "@/lib/xlsx-parser";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -139,6 +138,7 @@ function UploadPage() {
         setProgressPct(0);
         setProcessed(0);
         const buf = await f.arrayBuffer();
+        const { parseAnyWorkbook } = await import("@/lib/xlsx-parser");
         const parsed = parseAnyWorkbook(buf);
 
         totalLines = parsed.sales.length;
