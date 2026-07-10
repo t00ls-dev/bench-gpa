@@ -11,7 +11,9 @@ import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutDashboard } from "lucide-react";
 
-const DashboardCharts = lazy(() => import("@/components/dashboard-charts"));
+const DashboardCharts = lazy(() =>
+  import("@/components/dashboard-charts").then((m) => ({ default: m.DashboardCharts })),
+);
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
