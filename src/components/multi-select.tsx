@@ -46,8 +46,8 @@ export function MultiSelect({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="h-9 w-full justify-between text-left font-normal">
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" aria-label={label} className="h-9 w-full justify-between text-left font-normal">
           <span className="truncate">
             {label}
             {value.length > 0 && (
@@ -72,7 +72,7 @@ export function MultiSelect({
               placeholder="Buscar…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="h-7 border-0 px-0 text-sm shadow-none focus-visible:ring-0"
+              className="h-7 border-0 px-0 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
         )}
@@ -91,7 +91,7 @@ export function MultiSelect({
             <span>Selecionar todos</span>
           </button>
         )}
-        <div className="max-h-72 overflow-y-auto">
+        <div className="max-h-72 overflow-y-auto" role="listbox" aria-label={label}>
           {filtered.length === 0 && (
             <div className="p-3 text-xs text-muted-foreground">Nenhuma opção.</div>
           )}
@@ -101,6 +101,8 @@ export function MultiSelect({
               <button
                 key={o.value}
                 type="button"
+                role="option"
+                aria-selected={checked}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggle(o.value); }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
               >

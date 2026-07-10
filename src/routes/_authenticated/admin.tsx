@@ -250,6 +250,7 @@ function AdminPage() {
                           size="sm"
                           variant="outline"
                           title={isAdmin ? "Remover administrador" : "Tornar administrador"}
+                          aria-label={isAdmin ? "Remover administrador" : "Tornar administrador"}
                           onClick={() =>
                             action(
                               setRole({ data: { userId: u.id, role: isAdmin ? "user" : "admin" } }),
@@ -263,6 +264,7 @@ function AdminPage() {
                           size="sm"
                           variant="outline"
                           title="Redefinir senha"
+                          aria-label="Redefinir senha"
                           onClick={() => { setResetTarget({ id: u.id, email: u.email }); setNewPw(""); }}
                         >
                           <KeyRound className="size-3.5" />
