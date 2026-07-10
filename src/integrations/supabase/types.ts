@@ -419,6 +419,10 @@ export type Database = {
       refresh_sales_daily_agg: { Args: { p_date: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      upsert_products_bulk: {
+        Args: { p_rows: Json; p_sale_date: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
