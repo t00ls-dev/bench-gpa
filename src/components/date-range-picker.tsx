@@ -142,10 +142,12 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="grid grid-cols-2 gap-1 p-2">
+        <div className="grid grid-cols-2 gap-1 p-2" role="radiogroup" aria-label="Período">
           {PRESETS.map((p) => (
             <button
               key={p.key}
+              role="radio"
+              aria-checked={mode === p.key}
               onClick={() => { setMode(p.key); apply(p.key); }}
               className={cn(
                 "rounded-md border px-2 py-1.5 text-xs font-medium transition text-left",

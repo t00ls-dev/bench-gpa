@@ -146,7 +146,7 @@ function ProdutoPage() {
             placeholder="Digite ao menos 3 caracteres (nome ou código)…"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-            className="border-0 shadow-none focus-visible:ring-0"
+            className="border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           {(query.length > 0 || selected) && (
             <Button

@@ -20,7 +20,7 @@ export function RankingCard({ title, items, isLoading }: { title: string; items:
               const label = it.code ? `${it.code} - ${it.name ?? ""}` : (it.name ?? "");
               return (
                 <tr key={`${label}-${i}`} className="border-b border-border/60">
-                  <td className="py-2 pr-3 truncate" title={label}>{label}</td>
+                  <td className="py-2 pr-3 truncate" title={label} aria-label={label}>{label}</td>
                   <td className="num py-2 pl-2 text-right font-medium whitespace-nowrap">{fmtBRL(it.val)}</td>
                 </tr>
               );

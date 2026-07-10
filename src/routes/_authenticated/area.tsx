@@ -578,7 +578,7 @@ function AreaPage() {
                     placeholder="Buscar PLU ou descrição…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="h-7 w-40 sm:w-56 border-0 px-1 text-sm shadow-none focus-visible:ring-0"
+                    className="h-7 w-40 sm:w-56 border-0 px-1 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
                   {search && (
                     <button
@@ -672,6 +672,9 @@ function AreaPage() {
                       <tr
                         key={p.prod_code}
                         onClick={() => openProduct(p.prod_code)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProduct(p.prod_code); } }}
+                        tabIndex={0}
+                        role="button"
                         className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
                         title="Abrir Análise de Produto"
                       >
