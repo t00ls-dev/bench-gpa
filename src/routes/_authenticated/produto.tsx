@@ -38,10 +38,10 @@ function ProductHierarchyTrail({ product }: {
   const last = levels[levels.length - 1];
 
   return (
-    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-500">
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
       {parents && <span className="min-w-0 truncate">{parents}</span>}
-      {parents && <span className="shrink-0 text-slate-300">›</span>}
-      <span className="max-w-[45vw] shrink-0 truncate font-medium text-slate-600 sm:max-w-[200px]">{last}</span>
+      {parents && <span className="shrink-0 text-muted-foreground/40">›</span>}
+      <span className="max-w-[45vw] shrink-0 truncate font-medium text-foreground/80 sm:max-w-[200px]">{last}</span>
     </span>
   );
 }
@@ -246,14 +246,14 @@ function ProdutoPage() {
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={(analysisData.byStore as StorePoint[]).slice(0, 12)} margin={{ left: 8, right: 8, bottom: 28 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="code" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                     <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(label, payload) => {
                       const p = payload?.[0]?.payload as StorePoint | undefined;
                       return p ? `${p.code} - ${p.name}` : String(label);
                     }} />
-                    <Bar dataKey="val" fill="oklch(0.48 0.12 165)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="val" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -265,11 +265,11 @@ function ProdutoPage() {
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={analysisData.evolution}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => fmtBRShort(String(v))} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                     <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
-                    <Line type="monotone" dataKey="val" stroke="oklch(0.32 0.09 265)" strokeWidth={2.5} dot={false} />
+                    <Line type="monotone" dataKey="val" stroke="var(--chart-2)" strokeWidth={2.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

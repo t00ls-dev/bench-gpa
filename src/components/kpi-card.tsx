@@ -18,7 +18,7 @@ export function KpiCard({ label, value, delta, hint }: Props) {
         {delta != null && isFinite(delta) && (
           <div className={cn(
             "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold",
-            positive ? "bg-[oklch(0.94_0.06_155)] text-[oklch(0.4_0.13_155)]" : "bg-[oklch(0.95_0.05_25)] text-[oklch(0.45_0.18_25)]"
+            positive ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
           )}>
             {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
             {Math.abs(delta * 100).toFixed(1)}%
