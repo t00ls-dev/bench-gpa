@@ -57,17 +57,17 @@ export function LastUpdateInfo({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border px-3 py-2 text-xs ${
-      stale ? "border-amber-300 bg-amber-50 text-amber-800" : "border-border bg-muted/40 text-muted-foreground"
+      stale ? "border-warning/30 bg-warning/10 text-warning" : "border-border bg-muted/40 text-muted-foreground"
     }`}>
       <span className="flex items-center gap-1.5">
-        {stale ? <AlertTriangle className="size-3.5" /> : <CheckCircle2 className="size-3.5 text-emerald-600" />}
+        {stale ? <AlertTriangle className="size-3.5" /> : <CheckCircle2 className="size-3.5 text-success" />}
         <strong className="font-medium text-foreground">Dados atualizados em:</strong> {fmtDateTime(latestImport.imported_at)}
       </span>
       <span className="flex items-center gap-1.5">
         <strong className="font-medium text-foreground">Última venda disponível:</strong> {fmtDate(latestSale.sale_date)}
       </span>
       {stale ? (
-        <span className="w-full text-amber-800">
+        <span className="w-full text-warning">
           Existem dados mais recentes ainda não importados (há {gap} dias sem novas vendas).
         </span>
       ) : (
