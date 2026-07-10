@@ -14,7 +14,9 @@ import { Search, Package, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { fmtBRShort } from "@/lib/utils";
 
-const ProductCharts = lazy(() => import("@/components/product-charts"));
+const ProductCharts = lazy(() =>
+  import("@/components/product-charts").then((m) => ({ default: m.ProductCharts })),
+);
 
 export const Route = createFileRoute("/_authenticated/produto")({
   validateSearch: (s: Record<string, unknown>) => ({ plu: typeof s.plu === "string" ? s.plu : undefined }),
