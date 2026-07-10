@@ -672,7 +672,7 @@ function AreaPage() {
                       <tr
                         key={p.prod_code}
                         onClick={() => openProduct(p.prod_code)}
-                        className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-amber-50/40" : ""}`}
+                        className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
                         title="Abrir Análise de Produto"
                       >
                         <td className="py-3 md:py-2 font-mono text-xs whitespace-nowrap truncate">

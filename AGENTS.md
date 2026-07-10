@@ -55,8 +55,7 @@ src/
 │
 ├── hooks/
 │   ├── use-mobile.tsx           → Detecção de mobile breakpoint
-│   ├── use-persistent-state.ts  → useState com persistência em localStorage (chave: bench-gpa:filters:*)
-│   └── use-theme.ts            → Toggle light/dark
+│   └── use-persistent-state.ts  → useState com persistência em localStorage (chave: bench-gpa:filters:*)
 │
 ├── integrations/supabase/
 │   ├── client.ts            → Cliente Supabase (anon key, lado cliente)
@@ -162,7 +161,6 @@ Todas as queries analíticas via Supabase RPCs chamadas de server functions com 
 ### Estilização
 - Tailwind v4 com `@theme` inline tokens (espaço de cor OKLCH)
 - `@utility` custom: `kpi-card`, `gradient-hero`, `gradient-primary`
-- Dark mode via classe `.dark` no `<html>`, script inline anti-flash no SSR shell
 - Fontes: Plus Jakarta Sans (display), Inter (body), JetBrains Mono (mono)
 
 ### State Management

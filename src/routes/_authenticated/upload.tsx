@@ -296,7 +296,7 @@ function UploadPage() {
                   key={f.name}
                   className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
                     st === "processing" ? "bg-primary/5 ring-1 ring-primary/20" :
-                    st === "done" ? "bg-emerald-50" :
+                    st === "done" ? "bg-success/10" :
                     st === "error" ? "bg-destructive/5" :
                     "bg-muted/40"
                   }`}
@@ -304,7 +304,7 @@ function UploadPage() {
                   {st === "processing" ? (
                     <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
                   ) : st === "done" ? (
-                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                    <CheckCircle2 className="size-4 shrink-0 text-success" />
                   ) : st === "error" ? (
                     <AlertCircle className="size-4 shrink-0 text-destructive" />
                   ) : (
@@ -326,8 +326,8 @@ function UploadPage() {
           <h2 className="font-display text-lg font-semibold">Resultado</h2>
           <ul className="mt-3 space-y-2">
             {results.map((r, i) => (
-              <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-emerald-400 bg-emerald-50" : "border-destructive/30 bg-destructive/5"}`}>
-                {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-emerald-600" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
+              <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-success/30 bg-success/10" : "border-destructive/30 bg-destructive/5"}`}>
+                {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-success" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
                 <div className="flex-1">
                   <div className="font-medium">{r.filename}</div>
                   <div className="text-xs text-muted-foreground">
