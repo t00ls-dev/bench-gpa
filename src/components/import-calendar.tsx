@@ -54,14 +54,14 @@ export function ImportCalendar({ records }: Props) {
     <div className="grid gap-4 md:grid-cols-[1fr_280px]">
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={prevMonth}><ChevronLeft className="size-4" /></Button>
+          <Button variant="ghost" size="sm" aria-label="Mês anterior" onClick={prevMonth}><ChevronLeft className="size-4" /></Button>
           <div className="font-display text-sm font-semibold">{MONTHS[view.m]} {view.y}</div>
-          <Button variant="ghost" size="sm" onClick={nextMonth}><ChevronRight className="size-4" /></Button>
+          <Button variant="ghost" size="sm" aria-label="Próximo mês" onClick={nextMonth}><ChevronRight className="size-4" /></Button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-muted-foreground">
           {WD.map((w, i) => <div key={i} className="py-1">{w}</div>)}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Calendário de importações">
           {cells.map((iso, i) => {
             if (!iso) return <div key={i} className="aspect-square" />;
             const rec = byDate.get(iso);
@@ -69,9 +69,12 @@ export function ImportCalendar({ records }: Props) {
             const isFuture = iso > todayIso;
             const isSel = iso === selected;
             const day = parseInt(iso.slice(-2), 10);
+            const dayLabel = rec ? `${fmtBRShort(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBRShort(iso)} : não importado`;
             return (
               <button
                 key={i}
+                role="gridcell"
+                aria-label={dayLabel}
                 onClick={() => rec && setSelected(iso)}
                 disabled={!rec}
                 className={[
@@ -85,7 +88,7 @@ export function ImportCalendar({ records }: Props) {
                       : "border-dashed border-warning/30 bg-warning/10 text-warning",
                   isSel && !isLatest ? "ring-2 ring-primary" : "",
                 ].join(" ")}
-                title={rec ? `${fmtBRShort(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBRShort(iso)} : não importado`}
+                title={dayLabel}
               >
                 {day}
               </button>
