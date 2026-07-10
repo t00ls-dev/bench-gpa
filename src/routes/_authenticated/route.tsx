@@ -82,7 +82,10 @@ function AuthedLayout() {
   ] as const;
 
   return (
-    <SidebarProvider defaultOpen={true}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+        Pular para o conteúdo
+      </a>
+      <SidebarProvider defaultOpen={true}>
       <Sidebar collapsible="offcanvas">
         <SidebarHeader>
           <Link to="/" className="flex items-center gap-2 px-3 py-2 font-display text-lg font-bold">
@@ -130,7 +133,7 @@ function AuthedLayout() {
             </div>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10">
+        <main id="main-content" className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10">
           <Outlet />
         </main>
       </SidebarInset>

@@ -114,7 +114,7 @@ export function FilterBar({ value, onChange }: Props) {
         </div>
         <div className="md:col-span-2 lg:col-span-4">
           <Label className="text-xs">Comparar com</Label>
-          <div className="mt-1 flex flex-wrap gap-1.5">
+          <div className="mt-1 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Comparar com">
             {[
               { v: "prev_period", l: "Período anterior" },
               { v: "prev_week", l: "Semana anterior" },
@@ -123,6 +123,8 @@ export function FilterBar({ value, onChange }: Props) {
             ].map((o) => (
               <button
                 key={o.v}
+                role="radio"
+                aria-checked={value.compare === o.v}
                 onClick={() => setF({ compare: o.v as Filters["compare"] })}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition",
