@@ -325,7 +325,7 @@ function AreaPage() {
           search: search.trim(),
           sortBy: sortKey,
           sortDir,
-          page: null,
+
         },
       });
       const filtered = allData.products ?? [];
