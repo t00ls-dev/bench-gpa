@@ -2,7 +2,7 @@
 -- =====================================================================
 -- Refatoração de autenticação: tabela única users, login e-mail+senha,
 -- remoção da infraestrutura de e-mail. Todos os usuários existentes são
--- apagados; admin inicial 0001@gpabr.com criado com senha bcrypt.
+-- apagados; admin inicial admin@gpabr.com criado com senha bcrypt.
 -- =====================================================================
 
 -- Habilita pgcrypto para bcrypt
@@ -563,7 +563,7 @@ BEGIN
   ) VALUES (
     v_uid, '00000000-0000-0000-0000-000000000000',
     'authenticated', 'authenticated',
-    '0001@gpabr.com', crypt('CHANGE_ME_ADMIN_2026', gen_salt('bf')),  -- TODO: rotate in production via app.settings.admin_password
+    'admin@gpabr.com', crypt('CHANGE_ME_ADMIN_2026', gen_salt('bf')),  -- TODO: rotate in production via app.settings.admin_password
     now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
     now(), now(), '', '', '', ''
   );
@@ -573,10 +573,10 @@ BEGIN
     last_sign_in_at, created_at, updated_at
   ) VALUES (
     gen_random_uuid(), v_uid, v_uid::text, 'email',
-    jsonb_build_object('sub', v_uid::text, 'email', '0001@gpabr.com', 'email_verified', true),
+    jsonb_build_object('sub', v_uid::text, 'email', 'admin@gpabr.com', 'email_verified', true),
     now(), now(), now()
   );
 
   INSERT INTO public.users (id, email, name, role, is_active)
-  VALUES (v_uid, '0001@gpabr.com', 'Administrador', 'admin', true);
+  VALUES (v_uid, 'admin@gpabr.com', 'Administrador', 'admin', true);
 END $$;
