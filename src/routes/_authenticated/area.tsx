@@ -325,10 +325,26 @@ function AreaPage() {
           search: search.trim(),
           sortBy: sortKey,
           sortDir,
-
         },
       });
-      const filtered = allData.products ?? [];
+      const filtered = [...(allData.products ?? [])].sort((a, b) => {
+        let cmp = 0;
+        if (sortKey === "val") cmp = a.val - b.val;
+        else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
+        else if (sortKey === "prod_name") cmp = a.prod_name.localeCompare(b.prod_name);
+        else if (sortKey === "daysSince") {
+          const aDays = daysSinceNum(a.lastSaleDate);
+          const bDays = daysSinceNum(b.lastSaleDate);
+          const aIsNull = aDays === null;
+          const bIsNull = bDays === null;
+          if (aIsNull && bIsNull) cmp = 0;
+          else if (aIsNull) cmp = 1;
+          else if (bIsNull) cmp = -1;
+          else cmp = aDays - bDays;
+        }
+        if (cmp === 0) cmp = a.prod_code.localeCompare(b.prod_code);
+        return sortDir === "desc" ? -cmp : cmp;
+      });
 
 
       const jsPDF = (await import("jspdf")).default;
