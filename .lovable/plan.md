@@ -1,36 +1,30 @@
 ## Diagnóstico
 
-Logs do worker mostram o erro real:
+A RPC `area_analysis` (ramo com paginação) monta o array final com:
 
+```sql
+SELECT jsonb_agg(jsonb_build_object(...))   -- SEM ORDER BY interno
+FROM paged p LEFT JOIN last_sale ls ...
 ```
-[finalizeImport.swap] error: {"code":"57014","message":"canceling statement due to statement timeout"}
-```
 
-O erro `Falha ao finalizar importação` é o wrapper genérico do `safeError`. A causa é **statement_timeout** do Postgres estourando durante o swap atômico (`DELETE ... + INSERT ... FROM staging`) dentro de `public.finalize_import`. Com ~50 mil linhas/dia em `sales` + índices + o mesmo volume vindo de `staging_sales`, a operação passa do limite default aplicado via PostgREST.
+Apesar da CTE `paged` estar ordenada corretamente, o `LEFT JOIN` e o `jsonb_agg` sem `ORDER BY` **não preservam a ordem** das linhas. O Postgres é livre para embaralhar — é exatamente por isso que às vezes um item de venda menor aparece acima de um maior, sem lógica aparente. A ordenação da CTE só afeta o `LIMIT/OFFSET`, não a saída do `jsonb_agg`.
 
-`refresh_sales_daily_agg` tem o mesmo risco (roda logo depois, faz DELETE+INSERT em duas agregações + refresh de hierarquia).
+Além disso, a coluna "Dias sem venda" (`sortKey = "daysSince"`) é enviada pelo cliente, mas a RPC não tem `CASE` para ela — ordenação por essa coluna cai no fallback `prod_code`, dando a impressão de "ordem aleatória".
 
-A mensagem "nenhum arquivo processado" que o usuário viu é o toast final `toast.error("Nenhum arquivo importado.")` disparado quando todos os arquivos entram em `results.ok = false` por causa desse mesmo erro.
+## Correção (migration única)
 
-## Plano
+Recriar `public.area_analysis` com dois ajustes no ramo paginado:
 
-Migration nova elevando o `statement_timeout` **apenas dentro** das RPCs pesadas que já são `SECURITY DEFINER`. Sem tocar em código do front nem em outras funções.
+1. Adicionar `ORDER BY` **dentro** do `jsonb_agg`, replicando a mesma expressão de ordenação usada em `paged` (val/prod_code/prod_name/daysSince + tiebreaker por `prod_code`). Isso garante que a ordem retornada ao cliente é exatamente a que foi paginada.
+2. Suportar `p_sort_by = 'daysSince'`:
+   - Calcular `last_sale_date` **antes** da paginação (mover `last_sale` para rodar em cima de `filtered`, não de `paged`).
+   - Adicionar branches `CASE WHEN p_sort_by = 'daysSince' ...` ordenando por `last_sale_date` (asc = mais dias sem venda primeiro → `last_sale_date ASC NULLS FIRST`; desc = inverso).
+3. Aplicar o mesmo `ORDER BY` interno também no ramo sem paginação (`p_page IS NULL`), por consistência (já tem `ORDER BY` no agg, mas fica documentado).
 
-1. `ALTER FUNCTION public.finalize_import(uuid, date, integer, uuid) SET statement_timeout = '5min'`
-2. `ALTER FUNCTION public.refresh_sales_daily_agg(date) SET statement_timeout = '5min'`
-3. `ALTER FUNCTION public.refresh_filter_hierarchy() SET statement_timeout = '2min'`
-4. `ALTER FUNCTION public.upsert_products_bulk(jsonb, date) SET statement_timeout = '2min'` (preventivo — produtos em massa também podem passar do default)
+Assinatura, parâmetros e shape do JSON de retorno permanecem idênticos — nenhuma alteração no cliente ou em `types.ts`.
 
-O `SET` fica gravado como config da função (`pg_proc.proconfig`), aplicado a cada chamada, sem alterar timeout global nem tocar código cliente.
+## Arquivos alterados
 
-## Verificação
+- **Nova migration**: recria `public.area_analysis(...)` com as correções acima.
 
-- Executar um import real de uma data com ~50k linhas.
-- Confirmar que `import_log` recebe o registro e o toast final mostra sucesso.
-- Se aparecer novo timeout, avaliar chunking do DELETE por partição de data.
-
-## Detalhes técnicos
-
-- Não altera assinatura, corpo ou permissões das funções — só anexa a GUC via `ALTER FUNCTION ... SET`.
-- Não requer regenerar `types.ts`.
-- Não mexe em `upload.functions.ts` nem no fluxo de chunks do cliente.
+Nenhuma mudança em código TS/React.
