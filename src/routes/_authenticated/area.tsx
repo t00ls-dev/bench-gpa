@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getAreaFilterHierarchy, getAreaProductOptions } from "@/lib/analytics.functions";
+import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/analytics.functions";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -57,14 +57,12 @@ type AF = {
   secoes: string[];
   grupos: string[];
   subgrupos: string[];
-  prodCodes: string[];
 };
 
 function AreaPage() {
   const navigate = useNavigate();
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
   const getArea = useServerFn(getAreaAnalysis);
-  const getProductOpts = useServerFn(getAreaProductOptions);
 
   const [af, setAf] = usePersistentState<AF>("bench-gpa:filters:area", {
     dateFrom: "",
@@ -74,7 +72,6 @@ function AreaPage() {
     secoes: [],
     grupos: [],
     subgrupos: [],
-    prodCodes: [],
   });
   const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
   const setStores = (v: string[]) =>
@@ -83,7 +80,6 @@ function AreaPage() {
   const setSecoes = (v: string[]) => patch({ secoes: v, grupos: [], subgrupos: [] });
   const setGrupos = (v: string[]) => patch({ grupos: v, subgrupos: [] });
   const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
-  const setProdCodes = (v: string[]) => patch({ prodCodes: v });
   const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
 
   const {
@@ -94,7 +90,6 @@ function AreaPage() {
     secoes: fSecoes,
     grupos: fGrupos,
     subgrupos: fSubgrupos,
-    prodCodes,
   } = af;
 
   // Hierarquia completa carregada em 1 chamada (Critical #4)
@@ -165,28 +160,6 @@ function AreaPage() {
     [subgrupoBase],
   );
 
-  // Produto: options com busca server-side
-  const prodOptsQ = useQuery({
-    queryKey: ["area-product-options", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
-    queryFn: () =>
-      getProductOpts({
-        data: {
-          dateFrom,
-          dateTo,
-          stores: fStores,
-          deptos: fDeptos,
-          secoes: fSecoes,
-          grupos: fGrupos,
-          subgrupos: fSubgrupos,
-          search: "",
-        },
-      }),
-    enabled: !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0,
-    staleTime: 120_000,
-    placeholderData: (prev) => prev,
-  });
-  const prodOpts = prodOptsQ.data?.products ?? [];
-
   const opts = hierData;
 
   // "Data da base": os dados sempre correspondem ao dia anterior, então
@@ -254,7 +227,6 @@ function AreaPage() {
     fSecoes,
     fGrupos,
     fSubgrupos,
-    prodCodes,
   ]);
 
   // Consulta paginada com busca/ordenação no servidor (Critical #1 + #3)
@@ -268,7 +240,6 @@ function AreaPage() {
       fSecoes,
       fGrupos,
       fSubgrupos,
-      prodCodes,
       page,
       pageSize,
       search,
@@ -285,7 +256,6 @@ function AreaPage() {
           secoes: fSecoes,
           grupos: fGrupos,
           subgrupos: fSubgrupos,
-          prodCodes,
           page,
           pageSize,
           search,
@@ -352,7 +322,6 @@ function AreaPage() {
           secoes: fSecoes,
           grupos: fGrupos,
           subgrupos: fSubgrupos,
-          prodCodes,
           search: search.trim(),
           sortBy: sortKey,
           sortDir,
@@ -563,19 +532,6 @@ function AreaPage() {
               options={subgruposOpts.map((s) => ({ value: s, label: s }))}
               value={fSubgrupos}
               onChange={setSubgrupos}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Label className="text-xs">Produto</Label>
-            <MultiSelect
-              searchable
-              label="Todos"
-              options={prodOpts.map((p: { prod_code: string; prod_name: string }) => ({
-                value: p.prod_code,
-                label: `${p.prod_code} - ${p.prod_name}`,
-              }))}
-              value={prodCodes}
-              onChange={setProdCodes}
             />
           </div>
         </div>
