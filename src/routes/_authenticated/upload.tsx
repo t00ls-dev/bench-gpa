@@ -131,7 +131,7 @@ function UploadPage() {
       let totalLines = 0;
       setCurrentDate(entry.saleDate);
       setEntries((prev) => prev.map((e) =>
-        e.saleDate === entry.saleDate && e.file.name === entry.file.name
+        e.file === entry.file
           ? { ...e, status: "processing" as const }
           : e,
       ));
@@ -166,7 +166,7 @@ function UploadPage() {
         }
 
         setEntries((prev) => prev.map((e) =>
-          e.saleDate === entry.saleDate && e.file.name === entry.file.name
+          e.file === entry.file
             ? { ...e, totalLines }
             : e,
         ));
@@ -196,14 +196,14 @@ function UploadPage() {
 
         r.push({ filename: f.name, ok: true, message: `${fmtInt(totalLines)} linhas`, date: parsed.sale_date, rows: totalLines });
         setEntries((prev) => prev.map((e) =>
-          e.saleDate === entry.saleDate && e.file.name === entry.file.name
+          e.file === entry.file
             ? { ...e, status: "done" as const }
             : e,
         ));
       } catch (e: any) {
         r.push({ filename: f.name, ok: false, message: e?.message ?? "Erro desconhecido" });
         setEntries((prev) => prev.map((e) =>
-          e.saleDate === entry.saleDate && e.file.name === entry.file.name
+          e.file === entry.file
             ? { ...e, status: "error" as const, errorMsg: e?.message ?? "Erro desconhecido" }
             : e,
         ));
@@ -324,7 +324,7 @@ function UploadPage() {
           <ul className="space-y-2">
             {entries.map((e, i) => (
               <li
-                key={`${e.saleDate}-${e.file.name}-${i}`}
+                key={`${e.saleDate}-${i}`}
                 className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
                   e.status === "processing" ? "bg-primary/5 ring-1 ring-primary/20" :
                   e.status === "done" ? "bg-success/10" :
@@ -343,10 +343,9 @@ function UploadPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <span className="truncate font-medium">{fmtBRShort(e.saleDate)}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{e.file.name}</span>
                 </div>
                 <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  {e.status === "processing" ? `${fmtInt(processed)} / ${fmtInt(e.totalLines ?? 0)} linhas` : e.status === "error" && e.errorMsg ? "Erro" : `${(e.file.size / 1024).toFixed(0)} KB`}
+                  {e.status === "processing" ? `${fmtInt(processed)} / ${fmtInt(e.totalLines ?? 0)} linhas` : e.status === "error" && e.errorMsg ? "Erro" : "Aguardando"}
                 </span>
               </li>
             ))}
@@ -362,12 +361,8 @@ function UploadPage() {
               <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-success/30 bg-success/10" : "border-destructive/30 bg-destructive/5"}`}>
                 {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-success" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium">{r.date ? fmtBRShort(r.date) : r.filename}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {r.filename}
-                    {r.ok && r.date && <> · </>}
-                    {r.message}
-                  </div>
+                  <div className="font-medium">{r.date ? fmtBRShort(r.date) : "—"}</div>
+                  <div className="text-xs text-muted-foreground">{r.message}</div>
                 </div>
               </li>
             ))}
