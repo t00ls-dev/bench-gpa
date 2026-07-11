@@ -424,6 +424,42 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
     };
   });
 
+export const getAreaProductOptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        dateFrom: z.string(),
+        dateTo: z.string(),
+        stores: z.array(z.string()).optional().default([]),
+        deptos: z.array(z.string()).optional().default([]),
+        secoes: z.array(z.string()).optional().default([]),
+        grupos: z.array(z.string()).optional().default([]),
+        subgrupos: z.array(z.string()).optional().default([]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ products: Array<{ prod_code: string; prod_name: string }> }> => {
+    const supabase = context.supabase as DB;
+    const { data: res, error } = await supabase.rpc("area_product_options", {
+      p_date_from: data.dateFrom,
+      p_date_to: data.dateTo,
+      p_stores: data.stores ?? [],
+      p_deptos: data.deptos ?? [],
+      p_secoes: data.secoes ?? [],
+      p_grupos: data.grupos ?? [],
+      p_subgrupos: data.subgrupos ?? [],
+    });
+    if (error) throw safeError("analytics", error);
+    const r = asRecord(res);
+    return {
+      products: asArray(r.products).map((p) => {
+        const o = asRecord(p);
+        return { prod_code: str(o.prod_code), prod_name: str(o.prod_name) };
+      }),
+    };
+  });
+
 export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
