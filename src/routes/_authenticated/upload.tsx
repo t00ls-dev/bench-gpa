@@ -314,7 +314,7 @@ function UploadPage() {
                 />
               </div>
               <div className="mt-2 flex flex-nowrap items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 shrink-0"><Gauge className="size-3" /> {fmtInt(speed)} l/s</span>
+                <span className="flex items-center gap-1 shrink-0"><Gauge className="size-3" /> {fmtInt(speed)} Linhas/s</span>
                 <span className="shrink-0">·</span>
                 <span className="flex items-center gap-1 shrink-0 whitespace-nowrap"><Clock className="size-3" /> ~{eta}s</span>
               </div>
@@ -345,25 +345,8 @@ function UploadPage() {
                   <span className="truncate font-medium">{fmtBRShort(e.saleDate)}</span>
                 </div>
                 <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  {e.status === "processing" ? `${fmtInt(processed)} / ${fmtInt(e.totalLines ?? 0)} linhas` : e.status === "error" && e.errorMsg ? "Erro" : "Aguardando"}
+                  {e.status === "processing" ? `${fmtInt(processed)} / ${fmtInt(e.totalLines ?? 0)} linhas` : e.status === "done" ? "Concluído" : e.status === "error" && e.errorMsg ? "Erro" : "Aguardando"}
                 </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {results.length > 0 && (
-        <div className="mt-6 kpi-card">
-          <h2 className="font-display text-lg font-semibold">Resultado</h2>
-          <ul className="mt-3 space-y-2">
-            {results.map((r, i) => (
-              <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-success/30 bg-success/10" : "border-destructive/30 bg-destructive/5"}`}>
-                {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-success" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{r.date ? fmtBRShort(r.date) : "—"}</div>
-                  <div className="text-xs text-muted-foreground">{r.message}</div>
-                </div>
               </li>
             ))}
           </ul>
