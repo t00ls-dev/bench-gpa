@@ -13,9 +13,9 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT id INTO v_admin_id FROM public.users WHERE email = '0001@gpabr.com';
+  SELECT id INTO v_admin_id FROM public.users WHERE email = 'admin@gpabr.com';
   IF v_admin_id IS NULL THEN
-    RAISE WARNING 'admin user (0001@gpabr.com) not found — skipping';
+    RAISE WARNING 'admin user (admin@gpabr.com) not found — skipping';
     RETURN;
   END IF;
 
