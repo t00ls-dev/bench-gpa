@@ -413,7 +413,7 @@ function DiagnoseRepairSection({
                       ? 'text-destructive font-bold'
                       : ''
                   }`}>
-                    {Number(diag[key]).toLocaleString('pt-BR')}
+                    {Number(diag[key] ?? 0).toLocaleString('pt-BR')}
                   </td>
                 </tr>
               ))}
