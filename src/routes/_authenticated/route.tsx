@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation, useMatchRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
@@ -42,7 +42,6 @@ interface NavItem {
 function NavContent({ nav }: { nav: readonly NavItem[] }) {
   const { setOpenMobile } = useSidebar();
   const loc = useLocation();
-  const matchRoute = useMatchRoute();
 
   return (
     <SidebarGroup>
@@ -50,7 +49,7 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
         {nav.map((n) => {
           const isActive = n.to === "/"
             ? loc.pathname === "/"
-            : matchRoute({ to: n.to, fuzzy: true });
+            : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
           return (
             <SidebarMenuItem key={n.to}>
               <SidebarMenuButton asChild isActive={isActive}>
