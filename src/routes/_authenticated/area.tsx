@@ -185,7 +185,7 @@ function AreaPage() {
     staleTime: 120_000,
     placeholderData: (prev) => prev,
   });
-  const prodOpts = prodOptsQ.data ?? [];
+  const prodOpts = prodOptsQ.data?.products ?? [];
 
   const opts = hierData;
 
