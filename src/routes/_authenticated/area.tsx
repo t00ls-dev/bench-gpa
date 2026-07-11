@@ -60,26 +60,6 @@ type AF = {
   subgrupos: string[];
 };
 
-function dedupe<T>(arr: T[]): T[] {
-  return [...new Set(arr)];
-}
-
-function filteredHierarchy(
-  h: AreaHierarchyItem[],
-  stores: string[],
-  deptos: string[],
-  secoes: string[],
-  grupos: string[],
-) {
-  return h.filter(
-    (r) =>
-      (stores.length === 0 || stores.includes(r.store_code)) &&
-      (deptos.length === 0 || (r.depto && deptos.includes(r.depto))) &&
-      (secoes.length === 0 || (r.secao && secoes.includes(r.secao))) &&
-      (grupos.length === 0 || (r.grupo && grupos.includes(r.grupo))),
-  );
-}
-
 function AreaPage() {
   const navigate = useNavigate();
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
@@ -133,31 +113,52 @@ function AreaPage() {
     });
   }, [hierarchy]);
 
-  const filtered = useMemo(
-    () => filteredHierarchy(hierarchy, fStores, fDeptos, fSecoes, fGrupos),
-    [hierarchy, fStores, fDeptos, fSecoes, fGrupos],
+  // Departamento: só depende da Loja
+  const deptoBase = useMemo(
+    () => fStores.length === 0
+      ? hierarchy
+      : hierarchy.filter((r) => fStores.includes(r.store_code)),
+    [hierarchy, fStores],
+  );
+  const deptosOpts = useMemo(
+    () => [...new Set(deptoBase.map((r) => r.depto).filter(Boolean) as string[])].sort(),
+    [deptoBase],
   );
 
-  const deptosOpts = useMemo(
-    () => dedupe(filtered.map((r) => r.depto).filter(Boolean) as string[]).sort(),
-    [filtered],
+  // Seção: depende de Loja + Departamento
+  const secaoBase = useMemo(
+    () => fDeptos.length === 0
+      ? deptoBase
+      : deptoBase.filter((r) => r.depto && fDeptos.includes(r.depto)),
+    [deptoBase, fDeptos],
   );
   const secoesOpts = useMemo(
-    () => dedupe(filtered.map((r) => r.secao).filter(Boolean) as string[]).sort(),
-    [filtered],
-  );
-  const gruposOpts = useMemo(
-    () => dedupe(filtered.map((r) => r.grupo).filter(Boolean) as string[]).sort(),
-    [filtered],
+    () => [...new Set(secaoBase.map((r) => r.secao).filter(Boolean) as string[])].sort(),
+    [secaoBase],
   );
 
-  const subFiltered = useMemo(
-    () => filteredHierarchy(hierarchy, fStores, fDeptos, fSecoes, fGrupos),
-    [hierarchy, fStores, fDeptos, fSecoes, fGrupos],
+  // Grupo: depende de Loja + Departamento + Seção
+  const grupoBase = useMemo(
+    () => fSecoes.length === 0
+      ? secaoBase
+      : secaoBase.filter((r) => r.secao && fSecoes.includes(r.secao)),
+    [secaoBase, fSecoes],
+  );
+  const gruposOpts = useMemo(
+    () => [...new Set(grupoBase.map((r) => r.grupo).filter(Boolean) as string[])].sort(),
+    [grupoBase],
+  );
+
+  // Subgrupo: depende de Loja + Departamento + Seção + Grupo
+  const subgrupoBase = useMemo(
+    () => fGrupos.length === 0
+      ? grupoBase
+      : grupoBase.filter((r) => r.grupo && fGrupos.includes(r.grupo)),
+    [grupoBase, fGrupos],
   );
   const subgruposOpts = useMemo(
-    () => dedupe(subFiltered.map((r) => r.subgrupo).filter(Boolean) as string[]).sort(),
-    [subFiltered],
+    () => [...new Set(subgrupoBase.map((r) => r.subgrupo).filter(Boolean) as string[])].sort(),
+    [subgrupoBase],
   );
 
   const opts = hierData;
