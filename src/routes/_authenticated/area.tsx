@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/analytics.functions";
-import type { AreaHierarchyItem } from "@/lib/analytics.functions";
 import { Label } from "@/components/ui/label";
 import {
   Select,
