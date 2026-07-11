@@ -5,7 +5,7 @@ import { safeError } from "./safe-error";
 
 async function assertAdmin(ctx: { supabase: any; userId: string }) {
   const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
-  if (error) throw safeError("assertAdmin", error);
+  if (error) throw safeError("assertAdmin", error, undefined, true);
   if (!data) throw new Error("Apenas administradores.");
 }
 
@@ -22,7 +22,7 @@ export const listUsers = createServerFn({ method: "GET" })
       .from("users")
       .select("id, email, name, role, is_active, created_at")
       .order("created_at", { ascending: false });
-    if (error) throw safeError("listUsers", error);
+    if (error) throw safeError("listUsers", error, "Ocorreu um erro interno. Tente novamente.", true);
     return data ?? [];
   });
 
@@ -45,7 +45,7 @@ export const createUser = createServerFn({ method: "POST" })
       password: data.password,
       email_confirm: true,
     });
-    if (authErr || !created?.user) throw safeError("createUser.auth", authErr);
+    if (authErr || !created?.user) throw safeError("createUser.auth", authErr, "Falha ao criar usuário.", true);
 
     const { error: insErr } = await supabaseAdmin.from("users").insert({
       id: created.user.id,
@@ -57,7 +57,7 @@ export const createUser = createServerFn({ method: "POST" })
     if (insErr) {
       // rollback: apaga auth user órfão
       await supabaseAdmin.auth.admin.deleteUser(created.user.id).catch(() => {});
-      throw safeError("createUser.insert", insErr);
+      throw safeError("createUser.insert", insErr, "Falha ao salvar usuário.", true);
     }
     return { ok: true, id: created.user.id };
   });
@@ -80,7 +80,7 @@ export const setUserRole = createServerFn({ method: "POST" })
       .from("users")
       .update({ role: data.role })
       .eq("id", data.userId);
-    if (error) throw safeError("setUserRole", error);
+    if (error) throw safeError("setUserRole", error, "Ocorreu um erro interno. Tente novamente.", true);
     return { ok: true };
   });
 
@@ -102,7 +102,7 @@ export const setUserActive = createServerFn({ method: "POST" })
       .from("users")
       .update({ is_active: data.isActive })
       .eq("id", data.userId);
-    if (error) throw safeError("setUserActive", error);
+    if (error) throw safeError("setUserActive", error, "Ocorreu um erro interno. Tente novamente.", true);
     return { ok: true };
   });
 
@@ -120,7 +120,7 @@ export const resetPassword = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
       password: data.password,
     });
-    if (error) throw safeError("resetPassword", error);
+    if (error) throw safeError("resetPassword", error, "Ocorreu um erro interno. Tente novamente.", true);
     return { ok: true };
   });
 
@@ -128,13 +128,13 @@ type TableName = "sales" | "sales_daily_agg" | "products" | "stores" | "filter_h
 
 async function countRows(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName) {
   const { count, error } = await sa.from(table).select("*", { count: "exact", head: true });
-  if (error) throw safeError(`count.${table}`, error);
+  if (error) throw safeError(`count.${table}`, error, undefined, true);
   return count ?? 0;
 }
 
 async function fetchDistinctDates(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName, column: string) {
   const { data, error } = await sa.from(table).select(column);
-  if (error) throw safeError(`distinct.${table}.${column}`, error);
+  if (error) throw safeError(`distinct.${table}.${column}`, error, undefined, true);
   const vals = [...new Set((data ?? []).map((r) => String((r as unknown as Record<string, unknown>)[column])))].sort();
   return vals;
 }
