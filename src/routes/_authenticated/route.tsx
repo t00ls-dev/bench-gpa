@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation, useMatchRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import type { FC } from "react";
 import { LayoutDashboard, Upload, Package, Users, LogOut, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,7 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -31,9 +33,42 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthedLayout,
 });
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: FC<{ className?: string }>;
+}
+
+function NavContent({ nav }: { nav: readonly NavItem[] }) {
+  const { setOpenMobile } = useSidebar();
+  const loc = useLocation();
+  const matchRoute = useMatchRoute();
+
+  return (
+    <SidebarGroup>
+      <SidebarMenu>
+        {nav.map((n) => {
+          const isActive = n.to === "/"
+            ? loc.pathname === "/"
+            : matchRoute({ to: n.to, fuzzy: true });
+          return (
+            <SidebarMenuItem key={n.to}>
+              <SidebarMenuButton asChild isActive={isActive}>
+                <Link to={n.to} onClick={() => setOpenMobile(false)}>
+                  <n.icon />
+                  <span>{n.label}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          );
+        })}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
 function AuthedLayout() {
   const router = useRouter();
-  const loc = useLocation();
   const { user } = Route.useRouteContext();
   const [profile, setProfile] = useState<{ isActive: boolean; isAdmin: boolean } | null>(null);
 
@@ -94,20 +129,7 @@ function AuthedLayout() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarMenu>
-              {nav.map((n) => (
-                <SidebarMenuItem key={n.to}>
-                  <SidebarMenuButton asChild isActive={loc.pathname === n.to}>
-                    <Link to={n.to}>
-                      <n.icon />
-                      <span>{n.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+          <NavContent nav={nav} />
         </SidebarContent>
         <SidebarFooter>
           <div className="flex items-center gap-2 px-3 py-2">
