@@ -1,30 +1,19 @@
-## Diagnóstico
+## Problema
 
-A RPC `area_analysis` (ramo com paginação) monta o array final com:
+Em `src/routes/_authenticated/area.tsx`, `openPdfInNewTab` chama `getArea` sem passar `search`, `sortBy` nem `sortDir`. A RPC devolve tudo ordenado pelo default (`val` desc), e o filtro client-side de busca só olha `prod_code`/`prod_name` — ignorando a ordenação escolhida pelo usuário (val / prod_code / prod_name / daysSince, asc/desc).
 
-```sql
-SELECT jsonb_agg(jsonb_build_object(...))   -- SEM ORDER BY interno
-FROM paged p LEFT JOIN last_sale ls ...
-```
+## Correção
 
-Apesar da CTE `paged` estar ordenada corretamente, o `LEFT JOIN` e o `jsonb_agg` sem `ORDER BY` **não preservam a ordem** das linhas. O Postgres é livre para embaralhar — é exatamente por isso que às vezes um item de venda menor aparece acima de um maior, sem lógica aparente. A ordenação da CTE só afeta o `LIMIT/OFFSET`, não a saída do `jsonb_agg`.
+Único arquivo alterado: `src/routes/_authenticated/area.tsx`, função `openPdfInNewTab`.
 
-Além disso, a coluna "Dias sem venda" (`sortKey = "daysSince"`) é enviada pelo cliente, mas a RPC não tem `CASE` para ela — ordenação por essa coluna cai no fallback `prod_code`, dando a impressão de "ordem aleatória".
+1. Passar os controles atuais da tabela na chamada `getArea`:
+   - `search: search` (trim)
+   - `sortBy: sortKey`
+   - `sortDir` (o mesmo já derivado de `sortAsc`)
+   - `page: null` (mantém: exporta todos, sem paginação)
+2. Remover o filtro client-side por `pdfSearch` — a RPC já aplica busca e ordenação, então usar `allData.products` diretamente como `filtered`.
+3. Manter o restante (título, período, tabela, colunas) inalterado. `filtered.length` continua sendo a contagem exibida no cabeçalho "Produtos listados".
 
-## Correção (migration única)
+Resultado: o PDF passa a listar exatamente os mesmos produtos, na mesma ordem, que aparecem na tabela — apenas sem paginação (todas as páginas concatenadas).
 
-Recriar `public.area_analysis` com dois ajustes no ramo paginado:
-
-1. Adicionar `ORDER BY` **dentro** do `jsonb_agg`, replicando a mesma expressão de ordenação usada em `paged` (val/prod_code/prod_name/daysSince + tiebreaker por `prod_code`). Isso garante que a ordem retornada ao cliente é exatamente a que foi paginada.
-2. Suportar `p_sort_by = 'daysSince'`:
-   - Calcular `last_sale_date` **antes** da paginação (mover `last_sale` para rodar em cima de `filtered`, não de `paged`).
-   - Adicionar branches `CASE WHEN p_sort_by = 'daysSince' ...` ordenando por `last_sale_date` (asc = mais dias sem venda primeiro → `last_sale_date ASC NULLS FIRST`; desc = inverso).
-3. Aplicar o mesmo `ORDER BY` interno também no ramo sem paginação (`p_page IS NULL`), por consistência (já tem `ORDER BY` no agg, mas fica documentado).
-
-Assinatura, parâmetros e shape do JSON de retorno permanecem idênticos — nenhuma alteração no cliente ou em `types.ts`.
-
-## Arquivos alterados
-
-- **Nova migration**: recria `public.area_analysis(...)` com as correções acima.
-
-Nenhuma mudança em código TS/React.
+Nenhuma mudança em server functions, RPC ou tipos.

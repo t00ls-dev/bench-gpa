@@ -312,7 +312,7 @@ function AreaPage() {
     try {
       const area = pathParts.join(" › ");
 
-      // Para PDF, busca dados sem paginação
+      // Para PDF, busca dados sem paginação — respeitando search/sort da tabela
       const allData = await getArea({
         data: {
           dateFrom,
@@ -322,18 +322,14 @@ function AreaPage() {
           secoes: fSecoes,
           grupos: fGrupos,
           subgrupos: fSubgrupos,
+          search: search.trim(),
+          sortBy: sortKey,
+          sortDir,
+          page: null,
         },
       });
-      const allProducts = allData.products ?? [];
+      const filtered = allData.products ?? [];
 
-      const pdfSearch = search.trim().toLowerCase();
-      const filtered = pdfSearch
-        ? allProducts.filter(
-            (p) =>
-              p.prod_code.toLowerCase().includes(pdfSearch) ||
-              p.prod_name.toLowerCase().includes(pdfSearch),
-          )
-        : allProducts;
 
       const jsPDF = (await import("jspdf")).default;
       const autoTable = (await import("jspdf-autotable")).default;
