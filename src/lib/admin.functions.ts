@@ -128,7 +128,7 @@ type TableName = "sales" | "sales_daily_agg" | "products" | "stores" | "filter_h
 
 async function countRows(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName) {
   const { count, error } = await sa.from(table).select("*", { count: "exact", head: true });
-  if (error) throw safeError(`count.${table}`, error, undefined, true);
+  if (error) throw new Error(`Falha ao contar ${table}: ${JSON.stringify(error)}`);
   return count ?? 0;
 }
 
@@ -150,17 +150,11 @@ export const diagnoseData = createServerFn({ method: "GET" })
       try {
         counts[t] = await countRows(supabaseAdmin, t);
       } catch (e) {
-        console.error(`[diagnoseData] count.${t} failed:`, e);
-        throw new Error(`Erro ao contar ${t}: ${(e as any)?.message ?? String(e)}`);
+        throw e;
       }
     }
-    try {
-      const datesInSales = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
-      return { ...counts, dates_in_sales: datesInSales };
-    } catch (e) {
-      console.error(`[diagnoseData] distinct.sales.sale_date failed:`, e);
-      throw new Error(`Erro ao buscar datas: ${(e as any)?.message ?? String(e)}`);
-    }
+    const datesInSales = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
+    return { ...counts, dates_in_sales: datesInSales };
   });
 
 export const repairAggregations = createServerFn({ method: "POST" })
