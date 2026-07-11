@@ -147,10 +147,20 @@ export const diagnoseData = createServerFn({ method: "GET" })
     const tables: TableName[] = ["sales", "sales_daily_agg", "products", "stores", "filter_hierarchy", "import_log"];
     const counts: Record<string, number> = {};
     for (const t of tables) {
-      counts[t] = await countRows(supabaseAdmin, t);
+      try {
+        counts[t] = await countRows(supabaseAdmin, t);
+      } catch (e) {
+        console.error(`[diagnoseData] count.${t} failed:`, e);
+        throw new Error(`Erro ao contar ${t}: ${(e as any)?.message ?? String(e)}`);
+      }
     }
-    const datesInSales = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
-    return { ...counts, dates_in_sales: datesInSales };
+    try {
+      const datesInSales = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
+      return { ...counts, dates_in_sales: datesInSales };
+    } catch (e) {
+      console.error(`[diagnoseData] distinct.sales.sale_date failed:`, e);
+      throw new Error(`Erro ao buscar datas: ${(e as any)?.message ?? String(e)}`);
+    }
   });
 
 export const repairAggregations = createServerFn({ method: "POST" })
