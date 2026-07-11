@@ -327,7 +327,16 @@ function AreaPage() {
           sortDir,
         },
       });
-      const filtered = [...(allData.products ?? [])].sort((a, b) => {
+      const searchTerm = search.trim().toLowerCase();
+      const filtered = [...(allData.products ?? [])]
+        .filter((p) => {
+          if (!searchTerm) return true;
+          return (
+            p.prod_code.toLowerCase().includes(searchTerm) ||
+            p.prod_name.toLowerCase().includes(searchTerm)
+          );
+        })
+        .sort((a, b) => {
         let cmp = 0;
         if (sortKey === "val") cmp = a.val - b.val;
         else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
