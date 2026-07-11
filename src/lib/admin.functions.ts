@@ -127,8 +127,8 @@ export const resetPassword = createServerFn({ method: "POST" })
 type TableName = "sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
 
 async function countRows(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName) {
-  const { count, error } = await sa.from(table).select("*", { count: "exact", head: true });
-  if (error) throw new Error(`Falha ao contar ${table}: ${JSON.stringify(error)}`);
+  const { count, error } = await sa.from(table).select("*", { count: "exact", head: false });
+  if (error) throw safeError(`count.${table}`, error, undefined, true);
   return count ?? 0;
 }
 
