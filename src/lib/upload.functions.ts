@@ -5,7 +5,7 @@ import { safeError } from "./safe-error";
 
 async function assertAdmin(ctx: { supabase: any; userId: string }) {
   const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
-  if (error) throw safeError("upload.assertAdmin", error);
+  if (error) throw safeError("upload.assertAdmin", error, undefined, true);
   if (!data) throw new Error("Acesso negado: apenas administradores podem importar.");
 }
 
@@ -37,10 +37,10 @@ export const beginImport = createServerFn({ method: "POST" })
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: cleanErr } = await supabaseAdmin.from("staging_sales").delete().eq("sale_date", data.sale_date);
-    if (cleanErr) throw safeError("beginImport.cleanStaging", cleanErr, "Falha ao limpar staging anterior.");
+    if (cleanErr) throw safeError("beginImport.cleanStaging", cleanErr, "Falha ao limpar staging anterior.", true);
     if (data.stores.length) {
       const { error } = await supabaseAdmin.from("stores").upsert(data.stores, { onConflict: "store_code" });
-      if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.");
+      if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.", true);
     }
     if (data.products.length) {
       // Merge em massa via RPC: uma única chamada transacional, sem serializar
@@ -49,7 +49,7 @@ export const beginImport = createServerFn({ method: "POST" })
         p_rows: data.products,
         p_sale_date: data.sale_date,
       });
-      if (upErr) throw safeError("beginImport.products.upsert", upErr, "Falha ao cadastrar produtos.");
+      if (upErr) throw safeError("beginImport.products.upsert", upErr, "Falha ao cadastrar produtos.", true);
     }
 
 
@@ -66,7 +66,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({ ...r, batch_id: data.batch_id, sale_date: data.sale_date }));
     const { error } = await supabaseAdmin.from("staging_sales").insert(rows);
-    if (error) throw safeError("insertSalesChunk", error, "Falha ao inserir lote de vendas.");
+    if (error) throw safeError("insertSalesChunk", error, "Falha ao inserir lote de vendas.", true);
     return { inserted: rows.length };
   });
 
@@ -86,7 +86,7 @@ export const finalizeImport = createServerFn({ method: "POST" })
       p_row_count: data.row_count,
       p_imported_by: context.userId,
     });
-    if (swapErr) throw safeError("finalizeImport.swap", swapErr, "Falha ao finalizar importação.");
+    if (swapErr) throw safeError("finalizeImport.swap", swapErr, "Falha ao finalizar importação.", true);
 
     // 2) Tenta refresh da agg via RPC
     const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
@@ -100,13 +100,13 @@ export const finalizeImport = createServerFn({ method: "POST" })
     console.error("[finalizeImport] refresh_sales_daily_agg failed, stepping manually:", aggErr);
 
     const { error: delErr } = await supabaseAdmin.from("sales_daily_agg").delete().eq("sale_date", data.sale_date);
-    if (delErr) throw safeError("finalizeImport.delAgg", delErr, "Falha ao limpar agregados antigos.");
+    if (delErr) throw safeError("finalizeImport.delAgg", delErr, "Falha ao limpar agregados antigos.", true);
 
     const { data: salesRows, error: queryErr } = await supabaseAdmin
       .from("sales")
       .select("store_code, store_name, depto, secao, grupo, subgrupo, val_vda")
       .eq("sale_date", data.sale_date);
-    if (queryErr) throw safeError("finalizeImport.querySales", queryErr, "Falha ao consultar vendas para agregação.");
+    if (queryErr) throw safeError("finalizeImport.querySales", queryErr, "Falha ao consultar vendas para agregação.", true);
 
     if (salesRows && salesRows.length > 0) {
       interface AggRow {
@@ -142,11 +142,11 @@ export const finalizeImport = createServerFn({ method: "POST" })
         }
       }
       const { error: insErr } = await supabaseAdmin.from("sales_daily_agg").insert(Array.from(grouped.values()));
-      if (insErr) throw safeError("finalizeImport.insAgg", insErr, "Falha ao inserir agregados.");
+      if (insErr) throw safeError("finalizeImport.insAgg", insErr, "Falha ao inserir agregados.", true);
     }
 
     const { error: hierErr } = await supabaseAdmin.rpc("refresh_filter_hierarchy");
-    if (hierErr) throw safeError("finalizeImport.hierarchy", hierErr, "Falha ao atualizar hierarquia de filtros.");
+    if (hierErr) throw safeError("finalizeImport.hierarchy", hierErr, "Falha ao atualizar hierarquia de filtros.", true);
 
     return { ok: true };
   });
