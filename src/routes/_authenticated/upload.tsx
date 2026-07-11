@@ -21,6 +21,7 @@ import { ImportCalendar } from "@/components/import-calendar";
 import { AdminGate } from "@/components/admin-gate";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtBRShort, fmtInt, fmtDT } from "@/lib/utils";
+import { parseAnyWorkbook } from "@/lib/xlsx-parser";
 
 const CHUNK_SIZE = 1000;
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -40,7 +41,13 @@ export const Route = createFileRoute("/_authenticated/upload")({
 });
 
 
-type FileStatus = "pending" | "processing" | "done" | "error";
+interface FileEntry {
+  file: File;
+  saleDate: string;
+  status: "pending" | "processing" | "done" | "error";
+  totalLines?: number;
+  errorMsg?: string;
+}
 
 interface Result {
   filename: string;
@@ -51,16 +58,14 @@ interface Result {
 }
 
 function UploadPage() {
-  const [files, setFiles] = useState<File[]>([]);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
   const [results, setResults] = useState<Result[]>([]);
   const [busy, setBusy] = useState(false);
-  const [statuses, setStatuses] = useState<Record<string, FileStatus>>({});
   const [progressPct, setProgressPct] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [eta, setEta] = useState(0);
   const [processed, setProcessed] = useState(0);
-  const [fileTotals, setFileTotals] = useState<Record<string, number>>({});
-  const [currentFile, setCurrentFile] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     date: string;
     rowCount: number;
@@ -106,39 +111,36 @@ function UploadPage() {
     };
   }, [acquireWakeLock, releaseWakeLock]);
 
-  const setFileStatus = (name: string, st: FileStatus) =>
-    setStatuses((s) => ({ ...s, [name]: st }));
-
   const processFiles = async () => {
-    if (files.length === 0) return;
+    if (entries.length === 0) return;
     busyRef.current = true;
     setBusy(true);
     await acquireWakeLock();
     setResults([]);
-    setStatuses({});
     setProgressPct(0);
     setSpeed(0);
     setEta(0);
     setProcessed(0);
-    setFileTotals({});
-    setCurrentFile("");
+    setCurrentDate("");
     const r: Result[] = [];
 
-    const allNames = files.map((f) => f.name);
-    setStatuses(Object.fromEntries(allNames.map((n) => [n, "pending"])));
-
-    for (let fi = 0; fi < files.length; fi++) {
-      const f = files[fi];
+    const validEntries = entries.filter((e) => e.status !== "error");
+    for (let fi = 0; fi < validEntries.length; fi++) {
+      const entry = validEntries[fi];
       const startTime = Date.now();
       let totalLines = 0;
-      setCurrentFile(f.name);
-      setFileStatus(f.name, "processing");
+      setCurrentDate(entry.saleDate);
+      setEntries((prev) => prev.map((e) =>
+        e.saleDate === entry.saleDate && e.file.name === entry.file.name
+          ? { ...e, status: "processing" as const }
+          : e,
+      ));
 
+      const f = entry.file;
       try {
         setProgressPct(0);
         setProcessed(0);
         const buf = await f.arrayBuffer();
-        const { parseAnyWorkbook } = await import("@/lib/xlsx-parser");
         const parsed = parseAnyWorkbook(buf);
 
         totalLines = parsed.sales.length;
@@ -163,7 +165,11 @@ function UploadPage() {
           if (!ok) throw new Error("Importação cancelada para este arquivo.");
         }
 
-        setFileTotals((s) => ({ ...s, [f.name]: totalLines }));
+        setEntries((prev) => prev.map((e) =>
+          e.saleDate === entry.saleDate && e.file.name === entry.file.name
+            ? { ...e, totalLines }
+            : e,
+        ));
 
         const batchId = crypto.randomUUID();
         setProgressPct(0);
@@ -189,16 +195,24 @@ function UploadPage() {
         await finalize({ data: { sale_date: parsed.sale_date, batch_id: batchId, row_count: totalLines } });
 
         r.push({ filename: f.name, ok: true, message: `${fmtInt(totalLines)} linhas`, date: parsed.sale_date, rows: totalLines });
-        setFileStatus(f.name, "done");
+        setEntries((prev) => prev.map((e) =>
+          e.saleDate === entry.saleDate && e.file.name === entry.file.name
+            ? { ...e, status: "done" as const }
+            : e,
+        ));
       } catch (e: any) {
         r.push({ filename: f.name, ok: false, message: e?.message ?? "Erro desconhecido" });
-        setFileStatus(f.name, "error");
+        setEntries((prev) => prev.map((e) =>
+          e.saleDate === entry.saleDate && e.file.name === entry.file.name
+            ? { ...e, status: "error" as const, errorMsg: e?.message ?? "Erro desconhecido" }
+            : e,
+        ));
       }
       setResults([...r]);
     }
 
     setProgressPct(0);
-    setCurrentFile("");
+    setCurrentDate("");
     setBusy(false);
     busyRef.current = false;
     releaseWakeLock();
@@ -233,13 +247,32 @@ function UploadPage() {
         <input
           id="files" type="file" multiple accept=".xlsx,.xls"
           className="sr-only"
-          onChange={(e) => {
+          onChange={async (e) => {
             const selected = Array.from(e.target.files ?? []);
             const oversized = selected.filter((f) => f.size > MAX_FILE_SIZE);
             if (oversized.length > 0) {
               toast.error(`${oversized.length} arquivo(s) excedem o limite de 50 MB.`);
             }
-            setFiles(selected.filter((f) => f.size <= MAX_FILE_SIZE));
+            const valid = selected.filter((f) => f.size <= MAX_FILE_SIZE);
+            const parsed: FileEntry[] = [];
+            let parseErrors = 0;
+            for (const f of valid) {
+              try {
+                const buf = await f.arrayBuffer();
+                const p = parseAnyWorkbook(buf);
+                parsed.push({ file: f, saleDate: p.sale_date, status: "pending" });
+              } catch (err: any) {
+                parsed.push({ file: f, saleDate: "", status: "error", errorMsg: err?.message ?? "Erro ao ler arquivo" });
+                parseErrors++;
+              }
+            }
+            parsed.sort((a, b) => {
+              if (a.status === "error" && b.status !== "error") return 1;
+              if (b.status === "error" && a.status !== "error") return -1;
+              return a.saleDate.localeCompare(b.saleDate);
+            });
+            setEntries(parsed);
+            if (parseErrors > 0) toast.error(`${parseErrors} arquivo(s) não puderam ser lidos.`);
           }}
         />
       </label>
@@ -259,10 +292,10 @@ function UploadPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {files.length > 0 && (
+      {entries.length > 0 && (
         <div className="mt-4 kpi-card">
           <div className="mb-3 flex items-center justify-between">
-            <div className="text-sm font-medium">{files.length} arquivo(s) selecionado(s)</div>
+            <div className="text-sm font-medium">{entries.length} arquivo(s) selecionado(s)</div>
             <Button onClick={processFiles} disabled={busy}>
               {busy ? <><Loader2 className="mr-2 size-4 animate-spin" /> Importando…</> : "Iniciar importação"}
             </Button>
@@ -272,7 +305,7 @@ function UploadPage() {
             <div className="mb-3 rounded-md border bg-muted/30 p-3">
               <div className="flex items-center gap-3 text-sm">
                 <FileSpreadsheet className="size-4 shrink-0 text-primary" />
-                <span className="truncate font-medium">{currentFile}</span>
+                <span className="truncate font-medium">{currentDate ? fmtBRShort(currentDate) : ""}</span>
               </div>
               <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
@@ -289,34 +322,34 @@ function UploadPage() {
           )}
 
           <ul className="space-y-2">
-            {files.map((f) => {
-              const st = statuses[f.name] ?? "pending";
-              return (
-                <li
-                  key={f.name}
-                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
-                    st === "processing" ? "bg-primary/5 ring-1 ring-primary/20" :
-                    st === "done" ? "bg-success/10" :
-                    st === "error" ? "bg-destructive/5" :
-                    "bg-muted/40"
-                  }`}
-                >
-                  {st === "processing" ? (
-                    <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                  ) : st === "done" ? (
-                    <CheckCircle2 className="size-4 shrink-0 text-success" />
-                  ) : st === "error" ? (
-                    <AlertCircle className="size-4 shrink-0 text-destructive" />
-                  ) : (
-                    <FileSpreadsheet className="size-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <span className="truncate">{f.name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-                    {st === "processing" ? `${fmtInt(processed)} / ${fmtInt(fileTotals[f.name] ?? 0)} linhas` : `${(f.size / 1024).toFixed(0)} KB`}
-                  </span>
-                </li>
-              );
-            })}
+            {entries.map((e, i) => (
+              <li
+                key={`${e.saleDate}-${e.file.name}-${i}`}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
+                  e.status === "processing" ? "bg-primary/5 ring-1 ring-primary/20" :
+                  e.status === "done" ? "bg-success/10" :
+                  e.status === "error" ? "bg-destructive/5" :
+                  "bg-muted/40"
+                }`}
+              >
+                {e.status === "processing" ? (
+                  <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                ) : e.status === "done" ? (
+                  <CheckCircle2 className="size-4 shrink-0 text-success" />
+                ) : e.status === "error" ? (
+                  <AlertCircle className="size-4 shrink-0 text-destructive" />
+                ) : (
+                  <FileSpreadsheet className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <span className="truncate font-medium">{fmtBRShort(e.saleDate)}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{e.file.name}</span>
+                </div>
+                <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                  {e.status === "processing" ? `${fmtInt(processed)} / ${fmtInt(e.totalLines ?? 0)} linhas` : e.status === "error" && e.errorMsg ? "Erro" : `${(e.file.size / 1024).toFixed(0)} KB`}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
       )}
@@ -328,10 +361,11 @@ function UploadPage() {
             {results.map((r, i) => (
               <li key={i} className={`flex items-start gap-3 rounded-md border p-3 text-sm ${r.ok ? "border-success/30 bg-success/10" : "border-destructive/30 bg-destructive/5"}`}>
                 {r.ok ? <CheckCircle2 className="mt-0.5 size-4 text-success" /> : <AlertCircle className="mt-0.5 size-4 text-destructive" />}
-                <div className="flex-1">
-                  <div className="font-medium">{r.filename}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{r.date ? fmtBRShort(r.date) : r.filename}</div>
                   <div className="text-xs text-muted-foreground">
-                    {r.ok && r.date && <>Data {fmtBRShort(r.date)}: </>}
+                    {r.filename}
+                    {r.ok && r.date && <> · </>}
                     {r.message}
                   </div>
                 </div>
