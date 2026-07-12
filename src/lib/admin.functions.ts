@@ -157,7 +157,7 @@ export const diagnoseData = createServerFn({ method: "GET" })
     return { ...counts, dates_in_sales: datesInSales };
   });
 
-export interface DbHealthTable {
+interface DbHealthTable {
   table: string;
   schema: string;
   total_size: number;

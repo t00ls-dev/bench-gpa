@@ -80,48 +80,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sales: {
-        Row: {
-          depto: string | null
-          grupo: string | null
-          id: number
-          prod_code: string
-          prod_name: string
-          sale_date: string
-          secao: string | null
-          store_code: string
-          store_name: string
-          subgrupo: string | null
-          val_vda: number
-        }
-        Insert: {
-          depto?: string | null
-          grupo?: string | null
-          id?: number
-          prod_code: string
-          prod_name: string
-          sale_date: string
-          secao?: string | null
-          store_code: string
-          store_name: string
-          subgrupo?: string | null
-          val_vda?: number
-        }
-        Update: {
-          depto?: string | null
-          grupo?: string | null
-          id?: number
-          prod_code?: string
-          prod_name?: string
-          sale_date?: string
-          secao?: string | null
-          store_code?: string
-          store_name?: string
-          subgrupo?: string | null
-          val_vda?: number
-        }
-        Relationships: []
-      }
       sales_daily_agg: {
         Row: {
           depto: string | null
@@ -404,19 +362,7 @@ export type Database = {
           prod_name: string
         }[]
       }
-      products_in_decline: {
-        Args: {
-          p_date_from: string
-          p_date_to: string
-          p_deptos?: string[]
-          p_prod_codes?: string[]
-          p_secoes?: string[]
-          p_stores?: string[]
-        }
-        Returns: Json
-      }
       refresh_filter_hierarchy: { Args: never; Returns: undefined }
-      refresh_sales_daily_agg: { Args: { p_date: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       upsert_products_bulk: {
