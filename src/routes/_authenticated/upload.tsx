@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
+import { purgeOldAggs } from "@/lib/admin.functions";
 import { getImportedDates } from "@/lib/analytics.functions";
 import { Button } from "@/components/ui/button";
 import {
@@ -193,6 +194,8 @@ function UploadPage() {
 
         setProgressPct(100);
         await finalize({ data: { sale_date: parsed.sale_date, batch_id: batchId, row_count: totalLines } });
+
+        try { await purgeOldAggs(); } catch {}
 
         r.push({ filename: f.name, ok: true, message: `${fmtInt(totalLines)} linhas`, date: parsed.sale_date, rows: totalLines });
         setEntries((prev) => prev.map((e) =>

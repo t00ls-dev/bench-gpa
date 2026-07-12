@@ -362,6 +362,7 @@ export type Database = {
           prod_name: string
         }[]
       }
+      purge_old_aggs: { Args: { p_days?: number }; Returns: number }
       refresh_filter_hierarchy: { Args: never; Returns: undefined }
       upsert_products_bulk: {
         Args: { p_rows: Json; p_sale_date: string }
