@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { FC } from "react";
 import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   SidebarProvider,
@@ -157,6 +158,7 @@ function AuthedLayout() {
         </header>
         <main id="main-content" className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10">
           <Outlet />
+          <AppFooter />
         </main>
       </SidebarInset>
     </SidebarProvider>

@@ -277,6 +277,17 @@ export const getImportedDates = createServerFn({ method: "GET" })
     return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
   });
 
+export const getLatestSaleInfo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = context.supabase as DB;
+    const { data, error } = await supabase.rpc("imported_dates");
+    if (error) throw safeError("analytics", error);
+    if (!data || data.length === 0) return null;
+    const sorted = [...data].sort((a, b) => (a.sale_date < b.sale_date ? 1 : -1));
+    return sorted[0] as { sale_date: string; row_count: number; imported_at: string };
+  });
+
 export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ q: z.string().min(3) }).parse(d))
