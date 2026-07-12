@@ -135,6 +135,7 @@ function AdminPage() {
         <h1 className="font-display text-3xl font-bold flex items-center gap-2">
           <Shield className="size-7 text-primary shrink-0" /> Administração
         </h1>
+        <p className="text-sm text-muted-foreground mt-1">Gerencie usuários e monitore o banco de dados.</p>
         {err && (
           <p className="mt-2 text-sm text-destructive">{err}</p>
         )}
@@ -479,16 +480,16 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
             </div>
           </div>
 
-          <div className="flex gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Activity className="size-3.5" /> {data.active_connections} conexões ativas
             </span>
             <span>PG {data.version}</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="max-h-64 overflow-y-auto">
             <table className="w-full text-xs">
-              <thead>
+              <thead className="sticky top-0 bg-background">
                 <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
                   <th className="py-2 pr-4">Tabela</th>
                   <th className="py-2 pr-4 text-right">Tamanho</th>
@@ -496,32 +497,13 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
                 </tr>
               </thead>
               <tbody>
-                {data.tables.map((t) => {
-                  const barW = data.db_size > 0
-                    ? (t.total_size / data.db_size) * 100
-                    : 0;
-                  return (
-                    <tr key={`${t.schema}.${t.table}`} className="border-b border-border/40">
-                      <td className="py-1.5 pr-4 font-mono text-foreground">
-                        <span className="text-muted-foreground">{t.schema}.</span>{t.table}
-                      </td>
-                      <td className="py-1.5 pr-4 text-right font-mono">
-                        <div className="flex items-center justify-end gap-2">
-                          <span>{t.total_size_pretty}</span>
-                          <div className="h-2 w-16 overflow-hidden rounded-full bg-muted shrink-0">
-                            <div
-                              className="h-full rounded-full bg-primary/60"
-                              style={{ width: `${Math.min(barW, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-1.5 text-right font-mono">
-                        {t.row_estimate.toLocaleString('pt-BR')}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {data.tables.filter((t) => t.schema === 'public').map((t) => (
+                  <tr key={t.table} className="border-b border-border/40">
+                    <td className="py-1.5 pr-4 font-mono text-foreground">{t.table}</td>
+                    <td className="py-1.5 pr-4 text-right font-mono">{t.total_size_pretty}</td>
+                    <td className="py-1.5 text-right font-mono">{t.row_estimate.toLocaleString('pt-BR')}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
