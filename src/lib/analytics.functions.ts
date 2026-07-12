@@ -88,7 +88,7 @@ interface AreaAnalysisResult {
   totalPages?: number;
 }
 
-export interface AreaHierarchyItem {
+interface AreaHierarchyItem {
   store_code: string;
   store_name: string;
   depto: string | null;

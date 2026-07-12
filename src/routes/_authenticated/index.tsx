@@ -5,7 +5,6 @@ import { getDashboard, getDashboardRankings } from "@/lib/analytics.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { RankingCard } from "@/components/ranking-card";
-import { fmtBRShort } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
