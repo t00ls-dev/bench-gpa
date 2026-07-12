@@ -157,6 +157,35 @@ export const diagnoseData = createServerFn({ method: "GET" })
     return { ...counts, dates_in_sales: datesInSales };
   });
 
+export interface DbHealthTable {
+  table: string;
+  schema: string;
+  total_size: number;
+  total_size_pretty: string;
+  row_estimate: number;
+}
+
+export interface DbHealthData {
+  db_size: number;
+  db_size_pretty: string;
+  free_limit: number;
+  free_limit_pretty: string;
+  pct_used: number;
+  version: string;
+  active_connections: number;
+  tables: DbHealthTable[];
+}
+
+export const dbHealthCheck = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("db_health_check");
+    if (error) throw safeError("dbHealthCheck", error, undefined, true);
+    return data as DbHealthData;
+  });
+
 export const repairAggregations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

@@ -10,7 +10,9 @@ import {
   resetPassword,
   diagnoseData,
   repairAggregations,
+  dbHealthCheck,
 } from "@/lib/admin.functions";
+import type { DbHealthData } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +27,7 @@ import {
 import { toast } from "sonner";
 import {
   ShieldCheck, ShieldOff, KeyRound, Loader2, Users, UserPlus, Database, AlertTriangle, CheckCircle2,
+  HardDrive, Activity, Server,
 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +54,7 @@ function AdminPage() {
   const resetPw = useServerFn(resetPassword);
   const diag = useServerFn(diagnoseData);
   const repair = useServerFn(repairAggregations);
+  const health = useServerFn(dbHealthCheck);
   const qc = useQueryClient();
   const [err, setErr] = useState<string | null>(null);
 
@@ -129,9 +133,120 @@ function AdminPage() {
     return (
       <div className="kpi-card text-center">
         <p className="text-sm text-destructive">{err}</p>
+    </div>
+  );
+}
+
+function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }) {
+  const [data, setData] = useState<DbHealthData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const runCheck = async () => {
+    setLoading(true);
+    try {
+      const r = await healthFn();
+      setData(r);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao verificar saúde do banco");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pctColor = data
+    ? data.pct_used >= 85 ? 'bg-destructive'
+      : data.pct_used >= 60 ? 'bg-warning'
+      : 'bg-success'
+    : 'bg-muted';
+
+  return (
+    <div className="kpi-card space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Armazenamento total do banco versus o limite de 500 MB do plano free.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={runCheck} disabled={loading}>
+          {loading ? <Loader2 className="size-4 animate-spin mr-1" /> : <Server className="size-4 mr-1" />}
+          Verificar
+        </Button>
       </div>
-    );
-  }
+
+      {data && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium flex items-center gap-1.5">
+                <HardDrive className="size-4 text-muted-foreground" />
+                Uso do banco
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {data.db_size_pretty} / {data.free_limit_pretty}
+              </span>
+            </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full transition-all ${pctColor}`}
+                style={{ width: `${Math.min(data.pct_used, 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{data.pct_used}% utilizado</span>
+              <span>{Math.max(0, 100 - data.pct_used).toFixed(1)}% livre</span>
+            </div>
+          </div>
+
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Activity className="size-3.5" /> {data.active_connections} conexões ativas
+            </span>
+            <span>PG {data.version}</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
+                  <th className="py-2 pr-4">Tabela</th>
+                  <th className="py-2 pr-4 text-right">Tamanho</th>
+                  <th className="py-2 text-right">Linhas (aprox.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.tables.map((t) => {
+                  const barW = data.db_size > 0
+                    ? (t.total_size / data.db_size) * 100
+                    : 0;
+                  return (
+                    <tr key={`${t.schema}.${t.table}`} className="border-b border-border/40">
+                      <td className="py-1.5 pr-4 font-mono text-foreground">
+                        <span className="text-muted-foreground">{t.schema}.</span>{t.table}
+                      </td>
+                      <td className="py-1.5 pr-4 text-right font-mono">
+                        <div className="flex items-center justify-end gap-2">
+                          <span>{t.total_size_pretty}</span>
+                          <div className="h-2 w-16 overflow-hidden rounded-full bg-muted shrink-0">
+                            <div
+                              className="h-full rounded-full bg-primary/60"
+                              style={{ width: `${Math.min(barW, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-1.5 text-right font-mono">
+                        {t.row_estimate.toLocaleString('pt-BR')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
   return (
     <div>
@@ -288,6 +403,14 @@ function AdminPage() {
           diagnoseFn={diag}
           repairFn={repair}
         />
+      </section>
+
+      {/* Saúde do Banco */}
+      <section className="mt-10">
+        <h2 className="font-display text-xl font-bold flex items-center gap-2 mb-4">
+          <HardDrive className="size-5 text-primary" /> Saúde do Banco
+        </h2>
+        <DbHealthSection healthFn={health} />
       </section>
 
       <Dialog open={!!resetTarget} onOpenChange={(o) => !o && setResetTarget(null)}>
