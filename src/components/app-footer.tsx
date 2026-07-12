@@ -8,10 +8,14 @@ function fmtDate(iso: string) {
 }
 
 function timeAgo(ts: number) {
-  const diff = Math.floor((Date.now() / 1000 - ts) / 86400);
-  if (diff < 1) return "hoje";
-  if (diff === 1) return "ontem";
-  return `há ${diff} dias`;
+  const seconds = Math.floor(Date.now() / 1000 - ts);
+  if (seconds < 60) return "há menos de 1 minuto";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `há ${minutes} ${minutes === 1 ? "minuto" : "minutos"}`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours} ${hours === 1 ? "hora" : "horas"}`;
+  const days = Math.floor(hours / 24);
+  return `há ${days} ${days === 1 ? "dia" : "dias"}`;
 }
 
 export function AppFooter() {
@@ -23,12 +27,12 @@ export function AppFooter() {
   });
 
   return (
-    <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 pb-2 text-xs text-muted-foreground">
+    <div className="kpi-card mt-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
       <span>Última venda: {data ? fmtDate(data.sale_date) : "—"}</span>
       <span className="hidden sm:inline">·</span>
       <span>
         commit <code className="text-foreground/70">{__COMMIT_HASH__}</code> ({timeAgo(Number(__COMMIT_DATE__))})
       </span>
-    </footer>
+    </div>
   );
 }
