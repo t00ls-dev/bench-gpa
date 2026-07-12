@@ -269,7 +269,7 @@ function UploadPage() {
             parsed.sort((a, b) => {
               if (a.status === "error" && b.status !== "error") return 1;
               if (b.status === "error" && a.status !== "error") return -1;
-              return a.saleDate.localeCompare(b.saleDate);
+              return b.saleDate.localeCompare(a.saleDate);
             });
             setEntries(parsed);
             if (parseErrors > 0) toast.error(`${parseErrors} arquivo(s) não puderam ser lidos.`);
