@@ -176,6 +176,16 @@ export interface DbHealthData {
   tables: DbHealthTable[];
 }
 
+export const purgeOldAggs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.rpc("purge_old_aggs", { p_days: 28 });
+    if (error) throw safeError("purgeOldAggs", error, undefined, true);
+    return { deleted: data };
+  });
+
 export const dbHealthCheck = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
