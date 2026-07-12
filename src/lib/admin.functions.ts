@@ -124,7 +124,7 @@ export const resetPassword = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-type TableName = "sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
+type TableName = "staging_sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
 
 async function countRows(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName) {
   const { count, error } = await sa.from(table).select("*", { count: "exact", head: false });
@@ -144,7 +144,7 @@ export const diagnoseData = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const tables: TableName[] = ["sales", "sales_daily_agg", "products", "stores", "filter_hierarchy", "import_log"];
+    const tables: TableName[] = ["staging_sales", "sales_daily_agg", "products", "stores", "filter_hierarchy", "import_log"];
     const counts: Record<string, number> = {};
     for (const t of tables) {
       try {
@@ -153,7 +153,7 @@ export const diagnoseData = createServerFn({ method: "GET" })
         throw e;
       }
     }
-    const datesInSales = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
+    const datesInSales = await fetchDistinctDates(supabaseAdmin, "staging_sales", "sale_date");
     return { ...counts, dates_in_sales: datesInSales };
   });
 
@@ -163,10 +163,10 @@ export const repairAggregations = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Busca datas distintas de public.sales
-    const dates = await fetchDistinctDates(supabaseAdmin, "sales", "sale_date");
+    // Busca datas distintas de staging_sales
+    const dates = await fetchDistinctDates(supabaseAdmin, "staging_sales", "sale_date");
     if (dates.length === 0) {
-      return { ok: false, message: "Nenhuma data encontrada em public.sales" };
+      return { ok: false, message: "Nenhuma data encontrada em staging_sales" };
     }
 
     let refreshed = 0;
@@ -177,9 +177,9 @@ export const repairAggregations = createServerFn({ method: "POST" })
         // Deleta agregação existente para a data
         await supabaseAdmin.from("sales_daily_agg").delete().eq("sale_date", dateStr);
 
-        // Busca vendas brutas da data
+        // Busca vendas brutas da staging
         const { data: rows, error: qErr } = await supabaseAdmin
-          .from("sales")
+          .from("staging_sales")
           .select("store_code, store_name, depto, secao, grupo, subgrupo, val_vda")
           .eq("sale_date", dateStr);
         if (qErr) throw qErr;
