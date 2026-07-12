@@ -58,4 +58,4 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.db_health_check() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.db_health_check() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.db_health_check() TO authenticated, service_role;
