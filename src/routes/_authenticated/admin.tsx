@@ -421,6 +421,12 @@ function DataCountSection({
   );
 }
 
+function fmtSize(bytes: number): string {
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(0)} kB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+}
+
 function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }) {
   const [data, setData] = useState<DbHealthData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -500,7 +506,7 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
                 {data.tables.filter((t) => t.schema === 'public').map((t) => (
                   <tr key={t.table} className="border-b border-border/40">
                     <td className="py-1.5 pr-4 font-mono text-foreground">{t.table}</td>
-                    <td className="py-1.5 pr-4 text-right font-mono">{t.total_size_pretty}</td>
+                    <td className="py-1.5 pr-4 text-right font-mono">{fmtSize(t.total_size)}</td>
                     <td className="py-1.5 text-right font-mono">{t.row_estimate.toLocaleString('pt-BR')}</td>
                   </tr>
                 ))}
