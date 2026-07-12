@@ -40,10 +40,10 @@ export function DashboardCharts({ data, isLoading }: { data: DashboardData | und
               </LineChart>
             </ResponsiveContainer>
           )}
-          <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-[var(--chart-1)]" /> Atual</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm border-2 border-dashed border-[var(--chart-1)] opacity-50" /> Anterior</span>
-          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-[var(--chart-1)]" /> Atual</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm border-2 border-dashed border-[var(--chart-1)] opacity-50" /> Anterior</span>
         </div>
       </div>
 
