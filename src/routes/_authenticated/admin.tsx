@@ -197,7 +197,7 @@ function AdminPage() {
                     <Input className="mt-1.5" value={nName} onChange={(e) => setNName(e.target.value)} />
                   </div>
                   <div>
-                    <Label>Senha inicial</Label>
+                    <Label>Senha</Label>
                     <Input
                       className="mt-1.5"
                       type="password"
