@@ -27,7 +27,7 @@ export function AppFooter() {
   });
 
   return (
-    <div className="kpi-card mt-8 flex items-center gap-x-3 text-xs text-muted-foreground">
+    <div className="kpi-card mt-8 flex items-center gap-x-3 overflow-x-auto whitespace-nowrap text-xs text-muted-foreground">
       <span>Última venda: {data ? fmtDate(data.sale_date) : "—"}</span>
       <span className="hidden sm:inline">·</span>
       <span>
