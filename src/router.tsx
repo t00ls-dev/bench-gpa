@@ -1,5 +1,6 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryCache } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { routeTree } from "./routeTree.gen";
 
 export const getRouter = () => {
@@ -12,6 +13,21 @@ export const getRouter = () => {
         retry: 1,
       },
     },
+    queryCache: new QueryCache({
+      onError: async (error) => {
+        const msg = error?.message ?? "";
+        if (
+          msg.includes("Unauthorized") ||
+          msg.includes("Invalid token") ||
+          msg.includes("forbidden")
+        ) {
+          toast.error("Sessão expirada. Faça login novamente.");
+          const { supabase } = await import("@/integrations/supabase/client");
+          await supabase.auth.signOut();
+          window.location.href = "/auth";
+        }
+      },
+    }),
   });
 
 
