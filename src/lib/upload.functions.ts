@@ -2,12 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { safeError } from "./safe-error";
-
-async function assertAdmin(ctx: { supabase: any; userId: string }) {
-  const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
-  if (error) throw safeError("upload.assertAdmin", error, undefined, true);
-  if (!data) throw new Error("Acesso negado: apenas administradores podem importar.");
-}
+import { assertAdmin } from "./admin-utils";
 
 const SaleRow = z.object({
   store_code: z.string(),
@@ -33,7 +28,7 @@ export const beginImport = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    await assertAdmin(context, "upload.assertAdmin");
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: cleanErr } = await supabaseAdmin.from("staging_sales").delete().eq("sale_date", data.sale_date);
@@ -62,7 +57,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     z.object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRow) }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    await assertAdmin(context, "upload.assertAdmin");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const rows = data.rows.map((r) => ({ ...r, batch_id: data.batch_id, sale_date: data.sale_date }));
     const { error } = await supabaseAdmin.from("staging_sales").insert(rows);
@@ -76,7 +71,7 @@ export const finalizeImport = createServerFn({ method: "POST" })
     z.object({ sale_date: z.string(), batch_id: z.string(), row_count: z.number().int().nonnegative() }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    await assertAdmin(context, "upload.assertAdmin");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Swap atômico via RPC (valida staging, deleta aggs antigas, popula aggs direto, limpa staging, registra log)
