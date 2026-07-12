@@ -99,7 +99,7 @@ async function main() {
     p_batch_id: batchId,
     p_sale_date: parsed.sale_date,
     p_row_count: totalRows,
-    p_imported_by: userId ?? "00000000-0000-0000-0000-000000000000",
+    p_imported_by: (userId ?? null) as unknown as string,
   });
   if (swapErr) { console.error("   ❌ Erro ao finalizar:", swapErr.message); process.exit(1); }
   console.log("   ✓ Importação finalizada");
