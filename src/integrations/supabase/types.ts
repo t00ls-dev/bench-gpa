@@ -363,8 +363,6 @@ export type Database = {
         }[]
       }
       refresh_filter_hierarchy: { Args: never; Returns: undefined }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       upsert_products_bulk: {
         Args: { p_rows: Json; p_sale_date: string }
         Returns: undefined
