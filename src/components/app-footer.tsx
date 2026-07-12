@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { CalendarCheck, GitCommitHorizontal } from "lucide-react";
 import { getLatestSaleInfo } from "@/lib/analytics.functions";
 
 function fmtDate(iso: string) {
@@ -28,9 +29,13 @@ export function AppFooter() {
 
   return (
     <div className="kpi-card mt-8 flex items-center gap-x-3 overflow-x-auto whitespace-nowrap text-xs text-muted-foreground">
-      <span>Última venda: {data ? fmtDate(data.sale_date) : "—"}</span>
+      <span className="flex items-center gap-1.5">
+        <CalendarCheck className="size-3.5" />
+        Última venda: {data ? fmtDate(data.sale_date) : "—"}
+      </span>
       <span className="hidden sm:inline">·</span>
-      <span>
+      <span className="flex items-center gap-1.5">
+        <GitCommitHorizontal className="size-3.5" />
         commit <code className="text-foreground/70">{__COMMIT_HASH__}</code> ({timeAgo(Number(__COMMIT_DATE__))})
       </span>
     </div>
