@@ -9,7 +9,6 @@ import {
   setUserActive,
   resetPassword,
   diagnoseData,
-  repairAggregations,
   dbHealthCheck,
 } from "@/lib/admin.functions";
 import type { DbHealthData } from "@/lib/admin.functions";
@@ -26,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  ShieldCheck, ShieldOff, KeyRound, Loader2, Users, UserPlus, Database, AlertTriangle, CheckCircle2,
+  ShieldCheck, ShieldOff, KeyRound, Loader2, Users, UserPlus, Database, CheckCircle2,
   HardDrive, Activity, Server,
 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
@@ -53,7 +52,6 @@ function AdminPage() {
   const setActive = useServerFn(setUserActive);
   const resetPw = useServerFn(resetPassword);
   const diag = useServerFn(diagnoseData);
-  const repair = useServerFn(repairAggregations);
   const health = useServerFn(dbHealthCheck);
   const qc = useQueryClient();
   const [err, setErr] = useState<string | null>(null);
@@ -401,7 +399,6 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
         </h2>
         <DiagnoseRepairSection
           diagnoseFn={diag}
-          repairFn={repair}
         />
       </section>
 
@@ -442,19 +439,14 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
 
 function DiagnoseRepairSection({
   diagnoseFn,
-  repairFn,
 }: {
   diagnoseFn: () => Promise<Record<string, unknown>>;
-  repairFn: () => Promise<Record<string, unknown>>;
 }) {
   const [diag, setDiag] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
-  const [repairing, setRepairing] = useState(false);
-  const [repairResult, setRepairResult] = useState<string | null>(null);
 
   const runDiagnose = async () => {
     setLoading(true);
-    setRepairResult(null);
     try {
       const r = await diagnoseFn();
       setDiag(r as Record<string, unknown>);
@@ -465,51 +457,18 @@ function DiagnoseRepairSection({
     }
   };
 
-  const runRepair = async () => {
-    setRepairing(true);
-    try {
-      const r = await repairFn();
-      const res = r as Record<string, unknown>;
-      if (res.ok) {
-        toast.success(`${res.dates_refreshed} datas reagregadas`);
-        setRepairResult(`✓ ${res.dates_refreshed} datas processadas, ${res.errors} erros`);
-        runDiagnose();
-      } else {
-        toast.error((res.message as string) ?? "Falha no reparo");
-      }
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao reparar");
-    } finally {
-      setRepairing(false);
-    }
-  };
-
-  const needsRepair = diag && Number(diag.sales) > 0 && Number(diag.sales_daily_agg) === 0;
-
   return (
     <div className="kpi-card space-y-3">
       <p className="text-sm text-muted-foreground">
-        Verifique o estado das tabelas de agregação. Se houver dados em vendas brutas mas as agregações estiverem vazias, use o reparo.
+        Contagem de registros nas tabelas do sistema.
       </p>
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={runDiagnose} disabled={loading}>
           {loading ? <Loader2 className="size-4 animate-spin mr-1" /> : <Database className="size-4 mr-1" />}
-          Diagnosticar
+          Contar registros
         </Button>
-        {needsRepair && (
-          <Button size="sm" onClick={runRepair} disabled={repairing}>
-            {repairing ? <Loader2 className="size-4 animate-spin mr-1" /> : <AlertTriangle className="size-4 mr-1" />}
-            Reparar agregações
-          </Button>
-        )}
       </div>
-
-      {repairResult && (
-        <p className="text-xs text-success flex items-center gap-1">
-          <CheckCircle2 className="size-3.5" /> {repairResult}
-        </p>
-      )}
 
       {diag && (
         <div className="overflow-x-auto">
@@ -522,7 +481,7 @@ function DiagnoseRepairSection({
             </thead>
             <tbody>
               {[
-                ['sales', 'Vendas (brutas)'],
+                ['staging_sales', 'Staging (vendas brutas)'],
                 ['sales_daily_agg', 'Vendas (agregadas)'],
                 ['filter_hierarchy', 'Hierarquia de filtros'],
                 ['products', 'Produtos'],
@@ -531,23 +490,11 @@ function DiagnoseRepairSection({
               ].map(([key, label]) => (
                 <tr key={key} className="border-b border-border/40">
                   <td className="py-1.5 pr-4">{label}</td>
-                  <td className={`py-1.5 text-right font-mono ${
-                    key === 'sales_daily_agg' && Number(diag[key]) === 0 && Number(diag.sales) > 0
-                      ? 'text-destructive font-bold'
-                      : ''
-                  }`}>
+                  <td className="py-1.5 text-right font-mono">
                     {Number(diag[key] ?? 0).toLocaleString('pt-BR')}
                   </td>
                 </tr>
               ))}
-              <tr>
-                <td className="py-1.5 pr-4">Datas em vendas</td>
-                <td className="py-1.5 text-right font-mono">
-                  {Array.isArray(diag.dates_in_sales)
-                    ? `${diag.dates_in_sales.length} datas`
-                    : String(diag.dates_in_sales ?? '-')}
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
