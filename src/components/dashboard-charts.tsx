@@ -8,9 +8,18 @@ interface DashboardData {
     byDate: { date: string; val: number }[];
     byStore: { code: string; name: string; val: number }[];
   };
+  previous?: {
+    byDate: { date: string; val: number }[];
+  } | null;
 }
 
 export function DashboardCharts({ data, isLoading }: { data: DashboardData | undefined; isLoading: boolean }) {
+  const chartData = data?.current.byDate.map((d, i) => ({
+    date: d.date,
+    Atual: d.val,
+    Anterior: data?.previous?.byDate[i]?.val ?? null,
+  }));
+
   return (
     <section className="mt-6 grid gap-4 lg:grid-cols-2">
       <div className="kpi-card">
@@ -21,15 +30,20 @@ export function DashboardCharts({ data, isLoading }: { data: DashboardData | und
             <Skeleton className="h-full w-full rounded-lg" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data?.current.byDate ?? []}>
+              <LineChart data={chartData ?? []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => fmtBRShort(String(v))} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <Tooltip formatter={(v: number) => fmtBRL(v)} labelFormatter={(v) => fmtBRShort(String(v))} />
-                <Line type="monotone" dataKey="val" stroke="var(--chart-1)" strokeWidth={2.5} dot={false} />
+                <Tooltip formatter={(v: number, name: string) => [fmtBRL(v), name]} labelFormatter={(v) => fmtBRShort(String(v))} />
+                <Line type="monotone" dataKey="Atual" stroke="var(--chart-1)" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="Anterior" stroke="var(--chart-1)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} opacity={0.5} />
               </LineChart>
             </ResponsiveContainer>
           )}
+          <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-[var(--chart-1)]" /> Atual</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm border-2 border-dashed border-[var(--chart-1)] opacity-50" /> Anterior</span>
+          </div>
         </div>
       </div>
 
