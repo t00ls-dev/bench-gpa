@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  ShieldCheck, ShieldOff, KeyRound, Loader2, Users, UserPlus, Database, CheckCircle2,
+  Shield, ShieldCheck, ShieldOff, KeyRound, Loader2, Users, UserPlus, Database,
   HardDrive, Activity, Server,
 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
@@ -127,10 +127,295 @@ function AdminPage() {
     }
   };
 
-  if (err) {
-    return (
-      <div className="kpi-card text-center">
-        <p className="text-sm text-destructive">{err}</p>
+  const [tab, setTab] = useState<"usuarios" | "sistema">("usuarios");
+
+  return (
+    <div>
+      <header className="mb-6">
+        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+          <Shield className="size-7 text-primary shrink-0" /> Administração
+        </h1>
+        {err && (
+          <p className="mt-2 text-sm text-destructive">{err}</p>
+        )}
+      </header>
+
+      {/* Tab bar */}
+      <div className="mb-6 flex gap-1 rounded-lg bg-muted p-1 w-fit">
+        <button
+          onClick={() => setTab("usuarios")}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            tab === "usuarios"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Users className="size-4" /> Usuários
+        </button>
+        <button
+          onClick={() => setTab("sistema")}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            tab === "sistema"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Server className="size-4" /> Sistema
+        </button>
+      </div>
+
+      {/* ── Tab: Usuários ── */}
+      {tab === "usuarios" && (
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Cadastre novos usuários, ative/inative, redefina senhas e alterne o papel.</p>
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button><UserPlus className="mr-2 size-4" /> Novo usuário</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Novo usuário</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <Label>E-mail</Label>
+                    <div className="mt-1.5 flex">
+                      <Input
+                        value={nEmailLocal}
+                        onChange={(e) => setNEmailLocal(e.target.value)}
+                        placeholder="ex.: uilton.leite"
+                        className="rounded-r-none"
+                        autoComplete="off"
+                      />
+                      <span className="inline-flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
+                        @gpabr.com
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Nome</Label>
+                    <Input className="mt-1.5" value={nName} onChange={(e) => setNName(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Senha inicial</Label>
+                    <Input
+                      className="mt-1.5"
+                      type="password"
+                      value={nPassword}
+                      onChange={(e) => setNPassword(e.target.value)}
+                      placeholder="Mínimo 8 caracteres"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div>
+                    <Label>Papel</Label>
+                    <Select value={nRole} onValueChange={(v) => setNRole(v as "admin" | "user")}>
+                      <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Usuário</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</Button>
+                  <Button onClick={submitCreate} disabled={creating || !nEmailLocal || !nName || nPassword.length < 8}>
+                    {creating ? <Loader2 className="size-4 animate-spin" /> : "Criar"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="kpi-card overflow-x-auto p-0">
+            {isLoading ? (
+              <div className="space-y-2 p-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3">E-mail</th>
+                    <th className="px-4 py-3">Nome</th>
+                    <th className="px-4 py-3">Papel</th>
+                    <th className="px-4 py-3">Ativo</th>
+                    <th className="px-4 py-3">Cadastro</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data ?? []).map((u) => {
+                    const isAdmin = u.role === "admin";
+                    return (
+                      <tr key={u.id} className="border-b border-border/60">
+                        <td className="px-4 py-3 font-medium">{u.email}</td>
+                        <td className="px-4 py-3">{u.name}</td>
+                        <td className="px-4 py-3 text-xs">{isAdmin ? "Administrador" : "Usuário"}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={u.is_active}
+                              onCheckedChange={(v) =>
+                                action(setActive({ data: { userId: u.id, isActive: v } }),
+                                  v ? "Usuário ativado" : "Usuário inativado")
+                              }
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {u.is_active ? "Ativo" : "Inativo"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {fmtBRShort(new Date(u.created_at))}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title={isAdmin ? "Remover administrador" : "Tornar administrador"}
+                              aria-label={isAdmin ? "Remover administrador" : "Tornar administrador"}
+                              onClick={() =>
+                                action(
+                                  setRole({ data: { userId: u.id, role: isAdmin ? "user" : "admin" } }),
+                                  isAdmin ? "Admin removido" : "Promovido a admin"
+                                )
+                              }
+                            >
+                              {isAdmin ? <ShieldOff className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Redefinir senha"
+                              aria-label="Redefinir senha"
+                              onClick={() => { setResetTarget({ id: u.id, email: u.email }); setNewPw(""); }}
+                            >
+                              <KeyRound className="size-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Sistema ── */}
+      {tab === "sistema" && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
+              <Database className="size-5 text-primary" /> Dados e Agregações
+            </h2>
+            <DataCountSection diagnoseFn={diag} />
+          </div>
+          <div>
+            <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
+              <HardDrive className="size-5 text-primary" /> Saúde do Banco
+            </h2>
+            <DbHealthSection healthFn={health} />
+          </div>
+        </div>
+      )}
+
+      {/* Reset password dialog (renderizado fora das tabs) */}
+      <Dialog open={!!resetTarget} onOpenChange={(o) => !o && setResetTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Redefinir senha</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">{resetTarget?.email}</p>
+          <div>
+            <Label>Nova senha</Label>
+            <Input
+              className="mt-1.5"
+              type="password"
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              autoComplete="new-password"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetTarget(null)} disabled={resetting}>Cancelar</Button>
+            <Button onClick={submitReset} disabled={resetting || newPw.length < 8}>
+              {resetting ? <Loader2 className="size-4 animate-spin" /> : "Redefinir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DataCountSection({
+  diagnoseFn,
+}: {
+  diagnoseFn: () => Promise<Record<string, unknown>>;
+}) {
+  const [diag, setDiag] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const runDiagnose = async () => {
+    setLoading(true);
+    try {
+      const r = await diagnoseFn();
+      setDiag(r as Record<string, unknown>);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao diagnosticar");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="kpi-card space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Contagem de registros nas tabelas do sistema.
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={runDiagnose} disabled={loading}>
+          {loading ? <Loader2 className="size-4 animate-spin mr-1" /> : <Database className="size-4 mr-1" />}
+          Contar registros
+        </Button>
+      </div>
+
+      {diag && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
+                <th className="py-2 pr-4">Tabela</th>
+                <th className="py-2 text-right">Registros</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['staging_sales', 'Staging (vendas brutas)'],
+                ['sales_daily_agg', 'Vendas (agregadas)'],
+                ['filter_hierarchy', 'Hierarquia de filtros'],
+                ['products', 'Produtos'],
+                ['stores', 'Lojas'],
+                ['import_log', 'Log de importações'],
+              ].map(([key, label]) => (
+                <tr key={key} className="border-b border-border/40">
+                  <td className="py-1.5 pr-4">{label}</td>
+                  <td className="py-1.5 text-right font-mono">
+                    {Number(diag[key] ?? 0).toLocaleString('pt-BR')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -240,263 +525,6 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-  return (
-    <div>
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-            <Users className="size-7 text-primary shrink-0" /> Usuários
-          </h1>
-          <p className="text-sm text-muted-foreground">Cadastre novos usuários, ative/inative, redefina senhas e alterne o papel.</p>
-        </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button><UserPlus className="mr-2 size-4" /> Novo usuário</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Novo usuário</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div>
-                <Label>E-mail</Label>
-                <div className="mt-1.5 flex">
-                  <Input
-                    value={nEmailLocal}
-                    onChange={(e) => setNEmailLocal(e.target.value)}
-                    placeholder="ex.: uilton.leite"
-                    className="rounded-r-none"
-                    autoComplete="off"
-                  />
-                  <span className="inline-flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
-                    @gpabr.com
-                  </span>
-                </div>
-              </div>
-              <div>
-                <Label>Nome</Label>
-                <Input className="mt-1.5" value={nName} onChange={(e) => setNName(e.target.value)} />
-              </div>
-              <div>
-                <Label>Senha inicial</Label>
-                <Input
-                  className="mt-1.5"
-                  type="password"
-                  value={nPassword}
-                  onChange={(e) => setNPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div>
-                <Label>Papel</Label>
-                <Select value={nRole} onValueChange={(v) => setNRole(v as "admin" | "user")}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</Button>
-              <Button onClick={submitCreate} disabled={creating || !nEmailLocal || !nName || nPassword.length < 8}>
-                {creating ? <Loader2 className="size-4 animate-spin" /> : "Criar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </header>
-
-      <div className="kpi-card overflow-x-auto p-0">
-        {isLoading ? (
-          <div className="space-y-2 p-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3">E-mail</th>
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Papel</th>
-                <th className="px-4 py-3">Ativo</th>
-                <th className="px-4 py-3">Cadastro</th>
-                <th className="px-4 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data ?? []).map((u) => {
-                const isAdmin = u.role === "admin";
-                return (
-                  <tr key={u.id} className="border-b border-border/60">
-                    <td className="px-4 py-3 font-medium">{u.email}</td>
-                    <td className="px-4 py-3">{u.name}</td>
-                    <td className="px-4 py-3 text-xs">{isAdmin ? "Administrador" : "Usuário"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={u.is_active}
-                          onCheckedChange={(v) =>
-                            action(setActive({ data: { userId: u.id, isActive: v } }),
-                              v ? "Usuário ativado" : "Usuário inativado")
-                          }
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {u.is_active ? "Ativo" : "Inativo"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {fmtBRShort(new Date(u.created_at))}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          title={isAdmin ? "Remover administrador" : "Tornar administrador"}
-                          aria-label={isAdmin ? "Remover administrador" : "Tornar administrador"}
-                          onClick={() =>
-                            action(
-                              setRole({ data: { userId: u.id, role: isAdmin ? "user" : "admin" } }),
-                              isAdmin ? "Admin removido" : "Promovido a admin"
-                            )
-                          }
-                        >
-                          {isAdmin ? <ShieldOff className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          title="Redefinir senha"
-                          aria-label="Redefinir senha"
-                          onClick={() => { setResetTarget({ id: u.id, email: u.email }); setNewPw(""); }}
-                        >
-                          <KeyRound className="size-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Diagnóstico e Reparo */}
-      <section className="mt-10">
-        <h2 className="font-display text-xl font-bold flex items-center gap-2 mb-4">
-          <Database className="size-5 text-primary" /> Dados e Agregações
-        </h2>
-        <DiagnoseRepairSection
-          diagnoseFn={diag}
-        />
-      </section>
-
-      {/* Saúde do Banco */}
-      <section className="mt-10">
-        <h2 className="font-display text-xl font-bold flex items-center gap-2 mb-4">
-          <HardDrive className="size-5 text-primary" /> Saúde do Banco
-        </h2>
-        <DbHealthSection healthFn={health} />
-      </section>
-
-      <Dialog open={!!resetTarget} onOpenChange={(o) => !o && setResetTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Redefinir senha</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">{resetTarget?.email}</p>
-          <div>
-            <Label>Nova senha</Label>
-            <Input
-              className="mt-1.5"
-              type="password"
-              value={newPw}
-              onChange={(e) => setNewPw(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              autoComplete="new-password"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setResetTarget(null)} disabled={resetting}>Cancelar</Button>
-            <Button onClick={submitReset} disabled={resetting || newPw.length < 8}>
-              {resetting ? <Loader2 className="size-4 animate-spin" /> : "Redefinir"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function DiagnoseRepairSection({
-  diagnoseFn,
-}: {
-  diagnoseFn: () => Promise<Record<string, unknown>>;
-}) {
-  const [diag, setDiag] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const runDiagnose = async () => {
-    setLoading(true);
-    try {
-      const r = await diagnoseFn();
-      setDiag(r as Record<string, unknown>);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao diagnosticar");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="kpi-card space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Contagem de registros nas tabelas do sistema.
-      </p>
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={runDiagnose} disabled={loading}>
-          {loading ? <Loader2 className="size-4 animate-spin mr-1" /> : <Database className="size-4 mr-1" />}
-          Contar registros
-        </Button>
-      </div>
-
-      {diag && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
-                <th className="py-2 pr-4">Tabela</th>
-                <th className="py-2 text-right">Registros</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ['staging_sales', 'Staging (vendas brutas)'],
-                ['sales_daily_agg', 'Vendas (agregadas)'],
-                ['filter_hierarchy', 'Hierarquia de filtros'],
-                ['products', 'Produtos'],
-                ['stores', 'Lojas'],
-                ['import_log', 'Log de importações'],
-              ].map(([key, label]) => (
-                <tr key={key} className="border-b border-border/40">
-                  <td className="py-1.5 pr-4">{label}</td>
-                  <td className="py-1.5 text-right font-mono">
-                    {Number(diag[key] ?? 0).toLocaleString('pt-BR')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>
