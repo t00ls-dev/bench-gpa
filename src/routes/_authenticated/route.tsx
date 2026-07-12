@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { LayoutDashboard, Upload, Package, Users, LogOut, Layers, Shield } from "lucide-react";
+import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

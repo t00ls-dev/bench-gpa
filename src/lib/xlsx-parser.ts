@@ -1,7 +1,7 @@
 // Parser for GPA sales export (DTA_VENDA matrix).
 import * as XLSX from "xlsx";
 
-export interface ParsedSale {
+interface ParsedSale {
   store_code: string;
   store_name: string;
   depto: string | null;
@@ -13,7 +13,7 @@ export interface ParsedSale {
   val_vda: number;
 }
 
-export interface ParsedSalesFile {
+interface ParsedSalesFile {
   kind: "sales";
   sale_date: string; // YYYY-MM-DD
   sales: ParsedSale[];
@@ -122,6 +122,3 @@ function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
   };
 }
 
-export function parseWorkbook(buffer: ArrayBuffer): ParsedSalesFile {
-  return parseAnyWorkbook(buffer);
-}
