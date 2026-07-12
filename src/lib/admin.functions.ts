@@ -2,12 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { safeError } from "./safe-error";
-
-async function assertAdmin(ctx: { supabase: any; userId: string }) {
-  const { data, error } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
-  if (error) throw safeError("assertAdmin", error, undefined, true);
-  if (!data) throw new Error("Apenas administradores.");
-}
+import { assertAdmin } from "./admin-utils";
 
 const emailSchema = z.string().trim().toLowerCase()
   .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
