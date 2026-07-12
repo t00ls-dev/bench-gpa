@@ -96,17 +96,20 @@ async function main() {
   // ---- finalizeImport (manual, evita timeout do RPC) ----
   console.log("\n🔄 Finalizando...");
 
-  const PAGE_SIZE = 10000;
+  const PAGE_SIZE = 2000;
   const allStaging: any[] = [];
-  for (let page = 0; ; page++) {
+  let offset = 0;
+  for (;;) {
     const { data: rows, error: fetchErr } = await supabaseAdmin
       .from("staging_sales")
       .select("*")
       .eq("batch_id", batchId)
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      .order("prod_code", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
     if (fetchErr) { console.error("   ❌ Erro ao buscar staging:", fetchErr.message); process.exit(1); }
     if (!rows || rows.length === 0) break;
     allStaging.push(...rows);
+    offset += rows.length;
   }
   console.log(`   ✓ ${allStaging.length} linhas lidas do staging`);
 
