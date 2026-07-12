@@ -93,15 +93,96 @@ async function main() {
     console.log(`   ✓ Chunk ${i / chunkSize + 1}: ${chunk.length} linhas (${pct}%)`);
   }
 
-  // ---- finalizeImport ----
+  // ---- finalizeImport (manual, evita timeout do RPC) ----
   console.log("\n🔄 Finalizando...");
-  const { error: swapErr } = await supabaseAdmin.rpc("finalize_import", {
-    p_batch_id: batchId,
-    p_sale_date: parsed.sale_date,
-    p_row_count: totalRows,
-    p_imported_by: (userId ?? null) as unknown as string,
-  });
-  if (swapErr) { console.error("   ❌ Erro ao finalizar:", swapErr.message); process.exit(1); }
+
+  const PAGE_SIZE = 10000;
+  const allStaging: any[] = [];
+  for (let page = 0; ; page++) {
+    const { data: rows, error: fetchErr } = await supabaseAdmin
+      .from("staging_sales")
+      .select("*")
+      .eq("batch_id", batchId)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (fetchErr) { console.error("   ❌ Erro ao buscar staging:", fetchErr.message); process.exit(1); }
+    if (!rows || rows.length === 0) break;
+    allStaging.push(...rows);
+  }
+  console.log(`   ✓ ${allStaging.length} linhas lidas do staging`);
+
+  // 3. Deleta agregações antigas da data
+  const { error: del1 } = await supabaseAdmin.from("sales_daily_agg").delete().eq("sale_date", parsed.sale_date);
+  if (del1) { console.error("   ❌ Erro ao deletar sales_daily_agg:", del1.message); process.exit(1); }
+  const { error: del2 } = await supabaseAdmin.from("sales_prod_daily_agg").delete().eq("sale_date", parsed.sale_date);
+  if (del2) { console.error("   ❌ Erro ao deletar sales_prod_daily_agg:", del2.message); process.exit(1); }
+
+  // 4. Agrupa no cliente para sales_daily_agg
+  const dKey = (r: any) => `${r.sale_date}|${r.store_code}|${r.depto}|${r.secao}|${r.grupo}|${r.subgrupo}`;
+  const dailyMap = new Map<string, any>();
+  for (const r of allStaging) {
+    const k = dKey(r);
+    const existing = dailyMap.get(k);
+    if (existing) {
+      existing.val_vda += r.val_vda;
+      existing.item_count++;
+    } else {
+      dailyMap.set(k, {
+        sale_date: r.sale_date, store_code: r.store_code, store_name: r.store_name,
+        depto: r.depto, secao: r.secao, grupo: r.grupo, subgrupo: r.subgrupo,
+        val_vda: r.val_vda, item_count: 1,
+      });
+    }
+  }
+  const dailyAggs = Array.from(dailyMap.values());
+
+  const pKey = (r: any) => `${r.sale_date}|${r.store_code}|${r.depto}|${r.secao}|${r.grupo}|${r.subgrupo}|${r.prod_code}`;
+  const prodMap = new Map<string, any>();
+  for (const r of allStaging) {
+    const k = pKey(r);
+    const existing = prodMap.get(k);
+    if (existing) {
+      existing.val_vda += r.val_vda;
+      existing.item_count++;
+    } else {
+      prodMap.set(k, {
+        sale_date: r.sale_date, store_code: r.store_code, store_name: r.store_name,
+        depto: r.depto, secao: r.secao, grupo: r.grupo, subgrupo: r.subgrupo,
+        prod_code: r.prod_code, prod_name: r.prod_name,
+        val_vda: r.val_vda, item_count: 1,
+      });
+    }
+  }
+  const prodAggs = Array.from(prodMap.values());
+
+  // 5. Insere agregações em lote
+  for (let i = 0; i < dailyAggs.length; i += 1000) {
+    const { error: insErr } = await supabaseAdmin.from("sales_daily_agg").insert(dailyAggs.slice(i, i + 1000));
+    if (insErr) { console.error("   ❌ Erro ao inserir sales_daily_agg:", insErr.message); process.exit(1); }
+  }
+  console.log(`   ✓ ${dailyAggs.length} linhas em sales_daily_agg`);
+  for (let i = 0; i < prodAggs.length; i += 1000) {
+    const { error: insErr } = await supabaseAdmin.from("sales_prod_daily_agg").insert(prodAggs.slice(i, i + 1000));
+    if (insErr) { console.error("   ❌ Erro ao inserir sales_prod_daily_agg:", insErr.message); process.exit(1); }
+  }
+  console.log(`   ✓ ${prodAggs.length} linhas em sales_prod_daily_agg`);
+
+  // 6. Limpa staging
+  const { error: cleanStgErr } = await supabaseAdmin.from("staging_sales").delete().eq("batch_id", batchId);
+  if (cleanStgErr) { console.error("   ❌ Erro ao limpar staging:", cleanStgErr.message); process.exit(1); }
+
+  // 7. Registra no log
+  const { error: logErr } = await supabaseAdmin.from("import_log").upsert({
+    sale_date: parsed.sale_date,
+    row_count: totalRows,
+    imported_at: new Date().toISOString(),
+    imported_by: userId ?? null,
+  }, { onConflict: "sale_date" });
+  if (logErr) { console.error("   ❌ Erro ao registrar log:", logErr.message); process.exit(1); }
+
+  // 8. Atualiza hierarquia
+  const { error: hierErr } = await supabaseAdmin.rpc("refresh_filter_hierarchy");
+  if (hierErr) console.warn("   ⚠️  Erro ao atualizar hierarquia (não fatal):", hierErr.message);
+
   console.log("   ✓ Importação finalizada");
 
   // ---- purgeOldAggs ----
