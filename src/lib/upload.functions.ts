@@ -79,7 +79,7 @@ export const finalizeImport = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1) Swap atômico via RPC (valida staging, deleta dados antigos, insere novos, registra log)
+    // Swap atômico via RPC (valida staging, deleta aggs antigas, popula aggs direto, limpa staging, registra log)
     const { error: swapErr } = await supabaseAdmin.rpc("finalize_import", {
       p_batch_id: data.batch_id,
       p_sale_date: data.sale_date,
@@ -87,66 +87,6 @@ export const finalizeImport = createServerFn({ method: "POST" })
       p_imported_by: context.userId,
     });
     if (swapErr) throw safeError("finalizeImport.swap", swapErr, "Falha ao finalizar importação.", true);
-
-    // 2) Tenta refresh da agg via RPC
-    const { error: aggErr } = await supabaseAdmin.rpc("refresh_sales_daily_agg", { p_date: data.sale_date });
-    if (!aggErr) {
-      const { error: hierErr } = await supabaseAdmin.rpc("refresh_filter_hierarchy");
-      if (hierErr) console.error("[finalizeImport] refresh_filter_hierarchy failed:", hierErr);
-      return { ok: true };
-    }
-
-    // 3) Se falhou, faz passo a passo
-    console.error("[finalizeImport] refresh_sales_daily_agg failed, stepping manually:", aggErr);
-
-    const { error: delErr } = await supabaseAdmin.from("sales_daily_agg").delete().eq("sale_date", data.sale_date);
-    if (delErr) throw safeError("finalizeImport.delAgg", delErr, "Falha ao limpar agregados antigos.", true);
-
-    const { data: salesRows, error: queryErr } = await supabaseAdmin
-      .from("sales")
-      .select("store_code, store_name, depto, secao, grupo, subgrupo, val_vda")
-      .eq("sale_date", data.sale_date);
-    if (queryErr) throw safeError("finalizeImport.querySales", queryErr, "Falha ao consultar vendas para agregação.", true);
-
-    if (salesRows && salesRows.length > 0) {
-      interface AggRow {
-        sale_date: string;
-        store_code: string;
-        store_name: string;
-        depto: string | null;
-        secao: string | null;
-        grupo: string | null;
-        subgrupo: string | null;
-        val_vda: number;
-        item_count: number;
-      }
-      const grouped = new Map<string, AggRow>();
-      for (const r of salesRows) {
-        const key = `${r.store_code}|${r.depto ?? ""}|${r.secao ?? ""}|${r.grupo ?? ""}|${r.subgrupo ?? ""}`;
-        const g = grouped.get(key);
-        if (g) {
-          g.val_vda = Number(g.val_vda) + Number(r.val_vda);
-          g.item_count += 1;
-        } else {
-          grouped.set(key, {
-            sale_date: data.sale_date,
-            store_code: r.store_code,
-            store_name: r.store_name,
-            depto: r.depto,
-            secao: r.secao,
-            grupo: r.grupo,
-            subgrupo: r.subgrupo,
-            val_vda: Number(r.val_vda),
-            item_count: 1,
-          });
-        }
-      }
-      const { error: insErr } = await supabaseAdmin.from("sales_daily_agg").insert(Array.from(grouped.values()));
-      if (insErr) throw safeError("finalizeImport.insAgg", insErr, "Falha ao inserir agregados.", true);
-    }
-
-    const { error: hierErr } = await supabaseAdmin.rpc("refresh_filter_hierarchy");
-    if (hierErr) throw safeError("finalizeImport.hierarchy", hierErr, "Falha ao atualizar hierarquia de filtros.", true);
 
     return { ok: true };
   });

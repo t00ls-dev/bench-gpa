@@ -93,7 +93,7 @@ src/
 
 supabase/
 ├── config.toml                → Config do projeto Supabase
-└── migrations/                → 24 migrations SQL (schema, RPCs, RLS)
+└── migrations/                → 50 migrations SQL (schema, RPCs, RLS, security)
 ```
 
 ---
@@ -114,13 +114,15 @@ supabase/
 ## Banco de Dados (PostgreSQL via Supabase)
 
 ### Tabelas Principais
-- `public.sales` — Fato: `id, sale_date, store_code, store_name, depto, secao, grupo, subgrupo, prod_code, prod_name, val_vda`
+- `public.staging_sales` — Staging: `id, batch_id, sale_date, store_code, store_name, depto, secao, grupo, subgrupo, prod_code, prod_name, val_vda`
+- `public.sales_daily_agg` — Agregado diário por hierarquia (dashboard)
+- `public.sales_prod_daily_agg` — Agregado diário por produto (análise produto/área)
 - `public.products` — `prod_code PK, prod_name, last_seen` (índice trigram para busca)
 - `public.stores` — `store_code PK, store_name`
 - `public.users` — `id PK (ref auth.users), email, name, role (admin|user), is_active, created_at`
 - `public.import_log` — `sale_date PK, row_count, imported_at, imported_by`
 - `public.filter_hierarchy` — Hierarquia pré-computada para filtros cascata
-- `public.sales_daily_agg` — Materialized view para dashboard rápido
+- `public.sales` — (deprecated, não mais utilizada; aguardando DROP após validação)
 
 ### RPCs
 - `dashboard_metrics`, `dashboard_rankings`, `filter_options`
@@ -137,7 +139,7 @@ supabase/
 3. Rotas: `beforeLoad` redireciona não autenticados para `/auth`; admin routes checam role via RPC `has_role`
 
 ### Import Pipeline
-Upload XLSX → `xlsx-parser.ts` parseia → `beginImport` deleta dados existentes + upsert products/stores → `insertSalesChunk` batches (100-2000 linhas configurável) → `finalizeImport` loga import + atualiza materialized views
+Upload XLSX → `xlsx-parser.ts` parseia → `beginImport` deleta dados existentes + upsert products/stores → `insertSalesChunk` batches (100-2000 linhas configurável) → `finalizeImport` popula aggs direto de `staging_sales` (sem passar por `sales`) + loga import + atualiza hierarquia
 
 ### Analytics
 Todas as queries analíticas via Supabase RPCs chamadas de server functions com React Query no cliente.
@@ -180,6 +182,7 @@ Todas as queries analíticas via Supabase RPCs chamadas de server functions com 
 - **Weekday-aware analytics**: produto compara contra mesmo dia da semana histórico
 - **Chunked import**: 100-2000 linhas por chunk para evitar timeout
 - **Sem email**: login simplificado email/senha, sem magic links
+- **Sem `sales`**: finalize_import popula agregados direto de staging_sales, eliminando a tabela `sales` de 500MB+ que causou crash do free tier
 
 ---
 
