@@ -1,5 +1,5 @@
 # Logs (only specific files tracked)
-logs/
+logs/*
 !logs/.gitkeep
 !logs/import.log
 !logs/cron.log
