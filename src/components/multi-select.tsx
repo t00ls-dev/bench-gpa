@@ -49,10 +49,12 @@ export function MultiSelect({
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" aria-label={label} className="h-9 w-full justify-between text-left font-normal">
           <span className="truncate">
-            {label}
-            {value.length > 0 && (
+            {value.length === 0
+              ? label
+              : options.find((o) => o.value === value[0])?.label ?? value[0]}
+            {value.length > 1 && (
               <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                {value.length}
+                +{value.length - 1}
               </span>
             )}
           </span>
