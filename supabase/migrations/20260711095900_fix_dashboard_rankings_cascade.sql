@@ -19,23 +19,33 @@ BEGIN
   IF NOT public.is_active_user(auth.uid()) THEN RAISE EXCEPTION 'forbidden'; END IF;
 
   WITH
-  f_depto AS (
+  f_base AS (
     SELECT * FROM public.sales_daily_agg
     WHERE (p_date_from IS NULL OR sale_date >= p_date_from)
       AND (p_date_to   IS NULL OR sale_date <= p_date_to)
       AND (coalesce(array_length(p_stores,1),0)=0 OR store_code = ANY(p_stores))
   ),
-  f_secao AS (
-    SELECT * FROM f_depto
+  f_depto AS (
+    SELECT * FROM f_base
     WHERE (coalesce(array_length(p_deptos,1),0)=0 OR depto = ANY(p_deptos))
   ),
+  f_secao AS (
+    SELECT * FROM f_base
+    WHERE (coalesce(array_length(p_deptos,1),0)=0 OR depto = ANY(p_deptos))
+      AND (coalesce(array_length(p_secoes,1),0)=0 OR secao = ANY(p_secoes))
+  ),
   f_grupo AS (
-    SELECT * FROM f_secao
-    WHERE (coalesce(array_length(p_secoes,1),0)=0 OR secao = ANY(p_secoes))
+    SELECT * FROM f_base
+    WHERE (coalesce(array_length(p_deptos,1),0)=0 OR depto = ANY(p_deptos))
+      AND (coalesce(array_length(p_secoes,1),0)=0 OR secao = ANY(p_secoes))
+      AND (coalesce(array_length(p_grupos,1),0)=0 OR grupo = ANY(p_grupos))
   ),
   f_subgrupo AS (
-    SELECT * FROM f_grupo
-    WHERE (coalesce(array_length(p_grupos,1),0)=0 OR grupo = ANY(p_grupos))
+    SELECT * FROM f_base
+    WHERE (coalesce(array_length(p_deptos,1),0)=0 OR depto = ANY(p_deptos))
+      AND (coalesce(array_length(p_secoes,1),0)=0 OR secao = ANY(p_secoes))
+      AND (coalesce(array_length(p_grupos,1),0)=0 OR grupo = ANY(p_grupos))
+      AND (coalesce(array_length(p_subgrupos,1),0)=0 OR subgrupo = ANY(p_subgrupos))
   )
   SELECT
     coalesce((SELECT jsonb_agg(jsonb_build_object('name', name, 'val', v) ORDER BY v DESC)
