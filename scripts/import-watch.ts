@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readdirSync, renameSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
+import { readdirSync, renameSync, existsSync, mkdirSync, appendFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { extractDate } from "./extract-date";
 
@@ -32,7 +32,7 @@ async function main() {
 
   // 1. git pull
   log("Pull: starting...");
-  const pull = exec(["git", "pull", "--rebase"]);
+  const pull = exec(["git", "pull", "--rebase", "--autostash"]);
   if (!pull.ok) {
     log(`Pull: ERROR — ${pull.stderr}`);
     log("====== import-watch abort ======");
@@ -78,15 +78,20 @@ async function main() {
     const newName = `${date}.xlsx`;
     const newPath = join(monthDir, newName);
 
-    // Rename (skip if already correct name or if target exists)
+    // Rename (or remove duplicate if target already exists)
     if (file === newName) {
       log(`Rename: already normalized`);
-    } else {
-      if (existsSync(newPath)) {
-        log(`Rename: SKIP — ${newName} already exists`);
-        processed.push(`SKIP: ${file} (target ${newName} exists)`);
-        continue;
+    } else if (existsSync(newPath)) {
+      // Normalized file already exists — this is a duplicate
+      try { renameSync(filePath, newPath); } catch {}
+      if (existsSync(filePath)) {
+        // Could not overwrite; delete source as its data is already present
+        rmSync(filePath, { force: true });
       }
+      log(`Dedup: ${file} removed (${newName} already exists)`);
+      processed.push(`DUP: ${file} → removed (${newName} exists)`);
+      continue;
+    } else {
       renameSync(filePath, newPath);
       log(`Renamed: ${file} → ${newName}`);
     }
