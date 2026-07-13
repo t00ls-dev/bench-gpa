@@ -62,14 +62,12 @@ async function main() {
     log(`Scan: ${monthDir}/`);
   }
 
-  // 3. List non-normalized .xlsx files (not YYYY-MM-DD.xlsx)
-  const files = readdirSync(monthDir).filter(
-    (f) => f.endsWith(".xlsx") && !/^\d{4}-\d{2}-\d{2}\.xlsx$/.test(f),
-  );
-  files.sort();
+  // 3. List all .xlsx files
+  const allFiles = readdirSync(monthDir).filter((f) => f.endsWith(".xlsx"));
+  allFiles.sort();
 
-  if (files.length === 0) {
-    log("No non-normalized files found.");
+  if (allFiles.length === 0) {
+    log("No xlsx files found.");
   }
 
   // 4. Process each file
@@ -78,14 +76,23 @@ async function main() {
   const imported: string[] = [];
   const failed: string[] = [];
 
-  for (const file of files) {
+  for (const file of allFiles) {
     const filePath = join(monthDir, file);
     const tracked = isTracked(filePath);
-    log(`Found: ${file}${tracked ? " (tracked)" : ""}`);
+    const normalized = /^\d{4}-\d{2}-\d{2}\.xlsx$/.test(file);
 
-    const date = extractDate(filePath);
+    log(`Found: ${file}${tracked ? " (tracked)" : ""}${normalized ? " (normalized)" : ""}`);
+
+    // Extract date: from normalized name or via extractDate
+    let date: string | null;
+    if (normalized) {
+      date = file.slice(0, 10);
+    } else {
+      date = extractDate(filePath);
+    }
+
     if (!date) {
-      log(`Date: ERROR — could not extract from filename or content`);
+      log(`Date: ERROR — could not extract from ${file}`);
       failed.push(`${file} — could not extract date`);
       continue;
     }
@@ -94,33 +101,34 @@ async function main() {
     const newName = `${date}.xlsx`;
     const newPath = join(monthDir, newName);
 
-    // --- Rename / Dedup ---
-    if (file === newName) {
-      log(`Rename: already normalized`);
-    } else if (existsSync(newPath)) {
-      // Normalized target exists — remove source (its data is already present)
-      if (tracked) {
-        gitRm(filePath);
-        if (existsSync(filePath)) rmSync(filePath, { force: true });
-      } else {
-        rmSync(filePath, { force: true });
-      }
-      log(`Dedup: ${file} removed (${newName} exists)`);
-      deduped.push(`${file} → removed (${newName} exists)`);
-      continue;
-    } else if (tracked) {
-      if (!gitMv(filePath, newPath)) {
-        log(`Rename: ERROR — git mv failed`);
-        failed.push(`${file} — git mv failed`);
+    // --- Rename / Dedup (only for non-normalized) ---
+    if (!normalized) {
+      if (file === newName) {
+        log(`Rename: already normalized`);
+      } else if (existsSync(newPath)) {
+        if (tracked) {
+          gitRm(filePath);
+          if (existsSync(filePath)) rmSync(filePath, { force: true });
+        } else {
+          rmSync(filePath, { force: true });
+        }
+        log(`Dedup: ${file} removed (${newName} exists)`);
+        deduped.push(`${file} → removed (${newName} exists)`);
         continue;
+      } else if (tracked) {
+        if (!gitMv(filePath, newPath)) {
+          log(`Rename: ERROR — git mv failed`);
+          failed.push(`${file} — git mv failed`);
+          continue;
+        }
+        log(`Git mv: ${file} → ${newName}`);
+      } else {
+        renameSync(filePath, newPath);
+        log(`Renamed: ${file} → ${newName}`);
       }
-      log(`Git mv: ${file} → ${newName}`);
-    } else {
-      renameSync(filePath, newPath);
-      log(`Renamed: ${file} → ${newName}`);
     }
 
-    // --- Check import_log ---
+    // --- Check import_log (for all files) ---
     const { supabaseAdmin } = await import("../src/integrations/supabase/client.server");
     const { data: existing } = await supabaseAdmin
       .from("import_log")

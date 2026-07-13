@@ -62,7 +62,7 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-72 max-w-[calc(100vw-2rem)] p-0"
+        className="w-[var(--radix-popover-trigger-width)] min-w-60 max-w-[calc(100vw-2rem)] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
