@@ -194,6 +194,14 @@ async function main() {
   if (purgeErr) console.warn("   ⚠️  Erro na purga (não fatal):", purgeErr.message);
   else console.log("   ✓ Purga concluída");
 
+  // Também limpa import_log de datas órfãs (agregados já removidos)
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 28);
+  const cutoffIso = cutoff.toISOString().slice(0, 10);
+  const { error: logCleanErr } = await supabaseAdmin.from("import_log").delete().lt("sale_date", cutoffIso);
+  if (logCleanErr) console.warn("   ⚠️  Erro ao limpar import_log (não fatal):", logCleanErr.message);
+  else console.log("   ✓ import_log limpo");
+
   console.log(`\n✅ Importação concluída com sucesso!`);
 }
 
