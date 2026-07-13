@@ -40,13 +40,14 @@ export function FilterBar({ value, onChange }: Props) {
 
   });
 
-  // Seed default date range from latest available date once
+  // Seed default date range to the full available window once
   useEffect(() => {
-    if (opts?.latestDate && !value.dateFrom && !value.dateTo) {
-      onChange({ ...value, dateFrom: opts.latestDate, dateTo: opts.latestDate });
+    const avail = opts?.availableDates ?? [];
+    if (avail.length > 0 && !value.dateFrom && !value.dateTo) {
+      onChange({ ...value, dateFrom: avail[0], dateTo: avail[avail.length - 1] });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opts?.latestDate]);
+  }, [opts?.availableDates]);
 
   // Re-clamp current selection to available dates if filters narrowed the data set
   useEffect(() => {
