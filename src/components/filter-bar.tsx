@@ -23,21 +23,37 @@ interface Props {
   onChange: (f: Filters) => void;
 }
 
-interface StoreOpt { store_code: string; store_name: string }
+interface StoreOpt {
+  store_code: string;
+  store_name: string;
+}
 
 export function FilterBar({ value, onChange }: Props) {
   const getOpts = useServerFn(getFilterOptions);
   // Cascading filters: each level narrows the next
   const { data: opts } = useQuery({
-    queryKey: ["filter-options", value.dateFrom, value.dateTo, value.stores, value.deptos, value.secoes, value.grupos],
-    queryFn: () => getOpts({ data: {
-      dateFrom: value.dateFrom || null,
-      dateTo: value.dateTo || null,
-      stores: value.stores, deptos: value.deptos, secoes: value.secoes, grupos: value.grupos,
-    } }),
+    queryKey: [
+      "filter-options",
+      value.dateFrom,
+      value.dateTo,
+      value.stores,
+      value.deptos,
+      value.secoes,
+      value.grupos,
+    ],
+    queryFn: () =>
+      getOpts({
+        data: {
+          dateFrom: value.dateFrom || null,
+          dateTo: value.dateTo || null,
+          stores: value.stores,
+          deptos: value.deptos,
+          secoes: value.secoes,
+          grupos: value.grupos,
+        },
+      }),
     staleTime: 10 * 60_000,
     gcTime: 30 * 60_000,
-
   });
 
   // Seed default date range to the full available window once
@@ -68,7 +84,8 @@ export function FilterBar({ value, onChange }: Props) {
   const strList = (arr: unknown): string[] => (arr ?? []) as string[];
 
   // Cascading reset: when a parent changes, drop dependent selections.
-  const setStores = (v: string[]) => setF({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
+  const setStores = (v: string[]) =>
+    setF({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
   const setDeptos = (v: string[]) => setF({ deptos: v, secoes: [], grupos: [], subgrupos: [] });
   const setSecoes = (v: string[]) => setF({ secoes: v, grupos: [], subgrupos: [] });
   const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
@@ -92,26 +109,49 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Loja</Label>
           <MultiSelect
             label="Todas"
-            options={stores.map((s) => ({ value: s.store_code, label: `${s.store_code} - ${s.store_name}` }))}
+            options={stores.map((s) => ({
+              value: s.store_code,
+              label: `${s.store_code} - ${s.store_name}`,
+            }))}
             value={value.stores}
             onChange={setStores}
           />
         </div>
         <div>
           <Label className="text-xs">Departamento</Label>
-          <MultiSelect label="Todos" options={strList(opts?.deptos).map((s) => ({ value: s, label: s }))} value={value.deptos} onChange={setDeptos} />
+          <MultiSelect
+            label="Todos"
+            options={strList(opts?.deptos).map((s) => ({ value: s, label: s }))}
+            value={value.deptos}
+            onChange={setDeptos}
+          />
         </div>
         <div>
           <Label className="text-xs">Seção</Label>
-          <MultiSelect label="Todas" options={strList(opts?.secoes).map((s) => ({ value: s, label: s }))} value={value.secoes} onChange={setSecoes} />
+          <MultiSelect
+            label="Todas"
+            options={strList(opts?.secoes).map((s) => ({ value: s, label: s }))}
+            value={value.secoes}
+            onChange={setSecoes}
+          />
         </div>
         <div>
           <Label className="text-xs">Grupo</Label>
-          <MultiSelect label="Todos" options={strList(opts?.grupos).map((s) => ({ value: s, label: s }))} value={value.grupos} onChange={setGrupos} />
+          <MultiSelect
+            label="Todos"
+            options={strList(opts?.grupos).map((s) => ({ value: s, label: s }))}
+            value={value.grupos}
+            onChange={setGrupos}
+          />
         </div>
         <div className="md:col-span-2">
           <Label className="text-xs">Subgrupo</Label>
-          <MultiSelect label="Todos" options={strList(opts?.subgrupos).map((s) => ({ value: s, label: s }))} value={value.subgrupos} onChange={(v) => setF({ subgrupos: v })} />
+          <MultiSelect
+            label="Todos"
+            options={strList(opts?.subgrupos).map((s) => ({ value: s, label: s }))}
+            value={value.subgrupos}
+            onChange={(v) => setF({ subgrupos: v })}
+          />
         </div>
         <div className="md:col-span-2 lg:col-span-4">
           <Label className="text-xs">Comparar com</Label>
@@ -129,7 +169,9 @@ export function FilterBar({ value, onChange }: Props) {
                 onClick={() => setF({ compare: o.v as Filters["compare"] })}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition",
-                  value.compare === o.v ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:border-primary/50"
+                  value.compare === o.v
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/50",
                 )}
               >
                 {o.l}
@@ -138,8 +180,6 @@ export function FilterBar({ value, onChange }: Props) {
           </div>
         </div>
       </div>
-
     </div>
   );
 }
-
