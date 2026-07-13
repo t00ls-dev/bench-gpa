@@ -315,13 +315,13 @@ function ProdutoPage() {
               label={`Média de ${refWeekdayPlural?.toLowerCase() ?? "datas anteriores"}`}
               value={fmtBRL(avgSame)}
               delta={avgSame > 0 ? ((analysisData.refValue ?? 0) - avgSame) / avgSame : null}
-              hint={`Todos os ${refWeekdayPlural?.toLowerCase() ?? ""} do histórico`}
+              hint={`${refArticle} 4 ${refWeekdayPlural?.toLowerCase() ?? "datas"}`}
             />
             <KpiCard
               label="Média diária"
               value={fmtBRL(avgDaily)}
               delta={avgDaily > 0 ? ((analysisData.refValue ?? 0) - avgDaily) / avgDaily : null}
-              hint="Considerando todo o histórico disponível"
+              hint="Últimos 28 dias"
             />
           </section>
 
