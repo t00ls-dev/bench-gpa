@@ -45,6 +45,12 @@ function Dashboard() {
   const delta = (cur: number, prev: number | undefined) =>
     prev && prev > 0 ? (cur - prev) / prev : null;
 
+  const hideStores = filters.stores.length === 1;
+  const hideDepto = filters.deptos.length === 1;
+  const hideSecao = filters.secoes.length === 1;
+  const hideGrupo = filters.grupos.length === 1;
+  const hideSubgrupo = filters.subgrupos.length === 1;
+
   return (
     <div>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -86,15 +92,17 @@ function Dashboard() {
           <div className="kpi-card"><Skeleton className="h-64 w-full rounded-lg" /></div>
         </section>
       }>
-        <DashboardCharts data={data} isLoading={isLoading} />
+        <DashboardCharts data={data} isLoading={isLoading} hideStores={hideStores} />
       </Suspense>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        <RankingCard title="Top Departamentos" items={rankings?.byDepto ?? []} isLoading={rankingLoading} />
-        <RankingCard title="Top Seções" items={rankings?.bySecao ?? []} isLoading={rankingLoading} />
-        <RankingCard title="Top Grupos" items={rankings?.byGrupo ?? []} isLoading={rankingLoading} />
-        <RankingCard title="Top Subgrupos" items={rankings?.bySubgrupo ?? []} isLoading={rankingLoading} />
-      </section>
+      {(hideDepto && hideSecao && hideGrupo && hideSubgrupo) ? null : (
+        <section className="mt-6 grid gap-4 lg:grid-cols-2">
+          {hideDepto ? null : <RankingCard title="Top Departamentos" items={rankings?.byDepto ?? []} isLoading={rankingLoading} />}
+          {hideSecao ? null : <RankingCard title="Top Seções" items={rankings?.bySecao ?? []} isLoading={rankingLoading} />}
+          {hideGrupo ? null : <RankingCard title="Top Grupos" items={rankings?.byGrupo ?? []} isLoading={rankingLoading} />}
+          {hideSubgrupo ? null : <RankingCard title="Top Subgrupos" items={rankings?.bySubgrupo ?? []} isLoading={rankingLoading} />}
+        </section>
+      )}
 
       <section className="mt-6">
         <RankingCard title="Top Produtos" items={rankings?.byProduto ?? []} isLoading={rankingLoading} />
