@@ -40,3 +40,20 @@ hint: Disable this message with "git config advice.addIgnoredFile false"
  1 file changed, 12 insertions(+)
 [2026-07-13 11:37:08] Git push: OK
 [2026-07-13 11:37:08] ====== import-watch end ======
+[2026-07-13 12:04:54] ====== import-watch start ======
+[2026-07-13 12:04:54] Pull: starting...
+[2026-07-13 12:04:56] Pull: Updating 0de1c95..3977f5c
+Created autostash: 5386e2b
+Fast-forward
+ data/2026-07/12-07-2026.xlsx | Bin 0 -> 585742 bytes
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 data/2026-07/12-07-2026.xlsx
+[2026-07-13 12:04:56] Scan: data/2026-07/
+[2026-07-13 12:04:56] Found: 12-07-2026.xlsx
+[2026-07-13 12:04:56] Date: 2026-07-12
+[2026-07-13 12:04:56] Renamed: 12-07-2026.xlsx → 2026-07-12.xlsx
+[2026-07-13 12:04:57] Import: starting...
+[2026-07-13 12:05:35] Import: ERROR — $ bun run scripts/import.ts "data/2026-07/2026-07-12.xlsx" --user-id "00000000-0000-0000-0000-000000000000"
+   ❌ Erro ao registrar log: insert or update on table "import_log" violates foreign key constraint "import_log_imported_by_fkey"
+error: script "cli:import" exited with code 1
+[2026-07-13 12:05:35] FAIL: 12-07-2026.xlsx → 2026-07-12.xlsx (import error)
