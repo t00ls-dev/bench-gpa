@@ -86,3 +86,12 @@ error: script "cli:import" exited with code 1
 [2026-07-13 12:08:16] Date: 2026-07-11
 [2026-07-13 12:08:16] Dedup: VENDAS11072026.xlsx removed (2026-07-11.xlsx exists)
 [2026-07-13 12:08:16] DUP: VENDAS11072026.xlsx → removed (2026-07-11.xlsx exists)
+[2026-07-13 12:08:17] Git: [main 7aeed7d] import-watch: 2026-07-13 12:08 — 1 deduped
+ 1 file changed, 8 insertions(+)
+[2026-07-13 12:08:18] Git push: OK
+[2026-07-13 12:08:18] ====== import-watch end ======
+[2026-07-13 12:08:59] ====== import-watch start ======
+[2026-07-13 12:08:59] Pull: starting...
+[2026-07-13 12:09:00] Pull: Already up to date.
+[2026-07-13 12:09:00] Scan: data/2026-07/
+[2026-07-13 12:09:00] No non-normalized files found.
