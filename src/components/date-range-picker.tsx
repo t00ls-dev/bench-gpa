@@ -14,15 +14,7 @@ function shift(date: Date, days: number) {
   d.setDate(d.getDate() + days);
   return d;
 }
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-function endOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-export type PresetKey =
-  | "yesterday" | "last7" | "last30" | "month" | "prevMonth" | "custom";
+export type PresetKey = "yesterday" | "last7" | "last14" | "last28" | "custom";
 
 interface Props {
   from: string;
@@ -37,27 +29,28 @@ interface Props {
 
 const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "yesterday", label: "Ontem" },
-  { key: "last7",     label: "Últimos 7 dias" },
-  { key: "last30",    label: "Últimos 30 dias" },
-  { key: "month",     label: "Mês atual" },
-  { key: "prevMonth", label: "Mês anterior" },
-  { key: "custom",    label: "Personalizado" },
+  { key: "last7", label: "Últimos 7 dias" },
+  { key: "last14", label: "Últimas 2 semanas" },
+  { key: "last28", label: "Últimos 28 dias" },
+  { key: "custom", label: "Personalizado" },
 ];
 
-export function computePreset(key: PresetKey, refIso?: string): { from: string; to: string } | null {
+export function computePreset(
+  key: PresetKey,
+  refIso?: string,
+  availableDates?: string[],
+): { from: string; to: string } | null {
   const ref = refIso ? new Date(refIso + "T00:00:00") : new Date();
   switch (key) {
     case "yesterday": {
-      // Sempre o dia anterior ao dia atual real, independente do reference.
       const y = shift(new Date(), -1);
       return { from: iso(y), to: iso(y) };
     }
     case "last7":     return { from: iso(shift(ref, -6)),  to: iso(ref) };
-    case "last30":    return { from: iso(shift(ref, -29)), to: iso(ref) };
-    case "month":     return { from: iso(startOfMonth(ref)), to: iso(ref) };
-    case "prevMonth": {
-      const prev = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
-      return { from: iso(startOfMonth(prev)), to: iso(endOfMonth(prev)) };
+    case "last14":    return { from: iso(shift(ref, -13)), to: iso(ref) };
+    case "last28": {
+      if (!availableDates?.length) return null;
+      return { from: availableDates[0], to: availableDates[availableDates.length - 1] };
     }
     default: return null;
   }
@@ -87,7 +80,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
   }, [from, to]);
 
   const apply = (key: PresetKey) => {
-    const r = computePreset(key, reference);
+    const r = computePreset(key, reference, availableDates);
     if (r) {
       const clamped = clampRange(r);
       if (clamped) {
@@ -175,7 +168,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
             disabled={isDisabled}
             startMonth={minIso ? new Date(minIso + "T00:00:00") : undefined}
             endMonth={maxIso ? new Date(maxIso + "T00:00:00") : undefined}
-            numberOfMonths={1}
+            numberOfMonths={2}
             className={cn("p-2 pointer-events-auto")}
           />
           <div className="flex flex-wrap items-center gap-2 px-1 text-[10px] text-muted-foreground">
@@ -187,6 +180,9 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
               <span className="inline-block size-2.5 rounded-sm border border-dashed border-border bg-background" />
               Indisponível
             </span>
+            {hasAvailable && (
+              <span className="ml-auto font-medium">{availableDates!.length} datas disponíveis</span>
+            )}
           </div>
           {!hasAvailable && (
             <p className="text-xs text-muted-foreground px-1">
