@@ -57,3 +57,19 @@ Fast-forward
    ❌ Erro ao registrar log: insert or update on table "import_log" violates foreign key constraint "import_log_imported_by_fkey"
 error: script "cli:import" exited with code 1
 [2026-07-13 12:05:35] FAIL: 12-07-2026.xlsx → 2026-07-12.xlsx (import error)
+[2026-07-13 12:05:35] Git: [main 533357d] import-watch: results 2026-07-13 12:05
+ 2 files changed, 20 insertions(+)
+[2026-07-13 12:05:37] Git push: OK
+[2026-07-13 12:05:37] ====== import-watch end ======
+[2026-07-13 12:07:01] ====== import-watch start ======
+[2026-07-13 12:07:01] Pull: starting...
+[2026-07-13 12:07:02] Pull: Already up to date.
+[2026-07-13 12:07:02] Scan: data/2026-07/
+[2026-07-13 12:07:02] Found: 12-07-2026.xlsx (tracked)
+[2026-07-13 12:07:02] Date: 2026-07-12
+[2026-07-13 12:07:02] Git mv: 12-07-2026.xlsx → 2026-07-12.xlsx
+[2026-07-13 12:07:03] Import: starting...
+[2026-07-13 12:07:37] Import: ERROR — $ bun run scripts/import.ts "data/2026-07/2026-07-12.xlsx" --user-id "00000000-0000-0000-0000-000000000000"
+   ❌ Erro ao registrar log: insert or update on table "import_log" violates foreign key constraint "import_log_imported_by_fkey"
+error: script "cli:import" exited with code 1
+[2026-07-13 12:07:37] FAIL: 12-07-2026.xlsx → 2026-07-12.xlsx (import error)
