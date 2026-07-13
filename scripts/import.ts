@@ -189,18 +189,46 @@ async function main() {
   console.log("   ✓ Importação finalizada");
 
   // ---- purgeOldAggs ----
-  console.log("\n🧹 Purga agregados antigos...");
-  const { error: purgeErr } = await supabaseAdmin.rpc("purge_old_aggs", { p_days: 28 });
-  if (purgeErr) console.warn("   ⚠️  Erro na purga (não fatal):", purgeErr.message);
-  else console.log("   ✓ Purga concluída");
+  console.log("\n🧹 Verificando retenção (4 ocorrências por dia da semana)...");
 
-  // Também limpa import_log de datas órfãs (agregados já removidos)
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 28);
-  const cutoffIso = cutoff.toISOString().slice(0, 10);
-  const { error: logCleanErr } = await supabaseAdmin.from("import_log").delete().lt("sale_date", cutoffIso);
-  if (logCleanErr) console.warn("   ⚠️  Erro ao limpar import_log (não fatal):", logCleanErr.message);
-  else console.log("   ✓ import_log limpo");
+  const { data: logEntries, error: logErr } = await supabaseAdmin
+    .from("import_log")
+    .select("sale_date")
+    .order("sale_date");
+
+  if (logErr) { console.error("   ❌ Erro ao buscar import_log:", logErr.message); process.exit(1); }
+
+  const dates = (logEntries ?? []).map((r) => r.sale_date);
+  if (dates.length < 28) {
+    console.log(`   ✓ Apenas ${dates.length} datas, mínimo 28 necessário. Nada a purgar.`);
+  } else {
+    const byDOW: Record<number, string[]> = {};
+    for (const d of dates) {
+      const dow = new Date(d + "T12:00:00").getDay();
+      if (!byDOW[dow]) byDOW[dow] = [];
+      byDOW[dow].push(d);
+    }
+
+    const toDelete: string[] = [];
+    for (const dowStr of Object.keys(byDOW)) {
+      const sorted = byDOW[Number(dowStr)].sort().reverse();
+      for (let i = 4; i < sorted.length; i++) {
+        toDelete.push(sorted[i]);
+      }
+    }
+
+    if (toDelete.length > 0) {
+      for (const table of ["sales_prod_daily_agg", "sales_daily_agg", "import_log"] as const) {
+        for (let i = 0; i < toDelete.length; i += 50) {
+          const { error } = await supabaseAdmin.from(table).delete().in("sale_date", toDelete.slice(i, i + 50));
+          if (error) console.warn(`   ⚠️  Erro ao limpar ${table}:`, error.message);
+        }
+      }
+      console.log(`   ✓ ${toDelete.length} datas excedentes removidas`);
+    } else {
+      console.log("   ✓ Nenhuma data excedente, nada a purgar.");
+    }
+  }
 
   console.log(`\n✅ Importação concluída com sucesso!`);
 }
