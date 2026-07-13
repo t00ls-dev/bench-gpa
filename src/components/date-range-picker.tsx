@@ -134,7 +134,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
           <span className="truncate whitespace-nowrap">{label}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0" align="start" collisionPadding={24}>
         <div className="grid grid-cols-2 gap-1 p-2" role="radiogroup" aria-label="Período">
           {PRESETS.map((p) => (
             <button
