@@ -191,12 +191,12 @@ async function main() {
   // ---- purgeOldAggs ----
   console.log("\n🧹 Verificando retenção (4 ocorrências por dia da semana)...");
 
-  const { data: logEntries, error: logErr } = await supabaseAdmin
+  const { data: logEntries, error: datesErr } = await supabaseAdmin
     .from("import_log")
     .select("sale_date")
     .order("sale_date");
 
-  if (logErr) { console.error("   ❌ Erro ao buscar import_log:", logErr.message); process.exit(1); }
+  if (datesErr) { console.error("   ❌ Erro ao buscar import_log:", datesErr.message); process.exit(1); }
 
   const dates = (logEntries ?? []).map((r) => r.sale_date);
   if (dates.length < 28) {
