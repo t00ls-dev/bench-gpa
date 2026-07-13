@@ -174,7 +174,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
             disabled={isDisabled}
             startMonth={minIso ? new Date(minIso + "T00:00:00") : undefined}
             endMonth={maxIso ? new Date(maxIso + "T00:00:00") : undefined}
-            numberOfMonths={2}
+            numberOfMonths={1}
             className={cn("p-2 pointer-events-auto")}
           />
           <div className="flex flex-wrap items-center gap-2 px-1 text-[10px] text-muted-foreground">
