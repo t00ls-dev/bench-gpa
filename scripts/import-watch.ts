@@ -75,6 +75,7 @@ async function main() {
   const deduped: string[] = [];
   const imported: string[] = [];
   const failed: string[] = [];
+  let fileOps = false;
 
   for (const file of allFiles) {
     const filePath = join(monthDir, file);
@@ -112,6 +113,7 @@ async function main() {
         } else {
           rmSync(filePath, { force: true });
         }
+        fileOps = true;
         log(`Dedup: ${file} removed (${newName} exists)`);
         deduped.push(`${file} → removed (${newName} exists)`);
         continue;
@@ -121,8 +123,10 @@ async function main() {
           failed.push(`${file} — git mv failed`);
           continue;
         }
+        fileOps = true;
         log(`Git mv: ${file} → ${newName}`);
       } else {
+        fileOps = true;
         renameSync(filePath, newPath);
         log(`Renamed: ${file} → ${newName}`);
       }
@@ -151,6 +155,7 @@ async function main() {
     }
 
     // --- Import ---
+    fileOps = true;
     log(`Import: starting...`);
     const imp = exec(["bun", "run", "cli:import", newPath]);
     if (!imp.ok) {
@@ -167,29 +172,22 @@ async function main() {
   const all = [...renamed.map((s) => `REN: ${s}`), ...deduped.map((s) => `DUP: ${s}`), ...imported.map((s) => `IMP: ${s}`), ...failed.map((s) => `FAIL: ${s}`)];
   for (const p of all) log(p);
 
-  // 6. Commit + push changes
-  const hasChanges = !exec(["git", "diff", "--cached", "--quiet"]).ok || !exec(["git", "diff", "--quiet"]).ok;
+  // 6. Commit + push se houve operações em arquivos
+  const hasOps = fileOps;
 
-  if (!hasChanges) {
-    log("Git: no changes to commit");
+  if (!hasOps) {
+    log("Git: no file operations — skip commit");
   } else {
-    // Stage all: logs + any git-moved data files (already staged by git mv)
-    const filesToAdd = ["logs/import.log", "logs/cron.log"].filter((f) => existsSync(f));
-    exec(["git", "add", ...filesToAdd]);
-
-    if (exec(["git", "diff", "--cached", "--quiet"]).ok) {
-      log("Git: no changes to commit (after add)");
+    exec(["git", "add", "logs/import.log"]);
+    const summary = [renamed.length && `${renamed.length} renamed`, deduped.length && `${deduped.length} deduped`, imported.length && `${imported.length} imported`, failed.length && `${failed.length} failed`].filter(Boolean).join(", ");
+    const ts = new Date().toISOString().replace("T", " ").slice(0, 16);
+    const commit = exec(["git", "commit", "-m", `import-watch: ${ts} — ${summary}`]);
+    if (!commit.ok) {
+      log(`Git commit: ERROR — ${commit.stderr}`);
     } else {
-      const summary = [renamed.length && `${renamed.length} renamed`, deduped.length && `${deduped.length} deduped`, imported.length && `${imported.length} imported`, failed.length && `${failed.length} failed`].filter(Boolean).join(", ");
-      const ts = new Date().toISOString().replace("T", " ").slice(0, 16);
-      const commit = exec(["git", "commit", "-m", `import-watch: ${ts} — ${summary}`]);
-      if (!commit.ok) {
-        log(`Git commit: ERROR — ${commit.stderr}`);
-      } else {
-        log(`Git: ${commit.stdout}`);
-        const push = exec(["git", "push"]);
-        log(`Git push: ${push.ok ? (push.stdout || "OK") : "ERROR — " + push.stderr}`);
-      }
+      log(`Git: ${commit.stdout}`);
+      const push = exec(["git", "push"]);
+      log(`Git push: ${push.ok ? (push.stdout || "OK") : "ERROR — " + push.stderr}`);
     }
   }
 
