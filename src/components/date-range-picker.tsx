@@ -14,7 +14,7 @@ function shift(date: Date, days: number) {
   d.setDate(d.getDate() + days);
   return d;
 }
-export type PresetKey = "yesterday" | "last7" | "last14" | "last28" | "custom";
+type PresetKey = "yesterday" | "last7" | "last14" | "last28" | "custom";
 
 interface Props {
   from: string;
@@ -35,7 +35,7 @@ const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "custom", label: "Personalizado" },
 ];
 
-export function computePreset(
+function computePreset(
   key: PresetKey,
   refIso?: string,
   availableDates?: string[],
@@ -46,16 +46,18 @@ export function computePreset(
       const y = shift(new Date(), -1);
       return { from: iso(y), to: iso(y) };
     }
-    case "last7":     return { from: iso(shift(ref, -6)),  to: iso(ref) };
-    case "last14":    return { from: iso(shift(ref, -13)), to: iso(ref) };
+    case "last7":
+      return { from: iso(shift(ref, -6)), to: iso(ref) };
+    case "last14":
+      return { from: iso(shift(ref, -13)), to: iso(ref) };
     case "last28": {
       if (!availableDates?.length) return null;
       return { from: availableDates[0], to: availableDates[availableDates.length - 1] };
     }
-    default: return null;
+    default:
+      return null;
   }
 }
-
 
 export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
   const [open, setOpen] = useState(false);
@@ -64,7 +66,8 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
   const availableSet = useMemo(() => new Set(availableDates ?? []), [availableDates]);
   const hasAvailable = availableSet.size > 0;
   const minIso = availableDates && availableDates.length ? availableDates[0] : undefined;
-  const maxIso = availableDates && availableDates.length ? availableDates[availableDates.length - 1] : undefined;
+  const maxIso =
+    availableDates && availableDates.length ? availableDates[availableDates.length - 1] : undefined;
 
   const clampRange = (r: { from: string; to: string }): { from: string; to: string } | null => {
     if (!hasAvailable) return r;
@@ -141,12 +144,15 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
               key={p.key}
               role="radio"
               aria-checked={mode === p.key}
-              onClick={() => { setMode(p.key); apply(p.key); }}
+              onClick={() => {
+                setMode(p.key);
+                apply(p.key);
+              }}
               className={cn(
                 "rounded-md border px-2 py-1.5 text-xs font-medium transition text-left",
                 mode === p.key
                   ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background hover:border-primary/40"
+                  : "border-border bg-background hover:border-primary/40",
               )}
             >
               {p.label}
@@ -181,7 +187,9 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
               Indisponível
             </span>
             {hasAvailable && (
-              <span className="ml-auto font-medium">{availableDates!.length} datas disponíveis</span>
+              <span className="ml-auto font-medium">
+                {availableDates!.length} datas disponíveis
+              </span>
             )}
           </div>
           {!hasAvailable && (
@@ -189,7 +197,9 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
               Nenhuma data com dados disponíveis para os filtros atuais.
             </p>
           )}
-          <Button size="sm" className="w-full" onClick={() => setOpen(false)}>Aplicar</Button>
+          <Button size="sm" className="w-full" onClick={() => setOpen(false)}>
+            Aplicar
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
