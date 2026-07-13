@@ -3,3 +3,24 @@
 [2026-07-13 11:35:12] Pull: ERROR — error: cannot pull with rebase: You have unstaged changes.
 error: Please commit or stash them.
 [2026-07-13 11:35:12] ====== import-watch abort ======
+[2026-07-13 11:35:58] ====== import-watch start ======
+[2026-07-13 11:35:58] Pull: starting...
+[2026-07-13 11:35:59] Pull: Already up to date.
+[2026-07-13 11:35:59] Scan: data/2026-07/
+[2026-07-13 11:35:59] Found: VENDAS11072026.xlsx
+[2026-07-13 11:35:59] Date: 2026-07-11
+[2026-07-13 11:35:59] Rename: SKIP — 2026-07-11.xlsx already exists
+[2026-07-13 11:35:59] SKIP: VENDAS11072026.xlsx (target 2026-07-11.xlsx exists)
+[2026-07-13 11:35:59] Git add: ERROR — The following paths are ignored by one of your .gitignore files:
+logs
+hint: Use -f if you really want to add them.
+hint: Disable this message with "git config advice.addIgnoredFile false"
+[2026-07-13 11:35:59] ====== import-watch end ======
+[2026-07-13 11:36:32] ====== import-watch start ======
+[2026-07-13 11:36:32] Pull: starting...
+[2026-07-13 11:36:33] Pull: Already up to date.
+[2026-07-13 11:36:33] Scan: data/2026-07/
+[2026-07-13 11:36:33] Found: VENDAS11072026.xlsx
+[2026-07-13 11:36:33] Date: 2026-07-11
+[2026-07-13 11:36:33] Rename: SKIP — 2026-07-11.xlsx already exists
+[2026-07-13 11:36:33] SKIP: VENDAS11072026.xlsx (target 2026-07-11.xlsx exists)
