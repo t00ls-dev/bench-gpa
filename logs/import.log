@@ -24,3 +24,15 @@ hint: Disable this message with "git config advice.addIgnoredFile false"
 [2026-07-13 11:36:33] Date: 2026-07-11
 [2026-07-13 11:36:33] Rename: SKIP — 2026-07-11.xlsx already exists
 [2026-07-13 11:36:33] SKIP: VENDAS11072026.xlsx (target 2026-07-11.xlsx exists)
+[2026-07-13 11:36:33] Git: [main 7e3eb24] import-watch: results 2026-07-13 11:36
+ 1 file changed, 21 insertions(+)
+[2026-07-13 11:36:35] Git push: OK
+[2026-07-13 11:36:35] ====== import-watch end ======
+[2026-07-13 11:37:05] ====== import-watch start ======
+[2026-07-13 11:37:05] Pull: starting...
+[2026-07-13 11:37:06] Pull: Already up to date.
+[2026-07-13 11:37:06] Scan: data/2026-07/
+[2026-07-13 11:37:06] Found: VENDAS11072026.xlsx
+[2026-07-13 11:37:06] Date: 2026-07-11
+[2026-07-13 11:37:06] Dedup: VENDAS11072026.xlsx removed (2026-07-11.xlsx already exists)
+[2026-07-13 11:37:06] DUP: VENDAS11072026.xlsx → removed (2026-07-11.xlsx exists)
