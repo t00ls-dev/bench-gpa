@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "cli:import": "bun run scripts/import.ts"
+    "cli:import": "bun run scripts/import.ts",
+    "cli:watch": "bun run scripts/import-watch.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

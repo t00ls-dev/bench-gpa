@@ -1,0 +1,5 @@
+[2026-07-13 11:35:12] ====== import-watch start ======
+[2026-07-13 11:35:12] Pull: starting...
+[2026-07-13 11:35:12] Pull: ERROR — error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+[2026-07-13 11:35:12] ====== import-watch abort ======
