@@ -238,7 +238,7 @@ export const getStores = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("stores")
       .select("store_code, store_name")
-      .order("store_name", { ascending: true });
+      .order("store_code", { ascending: true });
     if (error) throw safeError("analytics", error);
     return (data ?? []) as StoreOption[];
   });

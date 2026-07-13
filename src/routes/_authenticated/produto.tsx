@@ -5,13 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { searchProducts, getProductAnalysis, getStores } from "@/lib/analytics.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { MultiSelect } from "@/components/multi-select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -178,19 +172,19 @@ function ProdutoPage() {
       <div className="kpi-card mb-4 grid gap-3 md:grid-cols-2">
         <div>
           <Label className="text-xs">Loja</Label>
-          <Select value={storeCode} onValueChange={setStoreCode}>
-            <SelectTrigger className="mt-1 h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Todas as lojas</SelectItem>
-              {stores.map((s) => (
-                <SelectItem key={s.store_code} value={s.store_code}>
-                  {s.store_code} - {s.store_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            single
+            label="Selecione"
+            options={[
+              { value: "__all__", label: "Todas as lojas" },
+              ...stores.map((s) => ({
+                value: s.store_code,
+                label: `${s.store_code} - ${s.store_name}`,
+              })),
+            ]}
+            value={[storeCode]}
+            onChange={(v) => setStoreCode(v[0] ?? "__all__")}
+          />
         </div>
       </div>
 
