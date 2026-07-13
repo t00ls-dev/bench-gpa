@@ -440,6 +440,7 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<DashboardRankingsResult> => {
     const supabase = context.supabase as DB;
+    console.log("[rankings] secoes:", JSON.stringify(data.secoes));
     const { data: res, error } = await supabase.rpc("dashboard_rankings", {
       p_date_from: data.dateFrom || (null as unknown as string),
       p_date_to: data.dateTo || (null as unknown as string),
