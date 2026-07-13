@@ -73,3 +73,8 @@ error: script "cli:import" exited with code 1
    ❌ Erro ao registrar log: insert or update on table "import_log" violates foreign key constraint "import_log_imported_by_fkey"
 error: script "cli:import" exited with code 1
 [2026-07-13 12:07:37] FAIL: 12-07-2026.xlsx → 2026-07-12.xlsx (import error)
+[2026-07-13 12:07:37] Git: [main a7dac33] import-watch: 2026-07-13 12:07 — 1 failed
+ 2 files changed, 16 insertions(+)
+ rename data/2026-07/{12-07-2026.xlsx => 2026-07-12.xlsx} (100%)
+[2026-07-13 12:07:38] Git push: OK
+[2026-07-13 12:07:38] ====== import-watch end ======
