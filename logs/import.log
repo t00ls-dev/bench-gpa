@@ -104,3 +104,7 @@ error: script "cli:import" exited with code 1
 [2026-07-13 12:17:52] Pull: Already up to date.
 [2026-07-13 12:17:52] Scan: data/2026-07/
 [2026-07-13 12:17:52] No non-normalized files found.
+[2026-07-13 12:17:52] Git: [main 7f74431] import-watch: 2026-07-13 12:17 —
+ 1 file changed, 9 insertions(+)
+[2026-07-13 12:17:54] Git push: OK
+[2026-07-13 12:17:54] ====== import-watch end ======
