@@ -1012,3 +1012,581 @@ volumes:
 | **Escalabilidade** | Vertical | Horizontal (read replicas) |
 | **Fulltext search** | LIKE NOCASE | FULLTEXT index ✅ |
 | **Tamanho max** | Ilimitado (disco) | 10 GB no plano mínimo DO |
+
+---
+
+## Apêndice: Supabase Zero (migrar Auth + Admin)
+
+Eliminar 100% do Supabase — Auth e toda lógica de usuários vão para a PHP API.
+A aplicação inteira roda sem depender de serviços externos.
+
+### O que muda
+
+| Componente | Hoje (Supabase) | Depois (PHP API) |
+|---|---|---|
+| Login / senha | `supabase.auth.signInWithPassword()` | `POST /api/auth/login` |
+| JWT | Supabase gera e valida | PHP gera (`firebase/php-jwt`) |
+| Validação token (serverFn) | `auth-middleware.ts` → Supabase `getClaims()` | Bun + `jsonwebtoken` com mesmo `JWT_SECRET` |
+| Cadastro de usuário | `supabaseAdmin.auth.admin.createUser()` | `POST /api/admin/users` |
+| Reset senha | `supabaseAdmin.auth.admin.updateUserById()` | `PUT /api/admin/users/:id/password` |
+| Tabela `auth.users` | Gerenciada pelo Supabase | Vai para MariaDB |
+| RPC `has_role` | PostgreSQL function | Query direta no PHP |
+
+### Schema adicional no MariaDB
+
+```sql
+-- users (substitui auth.users + public.users do Supabase)
+CREATE TABLE users (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(200) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('admin', 'user') NOT NULL DEFAULT 'user',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_users_email (email),
+  INDEX idx_users_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+### Novos endpoints de Auth
+
+| Método | Rota | Controller | Descrição |
+|---|---|---|---|
+| POST | `/api/auth/login` | `AuthController` | Login email+senha → JWT |
+| POST | `/api/auth/logout` | `AuthController` | (stateless, só descarta token no client) |
+| GET | `/api/auth/me` | `AuthController` | Dados do usuário atual (via token) |
+| PUT | `/api/auth/password` | `AuthController` | Trocar própria senha |
+| GET | `/api/admin/users` | `AdminController` | Listar usuários |
+| POST | `/api/admin/users` | `AdminController` | Criar usuário |
+| PUT | `/api/admin/users/{id}` | `AdminController` | Editar role/ativo |
+| PUT | `/api/admin/users/{id}/password` | `AdminController` | Resetar senha de outro usuário |
+
+### Fluxo de Login
+
+```
+Cliente (Browser)           Bun (serverFn)              PHP API
+      │                          │                        │
+      │ POST /api/auth/login     │                        │
+      │ email+senha ────────────►│ POST /api/auth/login   │
+      │                          │ email+senha ──────────►│
+      │                          │                        ├─ SELECT * FROM users WHERE email=?
+      │                          │                        ├─ password_verify(senha, hash)
+      │                          │                        ├─ Gera JWT (firebase/php-jwt)
+      │                          │    { jwt, user }       │
+      │                          │◄───────────────────────│
+      │    { jwt, user }         │                        │
+      │◄─────────────────────────│                        │
+      │ Guarda JWT em memória    │                        │
+      │ (ou httpOnly cookie)     │                        │
+```
+
+### JWT
+
+```env
+# Compartilhado entre Bun + PHP
+JWT_SECRET="base64:kX7m...long-random-secret..."
+JWT_EXPIRY="24h"
+```
+
+**Payload do JWT:**
+```json
+{
+  "sub": "uuid-do-usuario",
+  "email": "user@gpabr.com",
+  "role": "admin",
+  "iat": 1700000000,
+  "exp": 1700086400
+}
+```
+
+### PHP: AuthController (login)
+
+```php
+<?php
+namespace App\Controller;
+
+use App\Database\ConnectionFactory;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+
+class AuthController
+{
+    public function login(Request $request, Response $response): Response
+    {
+        $body = $request->getParsedBody();
+        $email = $body['email'] ?? '';
+        $password = $body['password'] ?? '';
+
+        if (!$email || !$password) {
+            return $this->json($response, ['error' => 'Email e senha obrigatórios'], 400);
+        }
+
+        $pdo = ConnectionFactory::get();
+        $stmt = $pdo->prepare(
+            "SELECT id, email, name, password_hash, role, is_active
+             FROM users WHERE email = ?"
+        );
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            return $this->json($response, ['error' => 'Email ou senha inválidos'], 401);
+        }
+
+        if (!$user['is_active']) {
+            return $this->json($response, ['error' => 'Conta desativada'], 403);
+        }
+
+        $now = time();
+        $payload = [
+            'sub'   => $user['id'],
+            'email' => $user['email'],
+            'name'  => $user['name'],
+            'role'  => $user['role'],
+            'iat'   => $now,
+            'exp'   => $now + 86400, // 24h
+        ];
+
+        $jwt = JWT::encode($payload, Config::get('JWT_SECRET'), 'HS256');
+
+        return $this->json($response, [
+            'token' => $jwt,
+            'user'  => [
+                'id'       => $user['id'],
+                'email'    => $user['email'],
+                'name'     => $user['name'],
+                'role'     => $user['role'],
+                'isActive' => (bool) $user['is_active'],
+            ],
+        ]);
+    }
+
+    public function me(Request $request, Response $response): Response
+    {
+        // Token já validado pelo middleware JwtAuth
+        $claims = $request->getAttribute('jwt_claims');
+
+        $pdo = ConnectionFactory::get();
+        $stmt = $pdo->prepare(
+            "SELECT id, email, name, role, is_active, created_at
+             FROM users WHERE id = ?"
+        );
+        $stmt->execute([$claims->sub]);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return $this->json($response, ['error' => 'Usuário não encontrado'], 404);
+        }
+
+        return $this->json($response, ['user' => [
+            'id'        => $user['id'],
+            'email'     => $user['email'],
+            'name'      => $user['name'],
+            'role'      => $user['role'],
+            'isActive'  => (bool) $user['is_active'],
+            'createdAt' => $user['created_at'],
+        ]]);
+    }
+
+    private function json(Response $response, array $data, int $status = 200): Response
+    {
+        $response->getBody()->write(json_encode($data));
+        return $response
+            ->withStatus($status)
+            ->withHeader('Content-Type', 'application/json');
+    }
+}
+```
+
+### PHP: JwtAuth middleware
+
+```php
+<?php
+namespace App\Middleware;
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Server\RequestHandlerInterface as Handler;
+use Slim\Psr7\Response;
+
+class JwtAuth
+{
+    public function __invoke(Request $request, Handler $handler): Response
+    {
+        $header = $request->getHeaderLine('Authorization');
+
+        if (!str_starts_with($header, 'Bearer ')) {
+            $response = new Response();
+            $response->getBody()->write(json_encode(['error' => 'Token não fornecido']));
+            return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
+        }
+
+        $token = substr($header, 7);
+
+        try {
+            $decoded = JWT::decode($token, new Key(Config::get('JWT_SECRET'), 'HS256'));
+            $request = $request->withAttribute('jwt_claims', $decoded);
+            $request = $request->withAttribute('user_id', $decoded->sub);
+            $request = $request->withAttribute('user_role', $decoded->role);
+            return $handler->handle($request);
+        } catch (\Throwable $e) {
+            $response = new Response();
+            $response->getBody()->write(json_encode(['error' => 'Token inválido ou expirado']));
+            return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
+        }
+    }
+}
+```
+
+### PHP: AdminController
+
+```php
+<?php
+namespace App\Controller;
+
+use App\Database\ConnectionFactory;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+
+class AdminController
+{
+    // GET /api/admin/users
+    public function list(Request $request, Response $response): Response
+    {
+        $pdo = ConnectionFactory::get();
+        $stmt = $pdo->query(
+            "SELECT id, email, name, role, is_active, created_at
+             FROM users ORDER BY created_at DESC"
+        );
+        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $response->getBody()->write(json_encode(
+            array_map(fn($u) => [
+                'id'        => $u['id'],
+                'email'     => $u['email'],
+                'name'      => $u['name'],
+                'role'      => $u['role'],
+                'isActive'  => (bool) $u['is_active'],
+                'createdAt' => $u['created_at'],
+            ], $users)
+        ));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    // POST /api/admin/users
+    public function create(Request $request, Response $response): Response
+    {
+        $body = $request->getParsedBody();
+        $email = strtolower(trim($body['email'] ?? ''));
+        $name  = trim($body['name'] ?? '');
+        $password = $body['password'] ?? '';
+        $role  = $body['role'] ?? 'user';
+
+        // Validações...
+        if (!preg_match('/^[a-z0-9._-]+@gpabr\.com$/', $email)) {
+            return $this->json($response, ['error' => 'Email deve ser @gpabr.com'], 400);
+        }
+        if (strlen($password) < 8) {
+            return $this->json($response, ['error' => 'Senha deve ter 8+ caracteres'], 400);
+        }
+
+        $pdo = ConnectionFactory::get();
+        $id = $body['id'] ?? bin2hex(random_bytes(16));
+        $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+
+        try {
+            $stmt = $pdo->prepare(
+                "INSERT INTO users (id, email, name, password_hash, role, is_active)
+                 VALUES (?, ?, ?, ?, ?, 1)"
+            );
+            $stmt->execute([$id, $email, $name, $hash, $role]);
+        } catch (\PDOException $e) {
+            if ($e->getCode() == 23000) {
+                return $this->json($response, ['error' => 'Email já cadastrado'], 409);
+            }
+            throw $e;
+        }
+
+        return $this->json($response, ['id' => $id], 201);
+    }
+
+    // PUT /api/admin/users/{id}
+    public function update(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $body = $request->getParsedBody();
+
+        $sets = [];
+        $params = [];
+        if (isset($body['role'])) {
+            $sets[] = 'role = ?';
+            $params[] = $body['role'];
+        }
+        if (isset($body['is_active'])) {
+            $sets[] = 'is_active = ?';
+            $params[] = $body['is_active'] ? 1 : 0;
+        }
+        if (empty($sets)) {
+            return $this->json($response, ['error' => 'Nada para atualizar'], 400);
+        }
+
+        $params[] = $id;
+        $pdo = ConnectionFactory::get();
+        $pdo->prepare(
+            "UPDATE users SET " . implode(', ', $sets) . " WHERE id = ?"
+        )->execute($params);
+
+        return $this->json($response, ['ok' => true]);
+    }
+
+    // PUT /api/admin/users/{id}/password
+    public function resetPassword(Request $request, Response $response, array $args): Response
+    {
+        $id = $args['id'];
+        $body = $request->getParsedBody();
+        $password = $body['password'] ?? '';
+
+        if (strlen($password) < 8) {
+            return $this->json($response, ['error' => 'Senha deve ter 8+ caracteres'], 400);
+        }
+
+        $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+
+        $pdo = ConnectionFactory::get();
+        $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+           ->execute([$hash, $id]);
+
+        return $this->json($response, ['ok' => true]);
+    }
+
+    private function json(Response $response, array $data, int $status = 200): Response
+    {
+        $response->getBody()->write(json_encode($data));
+        return $response
+            ->withStatus($status)
+            ->withHeader('Content-Type', 'application/json');
+    }
+}
+```
+
+### Routing dos novos endpoints
+
+```php
+// Adicionar ao config/routes.php
+
+use App\Controller\AuthController;
+use App\Controller\AdminController;
+use App\Middleware\JwtAuth;
+
+// Auth (públicos — sem ApiKeyAuth)
+$app->post('/api/auth/login', [AuthController::class, 'login']);
+
+// Auth (autenticados)
+$app->group('/api/auth', function (Slim\Routing\RouteCollectorProxy $api) {
+    $api->get('/me', [AuthController::class, 'me']);
+    $api->put('/password', [AuthController::class, 'changePassword']);
+})->add(new JwtAuth());
+
+// Admin (JwtAuth + role check)
+$app->group('/api/admin', function (Slim\Routing\RouteCollectorProxy $api) {
+    $api->get('/users', [AdminController::class, 'list']);
+    $api->post('/users', [AdminController::class, 'create']);
+    $api->put('/users/{id}', [AdminController::class, 'update']);
+    $api->put('/users/{id}/password', [AdminController::class, 'resetPassword']);
+})->add(new \App\Middleware\RequireAdmin())
+  ->add(new JwtAuth());
+```
+
+### Como o frontend muda
+
+#### 1. Login (`src/routes/auth.tsx`)
+
+**Antes:**
+```tsx
+const { data, error } = await supabase.auth.signInWithPassword({
+  email, password,
+});
+```
+
+**Depois:**
+```tsx
+const res = await fetch(`${apiUrl}/api/auth/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, password }),
+});
+const { token, user } = await res.json();
+// Guarda token (ex: localStorage ou context)
+localStorage.setItem("auth_token", token);
+```
+
+#### 2. `auth-attacher.ts`
+
+**Antes:** Anexa token do Supabase às serverFn
+**Depois:** Anexa token do PHP JWT (mesmo header `Authorization: Bearer ...`)
+
+```typescript
+// Quase igual — só muda de onde lê o token
+const token = localStorage.getItem("auth_token");
+// ou: const { data: session } = await supabase.auth.getSession();
+```
+
+#### 3. `auth-middleware.ts` (Bun server-side)
+
+**Antes:** Valida JWT no Supabase via `supabase.auth.getClaims(token)`
+**Depois:** Valida JWT localmente com o segredo compartilhado
+
+```typescript
+import jwt from "jsonwebtoken";
+
+export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
+  async ({ next }) => {
+    const token = // ... extrai do header Authorization
+
+    const secret = process.env.JWT_SECRET!;
+    const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
+
+    return next({
+      context: {
+        supabase: null,  // não precisa mais
+        userId: decoded.sub,
+        claims: decoded,
+      },
+    });
+  },
+);
+```
+
+> Dependência: `npm install jsonwebtoken @types/jsonwebtoken`
+
+#### 4. `admin.functions.ts`
+
+Todas as chamadas a `supabaseAdmin.from("users")` e `supabaseAdmin.auth.admin.*` viram `fetch()` para a PHP API com token JWT de admin.
+
+### Migração dos usuários existentes
+
+Script único para migrar `auth.users` + `public.users` do Supabase para MariaDB:
+
+```php
+<?php
+// data/migrate-users.php
+
+$supabaseUrl = getenv('SUPABASE_URL');
+$serviceKey = getenv('SUPABASE_SERVICE_ROLE_KEY');
+$pdo = new PDO(getenv('DB_DSN'), getenv('DB_USER'), getenv('DB_PASS'));
+
+// 1. Busca auth.users via Admin API
+$json = file_get_contents("{$supabaseUrl}/auth/v1/admin/users", false,
+    stream_context_create(['http' => [
+        'header' => "Authorization: Bearer {$serviceKey}\r\napikey: {$serviceKey}\r\n",
+    ]])
+);
+$supaUsers = json_decode($json, true)['users'] ?? [];
+
+// 2. Busca public.users
+$json2 = file_get_contents("{$supabaseUrl}/rest/v1/users?select=*", false,
+    stream_context_create(['http' => [
+        'header' => "Authorization: Bearer {$serviceKey}\r\napikey: {$serviceKey}\r\n",
+    ]])
+);
+$pubUsers = json_decode($json2, true) ?? [];
+$pubIndex = [];
+foreach ($pubUsers as $u) $pubIndex[$u['id']] = $u;
+
+// 3. Para cada auth.user, cria no MariaDB com password_hash dummy
+//    (senha original é hash do Supabase — não recuperável)
+//    Usuários precisam redefinir senha via "Esqueci minha senha"
+//    ou admin define nova senha.
+$stmt = $pdo->prepare(
+    "INSERT INTO users (id, email, name, password_hash, role, is_active, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+         name = VALUES(name),
+         role = VALUES(role),
+         is_active = VALUES(is_active)"
+);
+
+foreach ($supaUsers as $au) {
+    $pub = $pubIndex[$au['id']] ?? [];
+    $stmt->execute([
+        $au['id'],
+        $au['email'],
+        $pub['name'] ?? $au['email'],
+        // Hash dummy — usuário precisa resetar senha
+        password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT),
+        $pub['role'] ?? 'user',
+        $pub['is_active'] ?? true,
+        $au['created_at'],
+    ]);
+}
+```
+
+### Custo final (sem Supabase)
+
+| Componente | Custo |
+|---|---|
+| VPS (2 GB, 2 vCPU, 50 GB SSD) | $12/mo |
+| MariaDB (embutido no VPS) | $0 |
+| **Total** | **$12/mo** |
+| vs. antes (Supabase free + DO) | $12/mo (igual) |
+| **Economia vs. plano pago Supabase Pro** | **$13/mo** ($25 Pro → $12 VPS) |
+
+### Linha do tempo adicional
+
+Adicionar às fases existentes:
+
+**Fase 0 — Auth (2-3 dias, antes da Fase 1)**
+- [ ] Tabela `users` no MariaDB + migration
+- [ ] `POST /api/auth/login` — JWT com `firebase/php-jwt`
+- [ ] `GET /api/auth/me` — dados do usuário
+- [ ] Middleware `JwtAuth` (PHP)
+- [ ] Middleware `RequireAdmin` (PHP)
+- [ ] `PUT /api/auth/password`
+- [ ] `GET/POST /api/admin/users`
+- [ ] `PUT /api/admin/users/{id}`
+- [ ] `PUT /api/admin/users/{id}/password`
+- [ ] Atualizar `auth-middleware.ts` (Bun) para validar JWT local com `jsonwebtoken`
+- [ ] Atualizar `auth-attacher.ts` para ler token do localStorage
+- [ ] Atualizar `src/routes/auth.tsx` — login via PHP em vez de Supabase
+- [ ] Atualizar `admin.functions.ts` — chamar PHP em vez de Supabase Admin
+- [ ] Remover `admin-utils.ts:assertAdmin` → validar role no PHP
+- [ ] Script `data/migrate-users.php`
+- [ ] Rodar script para migrar usuários existentes
+- [ ] Testar: login → admin → CRUD usuários
+
+### Checklist final: tudo que sai do Supabase
+
+| Item | Saiu? |
+|---|---|
+| Auth (login, JWT) | ✅ PHP |
+| `auth.users` | ✅ MariaDB |
+| `public.users` | ✅ MariaDB |
+| `stores` | ✅ MariaDB |
+| `products` | ✅ MariaDB |
+| `import_log` | ✅ MariaDB |
+| `staging_sales` | ✅ MariaDB |
+| `sales_daily_agg` | ✅ MariaDB |
+| `sales_prod_daily_agg` | ✅ MariaDB |
+| `filter_hierarchy` | ✅ MariaDB |
+| `dashboard_metrics` RPC | ✅ PHP Service |
+| `dashboard_rankings` RPC | ✅ PHP Service |
+| `filter_options` RPC | ✅ PHP Service |
+| `product_analysis` RPC | ✅ PHP Service |
+| `product_search` RPC | ✅ PHP Service |
+| `area_analysis` RPC | ✅ PHP Service |
+| `area_filter_hierarchy` RPC | ✅ PHP Service |
+| `imported_dates` RPC | ✅ PHP Service |
+| `finalize_import` RPC | ✅ PHP Service |
+| `upsert_products_bulk` RPC | ✅ PHP Service |
+| `has_role` RPC | ✅ PHP Query |
+| `is_active_user` check | ✅ PHP Query |
+| Supabase client libraries | ❌ Removido |
+| `client.ts` | ❌ Removido |
+| `client.server.ts` | ❌ Removido |
+| `auth-middleware.ts` (validação Supabase) | ❌ Rewrite para `jsonwebtoken` |
+| `auth-attacher.ts` (anexar token) | ❌ Rewrite para ler token local |
