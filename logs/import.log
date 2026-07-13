@@ -170,3 +170,7 @@ error: script "cli:import" exited with code 1
 [2026-07-13 12:21:07] REN: 2026-07-10.xlsx → 2026-07-10.xlsx (already imported)
 [2026-07-13 12:21:07] REN: 2026-07-11.xlsx → 2026-07-11.xlsx (already imported)
 [2026-07-13 12:21:07] IMP: 2026-07-12.xlsx → 2026-07-12.xlsx
+[2026-07-13 12:21:07] Git: [main bfbedcd] import-watch: 2026-07-13 12:21 — 11 renamed, 1 imported
+ 1 file changed, 57 insertions(+)
+[2026-07-13 12:21:09] Git push: OK
+[2026-07-13 12:21:09] ====== import-watch end ======
