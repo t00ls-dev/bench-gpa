@@ -64,7 +64,7 @@ export function MultiSelect({
           <Button
             ref={triggerRef}
             type="button" variant="outline" aria-label={label} className="h-9 w-full justify-between text-left font-normal">
-          <span className="truncate">
+          <span className="truncate min-w-0">
             {value.length === 0
               ? label
               : options.find((o) => o.value === value[0])?.label ?? value[0]}
