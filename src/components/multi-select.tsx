@@ -63,7 +63,7 @@ export function MultiSelect({
         <PopoverTrigger asChild>
           <Button
             ref={triggerRef}
-            type="button" variant="outline" aria-label={label} className="h-9 w-full justify-between text-left font-normal">
+            type="button" variant="outline" aria-label={label} className="h-9 w-full min-w-0 justify-between text-left font-normal">
           <span className="truncate min-w-0">
             {value.length === 0
               ? label
