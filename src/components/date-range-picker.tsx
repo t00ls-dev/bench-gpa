@@ -134,7 +134,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
       <PopoverTrigger asChild>
         <Button variant="outline" className="h-9 w-full justify-start gap-2 text-left font-normal">
           <CalendarIcon className="size-4 opacity-60" />
-          <span className="truncate whitespace-nowrap">{label}</span>
+          <span className="truncate whitespace-nowrap min-w-0">{label}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" collisionPadding={24}>
