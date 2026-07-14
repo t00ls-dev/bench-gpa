@@ -26,7 +26,9 @@ export function MultiSelect({
   useEffect(() => {
     const el = triggerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setTriggerWidth(entry.contentRect.width));
+    const ro = new ResizeObserver(() => {
+      if (triggerRef.current) setTriggerWidth(triggerRef.current.offsetWidth);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
