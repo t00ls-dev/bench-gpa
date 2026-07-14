@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,17 @@ export function MultiSelect({
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [triggerWidth, setTriggerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setTriggerWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const filtered = useMemo(() => {
     if (!searchable || !q.trim()) return options;
     const t = q.toLowerCase();
@@ -47,7 +58,9 @@ export function MultiSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" aria-label={label} className="h-9 w-full justify-between text-left font-normal">
+          <Button
+            ref={triggerRef}
+            type="button" variant="outline" aria-label={label} className="h-9 w-full justify-between text-left font-normal">
           <span className="truncate">
             {value.length === 0
               ? label
@@ -62,7 +75,8 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0"
+        style={{ width: triggerWidth || undefined }}
+        className="max-w-[calc(100vw-2rem)] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
