@@ -132,7 +132,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="h-9 w-full min-w-0 justify-start gap-2 text-left font-normal">
+        <Button variant="outline" className="h-9 w-full max-w-full justify-start gap-2 text-left font-normal">
           <CalendarIcon className="size-4 opacity-60" />
           <span className="truncate whitespace-nowrap min-w-0">{label}</span>
         </Button>
