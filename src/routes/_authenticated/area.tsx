@@ -470,7 +470,7 @@ function AreaPage() {
 
       {/* Filtros */}
       <div className="kpi-card mb-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
           <div className="lg:col-span-2">
             <Label className="text-xs">Período</Label>
             <div className="mt-1">
