@@ -2638,3 +2638,6 @@ $ bun run scripts/import-watch.ts
 [2026-07-15 10:00:05] REN: 2026-07-13.xlsx → 2026-07-13.xlsx (already imported)
 [2026-07-15 10:00:05] Git: no file operations — skip commit
 [2026-07-15 10:00:05] ====== import-watch end ======
+$ bun run scripts/import-watch.ts
+/usr/bin/bash: line 1: bun: command not found
+error: script "cli:watch" exited with code 127
