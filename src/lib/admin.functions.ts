@@ -3,9 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+
 
 const emailSchema = z.string().trim().toLowerCase()
   .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
@@ -200,43 +198,21 @@ interface DocEntry {
   category: string;
 }
 
-function findDocsDir(): string {
-  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    path.join(process.cwd(), "docs"),
-    path.resolve(process.cwd(), "../docs"),
-    path.resolve(scriptDir, "../../docs"),
-    path.resolve(scriptDir, "../../../docs"),
-  ];
-  for (const dir of candidates) {
-    try {
-      if (fs.existsSync(dir)) return dir;
-    } catch {}
-  }
-  throw new Error("Diretório docs/ não encontrado no servidor.");
-}
+const docModules = import.meta.glob("/docs/**/*.md", { eager: true, query: "?raw", import: "default" }) as Record<string, string>;
 
 export const listDocs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const docsDir = findDocsDir();
     const entries: DocEntry[] = [];
-    const topFiles = fs.readdirSync(docsDir).filter(f => f.endsWith(".md")).sort();
-    for (const file of topFiles) {
-      const content = fs.readFileSync(path.join(docsDir, file), "utf-8");
-      const title = extractDocTitle(content) ?? file.replace(/\.md$/, "").replace(/[-_]/g, " ");
-      entries.push({ slug: file.replace(/\.md$/, ""), title, category: "Documentação Técnica" });
+    for (const [filePath, content] of Object.entries(docModules)) {
+      const slug = filePath.replace(/^\/docs\//, "").replace(/\.md$/, "");
+      if (slug === "improvements/README") continue;
+      const title = extractDocTitle(content) ?? slug.replace(/[/_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const category = slug.startsWith("improvements/") ? "Análise do Código" : "Documentação Técnica";
+      entries.push({ slug, title, category });
     }
-    const imprDir = path.join(docsDir, "improvements");
-    if (fs.existsSync(imprDir)) {
-      const imprFiles = fs.readdirSync(imprDir).filter(f => f.endsWith(".md") && f !== "README.md").sort();
-      for (const file of imprFiles) {
-        const content = fs.readFileSync(path.join(imprDir, file), "utf-8");
-        const title = extractDocTitle(content) ?? file.replace(/\.md$/, "").replace(/[-_]/g, " ");
-        entries.push({ slug: `improvements/${file.replace(/\.md$/, "")}`, title, category: "Análise do Código" });
-      }
-    }
+    entries.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
     return entries;
   });
 
@@ -247,10 +223,9 @@ export const getDocContent = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const docsDir = findDocsDir();
-    const fp = path.join(docsDir, `${data.slug}.md`);
-    if (!fs.existsSync(fp)) throw new Error("Documento não encontrado.");
-    return fs.readFileSync(fp, "utf-8");
+    const content = docModules[`/docs/${data.slug}.md`];
+    if (!content) throw new Error("Documento não encontrado.");
+    return content;
   });
 
 function extractDocTitle(content: string): string | null {
