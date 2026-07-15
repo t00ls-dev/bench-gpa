@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "cli:import": "bun run scripts/import.ts",
-    "cli:watch": "bun run scripts/import-watch.ts"
+    "cli:watch": "bun run scripts/import-watch.ts",
+    "cli:review": "bun run scripts/code-review.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
