@@ -2641,3 +2641,6 @@ $ bun run scripts/import-watch.ts
 $ bun run scripts/import-watch.ts
 /usr/bin/bash: line 1: bun: command not found
 error: script "cli:watch" exited with code 127
+$ bun run scripts/import-watch.ts
+/usr/bin/bash: line 1: bun: command not found
+error: script "cli:watch" exited with code 127
