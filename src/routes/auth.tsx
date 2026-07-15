@@ -23,7 +23,10 @@ export const Route = createFileRoute("/auth")({
     const { data } = await supabase.auth.getUser();
     if (data.user) {
       const target = sanitizeNext(search.next);
-      if (target !== "/") throw redirect({ href: target });
+      if (target !== "/") {
+        const u = new URL(target, window.location.origin);
+        throw redirect({ to: u.pathname, search: Object.fromEntries(u.searchParams.entries()) });
+      }
       throw redirect({ to: "/" });
     }
   },
@@ -40,7 +43,8 @@ function AuthPage() {
   const goNext = () => {
     const target = sanitizeNext(next);
     if (target !== "/") {
-      window.location.href = target;
+      const u = new URL(target, window.location.origin);
+      router.navigate({ to: u.pathname, search: Object.fromEntries(u.searchParams.entries()) });
     } else {
       router.navigate({ to: "/" });
     }
