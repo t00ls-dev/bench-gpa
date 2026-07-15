@@ -102,6 +102,7 @@ function existingDocSlugs(): string[] {
 
 const NOW = new Date();
 const DATE_BR = NOW.toLocaleDateString("pt-BR");
+const TIME_BR = NOW.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const DATE_ISO = NOW.toISOString().split("T")[0];
 
 async function main() {
@@ -165,9 +166,9 @@ async function main() {
   const filePath = join(IMPROV_DIR, fileName);
 
   const snapshotContent = [
-    `# Revisão Automática — ${DATE_BR}`,
+    `# Revisão Automática — ${DATE_BR} ${TIME_BR}`,
     "",
-    `Snapshot automatizado do estado do código em ${DATE_BR}.`,
+    `Snapshot automatizado do estado do código em ${DATE_BR} às ${TIME_BR}.`,
     "",
     "---",
     "",
