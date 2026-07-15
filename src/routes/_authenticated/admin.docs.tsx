@@ -93,7 +93,10 @@ function DocList() {
                   className="kpi-card flex items-start gap-3 text-left hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <FileText className="mt-0.5 size-5 shrink-0 text-primary" />
-                  <span className="font-medium">{doc.title}</span>
+                  <div className="min-w-0">
+                    <div className="font-medium">{doc.title}</div>
+                    {doc.date && <div className="mt-0.5 text-xs text-muted-foreground">{doc.date}</div>}
+                  </div>
                 </button>
               ))}
             </div>
