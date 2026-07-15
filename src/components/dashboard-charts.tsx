@@ -225,7 +225,7 @@ export function DashboardCharts({
                   <XAxis
                     dataKey="name"
                     tick={{ fontSize: 10 }}
-                    interval={0}
+                    interval="preserveStart"
                     angle={-30}
                     textAnchor="end"
                     height={50}
