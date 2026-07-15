@@ -331,6 +331,13 @@ export type Database = {
         }
         Returns: Json
       }
+      get_product_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          prod_code: string
+          prod_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -298,6 +298,21 @@ export const searchProducts = createServerFn({ method: "POST" })
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
   });
 
+export const getProductByCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ prodCode: z.string().min(1) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase as DB;
+    const { data: rows, error } = await supabase.rpc("get_product_by_code", {
+      p_code: data.prodCode.trim(),
+    });
+    if (error) throw safeError("analytics", error);
+    const row = (rows ?? [])[0] as
+      | { prod_code: string; prod_name: string }
+      | undefined;
+    return row ?? null;
+  });
+
 export const getProductAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
