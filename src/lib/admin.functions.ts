@@ -5,6 +5,7 @@ import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const emailSchema = z.string().trim().toLowerCase()
   .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
@@ -200,10 +201,12 @@ interface DocEntry {
 }
 
 function findDocsDir(): string {
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
-    path.resolve(import.meta.dirname, "../../docs"),
     path.join(process.cwd(), "docs"),
     path.resolve(process.cwd(), "../docs"),
+    path.resolve(scriptDir, "../../docs"),
+    path.resolve(scriptDir, "../../../docs"),
   ];
   for (const dir of candidates) {
     try {
