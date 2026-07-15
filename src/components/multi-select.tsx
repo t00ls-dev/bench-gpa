@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function truncate(s: string, max = 25) {
+function truncate(s: string, max = 20) {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
