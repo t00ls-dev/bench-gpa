@@ -28,9 +28,13 @@ export function fmtBRShort(input: string | Date | null | undefined): string {
   if (typeof input === "string") {
     const [Y, M, D] = input.slice(0, 10).split("-");
     if (!Y || !M || !D) return "(sem)";
-    y = Number(Y); m = Number(M); d = Number(D);
+    y = Number(Y);
+    m = Number(M);
+    d = Number(D);
   } else {
-    y = input.getFullYear(); m = input.getMonth() + 1; d = input.getDate();
+    y = input.getFullYear();
+    m = input.getMonth() + 1;
+    d = input.getDate();
   }
   return `${pad2(d)}/${pad2(m)}/${String(y).slice(-2)}`;
 }

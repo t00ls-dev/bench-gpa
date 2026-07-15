@@ -12,7 +12,9 @@ const browser = await puppeteer.launch({
 });
 
 const page = await browser.newPage();
-page.on("console", (msg) => { if (msg.type() === "error") console.log("CONSOLE ERROR:", msg.text()); });
+page.on("console", (msg) => {
+  if (msg.type() === "error") console.log("CONSOLE ERROR:", msg.text());
+});
 page.on("pageerror", (err) => console.log("PAGE ERROR:", err.message));
 
 // Intercept requests to handle any redirects
@@ -34,14 +36,17 @@ async function openDropdownAndMeasure(labelText) {
         const p = lb.closest("div");
         if (!p) return "no-parent";
         const b = p.querySelector("button");
-        if (b) { b.click(); return "clicked"; }
+        if (b) {
+          b.click();
+          return "clicked";
+        }
         return "no-button";
       }
     }
     return "no-label";
   }, labelText);
   console.log(`  Abrir "${labelText}": ${opened}`);
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 3000));
 
   const m = await page.evaluate(() => {
     const wrapper = document.querySelector("[data-radix-popper-content-wrapper]");
@@ -70,7 +75,14 @@ async function openDropdownAndMeasure(labelText) {
       windowWidth: window.innerWidth,
       bodyScrollW: bodyW,
       htmlScrollW: htmlW,
-      card: cardRect ? { left: cardRect.left, right: cardRect.right, width: cardRect.width, bottom: cardRect.bottom } : null,
+      card: cardRect
+        ? {
+            left: cardRect.left,
+            right: cardRect.right,
+            width: cardRect.width,
+            bottom: cardRect.bottom,
+          }
+        : null,
       wrapper: dim(wrapper),
       dialog: dim(dialog),
     };
@@ -106,7 +118,7 @@ const resp = await page.goto(URL + "/auth", { waitUntil: "domcontentloaded", tim
 console.log("Status:", resp?.status());
 
 // Wait for page to fully load
-await new Promise(r => setTimeout(r, 3000));
+await new Promise((r) => setTimeout(r, 3000));
 await page.screenshot({ path: "/tmp/opencode/prod-00-auth.png", fullPage: true });
 
 // Login
@@ -129,7 +141,7 @@ try {
   process.exit(1);
 }
 
-await new Promise(r => setTimeout(r, 3000));
+await new Promise((r) => setTimeout(r, 3000));
 await page.screenshot({ path: "/tmp/opencode/prod-01-dashboard.png", fullPage: true });
 console.log("Page URL:", page.url());
 
@@ -144,7 +156,7 @@ await page.evaluate(() => {
   const h1 = document.querySelector("h1");
   if (h1) h1.click();
 });
-await new Promise(r => setTimeout(r, 500));
+await new Promise((r) => setTimeout(r, 500));
 
 console.log("\n--- Selecting filters ---");
 // Try selecting the cascade
@@ -158,13 +170,19 @@ async function selectFilter(labelText, value) {
         const p = lb.closest("div");
         if (!p) return false;
         const b = p.querySelector("button");
-        if (b) { b.click(); return true; }
+        if (b) {
+          b.click();
+          return true;
+        }
       }
     }
     return false;
   }, labelText);
-  if (!opened) { console.log("  Failed to open"); return false; }
-  await new Promise(r => setTimeout(r, 2000));
+  if (!opened) {
+    console.log("  Failed to open");
+    return false;
+  }
+  await new Promise((r) => setTimeout(r, 2000));
 
   // Try selecting
   const result = await page.evaluate((opt) => {
@@ -174,22 +192,26 @@ async function selectFilter(labelText, value) {
     // Exact match first
     for (const item of items) {
       if (item.textContent && item.textContent.trim() === opt) {
-        item.click(); return "exact";
+        item.click();
+        return "exact";
       }
     }
     // Partial match
     for (const item of items) {
       if (item.textContent && item.textContent.trim().includes(opt)) {
-        item.click(); return "partial:" + item.textContent;
+        item.click();
+        return "partial:" + item.textContent;
       }
     }
     // Show available options
-    const opts = Array.from(items).map(i => i.textContent).filter(Boolean);
+    const opts = Array.from(items)
+      .map((i) => i.textContent)
+      .filter(Boolean);
     return "not-found. Options: " + JSON.stringify(opts);
   }, value);
 
   console.log("  Result:", result);
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, 2000));
   return result.startsWith("exact") || result.startsWith("partial");
 }
 
@@ -208,21 +230,28 @@ const deptos = await page.evaluate(() => {
   }
   return [];
 });
-await new Promise(r => setTimeout(r, 2000));
+await new Promise((r) => setTimeout(r, 2000));
 const deptoOpts = await page.evaluate(() => {
   const d = document.querySelector('[role="dialog"]');
   if (!d) return [];
-  return Array.from(d.querySelectorAll('[role="option"]')).map(o => o.textContent).filter(Boolean);
+  return Array.from(d.querySelectorAll('[role="option"]'))
+    .map((o) => o.textContent)
+    .filter(Boolean);
 });
 console.log("\nDepartamentos:", JSON.stringify(deptoOpts));
 
 // Close
-await page.evaluate(() => { document.querySelector("h1")?.click(); });
-await new Promise(r => setTimeout(r, 500));
+await page.evaluate(() => {
+  document.querySelector("h1")?.click();
+});
+await new Promise((r) => setTimeout(r, 500));
 
 // Now do the full cascade
 await selectFilter("Departamento", "PERECIVEIS");
-await page.screenshot({ path: "/tmp/opencode/prod-03-selecionou-departamento.png", fullPage: true });
+await page.screenshot({
+  path: "/tmp/opencode/prod-03-selecionou-departamento.png",
+  fullPage: true,
+});
 
 // Check secoes
 const secaoOpts = await page.evaluate(() => {
@@ -239,15 +268,19 @@ const secaoOpts = await page.evaluate(() => {
   setTimeout(() => {}, 2000);
   return [];
 });
-await new Promise(r => setTimeout(r, 2000));
+await new Promise((r) => setTimeout(r, 2000));
 const secaoList = await page.evaluate(() => {
   const d = document.querySelector('[role="dialog"]');
   if (!d) return [];
-  return Array.from(d.querySelectorAll('[role="option"]')).map(o => o.textContent).filter(Boolean);
+  return Array.from(d.querySelectorAll('[role="option"]'))
+    .map((o) => o.textContent)
+    .filter(Boolean);
 });
 console.log("\nSecoes:", JSON.stringify(secaoList));
-await page.evaluate(() => { document.querySelector("h1")?.click(); });
-await new Promise(r => setTimeout(r, 500));
+await page.evaluate(() => {
+  document.querySelector("h1")?.click();
+});
+await new Promise((r) => setTimeout(r, 500));
 
 // Continue cascade
 await selectFilter("Seção", "FRIOS TRANSFORMADOS");
@@ -266,15 +299,19 @@ const grupoOpts = await page.evaluate(() => {
   setTimeout(() => {}, 2000);
   return [];
 });
-await new Promise(r => setTimeout(r, 2000));
+await new Promise((r) => setTimeout(r, 2000));
 const grupoList = await page.evaluate(() => {
   const d = document.querySelector('[role="dialog"]');
   if (!d) return [];
-  return Array.from(d.querySelectorAll('[role="option"]')).map(o => o.textContent).filter(Boolean);
+  return Array.from(d.querySelectorAll('[role="option"]'))
+    .map((o) => o.textContent)
+    .filter(Boolean);
 });
 console.log("\nGrupos:", JSON.stringify(grupoList));
-await page.evaluate(() => { document.querySelector("h1")?.click(); });
-await new Promise(r => setTimeout(r, 500));
+await page.evaluate(() => {
+  document.querySelector("h1")?.click();
+});
+await new Promise((r) => setTimeout(r, 500));
 
 await selectFilter("Grupo", "FRIO DE AVE MANIPULADO +10");
 
@@ -295,11 +332,13 @@ const subOpts = await page.evaluate(() => {
   setTimeout(() => {}, 2000);
   return [];
 });
-await new Promise(r => setTimeout(r, 2000));
+await new Promise((r) => setTimeout(r, 2000));
 const subList = await page.evaluate(() => {
   const d = document.querySelector('[role="dialog"]');
   if (!d) return [];
-  return Array.from(d.querySelectorAll('[role="option"]')).map(o => o.textContent).filter(Boolean);
+  return Array.from(d.querySelectorAll('[role="option"]'))
+    .map((o) => o.textContent)
+    .filter(Boolean);
 });
 console.log("\nSubgrupos:", JSON.stringify(subList));
 
@@ -324,7 +363,14 @@ const m = await page.evaluate(() => {
   }
   return {
     windowWidth: window.innerWidth,
-    card: cardRect ? { left: cardRect.left, right: cardRect.right, width: cardRect.width, bottom: cardRect.bottom } : null,
+    card: cardRect
+      ? {
+          left: cardRect.left,
+          right: cardRect.right,
+          width: cardRect.width,
+          bottom: cardRect.bottom,
+        }
+      : null,
     wrapper: dim(wrapper),
     dialog: dim(dialog),
     bodyScrollW: document.body.scrollWidth,

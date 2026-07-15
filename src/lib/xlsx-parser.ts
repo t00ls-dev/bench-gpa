@@ -62,7 +62,8 @@ export function parseAnyWorkbook(buffer: ArrayBuffer): ParsedSalesFile {
 
 function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
   const dateIso = findSalesDate(rows);
-  if (!dateIso) throw new Error("Marcador 'DTA_VENDA é DD/MM/AAAA' não encontrado no arquivo de vendas.");
+  if (!dateIso)
+    throw new Error("Marcador 'DTA_VENDA é DD/MM/AAAA' não encontrado no arquivo de vendas.");
 
   const headerLojas = rows[0];
   const stores: Array<{ idx: number; code: string; name: string }> = [];
@@ -88,12 +89,34 @@ function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
   for (let r = 2; r < rows.length; r++) {
     const row = rows[r];
     if (!row || row.length === 0) continue;
-    const c0 = row[0]; const c1 = row[1]; const c2 = row[2]; const c3 = row[3]; const c4 = row[4];
+    const c0 = row[0];
+    const c1 = row[1];
+    const c2 = row[2];
+    const c3 = row[3];
+    const c4 = row[4];
     if (typeof c0 === "string" && c0.trim() === "Total" && c1 == null) continue;
-    if (isVal(c0) && c1 != null && String(c1).trim() === "Total") { depto = String(c0).trim(); secao=null;grupo=null;subgrupo=null; continue; }
-    if (isVal(c1) && c2 != null && String(c2).trim() === "Total") { secao = String(c1).trim(); grupo=null;subgrupo=null; continue; }
-    if (isVal(c2) && c3 != null && String(c3).trim() === "Total") { grupo = String(c2).trim(); subgrupo=null; continue; }
-    if (isVal(c3) && c4 != null && String(c4).trim() === "Total") { subgrupo = String(c3).trim(); continue; }
+    if (isVal(c0) && c1 != null && String(c1).trim() === "Total") {
+      depto = String(c0).trim();
+      secao = null;
+      grupo = null;
+      subgrupo = null;
+      continue;
+    }
+    if (isVal(c1) && c2 != null && String(c2).trim() === "Total") {
+      secao = String(c1).trim();
+      grupo = null;
+      subgrupo = null;
+      continue;
+    }
+    if (isVal(c2) && c3 != null && String(c3).trim() === "Total") {
+      grupo = String(c2).trim();
+      subgrupo = null;
+      continue;
+    }
+    if (isVal(c3) && c4 != null && String(c4).trim() === "Total") {
+      subgrupo = String(c3).trim();
+      continue;
+    }
 
     if (typeof c4 === "string") {
       const cn = splitCodeName(c4);
@@ -104,9 +127,14 @@ function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
         const n = num(v);
         if (n === 0) continue;
         sales.push({
-          store_code: st.code, store_name: st.name,
-          depto, secao, grupo, subgrupo,
-          prod_code: cn.code, prod_name: cn.name,
+          store_code: st.code,
+          store_name: st.name,
+          depto,
+          secao,
+          grupo,
+          subgrupo,
+          prod_code: cn.code,
+          prod_name: cn.name,
           val_vda: Math.round(n * 100) / 100,
         });
       }
@@ -121,4 +149,3 @@ function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
     products: Array.from(productMap, ([prod_code, prod_name]) => ({ prod_code, prod_name })),
   };
 }
-

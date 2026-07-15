@@ -3,13 +3,30 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fmtBRShort, fmtDT } from "@/lib/utils";
 
-interface ImportRecord { sale_date: string; row_count: number; imported_at: string }
+interface ImportRecord {
+  sale_date: string;
+  row_count: number;
+  imported_at: string;
+}
 
 interface Props {
   records: ImportRecord[];
 }
 
-const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const MONTHS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 export function ImportCalendar({ records }: Props) {
@@ -45,8 +62,10 @@ export function ImportCalendar({ records }: Props) {
   const today = new Date();
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const prevMonth = () => setView((v) => v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 });
-  const nextMonth = () => setView((v) => v.m === 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m: v.m + 1 });
+  const prevMonth = () =>
+    setView((v) => (v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 }));
+  const nextMonth = () =>
+    setView((v) => (v.m === 11 ? { y: v.y + 1, m: 0 } : { y: v.y, m: v.m + 1 }));
 
   const selectedRecord = selected ? byDate.get(selected) : null;
 
@@ -54,12 +73,22 @@ export function ImportCalendar({ records }: Props) {
     <div className="grid gap-4 md:grid-cols-[1fr_280px]">
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <Button variant="ghost" size="sm" aria-label="Mês anterior" onClick={prevMonth}><ChevronLeft className="size-4" /></Button>
-          <div className="font-display text-sm font-semibold">{MONTHS[view.m]} {view.y}</div>
-          <Button variant="ghost" size="sm" aria-label="Próximo mês" onClick={nextMonth}><ChevronRight className="size-4" /></Button>
+          <Button variant="ghost" size="sm" aria-label="Mês anterior" onClick={prevMonth}>
+            <ChevronLeft className="size-4" />
+          </Button>
+          <div className="font-display text-sm font-semibold">
+            {MONTHS[view.m]} {view.y}
+          </div>
+          <Button variant="ghost" size="sm" aria-label="Próximo mês" onClick={nextMonth}>
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-muted-foreground">
-          {WD.map((w, i) => <div key={i} className="py-1">{w}</div>)}
+          {WD.map((w, i) => (
+            <div key={i} className="py-1">
+              {w}
+            </div>
+          ))}
         </div>
         <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Calendário de importações">
           {cells.map((iso, i) => {
@@ -69,7 +98,9 @@ export function ImportCalendar({ records }: Props) {
             const isFuture = iso > todayIso;
             const isSel = iso === selected;
             const day = parseInt(iso.slice(-2), 10);
-            const dayLabel = rec ? `${fmtBRShort(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas` : `${fmtBRShort(iso)} : não importado`;
+            const dayLabel = rec
+              ? `${fmtBRShort(iso)} : ${rec.row_count.toLocaleString("pt-BR")} linhas`
+              : `${fmtBRShort(iso)} : não importado`;
             return (
               <button
                 key={i}
@@ -96,9 +127,18 @@ export function ImportCalendar({ records }: Props) {
           })}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-primary bg-primary" /> Mais recente</span>
-          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-success/30 bg-success/10" /> Importado</span>
-          <span className="flex items-center gap-1"><span className="inline-block size-3 rounded border border-dashed border-warning/30 bg-warning/10" /> Ausente</span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-3 rounded border border-primary bg-primary" /> Mais
+            recente
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-3 rounded border border-success/30 bg-success/10" />{" "}
+            Importado
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-3 rounded border border-dashed border-warning/30 bg-warning/10" />{" "}
+            Ausente
+          </span>
         </div>
       </div>
 
@@ -106,7 +146,9 @@ export function ImportCalendar({ records }: Props) {
         {selectedRecord ? (
           <div>
             <div className="text-xs text-muted-foreground">Detalhes da importação</div>
-            <div className="mt-1 font-display text-base font-semibold">{fmtBRShort(selectedRecord.sale_date)}</div>
+            <div className="mt-1 font-display text-base font-semibold">
+              {fmtBRShort(selectedRecord.sale_date)}
+            </div>
             <dl className="mt-3 space-y-1.5 text-xs">
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-foreground">Linhas</dt>
@@ -124,7 +166,9 @@ export function ImportCalendar({ records }: Props) {
         ) : selected ? (
           <div className="text-xs text-muted-foreground">Esta data ainda não foi importada.</div>
         ) : (
-          <div className="text-xs text-muted-foreground">Clique em uma data importada para ver os detalhes.</div>
+          <div className="text-xs text-muted-foreground">
+            Clique em uma data importada para ver os detalhes.
+          </div>
         )}
       </aside>
     </div>

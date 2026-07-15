@@ -14,7 +14,10 @@ function log(msg: string) {
   appendFileSync(LOG_FILE, line + "\n");
 }
 
-function exec(cmd: string[], opts?: { cwd?: string; timeout?: number }): { ok: boolean; stdout: string; stderr: string } {
+function exec(
+  cmd: string[],
+  opts?: { cwd?: string; timeout?: number },
+): { ok: boolean; stdout: string; stderr: string } {
   const result = Bun.spawnSync(cmd, {
     cwd: opts?.cwd,
     timeout: opts?.timeout ?? 600_000,
@@ -169,7 +172,12 @@ async function main() {
   }
 
   // 5. Summary
-  const all = [...renamed.map((s) => `REN: ${s}`), ...deduped.map((s) => `DUP: ${s}`), ...imported.map((s) => `IMP: ${s}`), ...failed.map((s) => `FAIL: ${s}`)];
+  const all = [
+    ...renamed.map((s) => `REN: ${s}`),
+    ...deduped.map((s) => `DUP: ${s}`),
+    ...imported.map((s) => `IMP: ${s}`),
+    ...failed.map((s) => `FAIL: ${s}`),
+  ];
   for (const p of all) log(p);
 
   // 6. Commit + push se houve operações em arquivos
@@ -179,7 +187,14 @@ async function main() {
     log("Git: no file operations — skip commit");
   } else {
     exec(["git", "add", "logs/import.log"]);
-    const summary = [renamed.length && `${renamed.length} renamed`, deduped.length && `${deduped.length} deduped`, imported.length && `${imported.length} imported`, failed.length && `${failed.length} failed`].filter(Boolean).join(", ");
+    const summary = [
+      renamed.length && `${renamed.length} renamed`,
+      deduped.length && `${deduped.length} deduped`,
+      imported.length && `${imported.length} imported`,
+      failed.length && `${failed.length} failed`,
+    ]
+      .filter(Boolean)
+      .join(", ");
     const ts = new Date().toISOString().replace("T", " ").slice(0, 16);
     const commit = exec(["git", "commit", "-m", `import-watch: ${ts} — ${summary}`]);
     if (!commit.ok) {
@@ -187,7 +202,7 @@ async function main() {
     } else {
       log(`Git: ${commit.stdout}`);
       const push = exec(["git", "push"]);
-      log(`Git push: ${push.ok ? (push.stdout || "OK") : "ERROR — " + push.stderr}`);
+      log(`Git push: ${push.ok ? push.stdout || "OK" : "ERROR — " + push.stderr}`);
     }
   }
 

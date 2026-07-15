@@ -12,5 +12,9 @@ export const Route = createFileRoute("/_authenticated/admin")({
     });
     if (isAdmin !== true) throw redirect({ to: "/" });
   },
-  component: () => <AdminGate><Outlet /></AdminGate>,
+  component: () => (
+    <AdminGate>
+      <Outlet />
+    </AdminGate>
+  ),
 });

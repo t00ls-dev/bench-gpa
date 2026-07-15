@@ -4,8 +4,10 @@ import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 
-
-const emailSchema = z.string().trim().toLowerCase()
+const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
   .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
 const passwordSchema = z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(128);
 
@@ -18,19 +20,22 @@ export const listUsers = createServerFn({ method: "GET" })
       .from("users")
       .select("id, email, name, role, is_active, created_at")
       .order("created_at", { ascending: false });
-    if (error) throw safeError("listUsers", error, "Ocorreu um erro interno. Tente novamente.", true);
+    if (error)
+      throw safeError("listUsers", error, "Ocorreu um erro interno. Tente novamente.", true);
     return data ?? [];
   });
 
 export const createUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({
-      email: emailSchema,
-      name: z.string().trim().min(1, "Nome obrigatório").max(120),
-      password: passwordSchema,
-      role: z.enum(["admin", "user"]),
-    }).parse(data)
+    z
+      .object({
+        email: emailSchema,
+        name: z.string().trim().min(1, "Nome obrigatório").max(120),
+        password: passwordSchema,
+        role: z.enum(["admin", "user"]),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -41,7 +46,8 @@ export const createUser = createServerFn({ method: "POST" })
       password: data.password,
       email_confirm: true,
     });
-    if (authErr || !created?.user) throw safeError("createUser.auth", authErr, "Falha ao criar usuário.", true);
+    if (authErr || !created?.user)
+      throw safeError("createUser.auth", authErr, "Falha ao criar usuário.", true);
 
     const { error: insErr } = await supabaseAdmin.from("users").insert({
       id: created.user.id,
@@ -61,10 +67,12 @@ export const createUser = createServerFn({ method: "POST" })
 export const setUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({
-      userId: z.string().uuid(),
-      role: z.enum(["admin", "user"]),
-    }).parse(data)
+    z
+      .object({
+        userId: z.string().uuid(),
+        role: z.enum(["admin", "user"]),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -76,17 +84,20 @@ export const setUserRole = createServerFn({ method: "POST" })
       .from("users")
       .update({ role: data.role })
       .eq("id", data.userId);
-    if (error) throw safeError("setUserRole", error, "Ocorreu um erro interno. Tente novamente.", true);
+    if (error)
+      throw safeError("setUserRole", error, "Ocorreu um erro interno. Tente novamente.", true);
     return { ok: true };
   });
 
 export const setUserActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({
-      userId: z.string().uuid(),
-      isActive: z.boolean(),
-    }).parse(data)
+    z
+      .object({
+        userId: z.string().uuid(),
+        isActive: z.boolean(),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -98,17 +109,20 @@ export const setUserActive = createServerFn({ method: "POST" })
       .from("users")
       .update({ is_active: data.isActive })
       .eq("id", data.userId);
-    if (error) throw safeError("setUserActive", error, "Ocorreu um erro interno. Tente novamente.", true);
+    if (error)
+      throw safeError("setUserActive", error, "Ocorreu um erro interno. Tente novamente.", true);
     return { ok: true };
   });
 
 export const resetPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({
-      userId: z.string().uuid(),
-      password: passwordSchema,
-    }).parse(data)
+    z
+      .object({
+        userId: z.string().uuid(),
+        password: passwordSchema,
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -116,22 +130,38 @@ export const resetPassword = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
       password: data.password,
     });
-    if (error) throw safeError("resetPassword", error, "Ocorreu um erro interno. Tente novamente.", true);
+    if (error)
+      throw safeError("resetPassword", error, "Ocorreu um erro interno. Tente novamente.", true);
     return { ok: true };
   });
 
-type TableName = "staging_sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
+type TableName =
+  | "staging_sales"
+  | "sales_daily_agg"
+  | "products"
+  | "stores"
+  | "filter_hierarchy"
+  | "import_log";
 
-async function countRows(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName) {
+async function countRows(
+  sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
+  table: TableName,
+) {
   const { count, error } = await sa.from(table).select("*", { count: "exact", head: false });
   if (error) throw safeError(`count.${table}`, error, undefined, true);
   return count ?? 0;
 }
 
-async function fetchDistinctDates(sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"], table: TableName, column: string) {
+async function fetchDistinctDates(
+  sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
+  table: TableName,
+  column: string,
+) {
   const { data, error } = await sa.from(table).select(column);
   if (error) throw safeError(`distinct.${table}.${column}`, error, undefined, true);
-  const vals = [...new Set((data ?? []).map((r) => String((r as unknown as Record<string, unknown>)[column])))].sort();
+  const vals = [
+    ...new Set((data ?? []).map((r) => String((r as unknown as Record<string, unknown>)[column]))),
+  ].sort();
   return vals;
 }
 
@@ -140,7 +170,14 @@ export const diagnoseData = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const tables: TableName[] = ["staging_sales", "sales_daily_agg", "products", "stores", "filter_hierarchy", "import_log"];
+    const tables: TableName[] = [
+      "staging_sales",
+      "sales_daily_agg",
+      "products",
+      "stores",
+      "filter_hierarchy",
+      "import_log",
+    ];
     const counts: Record<string, number> = {};
     for (const t of tables) {
       try {
@@ -199,7 +236,11 @@ interface DocEntry {
   date: string;
 }
 
-const docModules = import.meta.glob("/docs/**/*.md", { eager: true, query: "?raw", import: "default" }) as Record<string, string>;
+const docModules = import.meta.glob("/docs/**/*.md", {
+  eager: true,
+  query: "?raw",
+  import: "default",
+}) as Record<string, string>;
 
 export const listDocs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -209,9 +250,13 @@ export const listDocs = createServerFn({ method: "GET" })
     for (const [filePath, content] of Object.entries(docModules)) {
       const slug = filePath.replace(/^\/docs\//, "").replace(/\.md$/, "");
       if (slug === "improvements/README") continue;
-      const title = extractDocTitle(content) ?? slug.replace(/[/_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const title =
+        extractDocTitle(content) ??
+        slug.replace(/[/_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
       const date = extractDocDate(content) ?? "";
-      const category = slug.startsWith("improvements/") ? "Análise do Código" : "Documentação Técnica";
+      const category = slug.startsWith("improvements/")
+        ? "Análise do Código"
+        : "Documentação Técnica";
       entries.push({ slug, title, category, date });
     }
     entries.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
@@ -220,9 +265,7 @@ export const listDocs = createServerFn({ method: "GET" })
 
 export const getDocContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ slug: z.string().min(1) }).parse(data)
-  )
+  .inputValidator((data: unknown) => z.object({ slug: z.string().min(1) }).parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const content = docModules[`/docs/${data.slug}.md`];

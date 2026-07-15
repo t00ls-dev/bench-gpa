@@ -21,13 +21,13 @@ async function runTest(viewportWidth) {
 
   // Login
   await page.goto(URL + "/auth", { waitUntil: "domcontentloaded", timeout: 60000 });
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 3000));
   await page.waitForSelector("input[type=email]", { timeout: 30000 });
   await page.type("input[type=email]", EMAIL);
   await page.type("input[type=password]", PASS);
   await page.click('button[type="submit"]');
   await page.waitForSelector(".kpi-card", { timeout: 30000 });
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 3000));
 
   // Helper: click outside to close any open popover
   async function closePopover() {
@@ -35,7 +35,7 @@ async function runTest(viewportWidth) {
       // Click on the page background
       document.body.click();
     });
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 500));
   }
 
   // Helper: select a filter by label and option text
@@ -55,7 +55,7 @@ async function runTest(viewportWidth) {
         }
       }
     }, labelText);
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
 
     // Select the option
     const result = await page.evaluate((opt) => {
@@ -65,26 +65,31 @@ async function runTest(viewportWidth) {
       // exact match first
       for (const item of items) {
         if (item.textContent && item.textContent.trim() === opt) {
-          item.click(); return "exact:" + opt;
+          item.click();
+          return "exact:" + opt;
         }
       }
       // partial match
       for (const item of items) {
         if (item.textContent && item.textContent.includes(opt)) {
-          item.click(); return "partial:" + item.textContent;
+          item.click();
+          return "partial:" + item.textContent;
         }
       }
       return "not-found";
     }, optionText);
 
     console.log(`  ${labelText} -> ${optionText}: ${result}`);
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
     return result;
   }
 
   // Step 1: Take a screenshot of the initial dashboard
   console.log(`\n=== Testing at ${viewportWidth}px ===`);
-  await page.screenshot({ path: `/tmp/opencode/prod-${viewportWidth}-01-inicial.png`, fullPage: true });
+  await page.screenshot({
+    path: `/tmp/opencode/prod-${viewportWidth}-01-inicial.png`,
+    fullPage: true,
+  });
 
   // Step 2: Check all elements for overflow
   async function checkOverflow(label) {
@@ -107,7 +112,8 @@ async function runTest(viewportWidth) {
         const s = getComputedStyle(el);
         const r = el.getBoundingClientRect();
         // Check if element is wider than viewport
-        if (r.width > window.innerWidth + 2) { // 2px tolerance
+        if (r.width > window.innerWidth + 2) {
+          // 2px tolerance
           results.push({
             type: "wider-than-viewport",
             tag: el.tagName,
@@ -138,7 +144,7 @@ async function runTest(viewportWidth) {
     });
 
     console.log(`\n--- ${label} ---`);
-    const docData = overflowData.find(d => d.type === "document");
+    const docData = overflowData.find((d) => d.type === "document");
     if (docData) {
       console.log(`Window: ${docData.windowInnerW}px`);
       console.log(`HTML scrollW: ${docData.htmlScrollW}px, clientW: ${docData.htmlClientW}px`);
@@ -146,10 +152,10 @@ async function runTest(viewportWidth) {
       console.log(`Horizontal scroll: ${docData.hasHScroll ? "YES ***" : "NO"}`);
     }
 
-    const overflows = overflowData.filter(d => d.type !== "document");
+    const overflows = overflowData.filter((d) => d.type !== "document");
     if (overflows.length > 0) {
       console.log(`Overflowing elements: ${overflows.length}`);
-      overflows.slice(0, 10).forEach(o => {
+      overflows.slice(0, 10).forEach((o) => {
         console.log(`  ${o.type}: <${o.tag}> cls="${o.cls}" text="${o.text}"`);
       });
     } else {
@@ -163,7 +169,7 @@ async function runTest(viewportWidth) {
 
   // Step 3: Select the store
   console.log("\n--- Setting filters ---");
-  
+
   // First, list all deptos to find PERECIVEIS
   const deptos = await page.evaluate(() => {
     const labels = document.querySelectorAll("label");
@@ -177,11 +183,13 @@ async function runTest(viewportWidth) {
     }
     return null;
   });
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise((r) => setTimeout(r, 2000));
   const deptosList = await page.evaluate(() => {
     const d = document.querySelector('[role="dialog"]');
     if (!d) return [];
-    return Array.from(d.querySelectorAll('[role="option"]')).map(o => o.textContent).filter(Boolean);
+    return Array.from(d.querySelectorAll('[role="option"]'))
+      .map((o) => o.textContent)
+      .filter(Boolean);
   });
   console.log("Deptos:", JSON.stringify(deptosList));
   await closePopover();
@@ -205,10 +213,13 @@ async function runTest(viewportWidth) {
   console.log("Grupo selecionado:", grupoResult);
 
   // Wait a bit for the cascata to settle
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 3000));
 
   // Take a screenshot with filters set
-  await page.screenshot({ path: `/tmp/opencode/prod-${viewportWidth}-02-filters-set.png`, fullPage: true });
+  await page.screenshot({
+    path: `/tmp/opencode/prod-${viewportWidth}-02-filters-set.png`,
+    fullPage: true,
+  });
 
   // Check for overflow after filters
   await checkOverflow("After filters set");
@@ -227,10 +238,13 @@ async function runTest(viewportWidth) {
       }
     }
   });
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 3000));
 
   // Take screenshot with popover open
-  await page.screenshot({ path: `/tmp/opencode/prod-${viewportWidth}-03-popover-open.png`, fullPage: true });
+  await page.screenshot({
+    path: `/tmp/opencode/prod-${viewportWidth}-03-popover-open.png`,
+    fullPage: true,
+  });
 
   // Check overflow with popover open
   const overflowWithPopover = await checkOverflow("Popover open");
@@ -240,7 +254,8 @@ async function runTest(viewportWidth) {
     const wrapper = document.querySelector("[data-radix-popper-content-wrapper]");
     const dialog = document.querySelector('[role="dialog"]');
     const card = document.querySelector(".kpi-card");
-    const filterBar = document.querySelector(".kpi-card.mb-6") || document.querySelector("div.kpi-card");
+    const filterBar =
+      document.querySelector(".kpi-card.mb-6") || document.querySelector("div.kpi-card");
     const subTrigger = (() => {
       const labels = document.querySelectorAll("label");
       for (const lb of labels) {
@@ -249,7 +264,7 @@ async function runTest(viewportWidth) {
           if (!p) return null;
           const b = p.querySelector("button");
           if (!b) return null;
-          return el => {
+          return (el) => {
             const r = b.getBoundingClientRect();
             return { left: r.left, right: r.right, width: r.width, offsetWidth: b.offsetWidth };
           };
@@ -262,8 +277,12 @@ async function runTest(viewportWidth) {
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return {
-        left: r.left, right: r.right, top: r.top, bottom: r.bottom,
-        width: r.width, height: r.height
+        left: r.left,
+        right: r.right,
+        top: r.top,
+        bottom: r.bottom,
+        width: r.width,
+        height: r.height,
       };
     }
 
@@ -276,14 +295,26 @@ async function runTest(viewportWidth) {
   });
 
   console.log("\n=== POPOVER METRICS ===");
-  console.log(`Card: l=${popoverMetrics.card?.left.toFixed(0)} r=${popoverMetrics.card?.right.toFixed(0)} w=${popoverMetrics.card?.width.toFixed(0)}`);
-  console.log(`Wrapper: l=${popoverMetrics.wrapper?.left.toFixed(0)} r=${popoverMetrics.wrapper?.right.toFixed(0)} w=${popoverMetrics.wrapper?.width.toFixed(0)}`);
-  console.log(`Dialog: l=${popoverMetrics.dialog?.left.toFixed(0)} r=${popoverMetrics.dialog?.right.toFixed(0)} w=${popoverMetrics.dialog?.width.toFixed(0)}`);
+  console.log(
+    `Card: l=${popoverMetrics.card?.left.toFixed(0)} r=${popoverMetrics.card?.right.toFixed(0)} w=${popoverMetrics.card?.width.toFixed(0)}`,
+  );
+  console.log(
+    `Wrapper: l=${popoverMetrics.wrapper?.left.toFixed(0)} r=${popoverMetrics.wrapper?.right.toFixed(0)} w=${popoverMetrics.wrapper?.width.toFixed(0)}`,
+  );
+  console.log(
+    `Dialog: l=${popoverMetrics.dialog?.left.toFixed(0)} r=${popoverMetrics.dialog?.right.toFixed(0)} w=${popoverMetrics.dialog?.width.toFixed(0)}`,
+  );
 
   if (popoverMetrics.card && popoverMetrics.wrapper) {
-    console.log(`\nPopover fits inside card: ${popoverMetrics.wrapper.left >= popoverMetrics.card.left && popoverMetrics.wrapper.right <= popoverMetrics.card.right}`);
-    console.log(`Excess right: ${(popoverMetrics.wrapper.right - popoverMetrics.card.right).toFixed(1)}px`);
-    console.log(`Excess left: ${(popoverMetrics.card.left - popoverMetrics.wrapper.left).toFixed(1)}px`);
+    console.log(
+      `\nPopover fits inside card: ${popoverMetrics.wrapper.left >= popoverMetrics.card.left && popoverMetrics.wrapper.right <= popoverMetrics.card.right}`,
+    );
+    console.log(
+      `Excess right: ${(popoverMetrics.wrapper.right - popoverMetrics.card.right).toFixed(1)}px`,
+    );
+    console.log(
+      `Excess left: ${(popoverMetrics.card.left - popoverMetrics.wrapper.left).toFixed(1)}px`,
+    );
   }
 
   console.log("\nConsole errors:", consoleErrors.slice(0, 5).join(" | "));
