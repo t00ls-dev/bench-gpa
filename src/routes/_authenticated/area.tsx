@@ -284,7 +284,7 @@ function AreaPage() {
   };
 
   const openProduct = (code: string) => {
-    navigate({ to: "/produto", search: { plu: code } });
+    navigate({ to: "/produto", search: { plu: code, store: fStores.length === 1 ? fStores[0] : undefined } });
   };
 
   // Breadcrumb
