@@ -92,7 +92,7 @@ export function FilterBar({ value, onChange }: Props) {
 
   return (
     <div className="kpi-card mb-6 space-y-3 overflow-hidden">
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <div className="lg:col-span-2">
           <Label className="text-xs">Período</Label>
           <div className="mt-1">
