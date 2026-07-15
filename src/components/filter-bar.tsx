@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getFilterOptions } from "@/lib/analytics.functions";
+import { getFilterOptions } from "@/lib/dashboard.functions";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/date-range-picker";

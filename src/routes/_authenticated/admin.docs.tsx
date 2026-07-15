@@ -43,9 +43,13 @@ function DocList() {
           <h1 className="font-display text-3xl font-bold flex items-center gap-2">
             <BookText className="size-7 text-primary shrink-0" /> Documentação
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Documentação técnica e análises do sistema.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Documentação técnica e análises do sistema.
+          </p>
         </header>
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20 w-full" />
+        ))}
       </div>
     );
   }
@@ -57,7 +61,9 @@ function DocList() {
           <h1 className="font-display text-3xl font-bold flex items-center gap-2">
             <BookText className="size-7 text-primary shrink-0" /> Documentação
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Documentação técnica e análises do sistema.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Documentação técnica e análises do sistema.
+          </p>
         </header>
         <div className="kpi-card p-6 text-sm text-destructive">
           Erro ao carregar documentação: {(error as Error).message}
@@ -77,7 +83,9 @@ function DocList() {
         <h1 className="font-display text-3xl font-bold flex items-center gap-2">
           <BookText className="size-7 text-primary shrink-0" /> Documentação
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">Documentação técnica e análises do sistema.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Documentação técnica e análises do sistema.
+        </p>
       </header>
       {Object.keys(grouped).length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum documento encontrado.</p>
@@ -95,7 +103,9 @@ function DocList() {
                   <FileText className="mt-0.5 size-5 shrink-0 text-primary" />
                   <div className="min-w-0">
                     <div className="font-medium">{doc.title}</div>
-                    {doc.date && <div className="mt-0.5 text-xs text-muted-foreground">{doc.date}</div>}
+                    {doc.date && (
+                      <div className="mt-0.5 text-xs text-muted-foreground">{doc.date}</div>
+                    )}
                   </div>
                 </button>
               ))}
@@ -111,7 +121,11 @@ function DocViewer({ slug }: { slug: string }) {
   const navigate = Route.useNavigate();
   const getContent = useServerFn(getDocContent);
 
-  const { data: content, isLoading, error } = useQuery({
+  const {
+    data: content,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin-doc", slug],
     queryFn: () => getContent({ data: { slug } }),
   });
@@ -123,7 +137,9 @@ function DocViewer({ slug }: { slug: string }) {
       </Button>
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-4 w-full" />)}
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-4 w-full" />
+          ))}
         </div>
       ) : error ? (
         <div className="kpi-card p-6 text-sm text-destructive">
