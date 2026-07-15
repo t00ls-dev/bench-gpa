@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
+import fs from "node:fs";
+import path from "node:path";
 
 const emailSchema = z.string().trim().toLowerCase()
   .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
@@ -190,3 +192,50 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
     if (error) throw safeError("dbHealthCheck", error, undefined, true);
     return data as DbHealthData;
   });
+
+interface DocEntry {
+  slug: string;
+  title: string;
+  category: string;
+}
+
+export const listDocs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const docsDir = path.join(process.cwd(), "docs");
+    const entries: DocEntry[] = [];
+    const topFiles = fs.readdirSync(docsDir).filter(f => f.endsWith(".md")).sort();
+    for (const file of topFiles) {
+      const content = fs.readFileSync(path.join(docsDir, file), "utf-8");
+      const title = extractDocTitle(content) ?? file.replace(/\.md$/, "").replace(/[-_]/g, " ");
+      entries.push({ slug: file.replace(/\.md$/, ""), title, category: "Documentação Técnica" });
+    }
+    const imprDir = path.join(docsDir, "improvements");
+    if (fs.existsSync(imprDir)) {
+      const imprFiles = fs.readdirSync(imprDir).filter(f => f.endsWith(".md") && f !== "README.md").sort();
+      for (const file of imprFiles) {
+        const content = fs.readFileSync(path.join(imprDir, file), "utf-8");
+        const title = extractDocTitle(content) ?? file.replace(/\.md$/, "").replace(/[-_]/g, " ");
+        entries.push({ slug: `improvements/${file.replace(/\.md$/, "")}`, title, category: "Análise do Código" });
+      }
+    }
+    return entries;
+  });
+
+export const getDocContent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ slug: z.string().min(1) }).parse(data)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const fp = path.join(process.cwd(), "docs", `${data.slug}.md`);
+    if (!fs.existsSync(fp)) throw new Error("Documento não encontrado.");
+    return fs.readFileSync(fp, "utf-8");
+  });
+
+function extractDocTitle(content: string): string | null {
+  const m = content.match(/^#\s+(.+)/m);
+  return m ? m[1].trim() : null;
+}
