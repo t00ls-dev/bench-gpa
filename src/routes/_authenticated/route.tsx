@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { FC } from "react";
 import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield, BookText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -106,17 +107,16 @@ function AuthedLayout() {
     );
   }
 
-  const nav = [
+  const commonNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/produto", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
-    ...(profile.isAdmin
-      ? [
-          { to: "/upload", label: "Importar", icon: Upload },
-          { to: "/admin", label: "Administração", icon: Shield, exact: true },
-          { to: "/admin/docs", label: "Documentação", icon: BookText },
-        ]
-      : []),
+  ] as const;
+
+  const adminNav = [
+    { to: "/upload", label: "Importar", icon: Upload },
+    { to: "/admin", label: "Administração", icon: Shield, exact: true },
+    { to: "/admin/docs", label: "Documentação", icon: BookText },
   ] as const;
 
   return (
@@ -132,7 +132,13 @@ function AuthedLayout() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <NavContent nav={nav} />
+          <NavContent nav={commonNav} />
+          {profile.isAdmin && (
+            <>
+              <Separator className="my-2" />
+              <NavContent nav={adminNav} />
+            </>
+          )}
         </SidebarContent>
         <SidebarFooter>
           <div className="flex items-center gap-2 px-3 py-2">
