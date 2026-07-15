@@ -199,11 +199,25 @@ interface DocEntry {
   category: string;
 }
 
+function findDocsDir(): string {
+  const candidates = [
+    path.resolve(import.meta.dirname, "../../docs"),
+    path.join(process.cwd(), "docs"),
+    path.resolve(process.cwd(), "../docs"),
+  ];
+  for (const dir of candidates) {
+    try {
+      if (fs.existsSync(dir)) return dir;
+    } catch {}
+  }
+  throw new Error("Diretório docs/ não encontrado no servidor.");
+}
+
 export const listDocs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const docsDir = path.join(process.cwd(), "docs");
+    const docsDir = findDocsDir();
     const entries: DocEntry[] = [];
     const topFiles = fs.readdirSync(docsDir).filter(f => f.endsWith(".md")).sort();
     for (const file of topFiles) {
@@ -230,7 +244,8 @@ export const getDocContent = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const fp = path.join(process.cwd(), "docs", `${data.slug}.md`);
+    const docsDir = findDocsDir();
+    const fp = path.join(docsDir, `${data.slug}.md`);
     if (!fs.existsSync(fp)) throw new Error("Documento não encontrado.");
     return fs.readFileSync(fp, "utf-8");
   });
