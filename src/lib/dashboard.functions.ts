@@ -84,16 +84,17 @@ export const getDashboard = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
-    const current = await callMetrics(supabase, data);
-    let previous: DashboardMetricsResult | null = null;
+    const currentPromise = callMetrics(supabase, data);
+    let previousPromise: Promise<DashboardMetricsResult | null> = Promise.resolve(null);
     if (data.compare !== "none" && data.dateFrom && data.dateTo) {
       const prev = shiftPeriod(data.dateFrom, data.dateTo, data.compare);
-      previous = await callMetrics(supabase, {
+      previousPromise = callMetrics(supabase, {
         ...data,
         dateFrom: prev.dateFrom,
         dateTo: prev.dateTo,
       });
     }
+    const [current, previous] = await Promise.all([currentPromise, previousPromise]);
     return { current, previous };
   });
 
@@ -101,11 +102,14 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const supabase = context.supabase as DB;
-    const { data, error } = await supabase.rpc("imported_dates");
+    const { data, error } = await supabase
+      .from("import_log")
+      .select("sale_date, row_count, imported_at")
+      .order("sale_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (error) throw safeError("analytics", error);
-    if (!data || data.length === 0) return null;
-    const sorted = [...data].sort((a, b) => (a.sale_date < b.sale_date ? 1 : -1));
-    return sorted[0] as { sale_date: string; row_count: number; imported_at: string };
+    return data as { sale_date: string; row_count: number; imported_at: string } | null;
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })

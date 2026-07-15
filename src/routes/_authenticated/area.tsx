@@ -233,7 +233,7 @@ function AreaPage() {
         },
       }),
     enabled: ready,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
     retry: 1,
     placeholderData: (prev) => prev,
   });

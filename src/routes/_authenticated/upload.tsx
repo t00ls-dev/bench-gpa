@@ -31,17 +31,17 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_TOTAL_ROWS = 500_000;
 
 export const Route = createFileRoute("/_authenticated/upload")({
-  beforeLoad: async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) throw redirect({ to: "/auth" });
+  beforeLoad: async ({ context }) => {
+    const u = context.user;
+    if (!u) throw redirect({ to: "/auth" });
     const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: u.user.id,
+      _user_id: u.id,
       _role: "admin",
     });
     if (isAdmin !== true) throw redirect({ to: "/" });
   },
   component: () => (
-    <AdminGate>
+    <AdminGate isAdmin={true}>
       <UploadPage />
     </AdminGate>
   ),
@@ -84,12 +84,7 @@ function UploadPage() {
   const importedDates = useServerFn(getImportedDates);
   const qc = useQueryClient();
 
-  const { data: dates } = useQuery({
-    queryKey: ["imported-dates"],
-    queryFn: () => importedDates(),
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
-  });
+  const { data: dates } = useQuery({ queryKey: ["imported-dates"], queryFn: () => importedDates(), staleTime: 5 * 60_000, gcTime: 30 * 60_000 });
 
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const busyRef = useRef(false);
@@ -141,9 +136,7 @@ function UploadPage() {
       const startTime = Date.now();
       let totalLines = 0;
       setCurrentDate(entry.saleDate);
-      setEntries((prev) =>
-        prev.map((e) => (e.file === entry.file ? { ...e, status: "processing" as const } : e)),
-      );
+      setEntries((prev) => prev.map((e) => (e.file === entry.file ? { ...e, status: "processing" as const } : e)));
 
       const f = entry.file;
       try {
@@ -154,9 +147,7 @@ function UploadPage() {
 
         totalLines = parsed.sales.length;
         if (totalLines > MAX_TOTAL_ROWS) {
-          throw new Error(
-            `Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`,
-          );
+          throw new Error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
         }
         if (totalLines === 0) {
           throw new Error("Nenhuma linha de venda encontrada no arquivo.");
@@ -201,23 +192,17 @@ function UploadPage() {
           setEta(rem);
           setProcessed(Math.min(i + CHUNK_SIZE, totalLines));
           setProgressPct(totalLines > 0 ? Math.round((done / totalLines) * 100) : 0);
-          await insertChunk({
-            data: { sale_date: parsed.sale_date, batch_id: batchId, rows: chunk },
-          });
+          await insertChunk({ data: { sale_date: parsed.sale_date, batch_id: batchId, rows: chunk } });
           i += CHUNK_SIZE;
           done = i;
         }
 
         setProgressPct(100);
-        await finalize({
-          data: { sale_date: parsed.sale_date, batch_id: batchId, row_count: totalLines },
-        });
+        await finalize({ data: { sale_date: parsed.sale_date, batch_id: batchId, row_count: totalLines } });
 
         try {
           await purgeOldAggs();
-        } catch {
-          /* purge is best-effort */
-        }
+        } catch { /* purge is best-effort */ }
 
         r.push({
           filename: f.name,
@@ -226,15 +211,15 @@ function UploadPage() {
           date: parsed.sale_date,
           rows: totalLines,
         });
-        setEntries((prev) =>
-          prev.map((e) => (e.file === entry.file ? { ...e, status: "done" as const } : e)),
-        );
+        setEntries((prev) => prev.map((e) => (e.file === entry.file ? { ...e, status: "done" as const } : e)));
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Erro desconhecido";
         r.push({ filename: f.name, ok: false, message: msg });
         setEntries((prev) =>
           prev.map((e) =>
-            e.file === entry.file ? { ...e, status: "error" as const, errorMsg: msg } : e,
+            e.file === entry.file
+              ? { ...e, status: "error" as const, errorMsg: msg }
+              : e,
           ),
         );
       }
@@ -274,18 +259,12 @@ function UploadPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Substituir dados?</AlertDialogTitle>
             <AlertDialogDescription>
-              Data {fmtBRShort(confirmDialog?.date)} já foi importada com{" "}
-              {fmtInt(confirmDialog?.rowCount ?? 0)} linhas em{" "}
-              {confirmDialog?.importedAt ? fmtDT(confirmDialog.importedAt) : ""}. Deseja substituir?
+              Data {fmtBRShort(confirmDialog?.date)} já foi importada com {fmtInt(confirmDialog?.rowCount ?? 0)} linhas em {confirmDialog?.importedAt ? fmtDT(confirmDialog.importedAt) : ""}. Deseja substituir?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => confirmDialog?.resolve(false)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmDialog?.resolve(true)}>
-              Substituir
-            </AlertDialogAction>
+            <AlertDialogCancel onClick={() => confirmDialog?.resolve(false)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmDialog?.resolve(true)}>Substituir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
