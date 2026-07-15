@@ -169,7 +169,7 @@ function ProdutoPage() {
         </p>
       </header>
 
-      <div className="kpi-card mb-4 grid gap-3 md:grid-cols-2 [&>*]:min-w-0">
+      <div className="kpi-card mb-4 min-w-0 overflow-hidden grid gap-3 md:grid-cols-2 [&>*]:min-w-0">
         <div>
           <Label className="text-xs">Loja</Label>
           <MultiSelect

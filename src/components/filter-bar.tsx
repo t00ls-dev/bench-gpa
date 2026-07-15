@@ -91,7 +91,7 @@ export function FilterBar({ value, onChange }: Props) {
   const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
 
   return (
-    <div className="kpi-card mb-6 space-y-3">
+    <div className="kpi-card mb-6 space-y-3 min-w-0 overflow-hidden">
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
         <div className="lg:col-span-2">
           <Label className="text-xs">Período</Label>
