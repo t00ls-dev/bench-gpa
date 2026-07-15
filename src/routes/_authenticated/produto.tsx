@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { searchProducts, getProductAnalysis, getStores } from "@/lib/analytics.functions";
+import { searchProducts, getProductAnalysis, getStores, getProductByCode } from "@/lib/analytics.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
@@ -86,19 +86,27 @@ function ProductHierarchyTrail({
 function ProdutoPage() {
   const { plu } = Route.useSearch();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(
-    plu ? { prod_code: plu, prod_name: plu } : null,
-  );
+  const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
   const [storeCode, setStoreCode] = useState<string>("__all__");
   const tRef = useRef<number | null>(null);
 
+  const getProductByCodeFn = useServerFn(getProductByCode);
+
+  const { data: productByCode, isFetching: fetchingProductByCode } = useQuery({
+    queryKey: ["product-by-code", plu],
+    queryFn: () => getProductByCodeFn({ data: { prodCode: plu! } }),
+    enabled: !!plu && !selected,
+    staleTime: 10 * 60_000,
+  });
+
   useEffect(() => {
-    if (plu && (!selected || selected.prod_code !== plu)) {
+    if (plu && productByCode) {
+      setSelected(productByCode);
+    } else if (plu && !fetchingProductByCode && !productByCode) {
       setSelected({ prod_code: plu, prod_name: plu });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plu]);
+  }, [plu, productByCode, fetchingProductByCode]);
 
   useEffect(() => {
     if (tRef.current) window.clearTimeout(tRef.current);
@@ -352,7 +360,12 @@ function ProdutoPage() {
         </>
       )}
 
-      {!selected && (
+      {!selected && fetchingProductByCode && (
+        <div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" /> Carregando produto…
+        </div>
+      )}
+      {!selected && !fetchingProductByCode && (
         <div className="mt-12 text-center text-sm text-muted-foreground">
           Use a busca acima para começar.
         </div>
