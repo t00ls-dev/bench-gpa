@@ -35,21 +35,23 @@ function Dashboard() {
   const fnRank = useServerFn(getDashboardRankings);
   const enabled = !!filters.dateFrom && !!filters.dateTo;
 
+  const { compare, ...filterKey } = filters;
+
   const { data, isFetching, isLoading } = useQuery({
-    queryKey: ["dashboard", filters],
+    queryKey: ["dashboard", filterKey],
     queryFn: () => fn({ data: filters }),
     enabled,
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
   });
 
   const { data: rankings, isFetching: rankingLoading } = useQuery({
-    queryKey: ["dashboard-rankings", filters],
+    queryKey: ["dashboard-rankings", filterKey],
     queryFn: () => fnRank({ data: { ...filters, limit: 10 } }),
     enabled,
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
   });
 

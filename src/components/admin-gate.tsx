@@ -2,9 +2,19 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ShieldOff } from "lucide-react";
 
-export function AdminGate({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<"loading" | "allow" | "deny">("loading");
+export function AdminGate({
+  children,
+  isAdmin: knownAdmin,
+}: {
+  children: React.ReactNode;
+  isAdmin?: boolean;
+}) {
+  const [state, setState] = useState<"loading" | "allow" | "deny">(
+    knownAdmin ? "allow" : "loading",
+  );
+
   useEffect(() => {
+    if (knownAdmin) return;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return setState("deny");
@@ -14,7 +24,8 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
       });
       setState(!error && data === true ? "allow" : "deny");
     })();
-  }, []);
+  }, [knownAdmin]);
+
   if (state === "loading") {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">

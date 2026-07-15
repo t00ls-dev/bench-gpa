@@ -109,6 +109,7 @@ function ProdutoPage() {
         },
       }),
     enabled: !!selected,
+    staleTime: 5 * 60_000,
   });
 
   const refWeekdayIdx = analysisData?.refDate
