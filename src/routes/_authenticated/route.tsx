@@ -115,8 +115,8 @@ function AuthedLayout() {
 
   const adminNav = [
     { to: "/upload", label: "Importar", icon: Upload },
-    { to: "/admin", label: "Administração", icon: Shield, exact: true },
     { to: "/admin/docs", label: "Documentação", icon: BookText },
+    { to: "/admin", label: "Administração", icon: Shield, exact: true },
   ] as const;
 
   return (
