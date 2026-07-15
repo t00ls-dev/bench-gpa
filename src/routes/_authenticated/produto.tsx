@@ -21,6 +21,7 @@ const ProductCharts = lazy(() =>
 export const Route = createFileRoute("/_authenticated/produto")({
   validateSearch: (s: Record<string, unknown>) => ({
     plu: typeof s.plu === "string" ? s.plu : undefined,
+    store: typeof s.store === "string" ? s.store : undefined,
   }),
   component: ProdutoPage,
 });
@@ -84,11 +85,11 @@ function ProductHierarchyTrail({
 }
 
 function ProdutoPage() {
-  const { plu } = Route.useSearch();
+  const { plu, store } = Route.useSearch();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
-  const [storeCode, setStoreCode] = useState<string>("__all__");
+  const [storeCode, setStoreCode] = useState<string>(store ?? "__all__");
   const tRef = useRef<number | null>(null);
 
   const getProductByCodeFn = useServerFn(getProductByCode);
