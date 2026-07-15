@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function truncate(s: string, max = 25) {
+  return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
 export interface MSOption { value: string; label: string }
 
 export function MultiSelect({
@@ -67,7 +71,7 @@ export function MultiSelect({
           <span className="truncate min-w-0">
             {value.length === 0
               ? label
-              : options.find((o) => o.value === value[0])?.label ?? value[0]}
+              : truncate(options.find((o) => o.value === value[0])?.label ?? value[0])}
             {value.length > 1 && (
               <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
                 +{value.length - 1}
