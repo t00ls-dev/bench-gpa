@@ -76,7 +76,7 @@ export function ProductCharts({
                 <XAxis
                   dataKey="code"
                   tick={{ fontSize: 10 }}
-                  interval={0}
+                  interval="preserveStart"
                   angle={-30}
                   textAnchor="end"
                   height={50}
@@ -134,7 +134,7 @@ export function ProductCharts({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dowData} margin={{ left: 8, right: 8, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStart" />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
               <Tooltip
                 formatter={(v: number) => fmtBRL(v)}

@@ -127,7 +127,7 @@ function DocViewer({ slug }: { slug: string }) {
           Erro ao carregar documento: {(error as Error).message}
         </div>
       ) : (
-        <article className="markdown-content">
+        <article className="markdown-content overflow-x-auto">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content ?? ""}</ReactMarkdown>
         </article>
       )}

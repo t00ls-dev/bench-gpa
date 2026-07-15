@@ -476,7 +476,7 @@ function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealthData> }
             <span>PG {data.version}</span>
           </div>
 
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-64 overflow-x-auto overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-background">
                 <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
