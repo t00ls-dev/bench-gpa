@@ -100,9 +100,7 @@ function AuthPage() {
 
         <div className="kpi-card">
           <h2 className="font-display text-xl font-semibold">Entrar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Acesse com seu e-mail e senha.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Acesse com seu e-mail e senha.</p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>
@@ -134,7 +132,9 @@ function AuthPage() {
               {loading ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                <><LogIn className="mr-2 size-4" /> Entrar</>
+                <>
+                  <LogIn className="mr-2 size-4" /> Entrar
+                </>
               )}
             </Button>
           </form>
