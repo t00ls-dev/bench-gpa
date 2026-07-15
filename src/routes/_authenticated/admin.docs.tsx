@@ -7,7 +7,7 @@ import remarkGfm from "remark-gfm";
 import { listDocs, getDocContent } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, BookText, FileText } from "lucide-react";
 
 const docsSearchSchema = z.object({
   slug: z.string().optional(),
