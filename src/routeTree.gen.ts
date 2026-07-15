@@ -16,6 +16,7 @@ import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProdutoRouteImport } from './routes/_authenticated/produto'
 import { Route as AuthenticatedAreaRouteImport } from './routes/_authenticated/area'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminDocsRouteImport } from './routes/_authenticated/admin.docs'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -51,38 +52,60 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminDocsRoute = AuthenticatedAdminDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/area': typeof AuthenticatedAreaRoute
   '/produto': typeof AuthenticatedProdutoRoute
   '/upload': typeof AuthenticatedUploadRoute
+  '/admin/docs': typeof AuthenticatedAdminDocsRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/area': typeof AuthenticatedAreaRoute
   '/produto': typeof AuthenticatedProdutoRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/docs': typeof AuthenticatedAdminDocsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/area': typeof AuthenticatedAreaRoute
   '/_authenticated/produto': typeof AuthenticatedProdutoRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/docs': typeof AuthenticatedAdminDocsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/admin' | '/area' | '/produto' | '/upload'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/area'
+    | '/produto'
+    | '/upload'
+    | '/admin/docs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/admin' | '/area' | '/produto' | '/upload' | '/'
+  to:
+    | '/auth'
+    | '/admin'
+    | '/area'
+    | '/produto'
+    | '/upload'
+    | '/'
+    | '/admin/docs'
   id:
     | '__root__'
     | '/_authenticated'
@@ -92,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/produto'
     | '/_authenticated/upload'
     | '/_authenticated/'
+    | '/_authenticated/admin/docs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -150,11 +174,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/docs': {
+      id: '/_authenticated/admin/docs'
+      path: '/docs'
+      fullPath: '/admin/docs'
+      preLoaderRoute: typeof AuthenticatedAdminDocsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminDocsRoute: typeof AuthenticatedAdminDocsRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminDocsRoute: AuthenticatedAdminDocsRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAreaRoute: typeof AuthenticatedAreaRoute
   AuthenticatedProdutoRoute: typeof AuthenticatedProdutoRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
@@ -162,7 +204,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAreaRoute: AuthenticatedAreaRoute,
   AuthenticatedProdutoRoute: AuthenticatedProdutoRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,

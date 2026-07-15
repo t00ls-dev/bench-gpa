@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield } from "lucide-react";
+import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield, BookText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,6 +111,7 @@ function AuthedLayout() {
       ? [
           { to: "/upload", label: "Importar", icon: Upload },
           { to: "/admin", label: "Administração", icon: Shield },
+          { to: "/admin/docs", label: "Documentação", icon: BookText },
         ]
       : []),
   ] as const;
