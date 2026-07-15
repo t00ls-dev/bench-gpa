@@ -198,9 +198,9 @@ function ProdutoPage() {
       </div>
 
       <div className="kpi-card relative">
-        <div className="flex items-center gap-2">
-          <Search className="size-4 text-muted-foreground" />
-          <Input
+        <div className="flex items-center gap-2 flex-wrap">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input className="min-w-[180px] flex-1 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
             placeholder="Digite ao menos 3 caracteres (nome ou código)…"
             value={query}
             onChange={(e) => {
@@ -243,7 +243,7 @@ function ProdutoPage() {
             <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
               <Package className="size-3" />
               <span className="font-mono">{selected.prod_code}</span>
-              <span className="truncate max-w-[260px]">{selected.prod_name}</span>
+              <span className="truncate max-w-[40vw] sm:max-w-[260px]">{selected.prod_name}</span>
             </span>
             <ProductHierarchyTrail product={analysisData?.product} />
           </div>

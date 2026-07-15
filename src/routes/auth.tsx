@@ -95,7 +95,7 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <img src="/gpa-logo.png" alt="Grupo Pão de Açúcar" className="h-24 w-auto" />
+          <img src="/gpa-logo.png" alt="Grupo Pão de Açúcar" className="h-24 w-auto max-w-full" />
         </div>
 
         <div className="kpi-card">
