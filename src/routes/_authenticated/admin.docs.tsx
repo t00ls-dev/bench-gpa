@@ -1,11 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { supabase } from "@/integrations/supabase/client";
-import { AdminGate } from "@/components/admin-gate";
 import { listDocs, getDocContent } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,16 +15,7 @@ const docsSearchSchema = z.object({
 
 export const Route = createFileRoute("/_authenticated/admin/docs")({
   validateSearch: docsSearchSchema,
-  beforeLoad: async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) throw redirect({ to: "/auth" });
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: u.user.id,
-      _role: "admin",
-    });
-    if (isAdmin !== true) throw redirect({ to: "/" });
-  },
-  component: () => <AdminGate><AdminDocsPage /></AdminGate>,
+  component: AdminDocsPage,
 });
 
 function AdminDocsPage() {
