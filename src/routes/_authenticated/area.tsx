@@ -1,35 +1,19 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/analytics.functions";
+import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/area.functions";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
+import { fmtBRL, fmtInt } from "@/components/kpi-card";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Layers,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  Search,
-  FileText,
-  Loader2,
-  X,
-} from "lucide-react";
+import { AreaTable } from "@/components/area-table";
+import { AreaKpiCards } from "@/components/area-kpi-cards";
+import { Layers, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/area")({
   component: AreaPage,
@@ -60,7 +44,6 @@ type AF = {
 };
 
 function AreaPage() {
-  const navigate = useNavigate();
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
   const getArea = useServerFn(getAreaAnalysis);
 
@@ -92,13 +75,11 @@ function AreaPage() {
     subgrupos: fSubgrupos,
   } = af;
 
-  // Hierarquia completa carregada em 1 chamada (Critical #4)
   const hierQ = useQuery({
     queryKey: ["area-filter-hierarchy"],
     queryFn: () => getHierarchy({}),
     staleTime: 10 * 60_000,
     gcTime: 30 * 60_000,
-
   });
   const hierData = hierQ.data;
 
@@ -112,47 +93,42 @@ function AreaPage() {
     });
   }, [hierarchy]);
 
-  // Departamento: só depende da Loja
   const deptoBase = useMemo(
-    () => fStores.length === 0
-      ? hierarchy
-      : hierarchy.filter((r) => fStores.includes(r.store_code)),
+    () =>
+      fStores.length === 0 ? hierarchy : hierarchy.filter((r) => fStores.includes(r.store_code)),
     [hierarchy, fStores],
   );
   const deptosOpts = useMemo(
     () => [...new Set(deptoBase.map((r) => r.depto).filter(Boolean) as string[])].sort(),
     [deptoBase],
   );
-
-  // Seção: depende de Loja + Departamento
   const secaoBase = useMemo(
-    () => fDeptos.length === 0
-      ? deptoBase
-      : deptoBase.filter((r) => r.depto && fDeptos.includes(r.depto)),
+    () =>
+      fDeptos.length === 0
+        ? deptoBase
+        : deptoBase.filter((r) => r.depto && fDeptos.includes(r.depto)),
     [deptoBase, fDeptos],
   );
   const secoesOpts = useMemo(
     () => [...new Set(secaoBase.map((r) => r.secao).filter(Boolean) as string[])].sort(),
     [secaoBase],
   );
-
-  // Grupo: depende de Loja + Departamento + Seção
   const grupoBase = useMemo(
-    () => fSecoes.length === 0
-      ? secaoBase
-      : secaoBase.filter((r) => r.secao && fSecoes.includes(r.secao)),
+    () =>
+      fSecoes.length === 0
+        ? secaoBase
+        : secaoBase.filter((r) => r.secao && fSecoes.includes(r.secao)),
     [secaoBase, fSecoes],
   );
   const gruposOpts = useMemo(
     () => [...new Set(grupoBase.map((r) => r.grupo).filter(Boolean) as string[])].sort(),
     [grupoBase],
   );
-
-  // Subgrupo: depende de Loja + Departamento + Seção + Grupo
   const subgrupoBase = useMemo(
-    () => fGrupos.length === 0
-      ? grupoBase
-      : grupoBase.filter((r) => r.grupo && fGrupos.includes(r.grupo)),
+    () =>
+      fGrupos.length === 0
+        ? grupoBase
+        : grupoBase.filter((r) => r.grupo && fGrupos.includes(r.grupo)),
     [grupoBase, fGrupos],
   );
   const subgruposOpts = useMemo(
@@ -162,10 +138,6 @@ function AreaPage() {
 
   const opts = hierData;
 
-  // "Data da base": os dados sempre correspondem ao dia anterior, então
-  // usamos a última data disponível na base (não a data atual do sistema)
-  // como referência para não contar um dia a mais artificialmente.
-  // Reaproveitado tanto na tabela da tela quanto no export em PDF.
   const baseDateIso = dateTo || opts?.latestDate;
   const daysSinceNum = (iso: string | null): number | null => {
     if (!iso || !baseDateIso) return null;
@@ -201,17 +173,15 @@ function AreaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.availableDates]);
 
-  // Gate: Loja + Departamento são obrigatórios
   const ready = !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0;
 
-  // Table state
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("val");
   const [sortAsc, setSortAsc] = useState(false);
   const [pageSize, setPageSize] = useState<25 | 50 | 100 | 250>(50);
   const [page, setPage] = useState(1);
 
-  const sortDir = sortAsc ? "asc" : "desc";
+  const sortDir = sortAsc ? "desc" : "asc";
 
   useEffect(() => {
     setPage(1);
@@ -229,7 +199,6 @@ function AreaPage() {
     fSubgrupos,
   ]);
 
-  // Consulta paginada com busca/ordenação no servidor (Critical #1 + #3)
   const { data, isFetching, isLoading, isError, error, refetch } = useQuery({
     queryKey: [
       "area-analysis",
@@ -283,18 +252,13 @@ function AreaPage() {
     }
   };
 
-  const openProduct = (code: string) => {
-    navigate({ to: "/produto", search: { plu: code, store: fStores.length === 1 ? fStores[0] : undefined } });
-  };
-
-  // Breadcrumb
   const pathParts: string[] = [];
   if (fStores.length === 0) pathParts.push("Todas as lojas");
   else if (fStores.length === 1) {
     const s = stores.find((x) => x.store_code === fStores[0]);
     pathParts.push(`Loja ${s ? `${s.store_code} - ${s.store_name}` : fStores[0]}`);
   } else pathParts.push(`${fStores.length} lojas`);
-  const summarize = (arr: string[], one: string, many: string) =>
+  const summarize = (arr: string[], _one: string, many: string) =>
     arr.length === 1 ? arr[0] : arr.length > 1 ? `${arr.length} ${many}` : null;
   const dp = summarize(fDeptos, "depto", "departamentos");
   if (dp) pathParts.push(dp);
@@ -311,8 +275,6 @@ function AreaPage() {
     setPdfLoading(true);
     try {
       const area = pathParts.join(" › ");
-
-      // Para PDF, busca dados sem paginação — respeitando search/sort da tabela
       const allData = await getArea({
         data: {
           dateFrom,
@@ -329,32 +291,30 @@ function AreaPage() {
       });
       const searchTerm = search.trim().toLowerCase();
       const filtered = [...(allData.products ?? [])]
-        .filter((p) => {
-          if (!searchTerm) return true;
-          return (
+        .filter(
+          (p) =>
+            !searchTerm ||
             p.prod_code.toLowerCase().includes(searchTerm) ||
-            p.prod_name.toLowerCase().includes(searchTerm)
-          );
-        })
+            p.prod_name.toLowerCase().includes(searchTerm),
+        )
         .sort((a, b) => {
-        let cmp = 0;
-        if (sortKey === "val") cmp = a.val - b.val;
-        else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
-        else if (sortKey === "prod_name") cmp = a.prod_name.localeCompare(b.prod_name);
-        else if (sortKey === "daysSince") {
-          const aDays = daysSinceNum(a.lastSaleDate);
-          const bDays = daysSinceNum(b.lastSaleDate);
-          const aIsNull = aDays === null;
-          const bIsNull = bDays === null;
-          if (aIsNull && bIsNull) cmp = 0;
-          else if (aIsNull) cmp = 1;
-          else if (bIsNull) cmp = -1;
-          else cmp = aDays - bDays;
-        }
-        if (cmp === 0) cmp = a.prod_code.localeCompare(b.prod_code);
-        return sortDir === "desc" ? -cmp : cmp;
-      });
-
+          let cmp = 0;
+          if (sortKey === "val") cmp = a.val - b.val;
+          else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
+          else if (sortKey === "prod_name") cmp = a.prod_name.localeCompare(b.prod_name);
+          else if (sortKey === "daysSince") {
+            const aDays = daysSinceNum(a.lastSaleDate);
+            const bDays = daysSinceNum(b.lastSaleDate);
+            const aIsNull = aDays === null;
+            const bIsNull = bDays === null;
+            if (aIsNull && bIsNull) cmp = 0;
+            else if (aIsNull) cmp = 1;
+            else if (bIsNull) cmp = -1;
+            else cmp = aDays - bDays;
+          }
+          if (cmp === 0) cmp = a.prod_code.localeCompare(b.prod_code);
+          return sortDir === "desc" ? -cmp : cmp;
+        });
 
       const jsPDF = (await import("jspdf")).default;
       const autoTable = (await import("jspdf-autotable")).default;
@@ -417,9 +377,8 @@ function AreaPage() {
           if (
             hookData.section === "body" &&
             (hookData.column.index === 4 || hookData.column.index === 5)
-          ) {
+          )
             hookData.cell.text = [];
-          }
         },
         willDrawCell: (hookData) => {
           if (hookData.section === "body" && hookData.column.index === 1) {
@@ -429,9 +388,8 @@ function AreaPage() {
             const maxWidth = cell.width - cell.padding("horizontal");
             let text = raw;
             if (doc2.getTextWidth(text) > maxWidth) {
-              while (text.length > 1 && doc2.getTextWidth(text + "…") > maxWidth) {
+              while (text.length > 1 && doc2.getTextWidth(text + "…") > maxWidth)
                 text = text.slice(0, -1);
-              }
               text = text.trimEnd() + "…";
             }
             cell.text = [text];
@@ -452,11 +410,6 @@ function AreaPage() {
     }
   };
 
-  const clearSearch = useCallback(() => {
-    setSearch("");
-    setPage(1);
-  }, []);
-
   return (
     <div>
       <header className="mb-6">
@@ -468,7 +421,6 @@ function AreaPage() {
         </p>
       </header>
 
-      {/* Filtros */}
       <div className="kpi-card mb-4 space-y-3 min-w-0 overflow-hidden">
         <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
           <div className="lg:col-span-2">
@@ -506,7 +458,6 @@ function AreaPage() {
               onChange={setDeptos}
             />
           </div>
-
           <div>
             <Label className="text-xs">Seção</Label>
             <MultiSelect
@@ -580,218 +531,38 @@ function AreaPage() {
         </>
       ) : (
         <>
-          <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-            <KpiCard label="Venda Total" value={fmtBRL(total)} />
-            <KpiCard label="PLUs (área)" value={fmtInt(data?.plusTotal ?? 0)} />
-            <KpiCard label="PLUs com venda" value={fmtInt(data?.plusWithSale ?? 0)} />
-            <KpiCard label="PLUs sem venda" value={fmtInt(noSale)} />
-            <KpiCard label="Venda média por PLU" value={fmtBRL(data?.avgPerPlu ?? 0)} />
-          </section>
-
-          <div className="kpi-card min-w-0">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-lg font-semibold">Produtos da área</h2>
-              {isFetching && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 rounded-md border bg-background px-2 h-9">
-                  <Search className="size-3.5 text-muted-foreground shrink-0" />
-                  <Input
-                    placeholder="Buscar PLU ou descrição…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="h-7 w-40 sm:w-56 border-0 px-1 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                  {search && (
-                    <button
-                      onClick={clearSearch}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(v) => setPageSize(Number(v) as 25 | 50 | 100 | 250)}
-                >
-                  <SelectTrigger className="h-9 w-[110px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="25">25 / página</SelectItem>
-                    <SelectItem value="50">50 / página</SelectItem>
-                    <SelectItem value="100">100 / página</SelectItem>
-                    <SelectItem value="250">250 / página</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={openPdfInNewTab}
-                  className="h-9"
-                  disabled={pdfLoading}
-                >
-                  {pdfLoading ? (
-                    <Loader2 className="mr-1.5 size-4 animate-spin" />
-                  ) : (
-                    <FileText className="mr-1.5 size-4" />
-                  )}{" "}
-                  PDF
-                </Button>
-              </div>
-            </div>
-
-            {/* Só 4 colunas agora: a tabela fica leve o suficiente para não
-                precisar de scroll horizontal na maioria das telas. table-fixed
-                garante que "Produto" trunque de forma previsível em vez de
-                estourar a largura em nomes longos. */}
-            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <table className="w-full min-w-[420px] table-fixed text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                    <Th
-                      label="PLU"
-                      k="prod_code"
-                      sortKey={sortKey}
-                      sortAsc={sortAsc}
-                      toggle={toggleSort}
-                      className="w-[18%]"
-                    />
-                    <Th
-                      label="Produto"
-                      k="prod_name"
-                      sortKey={sortKey}
-                      sortAsc={sortAsc}
-                      toggle={toggleSort}
-                      className="w-[42%]"
-                    />
-                    <Th
-                      label="Venda"
-                      k="val"
-                      sortKey={sortKey}
-                      sortAsc={sortAsc}
-                      toggle={toggleSort}
-                      align="right"
-                      className="w-[20%]"
-                    />
-                    <Th
-                      label="Dias S/ Venda"
-                      k="daysSince"
-                      sortKey={sortKey}
-                      sortAsc={sortAsc}
-                      toggle={toggleSort}
-                      align="right"
-                      className="w-[20%]"
-                      hint={`Referência: ${baseDateIso ?? "—"}`}
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => {
-                    const noSaleRow = p.val === 0;
-                    return (
-                      <tr
-                        key={p.prod_code}
-                        onClick={() => openProduct(p.prod_code)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProduct(p.prod_code); } }}
-                        tabIndex={0}
-                        role="button"
-                        className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
-                        title="Abrir Análise de Produto"
-                      >
-                        <td className="py-3 md:py-2 font-mono text-xs whitespace-nowrap truncate">
-                          {p.prod_code}
-                        </td>
-                        <td className="py-3 md:py-2 truncate">{p.prod_name}</td>
-                        <td className="num py-3 md:py-2 text-right whitespace-nowrap font-medium">
-                          {fmtBRL(p.val)}
-                        </td>
-                        <td className="num py-3 md:py-2 text-right whitespace-nowrap text-muted-foreground">
-                          {daysSinceLabel(p.lastSaleDate)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {products.length === 0 && !isFetching && (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                        Nenhum produto encontrado.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <div>
-                Exibindo {totalRows === 0 ? 0 : (page - 1) * pageSize + 1}–
-                {Math.min(page * pageSize, totalRows)} de {fmtInt(totalRows)} produtos
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <span>
-                  Página {page} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Linhas em amarelo indicam produtos sem venda no período. Clique em uma linha para
-              abrir a Análise de Produto.
-            </p>
-          </div>
+          <AreaKpiCards
+            total={total}
+            plusTotal={data?.plusTotal ?? 0}
+            plusWithSale={data?.plusWithSale ?? 0}
+            noSale={noSale}
+            avgPerPlu={data?.avgPerPlu ?? 0}
+          />
+          <AreaTable
+            products={products}
+            totalRows={totalRows}
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            search={search}
+            isFetching={isFetching}
+            baseDateIso={baseDateIso}
+            sortKey={sortKey}
+            sortAsc={sortAsc}
+            daysSinceLabel={daysSinceLabel}
+            onSearchChange={setSearch}
+            onClearSearch={() => {
+              setSearch("");
+              setPage(1);
+            }}
+            onPageSizeChange={(v) => setPageSize(v as 25 | 50 | 100 | 250)}
+            onPageChange={setPage}
+            onSortToggle={toggleSort}
+            onExportPDF={openPdfInNewTab}
+            pdfLoading={pdfLoading}
+          />
         </>
       )}
     </div>
-  );
-}
-
-function Th({
-  label,
-  k,
-  sortKey,
-  sortAsc,
-  toggle,
-  align = "left",
-  className = "",
-  hint,
-}: {
-  label: string;
-  k: SortKey;
-  sortKey: SortKey;
-  sortAsc: boolean;
-  toggle: (k: SortKey) => void;
-  align?: "left" | "right";
-  className?: string;
-  hint?: string;
-}) {
-  const active = sortKey === k;
-  return (
-    <th className={`py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
-      <button
-        onClick={() => toggle(k)}
-        title={hint}
-        className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
-      >
-        {label}
-        {active &&
-          (sortAsc ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
-      </button>
-    </th>
   );
 }

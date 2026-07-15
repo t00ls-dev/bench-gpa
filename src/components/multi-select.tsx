@@ -9,10 +9,18 @@ function truncate(s: string, max = 20) {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-export interface MSOption { value: string; label: string }
+export interface MSOption {
+  value: string;
+  label: string;
+}
 
 export function MultiSelect({
-  label, options, value, onChange, searchable = false, single = false,
+  label,
+  options,
+  value,
+  onChange,
+  searchable = false,
+  single = false,
 }: {
   label: string;
   options: MSOption[];
@@ -41,7 +49,9 @@ export function MultiSelect({
   const filtered = useMemo(() => {
     if (!searchable || !q.trim()) return options;
     const t = q.toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(t) || o.value.toLowerCase().includes(t));
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(t) || o.value.toLowerCase().includes(t),
+    );
   }, [options, q, searchable]);
   const allSelected = !single && options.length > 0 && value.length === options.length;
 
@@ -64,10 +74,14 @@ export function MultiSelect({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            ref={triggerRef}
-            type="button" variant="outline" aria-label={label} className="h-9 w-full max-w-full justify-between text-left font-normal">
+      <PopoverTrigger asChild>
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="outline"
+          aria-label={label}
+          className="h-9 w-full max-w-full justify-between text-left font-normal"
+        >
           <span className="truncate min-w-0">
             {value.length === 0
               ? label
@@ -102,13 +116,21 @@ export function MultiSelect({
         {!single && options.length > 0 && (
           <button
             type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAll(); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleAll();
+            }}
             className="flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium hover:bg-muted"
           >
-            <span className={cn(
-              "flex size-4 items-center justify-center rounded border",
-              allSelected ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
-            )}>
+            <span
+              className={cn(
+                "flex size-4 items-center justify-center rounded border",
+                allSelected
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : "border-input bg-background",
+              )}
+            >
               {allSelected && <Check className="size-3" />}
             </span>
             <span>Selecionar todos</span>
@@ -126,14 +148,22 @@ export function MultiSelect({
                 type="button"
                 role="option"
                 aria-selected={checked}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggle(o.value); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleToggle(o.value);
+                }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
               >
-                <span className={cn(
-                  "flex size-4 shrink-0 items-center justify-center border",
-                  single ? "rounded-full" : "rounded",
-                  checked ? "bg-primary border-primary text-primary-foreground" : "border-input bg-background"
-                )}>
+                <span
+                  className={cn(
+                    "flex size-4 shrink-0 items-center justify-center border",
+                    single ? "rounded-full" : "rounded",
+                    checked
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "border-input bg-background",
+                  )}
+                >
                   {checked && <Check className="size-3" />}
                 </span>
                 <span className="truncate text-left flex-1">{o.label}</span>
@@ -143,7 +173,13 @@ export function MultiSelect({
         </div>
         {!single && value.length > 0 && (
           <div className="border-t p-2">
-            <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange([])}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              onClick={() => onChange([])}
+            >
               <X className="mr-1 size-3" /> Limpar seleção
             </Button>
           </div>

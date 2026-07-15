@@ -1,4 +1,11 @@
-import { createFileRoute, Outlet, redirect, Link, useRouter, useLocation } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  Link,
+  useRouter,
+  useLocation,
+} from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
@@ -49,11 +56,12 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
     <SidebarGroup>
       <SidebarMenu>
         {nav.map((n) => {
-          const isActive = n.to === "/"
-            ? loc.pathname === "/"
-            : n.exact
-              ? loc.pathname === n.to || loc.pathname === n.to + "/"
-              : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
+          const isActive =
+            n.to === "/"
+              ? loc.pathname === "/"
+              : n.exact
+                ? loc.pathname === n.to || loc.pathname === n.to + "/"
+                : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
           return (
             <SidebarMenuItem key={n.to}>
               <SidebarMenuButton asChild isActive={isActive}>
@@ -121,56 +129,82 @@ function AuthedLayout() {
 
   return (
     <>
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      >
         Pular para o conteúdo
       </a>
       <SidebarProvider defaultOpen={true}>
-      <Sidebar collapsible="offcanvas">
-        <SidebarHeader>
-          <Link to="/" className="flex items-center gap-2 px-3 py-2 font-display text-lg font-bold">
-            <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
-          </Link>
-        </SidebarHeader>
-        <SidebarContent>
-          <NavContent nav={commonNav} />
-          {profile.isAdmin && (
-            <>
-              <Separator className="my-2" />
-              <NavContent nav={adminNav} />
-            </>
-          )}
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="flex items-center gap-2 px-3 py-2">
-            <span className="flex-1 truncate text-xs text-sidebar-foreground/60">{user.email}</span>
-            <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair" className="size-7">
-              <LogOut className="size-4" />
-            </Button>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
-          <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
-            <SidebarTrigger className="md:hidden" />
-            <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold md:hidden">
+        <Sidebar collapsible="offcanvas">
+          <SidebarHeader>
+            <Link
+              to="/"
+              className="flex items-center gap-2 px-3 py-2 font-display text-lg font-bold"
+            >
               <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
             </Link>
-            <div className="ml-auto flex items-center gap-3">
-              <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
-              <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sair" className="hidden md:inline-flex size-7">
+          </SidebarHeader>
+          <SidebarContent>
+            <NavContent nav={commonNav} />
+            {profile.isAdmin && (
+              <>
+                <Separator className="my-2" />
+                <NavContent nav={adminNav} />
+              </>
+            )}
+          </SidebarContent>
+          <SidebarFooter>
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="flex-1 truncate text-xs text-sidebar-foreground/60">
+                {user.email}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                aria-label="Sair"
+                className="size-7"
+              >
                 <LogOut className="size-4" />
               </Button>
-              <SidebarTrigger className="hidden md:flex" />
             </div>
-          </div>
-        </header>
-        <main id="main-content" className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10">
-          <Outlet />
-          <AppFooter />
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+          <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+            <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
+              <SidebarTrigger className="md:hidden" />
+              <Link
+                to="/"
+                className="flex items-center gap-2 font-display text-lg font-bold md:hidden"
+              >
+                <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
+              </Link>
+              <div className="ml-auto flex items-center gap-3">
+                <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={signOut}
+                  aria-label="Sair"
+                  className="hidden md:inline-flex size-7"
+                >
+                  <LogOut className="size-4" />
+                </Button>
+                <SidebarTrigger className="hidden md:flex" />
+              </div>
+            </div>
+          </header>
+          <main
+            id="main-content"
+            className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10"
+          >
+            <Outlet />
+            <AppFooter />
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
     </>
   );
 }

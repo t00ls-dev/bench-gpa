@@ -1,5 +1,13 @@
 #!/usr/bin/env bun
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, statSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  appendFileSync,
+  statSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 
 const LOG_FILE = "logs/review.log";
@@ -15,7 +23,10 @@ function log(msg: string) {
   appendFileSync(LOG_FILE, line + "\n");
 }
 
-function exec(cmd: string[], opts?: { cwd?: string; timeout?: number }): { ok: boolean; stdout: string; stderr: string } {
+function exec(
+  cmd: string[],
+  opts?: { cwd?: string; timeout?: number },
+): { ok: boolean; stdout: string; stderr: string } {
   const result = Bun.spawnSync(cmd, {
     cwd: opts?.cwd,
     timeout: opts?.timeout ?? 300_000,
@@ -40,7 +51,13 @@ function parseLintOutput(stdout: string): LintIssue[] {
   const regex = /^(.+?):(\d+):(\d+):\s+(error|warning)\s+(.+)$/gm;
   let m;
   while ((m = regex.exec(stdout)) !== null) {
-    issues.push({ file: m[1], line: Number(m[2]), col: Number(m[3]), severity: m[4] as "error" | "warning", message: m[5] });
+    issues.push({
+      file: m[1],
+      line: Number(m[2]),
+      col: Number(m[3]),
+      severity: m[4] as "error" | "warning",
+      message: m[5],
+    });
   }
   return issues;
 }
@@ -55,7 +72,15 @@ function walkDir(dir: string, base: string): FileStats[] {
   try {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
-      if (entry.isDirectory() && entry.name !== "node_modules" && entry.name !== ".output" && entry.name !== ".git" && entry.name !== ".nitro" && entry.name !== ".wrangler" && !entry.name.startsWith(".")) {
+      if (
+        entry.isDirectory() &&
+        entry.name !== "node_modules" &&
+        entry.name !== ".output" &&
+        entry.name !== ".git" &&
+        entry.name !== ".nitro" &&
+        entry.name !== ".wrangler" &&
+        !entry.name.startsWith(".")
+      ) {
         result.push(...walkDir(full, base));
       } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))) {
         try {
@@ -88,7 +113,9 @@ function findTodos(base: string): { file: string; line: number; text: string }[]
 
 function nextDocNumber(): string {
   if (!existsSync(IMPROV_DIR)) return "01";
-  const files = readdirSync(IMPROV_DIR).filter((f) => /^\d{2}-.+\.md$/.test(f)).sort();
+  const files = readdirSync(IMPROV_DIR)
+    .filter((f) => /^\d{2}-.+\.md$/.test(f))
+    .sort();
   if (files.length === 0) return "01";
   const last = files[files.length - 1];
   const num = parseInt(last.slice(0, 2), 10) + 1;
@@ -97,7 +124,9 @@ function nextDocNumber(): string {
 
 function existingDocSlugs(): string[] {
   if (!existsSync(IMPROV_DIR)) return [];
-  return readdirSync(IMPROV_DIR).filter((f) => f.endsWith(".md") && f !== "README.md").sort();
+  return readdirSync(IMPROV_DIR)
+    .filter((f) => f.endsWith(".md") && f !== "README.md")
+    .sort();
 }
 
 const NOW = new Date();
@@ -139,7 +168,9 @@ async function main() {
   const allFiles = walkDir(join(projectRoot, "src"), projectRoot);
   const largeFiles = allFiles.filter((f) => f.lines > 300).sort((a, b) => b.lines - a.lines);
   const totalLines = allFiles.reduce((s, f) => s + f.lines, 0);
-  log(`Source: ${allFiles.length} files, ${totalLines} lines, ${largeFiles.length} large files (>300)`);
+  log(
+    `Source: ${allFiles.length} files, ${totalLines} lines, ${largeFiles.length} large files (>300)`,
+  );
 
   // 5. TODO/FIXME scan
   log("TODO scan: searching...");
@@ -190,8 +221,15 @@ async function main() {
     "",
     ...(lintIssues.length === 0
       ? ["Nenhum problema encontrado."]
-      : ["### Erros", "", ...lintErrors.map((i) => `- \`${i.file}:${i.line}:${i.col}\` — ${i.message}`), "", "### Avisos", "", ...lintWarnings.map((i) => `- \`${i.file}:${i.line}:${i.col}\` — ${i.message}`)]
-    ),
+      : [
+          "### Erros",
+          "",
+          ...lintErrors.map((i) => `- \`${i.file}:${i.line}:${i.col}\` — ${i.message}`),
+          "",
+          "### Avisos",
+          "",
+          ...lintWarnings.map((i) => `- \`${i.file}:${i.line}:${i.col}\` — ${i.message}`),
+        ]),
     "",
     "---",
     "",
@@ -199,8 +237,7 @@ async function main() {
     "",
     ...(largeFiles.length === 0
       ? ["Nenhum arquivo grande encontrado."]
-      : largeFiles.map((f) => `- \`${f.path}\` — ${f.lines} linhas`)
-    ),
+      : largeFiles.map((f) => `- \`${f.path}\` — ${f.lines} linhas`)),
     "",
     "---",
     "",
@@ -208,8 +245,7 @@ async function main() {
     "",
     ...(todos.length === 0
       ? ["Nenhum TODO/FIXME encontrado."]
-      : todos.map((t) => `- \`${t.file}:${t.line}\` — ${t.text}`)
-    ),
+      : todos.map((t) => `- \`${t.file}:${t.line}\` — ${t.text}`)),
     "",
     "---",
     "",
@@ -217,8 +253,7 @@ async function main() {
     "",
     ...(existingDocs.length === 0
       ? ["Nenhum documento de análise existente."]
-      : existingDocs.map((d) => `- \`${d.file}\` — ${d.title} (${d.date})`)
-    ),
+      : existingDocs.map((d) => `- \`${d.file}\` — ${d.title} (${d.date})`)),
     "",
     "---",
     "",
@@ -226,9 +261,13 @@ async function main() {
     "",
     `Revisão gerada automaticamente em ${DATE_BR}.`,
     ...(lintErrors.length > 0 ? ["- 🔴 Existem erros de lint que precisam de correção."] : []),
-    ...(lintWarnings.length > 0 ? [`- 🟡 ${lintWarnings.length} avisos de lint — revisar se aplicável.`] : []),
+    ...(lintWarnings.length > 0
+      ? [`- 🟡 ${lintWarnings.length} avisos de lint — revisar se aplicável.`]
+      : []),
     ...(!buildOk ? ["- 🔴 Build falhou — verificar erros de compilação."] : []),
-    ...(largeFiles.length > 0 ? [`- 🟡 ${largeFiles.length} arquivos com mais de 300 linhas — considerar refatoração.`] : []),
+    ...(largeFiles.length > 0
+      ? [`- 🟡 ${largeFiles.length} arquivos com mais de 300 linhas — considerar refatoração.`]
+      : []),
     ...(todos.length > 0 ? [`- 🟡 ${todos.length} TODOs/FIXMEs pendentes.`] : []),
     "",
   ].join("\n");
@@ -244,7 +283,12 @@ async function main() {
     log(`Git add: ERROR — ${add.stderr}`);
   } else {
     const ts = NOW.toISOString().replace("T", " ").slice(0, 16);
-    const commit = exec(["git", "commit", "-m", `code-review: ${ts} — ${lintErrors.length} errors, ${lintWarnings.length} warnings, ${totalLines} lines`]);
+    const commit = exec([
+      "git",
+      "commit",
+      "-m",
+      `code-review: ${ts} — ${lintErrors.length} errors, ${lintWarnings.length} warnings, ${totalLines} lines`,
+    ]);
     if (!commit.ok) {
       if (commit.stderr.includes("nothing to commit")) {
         log("Git: nothing to commit");
@@ -254,7 +298,7 @@ async function main() {
     } else {
       log(`Git: ${commit.stdout}`);
       const push = exec(["git", "push"]);
-      log(`Git push: ${push.ok ? (push.stdout || "OK") : "ERROR — " + push.stderr}`);
+      log(`Git push: ${push.ok ? push.stdout || "OK" : "ERROR — " + push.stderr}`);
     }
   }
 

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarCheck, GitCommitHorizontal } from "lucide-react";
-import { getLatestSaleInfo } from "@/lib/analytics.functions";
+import { getLatestSaleInfo } from "@/lib/dashboard.functions";
 
 function fmtDate(iso: string) {
   const [y, m, d] = iso.split("-");
@@ -36,7 +36,8 @@ export function AppFooter() {
       <span className="hidden sm:inline">·</span>
       <span className="flex items-center gap-1.5">
         <GitCommitHorizontal className="size-3.5" />
-        commit <code className="text-foreground/70">{__COMMIT_HASH__}</code> ({timeAgo(Number(__COMMIT_DATE__))})
+        commit <code className="text-foreground/70">{__COMMIT_HASH__}</code> (
+        {timeAgo(Number(__COMMIT_DATE__))})
       </span>
     </div>
   );

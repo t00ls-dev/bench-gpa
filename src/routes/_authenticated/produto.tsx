@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { searchProducts, getProductAnalysis, getStores, getProductByCode } from "@/lib/analytics.functions";
+import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/product.functions";
+import { getStores } from "@/lib/dashboard.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
 import { KpiCard, fmtBRL } from "@/components/kpi-card";
-import { lazy, Suspense } from "react";
+import { ProductHierarchyTrail } from "@/components/product-hierarchy-trail";
+import { PaginatedHistory } from "@/components/paginated-history";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Package, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-
+import { Search, Package, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fmtBRShort } from "@/lib/utils";
 
@@ -49,39 +50,6 @@ const WEEKDAY_IS_MASC = [true, false, false, false, false, false, true];
 interface SeriesPoint {
   date: string;
   val: number;
-}
-interface StorePoint {
-  code: string;
-  name: string;
-  val: number;
-}
-
-function ProductHierarchyTrail({
-  product,
-}: {
-  product:
-    | { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null }
-    | null
-    | undefined;
-}) {
-  if (!product) return null;
-  const levels = [product.depto, product.secao, product.grupo, product.subgrupo].filter(
-    (v): v is string => !!v && v.trim().length > 0,
-  );
-  if (levels.length === 0) return null;
-
-  const parents = levels.slice(0, -1).join(" › ");
-  const last = levels[levels.length - 1];
-
-  return (
-    <span className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
-      {parents && <span className="min-w-0 truncate">{parents}</span>}
-      {parents && <span className="shrink-0 text-muted-foreground/40">›</span>}
-      <span className="max-w-[45vw] shrink-0 truncate font-medium text-foreground/80 sm:max-w-[200px]">
-        {last}
-      </span>
-    </span>
-  );
 }
 
 function ProdutoPage() {
@@ -200,7 +168,8 @@ function ProdutoPage() {
       <div className="kpi-card relative">
         <div className="flex items-center gap-2 flex-wrap">
           <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input className="min-w-[180px] flex-1 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+          <Input
+            className="min-w-[180px] flex-1 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
             placeholder="Digite ao menos 3 caracteres (nome ou código)…"
             value={query}
             onChange={(e) => {
@@ -372,70 +341,5 @@ function ProdutoPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function PaginatedHistory({ title, rows }: { title: string; rows: SeriesPoint[] }) {
-  const sorted = useMemo(() => [...rows].sort((a, b) => (a.date < b.date ? 1 : -1)), [rows]);
-  const PAGE = 10;
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE));
-  const start = (page - 1) * PAGE;
-  const slice = sorted.slice(start, start + PAGE);
-
-  return (
-    <section className="mt-6 kpi-card">
-      <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="font-display text-lg font-semibold">{title}</h2>
-        <span className="text-xs text-muted-foreground">
-          {sorted.length} registro(s) · página {page} de {totalPages}
-        </span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="py-2">Data</th>
-              <th className="py-2 text-right">Venda</th>
-            </tr>
-          </thead>
-          <tbody>
-            {slice.map((d) => (
-              <tr key={d.date} className="border-b border-border/60">
-                <td className="py-2 whitespace-nowrap">{fmtBRShort(d.date)}</td>
-                <td className="num py-2 text-right font-medium">{fmtBRL(d.val)}</td>
-              </tr>
-            ))}
-            {sorted.length === 0 && (
-              <tr>
-                <td colSpan={2} className="py-6 text-center text-xs text-muted-foreground">
-                  Sem histórico disponível.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      {totalPages > 1 && (
-        <div className="mt-3 flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            <ChevronLeft className="size-3 mr-1" /> Anterior
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            Próxima <ChevronRight className="size-3 ml-1" />
-          </Button>
-        </div>
-      )}
-    </section>
   );
 }
