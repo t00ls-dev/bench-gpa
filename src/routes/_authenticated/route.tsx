@@ -37,6 +37,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: FC<{ className?: string }>;
+  exact?: boolean;
 }
 
 function NavContent({ nav }: { nav: readonly NavItem[] }) {
@@ -49,7 +50,9 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
         {nav.map((n) => {
           const isActive = n.to === "/"
             ? loc.pathname === "/"
-            : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
+            : n.exact
+              ? loc.pathname === n.to || loc.pathname === n.to + "/"
+              : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
           return (
             <SidebarMenuItem key={n.to}>
               <SidebarMenuButton asChild isActive={isActive}>
@@ -110,7 +113,7 @@ function AuthedLayout() {
     ...(profile.isAdmin
       ? [
           { to: "/upload", label: "Importar", icon: Upload },
-          { to: "/admin", label: "Administração", icon: Shield },
+          { to: "/admin", label: "Administração", icon: Shield, exact: true },
           { to: "/admin/docs", label: "Documentação", icon: BookText },
         ]
       : []),
