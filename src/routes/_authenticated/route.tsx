@@ -22,8 +22,6 @@ import {
 } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_authenticated")({
-  ssr: false,
-  validateSearch: (s: Record<string, unknown>) => s,
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) {
