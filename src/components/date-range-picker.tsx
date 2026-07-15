@@ -1,3 +1,7 @@
+function truncate(s: string, max = 25) {
+  return s.length > max ? s.slice(0, max) + "…" : s;
+}
+
 import { useMemo, useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -134,7 +138,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
       <PopoverTrigger asChild>
         <Button variant="outline" className="h-9 w-full max-w-full justify-start gap-2 text-left font-normal">
           <CalendarIcon className="size-4 opacity-60" />
-          <span className="truncate whitespace-nowrap min-w-0">{label}</span>
+          <span className="truncate whitespace-nowrap min-w-0">{truncate(label)}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start" collisionPadding={24}>
