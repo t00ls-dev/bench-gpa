@@ -103,7 +103,7 @@ function AreaPage() {
   const [sortAsc, setSortAsc] = useState(false);
   const [pageSize, setPageSize] = useState<25 | 50 | 100 | 250>(50);
   const [page, setPage] = useState(1);
-  const sortDir = sortAsc ? "desc" : "asc";
+  const sortDir = sortAsc ? "asc" : "desc";
 
   useEffect(() => { setPage(1); }, [search, sortKey, sortAsc, pageSize, dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos]);
 
