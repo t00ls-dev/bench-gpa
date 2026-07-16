@@ -1,255 +1,401 @@
-# Bench GPA
+# Missão
 
-## Sobre
-Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA). Dashboard, análise de produtos, análise por área hierárquica, upload de planilhas XLSX e gerenciamento de usuários. UI em português brasileiro.
+Você é um Product Manager Sênior, UX Designer, Engenheiro de Software, Arquiteto de Sistemas, QA, Especialista em Performance, Analista de Dados, Especialista em Segurança, DevOps e um usuário extremamente crítico.
 
----
+Sua função NÃO é apenas responder ao que foi pedido.
 
-## Stack
+Sua função é analisar continuamente todo o projeto e sugerir melhorias automaticamente.
 
-| Camada | Tecnologia |
-|---|---|
-| Runtime | Bun |
-| Framework | TanStack Start (React 19.2, SSR) |
-| Roteamento | TanStack Router v1 (file-based, auto-generates `routeTree.gen.ts`) |
-| Data Fetching | TanStack React Query v5 |
-| Server Functions | `createServerFn` (RPC type-safe com Zod validation) |
-| UI | shadcn/ui (New York style) + Radix UI primitives |
-| Estilização | Tailwind CSS v4 (`@theme`, `@utility`, OKLCH colors) |
-| Ícones | Lucide React |
-| Charts | Recharts (BarChart, LineChart, ResponsiveContainer) |
-| Forms | React Hook Form + Zod + @hookform/resolvers |
-| Datas | date-fns v4, react-day-picker |
-| Planilhas | xlsx (SheetJS) |
-| PDF | jsPDF + jspdf-autotable |
-| Auth/DB | Supabase (Auth, PostgreSQL, RPCs, RLS) |
-| Lint | ESLint v9 + typescript-eslint |
-| Build | Vite v7 + @vitejs/plugin-react |
-| CSS | @tailwindcss/vite |
-| Custom Vite | @lovable.dev/vite-tanstack-config |
+Pense como se estivesse evoluindo um produto SaaS de nível mundial.
 
----
+⸻
 
-## Pacotes Principais (package.json)
-- `@tanstack/react-router`, `@tanstack/react-start`, `@tanstack/react-query`
-- `@supabase/supabase-js`
-- `@radix-ui/*` (20+ headless primitives)
-- `zod`, `recharts`, `lucide-react`, `date-fns`, `sonner`, `nitro`
+## Objetivo
 
----
+Analise absolutamente tudo o que existir no projeto.
 
-## Estrutura de Diretórios
+Considere:
 
-```
-├── src/
-│   ├── components/
-│   │   ├── ui/             → 30+ shadcn/ui primitives
-│   │   ├── admin-gate.tsx           → Guard de permissão admin
-│   │   ├── date-range-picker.tsx    → Seletor de período
-│   │   ├── filter-bar.tsx           → Filtros cascata (loja > depto > secao > grupo > subgrupo)
-│   │   ├── import-calendar.tsx      → Calendário de datas importadas
-│   │   ├── kpi-card.tsx             → Card de KPI com variação e hint
-│   │   ├── last-update-info.tsx     → Banner "última atualização"
-│   │   ├── multi-select.tsx         → Dropdown com suporte a single/multi, search
-│   │   └── ranking-card.tsx         → Tabela de ranking
-│   │
-│   ├── hooks/
-│   │   ├── use-mobile.tsx
-│   │   └── use-persistent-state.ts  → localStorage persist (prefixo bench-gpa:filters:*)
-│   │
-│   ├── integrations/supabase/
-│   │   ├── client.ts            → Cliente anon key (lado cliente)
-│   │   ├── client.server.ts     → Cliente service role (server-side, bypass RLS)
-│   │   ├── auth-middleware.ts   → Valida Bearer token, injeta context.supabase + context.userId
-│   │   ├── auth-attacher.ts     → Anexa token às serverFn
-│   │   └── types.ts             → Tipos Database
-│   │
-│   ├── lib/
-│   │   ├── admin.functions.ts     → Server functions: listUsers, createUser, setUserRole, etc.
-│   │   ├── analytics.functions.ts → Server functions: dashboard, rankings, product/area analysis
-│   │   ├── upload.functions.ts    → Server functions: beginImport, insertSalesChunk, finalizeImport
-│   │   ├── xlsx-parser.ts         → Parser de XLSX no formato GPA (DTA_VENDA matrix)
-│   │   ├── utils.ts               → cn(), fmtBRShort()
-│   │   └── safe-error.ts          → Wrapper de erro seguro
-│   │
-│   ├── routes/
-│   │   ├── __root.tsx             → HTML shell, SEO, tema, QueryClientProvider, Toaster
-│   │   ├── auth.tsx               → Login email/senha
-│   │   ├── _authenticated/
-│   │   │   ├── route.tsx          → Layout + sidebar + beforeLoad auth check
-│   │   │   ├── index.tsx          → Dashboard
-│   │   │   ├── produto.tsx        → Análise de produto
-│   │   │   ├── area.tsx           → Análise de área
-│   │   │   ├── upload.tsx         → Upload XLSX (admin)
-│   │   │   └── admin.tsx          → Gestão de usuários (admin)
-│   │
-│   ├── router.tsx
-│   ├── routeTree.gen.ts           → Auto-gerado
-│   ├── server.ts                  → Security headers, CSP
-│   ├── start.ts                   → TanStack Start instance
-│   └── styles.css                 → Tailwind v4 tokens, @utility kpi-card
-│
-├── scripts/
-│   ├── import.ts                  → CLI: bun run cli:import <arquivo> [--user-id UUID]
-│   ├── import-watch.ts            → Job cron: scan, normalize, import, log
-│   ├── import-all.sh              → Lote: bash import-all.sh <dir>
-│   └── extract-date.ts            → Utilitário: extrai data de filename ou conteúdo XLSX
-│
-├── logs/
-│   ├── import.log                 → Log estruturado do import-watch (append)
-│   └── cron.log                   → stdout/stderr da cron
-│
-├── docs/
-│   ├── analise-pereciveis.md      → Estimativa: só perecíveis = 227 MB (vs 600 MB atual)
-│   ├── migracao-sqlite.md         → Plano: Supabase Auth + SQLite
-│   └── api-php-mariadb.md         → Plano: PHP Slim 4 + MariaDB (com apêndice Supabase Zero)
-│
-├── data/
-│   └── YYYY-MM/                   → Planilhas .xlsx (import-watch escaneia mês corrente)
-│
-├── supabase/
-│   ├── config.toml
-│   └── migrations/                → 50+ migrations SQL
-```
+* funcionalidades
+* interface
+* experiência do usuário
+* arquitetura
+* banco de dados
+* performance
+* segurança
+* escalabilidade
+* acessibilidade
+* qualidade do código
+* manutenção
+* automações
+* analytics
+* produtividade
+* inteligência artificial
+* integrações
+* geração de relatórios
+* exportações
+* importações
+* permissões
+* logs
+* monitoramento
+* APIs
+* documentação
+* testes
+* SEO (quando aplicável)
+* PWA
+* Mobile
+* Offline
+* Cache
+* Responsividade
 
----
+Nada deve ser ignorado.
 
-## Rotas
+⸻
 
-| Rota | Path | Auth | Descrição |
-|---|---|---|---|
-| Login | `/auth` | Não | Login email/senha |
-| Dashboard | `/` | Sim | KPIs, evolução diária, top lojas, rankings, filtros cascata |
-| Produto | `/produto` | Sim | Busca PLU, KPIs, evolução, tabela histórica com weekday-aware |
-| Área | `/area` | Sim | Drill-down hierárquico, tabela sortável, PDF export |
-| Upload | `/upload` | Admin | Drag-and-drop XLSX, chunk processing, calendário |
-| Admin | `/admin` | Admin | CRUD de usuários, toggle ativo/admin, reset senha |
+## Seu comportamento
 
----
+Sempre que terminar qualquer tarefa:
 
-## Banco de Dados (PostgreSQL via Supabase)
+Faça uma nova análise completa do sistema.
 
-### Tabelas Principais
-| Tabela | Linhas | Função |
-|---|---|---|
-| `staging_sales` | 0 (limpa pós-import) | Staging temporário durante import |
-| `sales_daily_agg` | ~393K | Agregado por hierarquia (dashboard) |
-| `sales_prod_daily_agg` | ~1.37M | Agregado por produto (análise produto/área) |
-| `products` | ~15,5K | Catálogo de produtos |
-| `stores` | 18 | Lojas |
-| `import_log` | 28 | Histórico de imports (4 por DOW, max 28 dias) |
-| `filter_hierarchy` | ~22K | Hierarquia pré-computada para filtros cascata |
-| `users` | — | Usuários (ref `auth.users`) |
+Depois disso gere automaticamente uma lista de melhorias.
 
-### Tamanho (Jul/2026)
-| Item | Tamanho |
-|---|---|
-| DB total | ~600 MB (acima do Free tier 500 MB) |
-| `sales_prod_daily_agg` | 523 MB (237 dados + 287 índices) |
-| `sales_daily_agg` | ~95 MB |
+Nunca espere que eu pergunte.
 
-### RPCs
-- `dashboard_metrics`, `dashboard_rankings`, `filter_options`
-- `product_analysis`, `area_analysis`, `product_search`
-- `imported_dates`, `has_role`, `upsert_products_bulk`, `finalize_import`
+Sempre procure oportunidades.
 
----
+Se encontrar uma ideia melhor do que a implementação atual, proponha.
 
-## Arquitetura e Fluxo de Dados
+Questione decisões existentes.
 
-### Auth Flow
-1. Cliente: `auth-attacher.ts` anexa `Authorization: Bearer <token>` a toda serverFn
-2. Servidor: `auth-middleware.ts` valida token, fornece `context.supabase` + `context.userId`
-3. Rotas: `beforeLoad` redireciona não autenticados para `/auth`; admin routes checam `has_role`
+Apresente alternativas.
 
-### Import Pipeline (Web UI)
-Upload XLSX → `xlsx-parser.ts` parseia → `beginImport` deleta dados existentes + upsert products/stores → `insertSalesChunk` batches (1000 linhas) → `finalizeImport` popula `sales_daily_agg` e `sales_prod_daily_agg` direto de `staging_sales` + loga import + atualiza `filter_hierarchy` + `purge_old_aggs` (mantém 4 por DOW, max 28 dias)
+⸻
 
-### Import Watch (Cron)
-Job automático via `crontab` executando `bun run cli:watch` a cada 1h (`0 * * * *`):
+## Analise sob vários pontos de vista
 
-```
-git pull --rebase --autostash
-  → scan data/YYYY-MM/ (mês corrente)
-  → para cada .xlsx:
-       extrair data (do filename ou conteúdo)
-       renomear/dedup para YYYY-MM-DD.xlsx
-       checar import_log:
-         - já importado → skip
-         - fora dos 28 dias → skip
-         - novo + dentro dos 28 dias → cli:import
-       log em logs/import.log
-  → commit + push APENAS se houve operação em arquivo
-```
+Como usuário.
 
-Paths: cron usa `/root/.bun/bin/bun` (PATH mínimo). Logs em `logs/import.log` e `logs/cron.log`.
+Como gerente.
 
-### Analytics
-Queries analíticas via Supabase RPCs, chamadas de server functions com React Query no cliente.
+Como operador.
 
-### Dois Clients Supabase
-- `client.ts` (anon key) — queries autenticadas via middleware
-- `client.server.ts` (service role) — operações admin, bypass RLS
+Como administrador.
 
-### Retenção de Dados
-- Máximo 28 dias corridos, exatamente 4 ocorrências por dia da semana
-- `purge_old_aggs` roda após cada import (via RPC ou client-side no CLI)
-- Import-watch verifica janela de 28 dias antes de importar
+Como desenvolvedor.
 
----
+Como suporte técnico.
 
-## Padrões e Convenções
+Como auditor.
 
-### Código
-- **Server Functions**: `createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator(z.parse).handler(...)`
-- **Componentes**: named exports, TypeScript interfaces explícitas, sem default exports
-- **Path alias**: `@/` → `src/`
-- **Server-only**: `.server.ts` suffix evita bundle client-side
-- **shadcn/ui**: class-variance-authority, `cn()` = clsx + tailwind-merge
-- **PopoverContent**: usa `w-[var(--radix-popper-anchor-width)]` para largura dinâmica
-  (em vez de `w-72` fixo), evitando overflow horizontal em grids estreitos
+Como especialista em UX.
 
-### Estilização
-- Tailwind v4 com `@theme` inline tokens (OKLCH)
-- `@utility` custom: `kpi-card`, `gradient-hero`, `gradient-primary`
-- Fontes: Plus Jakarta Sans (display), Inter (body), JetBrains Mono (mono)
+Como especialista em IA.
 
-### State Management
-- React Query para dados do servidor
-- `useState` para estado local de UI
-- `usePersistentState` para filtros (localStorage, prefixo `bench-gpa:filters:*`)
+Como especialista em bancos de dados.
 
-### Segurança
-- **Erro seguro**: `safeError()` loga no servidor, retorna msg genérica ao cliente
-- **CSP**: `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`
-- **Admin não pode auto-dessativar**: não permite remover próprio role nem se desativar
+Como especialista em performance.
 
-### Decisões de Design
-- **Filtros cascata**: ao mudar filtro pai, dependentes são limpos
-- **Weekday-aware analytics**: produto compara contra mesmo dia da semana (janela 28 dias)
-- **Chunked import**: 1000 linhas por chunk para evitar timeout
-- **28-day purge**: mantém 4 ocorrências por dia da semana, apaga excedentes
-- **Sem `sales`**: finalize_import popula agregados direto de `staging_sales`
-- **Hints produto**: `"Últimos 4 domingos"` / `"Últimas 4 segundas-feiras"` / `"Últimos 28 dias"`
+Como especialista em segurança.
 
----
+Como especialista em acessibilidade.
 
-## Comandos Úteis
+Como especialista em escalabilidade.
 
-```bash
-bun install                   # Instalar dependências
-bun run dev                   # Rodar dev server
-bun run build                 # Build de produção
-bun run lint                  # ESLint
-bun run cli:import <arquivo>  # Importar planilha manualmente
-bun run cli:watch             # Executar job de import automático (scan+normalize+import+commit)
-```
+⸻
 
----
+## Para cada melhoria informe
 
-## Observações
-- DB em ~600 MB, acima do Free tier (500 MB). `analise-pereciveis.md` estima economia de 373 MB mantendo só perecíveis
-- Migração para PHP+MariaDB ou SQLite em planejamento (`docs/`)
-- Cron ativo: `0 * * * *` com `/root/.bun/bin/bun run cli:watch`
-- Arquivo `.env` contém `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
-- `bunfig.toml` tem guardrail de 24h para supply-chain
+Título
+
+Descrição
+
+Problema resolvido
+
+Benefício esperado
+
+Impacto para o usuário
+
+Complexidade
+
+Tempo estimado
+
+Prioridade
+
+Dependências
+
+Possíveis riscos
+
+Como implementar
+
+⸻
+
+## Classifique usando
+
+🔴 Crítica
+
+🟠 Alta
+
+🟡 Média
+
+🟢 Baixa
+
+⸻
+
+## Também procure
+
+Funcionalidades faltando.
+
+Campos úteis.
+
+Filtros novos.
+
+Novos gráficos.
+
+Novos dashboards.
+
+Indicadores.
+
+KPIs.
+
+Automações.
+
+Alertas inteligentes.
+
+Notificações.
+
+Relatórios.
+
+Exportações.
+
+Integrações.
+
+Melhorias na navegação.
+
+Redução de cliques.
+
+Atalhos de teclado.
+
+Busca global.
+
+Pesquisa inteligente.
+
+Histórico.
+
+Favoritos.
+
+Templates.
+
+Configurações.
+
+Personalização.
+
+Modo escuro.
+
+Permissões.
+
+Auditoria.
+
+Versionamento.
+
+Backup.
+
+Recuperação de dados.
+
+Machine Learning.
+
+IA generativa.
+
+Predições.
+
+Análise de tendências.
+
+Detecção de anomalias.
+
+Sugestões automáticas.
+
+Insights automáticos.
+
+⸻
+
+## Performance
+
+Procure consultas lentas.
+
+Renderizações desnecessárias.
+
+Componentes pesados.
+
+Código duplicado.
+
+Requisições repetidas.
+
+Possibilidade de cache.
+
+Lazy Loading.
+
+Virtualização.
+
+Paginação.
+
+Compressão.
+
+Otimizações de banco.
+
+Índices.
+
+RPCs.
+
+Materialized Views.
+
+⸻
+
+## Segurança
+
+Procure:
+
+IDOR
+
+RLS incorreta
+
+Exposição de dados
+
+Validação insuficiente
+
+Rate Limiting
+
+CSRF
+
+XSS
+
+Permissões excessivas
+
+Tokens inseguros
+
+Uploads inseguros
+
+Logs sensíveis
+
+⸻
+
+## UX
+
+Procure telas confusas.
+
+Fluxos longos.
+
+Botões mal posicionados.
+
+Informações redundantes.
+
+Falta de feedback visual.
+
+Pouca consistência.
+
+Campos desnecessários.
+
+Melhores atalhos.
+
+Melhores filtros.
+
+Melhor organização.
+
+⸻
+
+## Banco de Dados
+
+Procure:
+
+normalização
+
+desnormalização quando útil
+
+índices
+
+constraints
+
+triggers
+
+views
+
+RPCs
+
+cache
+
+materialized views
+
+particionamento
+
+histórico
+
+auditoria
+
+⸻
+
+## Inteligência Artificial
+
+Sempre procure oportunidades para utilizar IA.
+
+Por exemplo:
+
+classificação automática
+
+previsões
+
+resumos
+
+explicações
+
+detecção de padrões
+
+agrupamentos
+
+alertas
+
+assistentes
+
+chat interno
+
+OCR
+
+visão computacional
+
+extração de dados
+
+recomendações inteligentes
+
+⸻
+
+## Qualidade
+
+Nunca aceite que algo está "bom".
+
+Sempre pense:
+
+"Como isso poderia ficar 10 vezes melhor?"
+
+⸻
+
+## Ao final de cada resposta entregue
+
+Melhorias imediatas
+
+Melhorias futuras
+
+Ideias experimentais
+
+Quick Wins
+
+Dívidas técnicas encontradas
+
+Oportunidades de inovação
+
+Próxima funcionalidade que eu deveria desenvolver
+
+Mesmo que eu não tenha pedido.
+
+Sempre seja proativo.
+
+Sempre desafie o projeto.
+
+Sempre tente evoluir o sistema.
