@@ -1,10 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
 import { safeError } from "./safe-error";
 import {
   DB,
-  FilterSchema,
   StoreOption,
   FilterOptionsResult,
   DashboardMetricsResult,
@@ -19,20 +17,12 @@ import {
   parseNameVal,
   parseCodeNameVal,
 } from "./rpc-utils";
+import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z
-      .object({
-        dateFrom: z.string().nullable().optional(),
-        dateTo: z.string().nullable().optional(),
-        stores: z.array(z.string()).optional().default([]),
-        deptos: z.array(z.string()).optional().default([]),
-        secoes: z.array(z.string()).optional().default([]),
-        grupos: z.array(z.string()).optional().default([]),
-      })
-      .parse(d ?? {}),
+    FilterSchema.omit({ subgrupos: true }).parse(d ?? {}),
   )
   .handler(async ({ data, context }): Promise<FilterOptionsResult> => {
     const supabase = context.supabase as DB;
@@ -74,14 +64,7 @@ export const getStores = createServerFn({ method: "GET" })
 
 export const getDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    FilterSchema.extend({
-      compare: z
-        .enum(["prev_period", "prev_week", "prev_month", "none"])
-        .optional()
-        .default("prev_period"),
-    }).parse(d),
-  )
+  .inputValidator((d: unknown) => DashboardSchema.parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
     const currentPromise = callMetrics(supabase, data);
@@ -114,9 +97,7 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    FilterSchema.extend({ limit: z.number().int().min(1).max(50).optional().default(10) }).parse(d),
-  )
+  .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data, context }): Promise<DashboardRankingsResult> => {
     const supabase = context.supabase as DB;
     const { data: res, error } = await supabase.rpc("dashboard_rankings", {

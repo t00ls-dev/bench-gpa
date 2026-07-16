@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
 import { safeError } from "./safe-error";
 import {
   DB,
@@ -13,10 +12,11 @@ import {
   parseCodeNameVal,
   parseDateVal,
 } from "./rpc-utils";
+import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
 
 export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ q: z.string().min(3) }).parse(d))
+  .inputValidator((d: unknown) => SingleQuerySchema.parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
     const { data: rows, error } = await supabase.rpc("product_search", { p_q: data.q.trim() });
@@ -26,7 +26,7 @@ export const searchProducts = createServerFn({ method: "POST" })
 
 export const getProductByCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ prodCode: z.string().min(1) }).parse(d))
+  .inputValidator((d: unknown) => SingleProdCodeSchema.parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
     const { data: rows, error } = await supabase.rpc("get_product_by_code", {
