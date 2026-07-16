@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
 import { ProductSearch } from "@/components/product-search";
 import { ProductKPIs } from "@/components/product-kpis";
-import { ProductHierarchyTrail } from "@/components/product-hierarchy-trail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Loader2 } from "lucide-react";
 import { Route } from "./produto";
@@ -125,13 +124,8 @@ function ProdutoPage() {
         onQueryChange={(v) => { setQuery(v); setSelected(null); }}
         onSelect={handleSelect}
         onClear={handleClear}
+        product={analysisData?.product}
       />
-
-      {selected && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
-          <ProductHierarchyTrail product={analysisData?.product} />
-        </div>
-      )}
 
       {selected && analysisLoading && !analysisData && (
         <>
