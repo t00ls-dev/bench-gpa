@@ -176,58 +176,54 @@ export function AreaTable({
               />
             </tr>
           </thead>
-          <tbody
-            style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const p = products[virtualRow.index];
-              if (!p) return null;
-              const noSaleRow = p.val === 0;
-              return (
-                <tr
-                  key={p.prod_code}
-                  onClick={() => openProduct(p.prod_code)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      openProduct(p.prod_code);
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
-                  title="Abrir Análise de Produto"
-                >
-                  <td className="py-3 md:py-2 font-mono text-xs whitespace-nowrap truncate">
-                    {p.prod_code}
-                  </td>
-                  <td className="py-3 md:py-2 truncate">{p.prod_name}</td>
-                  <td className="num py-3 md:py-2 text-right whitespace-nowrap font-medium">
-                    {fmtBRL(p.val)}
-                  </td>
-                  <td className="num py-3 md:py-2 text-right whitespace-nowrap text-muted-foreground">
-                    {daysSinceLabel(p.lastSaleDate)}
-                  </td>
-                </tr>
-              );
-            })}
-            {products.length === 0 && !isFetching && (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                  Nenhum produto encontrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
         </table>
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const p = products[virtualRow.index];
+            if (!p) return null;
+            const noSaleRow = p.val === 0;
+            return (
+              <div
+                key={p.prod_code}
+                onClick={() => openProduct(p.prod_code)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openProduct(p.prod_code);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+                className={`grid grid-cols-[18%_42%_20%_20%] cursor-pointer border-b border-border/60 text-sm hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
+                title="Abrir Análise de Produto"
+              >
+                <div className="truncate self-center font-mono text-xs pl-3">
+                  {p.prod_code}
+                </div>
+                <div className="truncate self-center">{p.prod_name}</div>
+                <div className="num text-right self-center whitespace-nowrap font-medium pr-3">
+                  {fmtBRL(p.val)}
+                </div>
+                <div className="num text-right self-center whitespace-nowrap text-muted-foreground pr-3">
+                  {daysSinceLabel(p.lastSaleDate)}
+                </div>
+              </div>
+            );
+          })}
+          {products.length === 0 && !isFetching && (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhum produto encontrado.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
