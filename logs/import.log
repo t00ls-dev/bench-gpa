@@ -3544,3 +3544,317 @@ error: script "cli:import" exited with code 1
 [2026-07-16 08:00:04] REN: 2026-07-14.xlsx → 2026-07-14.xlsx (already imported)
 [2026-07-16 08:00:04] Git: no file operations — skip commit
 [2026-07-16 08:00:04] ====== import-watch end ======
+[2026-07-16 09:00:01] ====== import-watch start ======
+[2026-07-16 09:00:01] Pull: starting...
+[2026-07-16 09:00:02] Pull: Already up to date.
+[2026-07-16 09:00:02] Scan: data/2026-07/
+[2026-07-16 09:00:02] Found: 2026-07-01.xlsx (tracked) (normalized)
+[2026-07-16 09:00:02] Date: 2026-07-01
+[2026-07-16 09:00:03] import_log: 2026-07-01 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-02.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-02
+[2026-07-16 09:00:03] import_log: 2026-07-02 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-03.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-03
+[2026-07-16 09:00:03] import_log: 2026-07-03 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-04.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-04
+[2026-07-16 09:00:03] import_log: 2026-07-04 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-05.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-05
+[2026-07-16 09:00:03] import_log: 2026-07-05 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-06.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-06
+[2026-07-16 09:00:03] import_log: 2026-07-06 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-07.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-07
+[2026-07-16 09:00:03] import_log: 2026-07-07 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-08.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-08
+[2026-07-16 09:00:03] import_log: 2026-07-08 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-09.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-09
+[2026-07-16 09:00:03] import_log: 2026-07-09 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-10.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-10
+[2026-07-16 09:00:03] import_log: 2026-07-10 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-11.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-11
+[2026-07-16 09:00:03] import_log: 2026-07-11 already imported — skip
+[2026-07-16 09:00:03] Found: 2026-07-12.xlsx (tracked) (normalized)
+[2026-07-16 09:00:03] Date: 2026-07-12
+[2026-07-16 09:00:04] import_log: 2026-07-12 already imported — skip
+[2026-07-16 09:00:04] Found: 2026-07-13.xlsx (tracked) (normalized)
+[2026-07-16 09:00:04] Date: 2026-07-13
+[2026-07-16 09:00:04] import_log: 2026-07-13 already imported — skip
+[2026-07-16 09:00:04] Found: 2026-07-14.xlsx (tracked) (normalized)
+[2026-07-16 09:00:04] Date: 2026-07-14
+[2026-07-16 09:00:04] import_log: 2026-07-14 already imported — skip
+[2026-07-16 09:00:04] REN: 2026-07-01.xlsx → 2026-07-01.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-02.xlsx → 2026-07-02.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-03.xlsx → 2026-07-03.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-04.xlsx → 2026-07-04.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-05.xlsx → 2026-07-05.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-06.xlsx → 2026-07-06.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-07.xlsx → 2026-07-07.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-08.xlsx → 2026-07-08.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-09.xlsx → 2026-07-09.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-10.xlsx → 2026-07-10.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-11.xlsx → 2026-07-11.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-12.xlsx → 2026-07-12.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-13.xlsx → 2026-07-13.xlsx (already imported)
+[2026-07-16 09:00:04] REN: 2026-07-14.xlsx → 2026-07-14.xlsx (already imported)
+[2026-07-16 09:00:04] Git: no file operations — skip commit
+[2026-07-16 09:00:04] ====== import-watch end ======
+[2026-07-16 10:00:01] ====== import-watch start ======
+[2026-07-16 10:00:01] Pull: starting...
+[2026-07-16 10:00:02] Pull: Already up to date.
+[2026-07-16 10:00:02] Scan: data/2026-07/
+[2026-07-16 10:00:02] Found: 2026-07-01.xlsx (tracked) (normalized)
+[2026-07-16 10:00:02] Date: 2026-07-01
+[2026-07-16 10:00:03] import_log: 2026-07-01 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-02.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-02
+[2026-07-16 10:00:03] import_log: 2026-07-02 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-03.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-03
+[2026-07-16 10:00:03] import_log: 2026-07-03 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-04.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-04
+[2026-07-16 10:00:03] import_log: 2026-07-04 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-05.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-05
+[2026-07-16 10:00:03] import_log: 2026-07-05 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-06.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-06
+[2026-07-16 10:00:03] import_log: 2026-07-06 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-07.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-07
+[2026-07-16 10:00:03] import_log: 2026-07-07 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-08.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-08
+[2026-07-16 10:00:03] import_log: 2026-07-08 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-09.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-09
+[2026-07-16 10:00:03] import_log: 2026-07-09 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-10.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-10
+[2026-07-16 10:00:03] import_log: 2026-07-10 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-11.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-11
+[2026-07-16 10:00:03] import_log: 2026-07-11 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-12.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-12
+[2026-07-16 10:00:03] import_log: 2026-07-12 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-13.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-13
+[2026-07-16 10:00:03] import_log: 2026-07-13 already imported — skip
+[2026-07-16 10:00:03] Found: 2026-07-14.xlsx (tracked) (normalized)
+[2026-07-16 10:00:03] Date: 2026-07-14
+[2026-07-16 10:00:03] import_log: 2026-07-14 already imported — skip
+[2026-07-16 10:00:03] REN: 2026-07-01.xlsx → 2026-07-01.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-02.xlsx → 2026-07-02.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-03.xlsx → 2026-07-03.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-04.xlsx → 2026-07-04.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-05.xlsx → 2026-07-05.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-06.xlsx → 2026-07-06.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-07.xlsx → 2026-07-07.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-08.xlsx → 2026-07-08.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-09.xlsx → 2026-07-09.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-10.xlsx → 2026-07-10.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-11.xlsx → 2026-07-11.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-12.xlsx → 2026-07-12.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-13.xlsx → 2026-07-13.xlsx (already imported)
+[2026-07-16 10:00:03] REN: 2026-07-14.xlsx → 2026-07-14.xlsx (already imported)
+[2026-07-16 10:00:03] Git: no file operations — skip commit
+[2026-07-16 10:00:03] ====== import-watch end ======
+[2026-07-16 11:00:02] ====== import-watch start ======
+[2026-07-16 11:00:02] Pull: starting...
+[2026-07-16 11:00:02] Pull: Already up to date.
+[2026-07-16 11:00:02] Scan: data/2026-07/
+[2026-07-16 11:00:02] Found: 2026-07-01.xlsx (tracked) (normalized)
+[2026-07-16 11:00:02] Date: 2026-07-01
+[2026-07-16 11:00:03] import_log: 2026-07-01 already imported — skip
+[2026-07-16 11:00:03] Found: 2026-07-02.xlsx (tracked) (normalized)
+[2026-07-16 11:00:03] Date: 2026-07-02
+[2026-07-16 11:00:03] import_log: 2026-07-02 already imported — skip
+[2026-07-16 11:00:03] Found: 2026-07-03.xlsx (tracked) (normalized)
+[2026-07-16 11:00:03] Date: 2026-07-03
+[2026-07-16 11:00:03] import_log: 2026-07-03 already imported — skip
+[2026-07-16 11:00:03] Found: 2026-07-04.xlsx (tracked) (normalized)
+[2026-07-16 11:00:03] Date: 2026-07-04
+[2026-07-16 11:00:03] import_log: 2026-07-04 already imported — skip
+[2026-07-16 11:00:03] Found: 2026-07-05.xlsx (tracked) (normalized)
+[2026-07-16 11:00:03] Date: 2026-07-05
+[2026-07-16 11:00:03] import_log: 2026-07-05 already imported — skip
+[2026-07-16 11:00:03] Found: 2026-07-06.xlsx (tracked) (normalized)
+[2026-07-16 11:00:03] Date: 2026-07-06
+[2026-07-16 11:00:03] import_log: 2026-07-06 already imported — skip
+[2026-07-16 11:00:03] Found: 2026-07-07.xlsx (tracked) (normalized)
+[2026-07-16 11:00:03] Date: 2026-07-07
+[2026-07-16 11:00:04] import_log: 2026-07-07 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-08.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-08
+[2026-07-16 11:00:04] import_log: 2026-07-08 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-09.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-09
+[2026-07-16 11:00:04] import_log: 2026-07-09 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-10.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-10
+[2026-07-16 11:00:04] import_log: 2026-07-10 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-11.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-11
+[2026-07-16 11:00:04] import_log: 2026-07-11 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-12.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-12
+[2026-07-16 11:00:04] import_log: 2026-07-12 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-13.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-13
+[2026-07-16 11:00:04] import_log: 2026-07-13 already imported — skip
+[2026-07-16 11:00:04] Found: 2026-07-14.xlsx (tracked) (normalized)
+[2026-07-16 11:00:04] Date: 2026-07-14
+[2026-07-16 11:00:04] import_log: 2026-07-14 already imported — skip
+[2026-07-16 11:00:04] REN: 2026-07-01.xlsx → 2026-07-01.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-02.xlsx → 2026-07-02.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-03.xlsx → 2026-07-03.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-04.xlsx → 2026-07-04.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-05.xlsx → 2026-07-05.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-06.xlsx → 2026-07-06.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-07.xlsx → 2026-07-07.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-08.xlsx → 2026-07-08.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-09.xlsx → 2026-07-09.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-10.xlsx → 2026-07-10.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-11.xlsx → 2026-07-11.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-12.xlsx → 2026-07-12.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-13.xlsx → 2026-07-13.xlsx (already imported)
+[2026-07-16 11:00:04] REN: 2026-07-14.xlsx → 2026-07-14.xlsx (already imported)
+[2026-07-16 11:00:04] Git: no file operations — skip commit
+[2026-07-16 11:00:04] ====== import-watch end ======
+[2026-07-16 12:00:01] ====== import-watch start ======
+[2026-07-16 12:00:01] Pull: starting...
+[2026-07-16 12:00:02] Pull: Already up to date.
+[2026-07-16 12:00:02] Scan: data/2026-07/
+[2026-07-16 12:00:02] Found: 2026-07-01.xlsx (tracked) (normalized)
+[2026-07-16 12:00:02] Date: 2026-07-01
+[2026-07-16 12:00:03] import_log: 2026-07-01 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-02.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-02
+[2026-07-16 12:00:03] import_log: 2026-07-02 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-03.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-03
+[2026-07-16 12:00:03] import_log: 2026-07-03 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-04.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-04
+[2026-07-16 12:00:03] import_log: 2026-07-04 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-05.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-05
+[2026-07-16 12:00:03] import_log: 2026-07-05 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-06.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-06
+[2026-07-16 12:00:03] import_log: 2026-07-06 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-07.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-07
+[2026-07-16 12:00:03] import_log: 2026-07-07 already imported — skip
+[2026-07-16 12:00:03] Found: 2026-07-08.xlsx (tracked) (normalized)
+[2026-07-16 12:00:03] Date: 2026-07-08
+[2026-07-16 12:00:04] import_log: 2026-07-08 already imported — skip
+[2026-07-16 12:00:04] Found: 2026-07-09.xlsx (tracked) (normalized)
+[2026-07-16 12:00:04] Date: 2026-07-09
+[2026-07-16 12:00:04] import_log: 2026-07-09 already imported — skip
+[2026-07-16 12:00:04] Found: 2026-07-10.xlsx (tracked) (normalized)
+[2026-07-16 12:00:04] Date: 2026-07-10
+[2026-07-16 12:00:04] import_log: 2026-07-10 already imported — skip
+[2026-07-16 12:00:04] Found: 2026-07-11.xlsx (tracked) (normalized)
+[2026-07-16 12:00:04] Date: 2026-07-11
+[2026-07-16 12:00:04] import_log: 2026-07-11 already imported — skip
+[2026-07-16 12:00:04] Found: 2026-07-12.xlsx (tracked) (normalized)
+[2026-07-16 12:00:04] Date: 2026-07-12
+[2026-07-16 12:00:04] import_log: 2026-07-12 already imported — skip
+[2026-07-16 12:00:04] Found: 2026-07-13.xlsx (tracked) (normalized)
+[2026-07-16 12:00:04] Date: 2026-07-13
+[2026-07-16 12:00:04] import_log: 2026-07-13 already imported — skip
+[2026-07-16 12:00:04] Found: 2026-07-14.xlsx (tracked) (normalized)
+[2026-07-16 12:00:04] Date: 2026-07-14
+[2026-07-16 12:00:04] import_log: 2026-07-14 already imported — skip
+[2026-07-16 12:00:04] REN: 2026-07-01.xlsx → 2026-07-01.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-02.xlsx → 2026-07-02.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-03.xlsx → 2026-07-03.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-04.xlsx → 2026-07-04.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-05.xlsx → 2026-07-05.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-06.xlsx → 2026-07-06.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-07.xlsx → 2026-07-07.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-08.xlsx → 2026-07-08.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-09.xlsx → 2026-07-09.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-10.xlsx → 2026-07-10.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-11.xlsx → 2026-07-11.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-12.xlsx → 2026-07-12.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-13.xlsx → 2026-07-13.xlsx (already imported)
+[2026-07-16 12:00:04] REN: 2026-07-14.xlsx → 2026-07-14.xlsx (already imported)
+[2026-07-16 12:00:04] Git: no file operations — skip commit
+[2026-07-16 12:00:04] ====== import-watch end ======
+[2026-07-16 12:42:17] ====== import-watch start ======
+[2026-07-16 12:42:17] Pull: starting...
+[2026-07-16 12:42:18] Pull: Already up to date.
+[2026-07-16 12:42:18] Scan: data/2026-07/
+[2026-07-16 12:42:18] Found: 15-07-2026.xlsx (tracked)
+[2026-07-16 12:42:18] Date: 2026-07-15
+[2026-07-16 12:42:18] Git mv: 15-07-2026.xlsx → 2026-07-15.xlsx
+[2026-07-16 12:42:18] Import: starting...
+[2026-07-16 12:43:09] Import: ✅ Importação concluída com sucesso!
+[2026-07-16 12:43:09] Found: 2026-07-01.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-01
+[2026-07-16 12:43:09] import_log: 2026-07-01 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-02.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-02
+[2026-07-16 12:43:09] import_log: 2026-07-02 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-03.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-03
+[2026-07-16 12:43:09] import_log: 2026-07-03 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-04.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-04
+[2026-07-16 12:43:09] import_log: 2026-07-04 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-05.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-05
+[2026-07-16 12:43:09] import_log: 2026-07-05 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-06.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-06
+[2026-07-16 12:43:09] import_log: 2026-07-06 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-07.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-07
+[2026-07-16 12:43:09] import_log: 2026-07-07 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-08.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-08
+[2026-07-16 12:43:09] import_log: 2026-07-08 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-09.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-09
+[2026-07-16 12:43:09] import_log: 2026-07-09 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-10.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-10
+[2026-07-16 12:43:09] import_log: 2026-07-10 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-11.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-11
+[2026-07-16 12:43:09] import_log: 2026-07-11 already imported — skip
+[2026-07-16 12:43:09] Found: 2026-07-12.xlsx (tracked) (normalized)
+[2026-07-16 12:43:09] Date: 2026-07-12
+[2026-07-16 12:43:10] import_log: 2026-07-12 already imported — skip
+[2026-07-16 12:43:10] Found: 2026-07-13.xlsx (tracked) (normalized)
+[2026-07-16 12:43:10] Date: 2026-07-13
+[2026-07-16 12:43:10] import_log: 2026-07-13 already imported — skip
+[2026-07-16 12:43:10] Found: 2026-07-14.xlsx (tracked) (normalized)
+[2026-07-16 12:43:10] Date: 2026-07-14
+[2026-07-16 12:43:10] import_log: 2026-07-14 already imported — skip
+[2026-07-16 12:43:10] REN: 2026-07-01.xlsx → 2026-07-01.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-02.xlsx → 2026-07-02.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-03.xlsx → 2026-07-03.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-04.xlsx → 2026-07-04.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-05.xlsx → 2026-07-05.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-06.xlsx → 2026-07-06.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-07.xlsx → 2026-07-07.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-08.xlsx → 2026-07-08.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-09.xlsx → 2026-07-09.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-10.xlsx → 2026-07-10.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-11.xlsx → 2026-07-11.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-12.xlsx → 2026-07-12.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-13.xlsx → 2026-07-13.xlsx (already imported)
+[2026-07-16 12:43:10] REN: 2026-07-14.xlsx → 2026-07-14.xlsx (already imported)
+[2026-07-16 12:43:10] IMP: 15-07-2026.xlsx → 2026-07-15.xlsx
