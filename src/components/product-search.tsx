@@ -14,6 +14,7 @@ export function ProductSearch({
   selected,
   suggestions,
   searchFetching,
+  product,
   onQueryChange,
   onSelect,
   onClear,
