@@ -1,6 +1,5 @@
 import { execSync } from "child_process";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
-import compression from "vite-plugin-compression";
 
 let commitHash = "dev";
 let commitTimestamp = "0";
@@ -16,10 +15,7 @@ export default defineConfig({
       __COMMIT_HASH__: JSON.stringify(commitHash),
       __COMMIT_DATE__: JSON.stringify(commitTimestamp),
     },
-    plugins: [
-      compression({ algorithm: "brotliCompress", ext: ".br" }),
-      compression({ algorithm: "gzip", ext: ".gz" }),
-    ],
+    plugins: [],
   },
   tanstackStart: {
     server: { entry: "server" },
