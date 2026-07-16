@@ -1,6 +1,6 @@
-import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { lazy } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AdminGate } from "@/components/admin-gate";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async ({ context }) => {
@@ -12,9 +12,5 @@ export const Route = createFileRoute("/_authenticated/admin")({
     });
     if (isAdmin !== true) throw redirect({ to: "/" });
   },
-  component: () => (
-    <AdminGate isAdmin={true}>
-      <Outlet />
-    </AdminGate>
-  ),
+  component: lazy(() => import("./admin.page")),
 });
