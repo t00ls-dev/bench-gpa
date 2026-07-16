@@ -59,6 +59,9 @@ export function ProductSearch({
             <span className="font-mono">{selected.prod_code}</span>
             <span className="truncate max-w-[40vw] sm:max-w-[260px]">{selected.prod_name}</span>
           </span>
+          {product && (
+            <ProductHierarchyTrail product={product} />
+          )}
         </div>
       )}
       {!selected &&

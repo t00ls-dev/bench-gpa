@@ -11,8 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fmtBRL, fmtInt } from "@/components/kpi-card";
-import { AreaTh } from "@/components/area-th";
-import { ChevronLeft, ChevronRight, FileText, Loader2, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, Loader2, Search, X } from "lucide-react";
 
 type Product = {
   prod_code: string;
@@ -27,6 +26,25 @@ type Product = {
 };
 
 type SortKey = "prod_code" | "prod_name" | "val" | "daysSince";
+
+function SortBtn({ label, k, sortKey, sortAsc, toggle, align = "left", hint }: {
+  label: string; k: SortKey; sortKey: SortKey; sortAsc: boolean;
+  toggle: (k: SortKey) => void; align?: "left" | "right"; hint?: string;
+}) {
+  const active = sortKey === k;
+  return (
+    <div className={`py-2 px-3 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        onClick={() => toggle(k)}
+        title={hint}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
+      >
+        {label}
+        {active && (sortAsc ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
+      </button>
+    </div>
+  );
+}
 
 export function AreaTable({
   products,
@@ -136,93 +154,54 @@ export function AreaTable({
       </div>
 
       <div ref={scrollRef} className="overflow-auto -mx-3 px-3 sm:mx-0 sm:px-0" style={{ maxHeight: "70vh" }}>
-        <table className="w-full min-w-[420px] table-fixed text-sm">
-          <thead>
-            <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <AreaTh
-                label="PLU"
-                k="prod_code"
-                sortKey={sortKey}
-                sortAsc={sortAsc}
-                toggle={onSortToggle}
-                className="w-[18%]"
-              />
-              <AreaTh
-                label="Produto"
-                k="prod_name"
-                sortKey={sortKey}
-                sortAsc={sortAsc}
-                toggle={onSortToggle}
-                className="w-[42%]"
-              />
-              <AreaTh
-                label="Venda"
-                k="val"
-                sortKey={sortKey}
-                sortAsc={sortAsc}
-                toggle={onSortToggle}
-                align="right"
-                className="w-[20%]"
-              />
-              <AreaTh
-                label="Dias S/ Venda"
-                k="daysSince"
-                sortKey={sortKey}
-                sortAsc={sortAsc}
-                toggle={onSortToggle}
-                align="right"
-                className="w-[20%]"
-                hint={`Referência: ${baseDateIso ?? "—"}`}
-              />
-            </tr>
-          </thead>
-        </table>
-        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const p = products[virtualRow.index];
-            if (!p) return null;
-            const noSaleRow = p.val === 0;
-            return (
-              <div
-                key={p.prod_code}
-                onClick={() => openProduct(p.prod_code)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openProduct(p.prod_code);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-                className={`grid grid-cols-[18%_42%_20%_20%] cursor-pointer border-b border-border/60 text-sm hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
-                title="Abrir Análise de Produto"
-              >
-                <div className="truncate self-center font-mono text-xs pl-3">
-                  {p.prod_code}
+        <div className="min-w-[420px] text-sm">
+          <div className="grid grid-cols-[18%_42%_20%_20%] border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <SortBtn label="PLU" k="prod_code" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} />
+            <SortBtn label="Produto" k="prod_name" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} />
+            <SortBtn label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} align="right" />
+            <SortBtn label="Dias S/ Venda" k="daysSince" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} align="right" hint={`Referência: ${baseDateIso ?? "—"}`} />
+          </div>
+          <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const p = products[virtualRow.index];
+              if (!p) return null;
+              const noSaleRow = p.val === 0;
+              return (
+                <div
+                  key={p.prod_code}
+                  onClick={() => openProduct(p.prod_code)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openProduct(p.prod_code);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className={`grid grid-cols-[18%_42%_20%_20%] cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
+                  title="Abrir Análise de Produto"
+                >
+                  <div className="truncate self-center font-mono text-xs pl-3">{p.prod_code}</div>
+                  <div className="truncate self-center">{p.prod_name}</div>
+                  <div className="num text-right self-center whitespace-nowrap font-medium pr-3">{fmtBRL(p.val)}</div>
+                  <div className="num text-right self-center whitespace-nowrap text-muted-foreground pr-3">{daysSinceLabel(p.lastSaleDate)}</div>
                 </div>
-                <div className="truncate self-center">{p.prod_name}</div>
-                <div className="num text-right self-center whitespace-nowrap font-medium pr-3">
-                  {fmtBRL(p.val)}
-                </div>
-                <div className="num text-right self-center whitespace-nowrap text-muted-foreground pr-3">
-                  {daysSinceLabel(p.lastSaleDate)}
-                </div>
+              );
+            })}
+            {products.length === 0 && !isFetching && (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Nenhum produto encontrado.
               </div>
-            );
-          })}
-          {products.length === 0 && !isFetching && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              Nenhum produto encontrado.
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
