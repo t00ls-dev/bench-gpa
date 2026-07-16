@@ -282,6 +282,7 @@ function AreaPage() {
           <AreaTable
             products={products} totalRows={totalRows} page={page} totalPages={totalPages} pageSize={pageSize}
             search={search} isFetching={isFetching} baseDateIso={baseDateIso}
+            storeCode={fStores.length === 1 ? fStores[0] : null}
             sortKey={sortKey} sortAsc={sortAsc} daysSinceLabel={daysSinceLabel}
             onSearchChange={setSearch} onClearSearch={() => { setSearch(""); setPage(1); }}
             onPageSizeChange={(v) => setPageSize(v as 25 | 50 | 100 | 250)}
