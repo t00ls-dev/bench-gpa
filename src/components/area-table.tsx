@@ -55,6 +55,7 @@ export function AreaTable({
   search,
   isFetching,
   baseDateIso,
+  storeCode,
   sortKey,
   sortAsc,
   daysSinceLabel,
@@ -74,6 +75,7 @@ export function AreaTable({
   search: string;
   isFetching: boolean;
   baseDateIso?: string;
+  storeCode?: string | null;
   sortKey: SortKey;
   sortAsc: boolean;
   daysSinceLabel: (iso: string | null) => string;
@@ -90,9 +92,11 @@ export function AreaTable({
 
   const openProduct = useCallback(
     (code: string) => {
-      navigate({ to: "/produto", search: { plu: code } });
+      const s: Record<string, string> = { plu: code };
+      if (storeCode) s.store = storeCode;
+      navigate({ to: "/produto", search: s });
     },
-    [navigate],
+    [navigate, storeCode],
   );
 
   const virtualizer = useVirtualizer({
