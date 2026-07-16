@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
 import { safeError } from "./safe-error";
 import {
   DB,
@@ -16,27 +15,11 @@ import {
   numOrNull,
   parseDateVal,
 } from "./rpc-utils";
+import { AreaAnalysisSchema } from "./schemas";
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        dateFrom: z.string(),
-        dateTo: z.string(),
-        stores: z.array(z.string()).optional().default([]),
-        deptos: z.array(z.string()).optional().default([]),
-        secoes: z.array(z.string()).optional().default([]),
-        grupos: z.array(z.string()).optional().default([]),
-        subgrupos: z.array(z.string()).optional().default([]),
-        page: z.number().int().optional(),
-        pageSize: z.number().int().optional().default(50),
-        search: z.string().optional().default(""),
-        sortBy: z.enum(["val", "prod_code", "prod_name", "daysSince"]).optional().default("val"),
-        sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
-      })
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data, context }): Promise<AreaAnalysisResult> => {
     const supabase = context.supabase as DB;
     const { data: res, error } = await supabase.rpc("area_analysis", {

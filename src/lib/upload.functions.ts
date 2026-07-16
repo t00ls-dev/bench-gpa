@@ -4,18 +4,7 @@ import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import { DB } from "./rpc-utils";
-
-const SaleRow = z.object({
-  store_code: z.string(),
-  store_name: z.string(),
-  depto: z.string().nullable(),
-  secao: z.string().nullable(),
-  grupo: z.string().nullable(),
-  subgrupo: z.string().nullable(),
-  prod_code: z.string(),
-  prod_name: z.string(),
-  val_vda: z.number(),
-});
+import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -68,7 +57,7 @@ export const beginImport = createServerFn({ method: "POST" })
 export const insertSalesChunk = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRow) }).parse(d),
+    z.object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRowSchema) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context, "upload.assertAdmin");

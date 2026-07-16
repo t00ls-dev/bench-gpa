@@ -1,15 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
-
-const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9._-]+@gpabr\.com$/i, "E-mail deve terminar em @gpabr.com");
-const passwordSchema = z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(128);
+import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
 
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -30,10 +23,10 @@ export const createUser = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z
       .object({
-        email: emailSchema,
+        email: EmailSchema,
         name: z.string().trim().min(1, "Nome obrigatório").max(120),
-        password: passwordSchema,
-        role: z.enum(["admin", "user"]),
+        password: PasswordSchema,
+        role: RoleEnum,
       })
       .parse(data),
   )
@@ -67,12 +60,7 @@ export const createUser = createServerFn({ method: "POST" })
 export const setUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({
-        userId: z.string().uuid(),
-        role: z.enum(["admin", "user"]),
-      })
-      .parse(data),
+    z.object({ userId: UserIdSchema, role: RoleEnum }).parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -92,12 +80,7 @@ export const setUserRole = createServerFn({ method: "POST" })
 export const setUserActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({
-        userId: z.string().uuid(),
-        isActive: z.boolean(),
-      })
-      .parse(data),
+    z.object({ userId: UserIdSchema, isActive: z.boolean() }).parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -117,12 +100,7 @@ export const setUserActive = createServerFn({ method: "POST" })
 export const resetPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({
-        userId: z.string().uuid(),
-        password: passwordSchema,
-      })
-      .parse(data),
+    z.object({ userId: UserIdSchema, password: PasswordSchema }).parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -265,7 +243,7 @@ export const listDocs = createServerFn({ method: "GET" })
 
 export const getDocContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ slug: z.string().min(1) }).parse(data))
+  .inputValidator((data: unknown) => SingleSlugSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const content = docModules[`/docs/${data.slug}.md`];

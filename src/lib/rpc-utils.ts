@@ -1,21 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
 import { safeError } from "./safe-error";
 import type { Database } from "@/integrations/supabase/types";
+import { FilterSchema } from "./schemas";
+import type { Filters } from "./schemas";
 
 export type DB = SupabaseClient<Database>;
-
-export const FilterSchema = z.object({
-  dateFrom: z.string().optional().nullable(),
-  dateTo: z.string().optional().nullable(),
-  stores: z.array(z.string()).optional().default([]),
-  deptos: z.array(z.string()).optional().default([]),
-  secoes: z.array(z.string()).optional().default([]),
-  grupos: z.array(z.string()).optional().default([]),
-  subgrupos: z.array(z.string()).optional().default([]),
-});
-
-export type Filters = z.infer<typeof FilterSchema>;
 
 export interface NameVal {
   name: string;

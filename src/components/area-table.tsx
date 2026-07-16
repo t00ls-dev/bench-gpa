@@ -1,5 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +68,7 @@ export function AreaTable({
   pdfLoading: boolean;
 }) {
   const navigate = useNavigate();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const openProduct = useCallback(
     (code: string) => {
@@ -74,6 +76,13 @@ export function AreaTable({
     },
     [navigate],
   );
+
+  const virtualizer = useVirtualizer({
+    count: products.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 40,
+    overscan: 10,
+  });
 
   return (
     <div className="kpi-card min-w-0">
@@ -126,7 +135,7 @@ export function AreaTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+      <div ref={scrollRef} className="overflow-auto -mx-3 px-3 sm:mx-0 sm:px-0" style={{ maxHeight: "70vh" }}>
         <table className="w-full min-w-[420px] table-fixed text-sm">
           <thead>
             <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
@@ -167,8 +176,12 @@ export function AreaTable({
               />
             </tr>
           </thead>
-          <tbody>
-            {products.map((p) => {
+          <tbody
+            style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const p = products[virtualRow.index];
+              if (!p) return null;
               const noSaleRow = p.val === 0;
               return (
                 <tr
@@ -182,6 +195,14 @@ export function AreaTable({
                   }}
                   tabIndex={0}
                   role="button"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
                   className={`cursor-pointer border-b border-border/60 hover:bg-muted/40 ${noSaleRow ? "bg-warning/10" : ""}`}
                   title="Abrir Análise de Produto"
                 >

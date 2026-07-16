@@ -194,13 +194,19 @@ async function main() {
 
   // 1. git pull
   log("Pull: starting...");
-  const pull = exec(["git", "pull", "--rebase", "--autostash"]);
+  const pull = exec(["git", "pull", "--ff-only"]);
   if (!pull.ok) {
-    log(`Pull: ERROR — ${pull.stderr}`);
-    log("====== code-review abort ======");
-    process.exit(1);
+    log(`Pull: retry with rebase...`);
+    const rebase = exec(["git", "pull", "--rebase"]);
+    if (!rebase.ok) {
+      log(`Pull: ERROR — ${rebase.stderr}`);
+      log("====== code-review abort ======");
+      process.exit(1);
+    }
+    log(`Pull: ${rebase.stdout || "Already up to date."}`);
+  } else {
+    log(`Pull: ${pull.stdout || "Already up to date."}`);
   }
-  log(`Pull: ${pull.stdout || "Already up to date."}`);
 
   // 2. Run lint
   log("Lint: starting...");
