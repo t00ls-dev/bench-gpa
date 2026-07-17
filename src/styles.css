@@ -166,7 +166,7 @@
   table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
   th, td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; }
   th { background: var(--muted); font-weight: 600; }
-  tr:nth-child(even) td { background: var(--muted / 0.5); }
+  tr:nth-child(even) td { background: color-mix(in oklab, var(--muted) 50%, transparent); }
   blockquote { border-left: 3px solid var(--primary); padding-left: 1rem; color: var(--muted-foreground); margin-bottom: 0.75rem; }
   hr { border-color: var(--border); margin: 1.5rem 0; }
   a { color: var(--primary); text-decoration: underline; }
