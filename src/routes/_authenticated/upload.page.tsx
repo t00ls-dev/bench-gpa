@@ -38,7 +38,7 @@ type ImportEntry = {
 export default function UploadPage() {
   const imported = useQuery({
     queryKey: ["imported-dates"],
-    queryFn: () => importedDates(),
+    queryFn: () => getImported(),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
   });
@@ -172,11 +172,11 @@ export default function UploadPage() {
         <div className="space-y-4">
           <UploadDropzone onFilesReady={handleFiles} disabled={processingRef.current} />
           {entries.length > 0 && <ImportProgress entries={entries} />}
-          <ImportHistory imported={imported} />
+          <ImportHistory dates={imported.data} />
         </div>
       )}
 
-      {tab === "calendario" && <ImportCalendar />}
+      {tab === "calendario" && <ImportCalendar records={imported.data ?? []} />}
 
       <AlertDialog open={!!confirmDialog} onOpenChange={(o) => { if (!o) setConfirmDialog(null); }}>
         <AlertDialogContent>
