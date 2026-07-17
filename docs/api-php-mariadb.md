@@ -1,48 +1,47 @@
-# Plano: PHP API (Slim 4) + MariaDB
+# Migração: Vercel + PHP API (Slim 4) + MariaDB
+
+> Substitui **todo** o Supabase (Auth + DB). Zero dependência externa além do VPS.
 
 ## Stack
 
 | Camada | Tecnologia |
 |---|---|
-| Framework | Slim 4 (PSR-7/PSR-15) |
-| Linguagem | PHP 8.3+ |
+| Frontend | Vercel — TanStack Start (SSR) |
+| API | PHP 8.3+ — Slim 4 (PSR-7/PSR-15) |
 | Database | MariaDB 11+ |
-| Server | PHP-FPM + Nginx (ou FrankenPHP) |
-| Auth | API Key compartilhada frontend→API |
-| HTTP Client (frontend) | `fetch()` nativo nas server functions |
+| Server | VPS — Nginx + PHP-FPM |
+| Auth | JWT próprio — `firebase/php-jwt` + `password_hash` (bcrypt) |
+| HTTP Client | `fetch()` nativo nas server functions |
 
 ---
 
 ## Arquitetura
 
 ```
-                      ┌──────────────────────┐
-                      │  Supabase Auth        │
-                      │  (login, JWT token)   │
-                      └──────────┬───────────┘
-                                 │ valida token
-                                 ▼
 ┌─────────────────────────────────────────────────┐
-│           TanStack Start (Bun)                  │
-│  Valida JWT → extrai userId + role              │
-│  Chama PHP API com X-API-Key + headers de user  │
+│  VERCEL                                          │
+│  TanStack Start (SSR)                           │
+│  ├─ Server functions chamam PHP API via fetch() │
+│  ├─ Auth: login/logout/me → PHP API             │
+│  └─ JWT armazenado em cookie HttpOnly           │
 └───────────────────┬─────────────────────────────┘
-                    │ HTTP (JSON)
+                    │ HTTPS — JSON com JWT no header Authorization
                     ▼
 ┌─────────────────────────────────────────────────┐
-│           PHP API (Slim 4)                      │
-│  Middleware: valida API Key                      │
-│  Middleware: CORS                                │
-│  Controllers → Services → Repositories → MariaDB│
+│  VPS — Nginx + PHP-FPM                          │
+│  PHP API (Slim 4)                               │
+│  ├─ Middleware: valida JWT (exceto /auth/*)     │
+│  ├─ Middleware: CORS                             │
+│  ├─ Controllers → Services → Repositories      │
+│  └─ Auth: login, logout, me                     │
 └───────────────────┬─────────────────────────────┘
-                    │ SQL
+                    │ PDO — SQL
                     ▼
 ┌─────────────────────────────────────────────────┐
-│           MariaDB 11+                           │
-│  sales_prod_daily_agg     (tabelão, ~523 MB)    │
-│  sales_daily_agg          (dashboard, ~65 MB)   │
-│  staging_sales / products / stores / import_log │
-│  filter_hierarchy                               │
+│  MariaDB 11+ (localhost, não exposto)            │
+│  users / stores / products / import_log         │
+│  staging_sales / sales_daily_agg                │
+│  sales_prod_daily_agg / filter_hierarchy        │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -56,9 +55,10 @@ php-api/
 │   └── index.php                    ← Entrypoint (Slim App)
 ├── src/
 │   ├── Middleware/
-│   │   ├── ApiKeyAuth.php           ← Valida X-API-Key
+│   │   ├── JwtAuth.php              ← Valida JWT (exceto rotas /auth/*)
 │   │   └── Cors.php                 ← CORS headers
 │   ├── Controller/
+│   │   ├── AuthController.php       ← /api/auth/* (login, logout, me)
 │   │   ├── DashboardController.php  ← /api/dashboard/*
 │   │   ├── FilterController.php     ← /api/filter-options
 │   │   ├── ProductController.php    ← /api/products/*
@@ -66,13 +66,15 @@ php-api/
 │   │   ├── ImportController.php     ← /api/import/*
 │   │   └── StoreController.php      ← /api/stores
 │   ├── Service/
-│   │   ├── DashboardService.php     ← Lógica de métricas agregadas
+│   │   ├── AuthService.php          ← Login, validação, hash
+│   │   ├── DashboardService.php     ← Métricas agregadas
 │   │   ├── RankingService.php       ← Rankings hierárquicos
 │   │   ├── AreaAnalysisService.php  ← Tabela paginada + sort
 │   │   ├── ProductAnalysisService.php ← Análise de produto
 │   │   ├── FilterService.php        ← Opções de filtro cascata
 │   │   └── ImportService.php        ← Pipeline de importação
 │   ├── Repository/
+│   │   ├── UserRepository.php       ← CRUD usuários
 │   │   ├── SalesProdDailyAggRepository.php
 │   │   ├── SalesDailyAggRepository.php
 │   │   ├── ProductRepository.php
@@ -80,6 +82,7 @@ php-api/
 │   │   ├── ImportLogRepository.php
 │   │   └── FilterHierarchyRepository.php
 │   ├── DTO/
+│   │   ├── LoginResult.php
 │   │   ├── DashboardMetrics.php
 │   │   ├── DashboardRankings.php
 │   │   ├── AreaAnalysisResult.php
@@ -92,15 +95,16 @@ php-api/
 ├── config/
 │   └── settings.php                 ← Slim settings
 ├── migrations/
-│   ├── 001_create_stores.sql
-│   ├── 002_create_products.sql
-│   ├── 003_create_import_log.sql
-│   ├── 004_create_staging_sales.sql
-│   ├── 005_create_sales_daily_agg.sql
-│   ├── 006_create_sales_prod_daily_agg.sql
-│   └── 007_create_filter_hierarchy.sql
+│   ├── 001_create_users.sql
+│   ├── 002_create_stores.sql
+│   ├── 003_create_products.sql
+│   ├── 004_create_import_log.sql
+│   ├── 005_create_staging_sales.sql
+│   ├── 006_create_sales_daily_agg.sql
+│   ├── 007_create_sales_prod_daily_agg.sql
+│   └── 008_create_filter_hierarchy.sql
 ├── data/
-│   └── seed.sql                     ← Dump inicial do Supabase (único)
+│   └── seed.sql                     ← Dump inicial do Supabase
 ├── .env.example
 ├── composer.json
 ├── Makefile
@@ -112,6 +116,21 @@ php-api/
 ## MariaDB Schema
 
 ```sql
+-- users
+CREATE TABLE users (
+  id         VARCHAR(36) PRIMARY KEY,
+  email      VARCHAR(255) NOT NULL UNIQUE,
+  name       VARCHAR(255) NOT NULL,
+  password   VARCHAR(255) NOT NULL,
+  role       ENUM('admin','user') NOT NULL DEFAULT 'user',
+  is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_users_email (email),
+  INDEX idx_users_role (role),
+  INDEX idx_users_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- stores
 CREATE TABLE stores (
   store_code VARCHAR(10) NOT NULL PRIMARY KEY,
@@ -210,81 +229,291 @@ CREATE TABLE filter_hierarchy (
 
 ## API Endpoints
 
-| Método | Rota | Controller | Descrição |
-|---|---|---|---|
-| GET | `/api/health` | — | Health check |
-| GET | `/api/stores` | `StoreController` | Lista lojas ordenadas por código |
-| POST | `/api/filter-options` | `FilterController` | Opções de filtro cascata |
-| POST | `/api/dashboard/metrics` | `DashboardController` | KPIs + top lojas + evolução |
-| POST | `/api/dashboard/rankings` | `DashboardController` | Rankings por hierarquia |
-| POST | `/api/products/search` | `ProductController` | Busca textual (≥3 chars) |
-| POST | `/api/products/analysis` | `ProductController` | Análise completa de um produto |
-| POST | `/api/area/analysis` | `AreaController` | Tabela paginada com filtros/sort |
-| GET | `/api/area/hierarchy` | `AreaController` | Hierarquia para filtros |
-| GET | `/api/import/dates` | `ImportController` | Datas importadas |
-| POST | `/api/import/begin` | `ImportController` | Iniciar importação |
-| POST | `/api/import/chunk` | `ImportController` | Inserir lote de linhas |
-| POST | `/api/import/finalize` | `ImportController` | Finalizar importação |
+| Método | Rota | Controller | Auth | Descrição |
+|---|---|---|---|---|
+| POST | `/api/auth/login` | `AuthController` | ❌ | Login (email + password → JWT + cookie) |
+| POST | `/api/auth/logout` | `AuthController` | ❌ | Logout (limpa cookie) |
+| GET | `/api/auth/me` | `AuthController` | ✅ | Retorna usuário atual do JWT |
+| POST | `/api/auth/change-password` | `AuthController` | ✅ | Alterar própria senha |
+| GET | `/api/health` | — | ❌ | Health check |
+| GET | `/api/stores` | `StoreController` | ✅ | Lista lojas |
+| POST | `/api/filter-options` | `FilterController` | ✅ | Opções de filtro cascata |
+| POST | `/api/dashboard/metrics` | `DashboardController` | ✅ | KPIs + top lojas + evolução |
+| POST | `/api/dashboard/rankings` | `DashboardController` | ✅ | Rankings |
+| POST | `/api/products/search` | `ProductController` | ✅ | Busca textual (≥3 chars) |
+| POST | `/api/products/analysis` | `ProductController` | ✅ | Análise de produto |
+| POST | `/api/area/analysis` | `AreaController` | ✅ | Tabela paginada |
+| GET | `/api/area/hierarchy` | `AreaController` | ✅ | Hierarquia para filtros |
+| GET | `/api/import/dates` | `ImportController` | ✅ | Datas importadas |
+| POST | `/api/import/begin` | `ImportController` | ✅ | Iniciar importação |
+| POST | `/api/import/chunk` | `ImportController` | ✅ | Inserir lote |
+| POST | `/api/import/finalize` | `ImportController` | ✅ | Finalizar importação |
 
 ---
 
-## Autenticação (API Key)
+## Autenticação (JWP próprio)
 
-A chave é configurada via variável de ambiente nos dois lados.
+A API PHP substitui completamente o Supabase Auth. O fluxo é:
 
-### Frontend (`.env`)
+```
+1. Usuário faz POST /api/auth/login { email, password }
+2. PHP verifica hash (password_hash/bcrypt) na tabela users
+3. PHP retorna JWT + setta cookie HttpOnly
+4. Frontend armazena cookie (enviado automaticamente nas próximas requests)
+5. Middleware JwtAuth valida token em toda rota (exceto /auth/*)
+6. Server functions no Vercel enviam cookie via credentials: "include"
+```
+
+### Variáveis de ambiente
+
+**PHP API (`.env`):**
 ```env
-API_PHP_URL="https://php-api.exemplo.com"
-API_PHP_KEY="a3f8c9d1e2b4..."
+JWT_SECRET="uma-chave-segura-de-64-caracteres"
+JWT_EXPIRY="604800"            # 7 dias em segundos
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_NAME="bench_gpa"
+DB_USER="bench_gpa"
+DB_PASS="senha-segura"
+APP_URL="https://api.seu-dominio.com"
 ```
 
-### PHP API (`.env`)
+**Vercel (`.env.production`):**
 ```env
-API_KEY="a3f8c9d1e2b4..."
+API_PHP_URL="https://api.seu-dominio.com"
 ```
 
-### Fluxo da request
-
-O frontend envia em toda requisição:
-```
-X-API-Key: a3f8c9d1e2b4...
-X-User-Id: <uuid-do-usuario>
-X-User-Role: admin|user
-```
-
-O middleware `ApiKeyAuth.php` verifica se `X-API-Key` bate com a configurada.
-Os headers `X-User-Id` e `X-User-Role` são **confiados** (o frontend já validou via Supabase JWT)
-— a API não valida autenticidade deles.
-
-### ApiKeyAuth.php
+### JwtAuth.php — Middleware
 
 ```php
 <?php
 namespace App\Middleware;
 
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface as Handler;
 use Slim\Psr7\Response;
 
-class ApiKeyAuth
+class JwtAuth
 {
     public function __invoke(Request $request, Handler $handler): Response
     {
-        $key = $request->getHeaderLine('X-API-Key');
+        $auth = $request->getHeaderLine('Authorization');
 
-        if ($key !== Config::get('API_KEY')) {
-            $response = new Response();
-            $response->getBody()->write(json_encode([
-                'error' => 'Unauthorized',
-            ]));
-            return $response
-                ->withStatus(401)
-                ->withHeader('Content-Type', 'application/json');
+        if (!str_starts_with($auth, 'Bearer ')) {
+            return $this->unauthorized('Token não fornecido.');
+        }
+
+        $token = substr($auth, 7);
+
+        try {
+            $payload = JWT::decode($token, new Key($_ENV['JWT_SECRET'], 'HS256'));
+            $request = $request
+                ->withAttribute('userId', $payload->userId)
+                ->withAttribute('userRole', $payload->role)
+                ->withAttribute('userEmail', $payload->email);
+        } catch (\Exception $e) {
+            return $this->unauthorized('Token inválido ou expirado.');
         }
 
         return $handler->handle($request);
     }
+
+    private function unauthorized(string $msg): Response
+    {
+        $res = new Response();
+        $res->getBody()->write(json_encode(['error' => $msg]));
+        return $res->withStatus(401)->withHeader('Content-Type', 'application/json');
+    }
 }
+```
+
+### AuthController.php
+
+```php
+<?php
+namespace App\Controller;
+
+use App\Database\ConnectionFactory;
+use Firebase\JWT\JWT;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+
+class AuthController
+{
+    public function login(Request $request, Response $response): Response
+    {
+        $body = $request->getParsedBody();
+        $email = strtolower(trim($body['email'] ?? ''));
+        $password = $body['password'] ?? '';
+
+        if (!$email || !$password) {
+            return $this->json($response, ['ok' => false, 'error' => 'E-mail e senha obrigatórios.'], 400);
+        }
+
+        $pdo = ConnectionFactory::get();
+        $stmt = $pdo->prepare(
+            "SELECT id, email, name, password, role, is_active FROM users WHERE email = ?"
+        );
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$user || !password_verify($password, $user['password'])) {
+            return $this->json($response, ['ok' => false, 'error' => 'E-mail ou senha inválidos.'], 401);
+        }
+
+        if (!$user['is_active']) {
+            return $this->json($response, ['ok' => false, 'error' => 'Usuário inativo.'], 403);
+        }
+
+        $now = time();
+        $payload = [
+            'iss' => $_ENV['APP_URL'],
+            'iat' => $now,
+            'exp' => $now + (int)($_ENV['JWT_EXPIRY'] ?? 604800),
+            'userId' => $user['id'],
+            'role' => $user['role'],
+            'email' => $user['email'],
+        ];
+
+        $token = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
+
+        $result = $this->json($response, [
+            'ok' => true,
+            'token' => $token,
+            'user' => [
+                'id' => $user['id'],
+                'email' => $user['email'],
+                'name' => $user['name'],
+                'role' => $user['role'],
+            ],
+        ]);
+
+        // Cookie HttpOnly para SSR
+        $secure = ($_ENV['APP_ENV'] ?? 'production') === 'production';
+        $result = $result->withHeader(
+            'Set-Cookie',
+            sprintf(
+                'session=%s; HttpOnly; Path=/; Max-Age=%d; SameSite=Lax%s',
+                $token,
+                $_ENV['JWT_EXPIRY'] ?? 604800,
+                $secure ? '; Secure' : '',
+            ),
+        );
+
+        return $result;
+    }
+
+    public function me(Request $request, Response $response): Response
+    {
+        return $this->json($response, [
+            'id' => $request->getAttribute('userId'),
+            'email' => $request->getAttribute('userEmail'),
+            'role' => $request->getAttribute('userRole'),
+        ]);
+    }
+
+    public function logout(Request $request, Response $response): Response
+    {
+        $result = $this->json($response, ['ok' => true]);
+        return $result->withHeader(
+            'Set-Cookie',
+            'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax',
+        );
+    }
+
+    private function json(Response $response, mixed $data, int $status = 200): Response
+    {
+        $response->getBody()->write(json_encode($data));
+        return $response
+            ->withStatus($status)
+            ->withHeader('Content-Type', 'application/json');
+    }
+}
+```
+
+### Registrar o middleware no Slim
+
+```php
+// public/index.php
+use App\Middleware\JwtAuth;
+use Slim\Routing\RouteCollectorProxy;
+
+$app->post('/api/auth/login', [AuthController::class, 'login']);
+$app->post('/api/auth/logout', [AuthController::class, 'logout']);
+$app->get('/api/auth/me', [AuthController::class, 'me'])->add(new JwtAuth());
+$app->get('/api/health', function ($req, $res) { ... });
+
+$app->group('/api', function (RouteCollectorProxy $group) {
+    $group->get('/stores', [StoreController::class, 'list']);
+    $group->post('/filter-options', [FilterController::class, 'options']);
+    $group->post('/dashboard/metrics', [DashboardController::class, 'metrics']);
+    $group->post('/dashboard/rankings', [DashboardController::class, 'rankings']);
+    $group->post('/products/search', [ProductController::class, 'search']);
+    $group->post('/products/analysis', [ProductController::class, 'analysis']);
+    $group->post('/area/analysis', [AreaController::class, 'analysis']);
+    $group->get('/area/hierarchy', [AreaController::class, 'hierarchy']);
+    $group->get('/import/dates', [ImportController::class, 'dates']);
+    $group->post('/import/begin', [ImportController::class, 'begin']);
+    $group->post('/import/chunk', [ImportController::class, 'chunk']);
+    $group->post('/import/finalize', [ImportController::class, 'finalize']);
+})->add(new JwtAuth());
+```
+
+### Fluxo no frontend (Vercel)
+
+**Login** (`auth.page.tsx`):
+```ts
+const res = await fetch(`${apiUrl}/api/auth/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",  // ← essencial para enviar/receber cookie
+  body: JSON.stringify({ email, password }),
+});
+const data = await res.json();
+if (!data.ok) { /* erro */ }
+// Cookie HttpOnly setado automaticamente pelo header Set-Cookie
+// JWT está no cookie, não precisa manipular manualmente
+router.invalidate();
+```
+
+**Server function** (`src/lib/*.functions.ts`):
+```ts
+// Cada server function chama a PHP API com cookie
+const res = await fetch(`${process.env.API_PHP_URL}/api/dashboard/metrics`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({ dateFrom, dateTo, stores, deptos, secoes, grupos, subgrupos }),
+});
+if (!res.ok) throw new Error("API error");
+return await res.json();
+```
+
+**Middleware de auth** (`src/integrations/ substituído por src/lib/auth-middleware.ts`):
+```ts
+import { createMiddleware } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+
+export const requireAuth = createMiddleware({ type: "function" }).server(
+  async ({ next }) => {
+    const request = getRequest();
+    const cookie = request?.headers?.get("cookie") || "";
+    if (!cookie.includes("session=")) throw new Error("Unauthorized");
+
+    // Validar chamando PHP API
+    const res = await fetch(`${process.env.API_PHP_URL}/api/auth/me`, {
+      headers: { cookie },
+    });
+    if (!res.ok) throw new Error("Unauthorized");
+    const user = await res.json();
+
+    return next({
+      context: { userId: user.id, userRole: user.role, userEmail: user.email },
+    });
+  },
+);
 ```
 
 ---
@@ -601,25 +830,28 @@ class ImportService
 
 ## Como o frontend consome a API
 
-Cada server function em `src/lib/analytics.functions.ts` troca `supabase.rpc(...)` por `fetch(...)`.
+Cada server function em `src/lib/*.functions.ts` troca `supabase.rpc(...)` por `fetch(...)` enviando o cookie JWT.
+
+O cookie HttpOnly `session` é enviado automaticamente pelo navegador via `credentials: "include"`.
+Nas server functions (SSR), o cookie é lido do Request original e reenviado.
 
 ### Exemplo: getFilterOptions
 
 ```typescript
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+
 export const getFilterOptions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(/* ... */)
-  .handler(async ({ data, context }): Promise<FilterOptionsResult> => {
+  .handler(async ({ data }): Promise<FilterOptionsResult> => {
     const apiUrl = process.env.API_PHP_URL!;
-    const apiKey = process.env.API_PHP_KEY!;
+    const request = getRequest();
+    const cookie = request?.headers?.get("cookie") || "";
 
     const res = await fetch(`${apiUrl}/api/filter-options`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-        "X-User-Id": context.userId,
-        "X-User-Role": (context.claims as any)?.role ?? "user",
+        cookie,
       },
       body: JSON.stringify({
         dateFrom: data.dateFrom,
@@ -633,7 +865,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw safeError("getFilterOptions", err);
+      throw new Error(err.error ?? "API error");
     }
 
     return res.json();
@@ -643,32 +875,30 @@ export const getFilterOptions = createServerFn({ method: "POST" })
 ### Exemplo: getStores
 
 ```typescript
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+
 export const getStores = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<StoreOption[]> => {
+  .handler(async (): Promise<StoreOption[]> => {
     const apiUrl = process.env.API_PHP_URL!;
-    const apiKey = process.env.API_PHP_KEY!;
+    const request = getRequest();
+    const cookie = request?.headers?.get("cookie") || "";
 
     const res = await fetch(`${apiUrl}/api/stores`, {
-      headers: {
-        "X-API-Key": apiKey,
-        "X-User-Id": context.userId,
-        "X-User-Role": (context.claims as any)?.role ?? "user",
-      },
+      headers: { cookie },
     });
 
-    if (!res.ok) throw safeError("getStores", "API error");
+    if (!res.ok) throw new Error("API error");
 
     return res.json();
   });
 ```
 
-### Novas variáveis de ambiente
+### Variáveis de ambiente
 
 ```env
-# .env
-API_PHP_URL="https://php-api.exemplo.com"
-API_PHP_KEY="a3f8c9d1e2b4..."
+# .env.production (Vercel)
+API_PHP_URL="https://api.seu-dominio.com"
 ```
 
 ---
@@ -718,7 +948,7 @@ return function (Slim\App $app) {
         $api->post('/import/begin', [ImportController::class, 'begin']);
         $api->post('/import/chunk', [ImportController::class, 'chunk']);
         $api->post('/import/finalize', [ImportController::class, 'finalize']);
-    })->add(new App\Middleware\ApiKeyAuth())
+    })->add(new App\Middleware\JwtAuth())
       ->add(new App\Middleware\Cors());
 };
 ```
@@ -904,8 +1134,6 @@ services:
       DB_NAME: benchgpa
       DB_USER: root
       DB_PASS: ${DB_ROOT_PW}
-      API_KEY: ${API_PHP_KEY}
-
   frontend:
     build: .
     depends_on:
@@ -914,9 +1142,6 @@ services:
       - "80:3000"
     environment:
       API_PHP_URL: "http://php-api:8080"
-      API_PHP_KEY: ${API_PHP_KEY}
-      SUPABASE_URL: ${VITE_SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
 
 volumes:
   db_data:
@@ -932,7 +1157,7 @@ volumes:
 - [ ] `composer init` com `slim/slim:^4`, `slim/psr7`, `php-di/slim-bridge`
 - [ ] Estrutura de diretórios (Controllers, Services, Repositories, DTO)
 - [ ] `public/index.php` + `config/routes.php`
-- [ ] Middleware `ApiKeyAuth` + `Cors`
+- [ ] Middleware `Cors`
 - [ ] `Database/ConnectionFactory.php` + `Config/Config.php`
 - [ ] `migrations/` — arquivos SQL do schema
 - [ ] Script `migrate.php` que executa os .sql em ordem
@@ -959,7 +1184,7 @@ volumes:
 
 ### Fase 4 — Integração frontend (2-3 dias)
 
-- [ ] Adicionar `API_PHP_URL` + `API_PHP_KEY` ao `.env`
+- [ ] Adicionar `API_PHP_URL` ao `.env`
 - [ ] Converter `getStores` — trocar `supabase.from("stores")` por `fetch()`
 - [ ] Converter `getFilterOptions`
 - [ ] Converter `getDashboard` (+ `callMetrics`)
@@ -1383,7 +1608,7 @@ use App\Controller\AuthController;
 use App\Controller\AdminController;
 use App\Middleware\JwtAuth;
 
-// Auth (públicos — sem ApiKeyAuth)
+// Auth (público — sem JWT)
 $app->post('/api/auth/login', [AuthController::class, 'login']);
 
 // Auth (autenticados)
