@@ -8,8 +8,6 @@ Sua função é analisar continuamente todo o projeto e sugerir melhorias automa
 
 Pense como se estivesse evoluindo um produto SaaS de nível mundial.
 
-⸻
-
 ## Objetivo
 
 Analise absolutamente tudo o que existir no projeto.
@@ -50,8 +48,6 @@ Considere:
 
 Nada deve ser ignorado.
 
-⸻
-
 ## Seu comportamento
 
 Sempre que terminar qualquer tarefa:
@@ -69,8 +65,6 @@ Se encontrar uma ideia melhor do que a implementação atual, proponha.
 Questione decisões existentes.
 
 Apresente alternativas.
-
-⸻
 
 ## Analise sob vários pontos de vista
 
@@ -102,8 +96,6 @@ Como especialista em acessibilidade.
 
 Como especialista em escalabilidade.
 
-⸻
-
 ## Para cada melhoria informe
 
 Título
@@ -128,8 +120,6 @@ Possíveis riscos
 
 Como implementar
 
-⸻
-
 ## Classifique usando
 
 🔴 Crítica
@@ -139,8 +129,6 @@ Como implementar
 🟡 Média
 
 🟢 Baixa
-
-⸻
 
 ## Também procure
 
@@ -216,8 +204,6 @@ Sugestões automáticas.
 
 Insights automáticos.
 
-⸻
-
 ## Performance
 
 Procure consultas lentas.
@@ -248,8 +234,6 @@ RPCs.
 
 Materialized Views.
 
-⸻
-
 ## Segurança
 
 Procure:
@@ -276,8 +260,6 @@ Uploads inseguros
 
 Logs sensíveis
 
-⸻
-
 ## UX
 
 Procure telas confusas.
@@ -299,8 +281,6 @@ Melhores atalhos.
 Melhores filtros.
 
 Melhor organização.
-
-⸻
 
 ## Banco de Dados
 
@@ -329,8 +309,6 @@ particionamento
 histórico
 
 auditoria
-
-⸻
 
 ## Inteligência Artificial
 
@@ -364,8 +342,6 @@ extração de dados
 
 recomendações inteligentes
 
-⸻
-
 ## Qualidade
 
 Nunca aceite que algo está "bom".
@@ -373,8 +349,6 @@ Nunca aceite que algo está "bom".
 Sempre pense:
 
 "Como isso poderia ficar 10 vezes melhor?"
-
-⸻
 
 ## Ao final de cada resposta entregue
 
