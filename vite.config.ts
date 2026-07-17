@@ -43,7 +43,10 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
-    tanstackStart({ server: { entry: "server" } }),
+    tanstackStart({
+      server: { entry: "server" },
+      router: { routeFileIgnorePattern: "\\.page\\.tsx" },
+    }),
     nitro(),
     react(),
   ],
