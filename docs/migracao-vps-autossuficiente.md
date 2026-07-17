@@ -66,7 +66,36 @@ Usuário ──HTTPS──▶ Vercel (SSR TanStack)
                                      └── Node.js API → MariaDB
 ```
 
-Em ambos os casos: **MariaDB nunca exposto externamente**.
+Em ambos os casos: **MariaDB nunca exposto externamente**, exceto na Opção C.
+
+### Opção C: MariaDB externo gerenciado
+
+```
+Usuário ──HTTPS──▶ Nginx (443, SSL)
+                    └── proxy reverso :3000
+                         └── Node.js App (PM2)
+                              └── TCP :3306 ──▶ MariaDB externo (DO / Hetzner / AWS)
+```
+
+Útil quando:
+- Quer separar compute de dados (mais seguro, backup gerenciado)
+- Precisa escalar DB independente do app
+- Vai rodar app em serverless (Vercel) com DB externo
+
+**Cuidados:**
+- **Sempre SSL/TLS** entre app e DB (`ssl: { rejectUnauthorized: true }`)
+- Firewall do DB deve liberar **apenas o IP do app**, nunca `0.0.0.0/0`
+- Latência adicional de ~1-5ms (rede) — aceitável para consultas OLAP
+- Conexão pool com `connectionLimit` menor (5-10) para não estourar conexões do plano
+
+**Provedores recomendados:**
+
+| Provedor | RAM | Storage | Preço | SSL | Backup |
+|---|---|---|---|---|---|
+| DigitalOcean Managed | 1 GB | 10 GB SSD | $15/mo | ✅ automático | ✅ diário |
+| Hetzner (VPC) | 1-2 GB | 40 GB SSD | ~$5-8/mo | ✅ configurar | ❌ manual |
+| AWS RDS (db.t4g.micro) | 1 GB | 20 GB gp3 | ~$15/mo | ✅ automático | ✅ configurável |
+| VPS próprio (segundo) | 1 GB | 25 GB | ~$4-6/mo | ✅ configurar | ❌ manual |
 
 ---
 
@@ -227,19 +256,54 @@ CREATE TABLE filter_hierarchy (
 ```ts
 import { createPool } from "mysql2/promise";
 
+const isRemote = process.env.DB_HOST && process.env.DB_HOST !== "localhost";
+
 const pool = createPool({
   host: process.env.DB_HOST || "localhost",
+  port: Number(process.env.DB_PORT ?? 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: isRemote ? 5 : 10,
   queueLimit: 0,
   charset: "utf8mb4",
   timezone: "+00:00",
+  // SSL obrigatório para conexões remotas
+  ...(isRemote && {
+    ssl: {
+      rejectUnauthorized: true,
+      ...(process.env.DB_CA_PATH && {
+        ca: fs.readFileSync(process.env.DB_CA_PATH),
+      }),
+    },
+  }),
 });
 
 export default pool;
+```
+
+> **DB local**: `DB_HOST` vazio ou `localhost` usa TCP sem SSL (mais rápido).
+> **DB remoto**: qualquer outro host ativa SSL automaticamente com `rejectUnauthorized: true`.
+> Para provedores que usam certificado auto-assinado (ex: DigitalOcean), adicione `ca` com o caminho do certificado.
+
+### .env
+
+```env
+# DB local (padrão)
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_NAME="bench_gpa"
+DB_USER="bench_gpa"
+DB_PASS="senha-segura"
+
+# DB externo (ex: DigitalOcean Managed)
+# DB_HOST="benchgpa-do-user-123456.db.ondigitalocean.com"
+# DB_PORT="25060"
+# DB_NAME="bench_gpa"
+# DB_USER="doadmin"
+# DB_PASS="senha-segura"
+# DB_CA_PATH="/etc/ssl/certs/do-ca.crt"   # opcional
 ```
 
 ---
@@ -1328,6 +1392,8 @@ VALUES (
 
 ### Fase 0: Infraestrutura (30 min)
 
+#### DB local (recomendado)
+
 ```bash
 # No VPS
 apt install nginx mariadb-server -y
@@ -1345,6 +1411,69 @@ GRANT ALL ON bench_gpa.* TO 'bench_gpa'@'localhost';
 # Schema + stored procedures
 mysql -u bench_gpa -p bench_gpa < scripts/migrate-schema.sql
 ```
+
+#### DB externo (opcional)
+
+Se usar MariaDB gerenciado (DigitalOcean, Hetzner, AWS), pule a instalação local e configure o provedor:
+
+**DigitalOcean Managed Database:**
+```bash
+# No VPS, instalar só nginx + pm2
+apt install nginx -y
+npm install -g pm2
+
+# Download do CA certificate
+curl -o /etc/ssl/certs/do-ca.crt https://www.digitalocean.com/static/media/DO_CA.crt
+
+# Rodar schema remotamente
+mysql -h "<host_do>" -P 25060 -u doadmin -p bench_gpa < scripts/migrate-schema.sql
+```
+
+```env
+# .env
+DB_HOST="benchgpa-do-user-123456.db.ondigitalocean.com"
+DB_PORT="25060"
+DB_NAME="bench_gpa"
+DB_USER="doadmin"
+DB_PASS="<senha_do>"
+DB_CA_PATH="/etc/ssl/certs/do-ca.crt"
+```
+
+**VPS próprio (segundo servidor):**
+```bash
+# No VPS de DB
+apt install mariadb-server -y
+
+# Liberar apenas o IP do app
+ufw allow from <IP_DO_APP> to any port 3306
+
+# Criar usuário com acesso remoto
+mysql -e "
+  CREATE DATABASE bench_gpa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER 'bench_gpa'@'<IP_DO_APP>' IDENTIFIED BY 'senha';
+  GRANT ALL ON bench_gpa.* TO 'bench_gpa'@'<IP_DO_APP>';
+  FLUSH PRIVILEGES;
+"
+
+# Copiar schema
+mysql -u bench_gpa -p bench_gpa < scripts/migrate-schema.sql
+```
+
+```bash
+# Configurar SSL no MariaDB (recomendado)
+# /etc/mysql/mariadb.conf.d/50-server.cnf
+echo "
+[mariadb]
+ssl-cert=/etc/ssl/certs/mariadb-server.crt
+ssl-key=/etc/ssl/private/mariadb-server.key
+bind-address=0.0.0.0
+" >> /etc/mysql/mariadb.conf.d/50-server.cnf
+
+# No VPS app (opcional se MariaDB tiver cert auto-assinado)
+# Copiar CA e configurar ssl.rejectUnauthorized: true no db.ts
+```
+
+> ⚠️ **Segurança**: nunca use `bind-address=0.0.0.0` sem firewall. Sempre restrinja ao IP do app com `ufw` ou security group do provedor.
 
 ### Fase 1: Build config (1 commit)
 

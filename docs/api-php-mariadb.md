@@ -275,6 +275,7 @@ DB_PORT="3306"
 DB_NAME="bench_gpa"
 DB_USER="bench_gpa"
 DB_PASS="senha-segura"
+# DB_CA_PATH="/etc/ssl/certs/do-ca.crt"   # apenas se DB remoto
 APP_URL="https://api.seu-dominio.com"
 ```
 
@@ -1147,6 +1148,89 @@ volumes:
   db_data:
 ```
 
+### Opção D: MariaDB externo gerenciado
+
+Use com qualquer opção (A, B ou C) — basta apontar `DB_HOST` para o host remoto.
+
+```
+Vercel / VPS ──TCP :3306──▶ MariaDB externo
+```
+
+**Cuidados:**
+- **Sempre SSL/TLS** entre PHP API e MariaDB externo
+- Firewall do DB deve liberar **apenas o IP do app**
+- Pool de conexões com limite menor (5-10)
+- Latência adicional ~1-5ms
+
+**Provedores recomendados:**
+
+| Provedor | RAM | Storage | Preço | SSL | Backup |
+|---|---|---|---|---|---|
+| DigitalOcean Managed | 1 GB | 10 GB SSD | $15/mo | ✅ automático | ✅ diário |
+| Hetzner (VPC) | 1-2 GB | 40 GB SSD | ~$5-8/mo | ✅ configurar | ❌ manual |
+| AWS RDS (db.t4g.micro) | 1 GB | 20 GB gp3 | ~$15/mo | ✅ automático | ✅ configurável |
+| VPS próprio (segundo) | 1 GB | 25 GB | ~$4-6/mo | ✅ configurar | ❌ manual |
+
+**Configuração PHP (ConnectionFactory.php):**
+
+```php
+<?php
+namespace App\Database;
+
+class ConnectionFactory
+{
+    private static ?\PDO $instance = null;
+
+    public static function get(): \PDO
+    {
+        if (self::$instance === null) {
+            $host = $_ENV['DB_HOST'];
+            $port = $_ENV['DB_PORT'] ?? '3306';
+            $isRemote = $host !== 'localhost' && $host !== '127.0.0.1';
+
+            $dsn = "mysql:host={$host};port={$port};dbname={$_ENV['DB_NAME']};charset=utf8mb4";
+
+            $options = [
+                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                \PDO::ATTR_EMULATE_PREPARES   => false,
+            ];
+
+            // SSL obrigatório para conexões remotas
+            if ($isRemote) {
+                $dsn .= ';ssl_mode=VERIFY_IDENTITY';
+                if (!empty($_ENV['DB_CA_PATH'])) {
+                    $options[\PDO::MYSQL_ATTR_SSL_CA] = $_ENV['DB_CA_PATH'];
+                }
+            }
+
+            self::$instance = new \PDO($dsn, $_ENV['DB_USER'], $_ENV['DB_PASS'], $options);
+        }
+
+        return self::$instance;
+    }
+}
+```
+
+**Ambiente (.env):**
+
+```env
+# DB local
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_NAME="bench_gpa"
+DB_USER="bench_gpa"
+DB_PASS="senha-segura"
+
+# DB remoto (ex: DigitalOcean)
+# DB_HOST="benchgpa-do-user-123456.db.ondigitalocean.com"
+# DB_PORT="25060"
+# DB_NAME="bench_gpa"
+# DB_USER="doadmin"
+# DB_PASS="senha-segura"
+# DB_CA_PATH="/etc/ssl/certs/do-ca.crt"
+```
+
 ---
 
 ## Plano de execução
@@ -1158,7 +1242,7 @@ volumes:
 - [ ] Estrutura de diretórios (Controllers, Services, Repositories, DTO)
 - [ ] `public/index.php` + `config/routes.php`
 - [ ] Middleware `Cors`
-- [ ] `Database/ConnectionFactory.php` + `Config/Config.php`
+- [ ] `Database/ConnectionFactory.php` + `Config/Config.php` (com suporte SSL para DB remoto)
 - [ ] `migrations/` — arquivos SQL do schema
 - [ ] Script `migrate.php` que executa os .sql em ordem
 - [ ] Dockerfile + docker-compose.yaml
