@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
+import { z } from "zod";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -202,9 +203,9 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("db_health_check");
+    const { data, error } = await (supabaseAdmin.rpc as any)("db_health_check");
     if (error) throw safeError("dbHealthCheck", error, undefined, true);
-    return data as DbHealthData;
+    return data as unknown as DbHealthData;
   });
 
 interface DocEntry {
