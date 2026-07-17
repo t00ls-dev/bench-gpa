@@ -50,15 +50,16 @@ export default function UploadPage() {
   });
 
   const [entries, setEntries] = useState<FileEntry[]>([]);
-  const [pendingData, setPendingData] = useState<{
-    file: string;
+  const [pendingQueue, setPendingQueue] = useState<Array<{
+    file: File;
     date: string;
     parsed: ParsedSalesFile;
-  } | null>(null);
+  }>>([]);
 
   const processingRef = useRef(false);
 
   const handleFiles = (files: FileEntry[]) => {
+    const valid: typeof pendingQueue = [];
     for (const entry of files) {
       if (entry.status === "error") {
         toast.error(`Erro ao ler ${entry.file.name}: ${entry.errorMsg ?? "erro desconhecido"}`);
@@ -71,63 +72,69 @@ export default function UploadPage() {
         toast.error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
         continue;
       }
-      setPendingData({ file: entry.saleDate, date: entry.saleDate, parsed });
+      valid.push({ file: entry.file, date: entry.saleDate, parsed });
     }
+    if (valid.length > 0) setPendingQueue(valid);
   };
 
-  const confirmImport = async () => {
-    if (!pendingData || processingRef.current) return;
-    const { file, date, parsed } = pendingData;
-    setPendingData(null);
-
-    const entry: FileEntry = { file: new File([], file), saleDate: date, status: "pending", totalLines: parsed.sales.length };
+  const processOne = async (item: typeof pendingQueue[number]): Promise<void> => {
+    const { date, parsed } = item;
+    const entry: FileEntry = { file: item.file, saleDate: date, status: "pending", totalLines: parsed.sales.length };
     setEntries((prev) => [entry, ...prev]);
-
-    processingRef.current = true;
 
     const update = (patch: Partial<FileEntry>) =>
       setEntries((prev) =>
         prev.map((e) => (e.saleDate === entry.saleDate && e.file.name === entry.file.name ? { ...e, ...patch } : e)),
       );
 
+    update({ status: "processing" });
+
+    const batchId = crypto.randomUUID();
+    const stores = [...new Map(parsed.sales.map((r) => [r.store_code, { store_code: r.store_code, store_name: r.store_name }])).values()];
+    const seen = new Set<string>();
+    const products = parsed.sales.filter((r) => {
+      const k = r.prod_code;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
+
+    await doBeginImport({
+      data: {
+        sale_date: date,
+        batch_id: batchId,
+        total_rows: parsed.sales.length,
+        stores,
+        products,
+      },
+    });
+
+    const totalChunks = Math.ceil(parsed.sales.length / CHUNK_SIZE);
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = parsed.sales.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
+      update({ totalLines: Math.min((i + 1) * CHUNK_SIZE, parsed.sales.length) });
+    }
+
+    await doFinalizeImport({ data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length } });
+
+    update({ status: "done", totalLines: parsed.sales.length });
+  };
+
+  const confirmImport = async () => {
+    if (pendingQueue.length === 0 || processingRef.current) return;
+    const queue = [...pendingQueue];
+    setPendingQueue([]);
+    processingRef.current = true;
+
     try {
-      update({ status: "processing" });
-
-      const batchId = crypto.randomUUID();
-      const stores = [...new Map(parsed.sales.map((r) => [r.store_code, { store_code: r.store_code, store_name: r.store_name }])).values()];
-      const seen = new Set<string>();
-      const products = parsed.sales.filter((r) => {
-        const k = r.prod_code;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      }).map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
-
-      await doBeginImport({
-        data: {
-          sale_date: date,
-          batch_id: batchId,
-          total_rows: parsed.sales.length,
-          stores,
-          products,
-        },
-      });
-
-      const totalChunks = Math.ceil(parsed.sales.length / CHUNK_SIZE);
-      for (let i = 0; i < totalChunks; i++) {
-        const chunk = parsed.sales.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
-        update({ totalLines: Math.min((i + 1) * CHUNK_SIZE, parsed.sales.length) });
+      for (const item of queue) {
+        await processOne(item);
       }
-
-      await doFinalizeImport({ data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length } });
       doPurge({}).catch(() => {});
-
-      update({ status: "done", totalLines: parsed.sales.length });
       imported.refetch();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
-      update({ status: "error", errorMsg: msg });
       toast.error(msg);
     } finally {
       processingRef.current = false;
@@ -135,6 +142,8 @@ export default function UploadPage() {
   };
 
   const [tab, setTab] = useState<"upload" | "calendario">("upload");
+
+  const totalPendingLines = pendingQueue.reduce((acc, p) => acc + p.parsed.sales.length, 0);
 
   return (
     <div>
@@ -173,23 +182,35 @@ export default function UploadPage() {
       {tab === "upload" && (
         <div className="space-y-4">
           <UploadDropzone onFilesSelected={handleFiles} disabled={processingRef.current} />
-          {entries.length > 0 && <ImportProgress entries={entries} busy={false} progressPct={0} speed={0} eta={0} processed={0} currentDate="" onProcess={confirmImport} />}
+          {entries.length > 0 && <ImportProgress entries={entries} busy={false} progressPct={0} speed={0} eta={0} processed={0} currentDate="" onProcess={() => {}} />}
           <ImportHistory dates={imported.data} />
         </div>
       )}
 
       {tab === "calendario" && <ImportCalendar records={imported.data ?? []} />}
 
-      <AlertDialog open={!!pendingData} onOpenChange={(o) => { if (!o) setPendingData(null); }}>
+      <AlertDialog open={pendingQueue.length > 0} onOpenChange={(o) => { if (!o) setPendingQueue([]); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar importação</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja importar <strong>{pendingData?.file}</strong>{" "}
-              com {fmtInt(pendingData?.parsed.sales.length ?? 0)} linhas em{" "}
-              <strong>{pendingData?.date}</strong>?
+              {pendingQueue.length === 1 ? (
+                <>Deseja importar <strong>{pendingQueue[0].date}</strong> com {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?</>
+              ) : (
+                <>Deseja importar <strong>{pendingQueue.length} arquivos</strong> totalizando {fmtInt(totalPendingLines)} linhas?</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {pendingQueue.length > 1 && (
+            <ul className="px-6 text-sm space-y-1 max-h-40 overflow-y-auto">
+              {pendingQueue.map((p, i) => (
+                <li key={i} className="flex justify-between text-muted-foreground">
+                  <span>{p.date}</span>
+                  <span>{fmtInt(p.parsed.sales.length)} linhas</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmImport}>Substituir</AlertDialogAction>
