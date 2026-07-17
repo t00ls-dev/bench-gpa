@@ -27,8 +27,8 @@ interface SeriesPoint {
 const WEEKDAYS_SHORT = ["Dom", "Seg", "Ter", "qua", "Qui", "Sex", "Sáb"];
 
 interface ProductChartsData {
-  byStore: StorePoint[];
-  evolution: SeriesPoint[];
+  byStore?: StorePoint[];
+  evolution?: SeriesPoint[];
 }
 
 export function ProductCharts({
@@ -69,7 +69,7 @@ export function ProductCharts({
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={(analysisData.byStore as StorePoint[]).slice(0, 12)}
+                data={(analysisData.byStore ?? []).slice(0, 12)}
                 margin={{ left: 8, right: 8, bottom: 28 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -101,7 +101,7 @@ export function ProductCharts({
         <p className="text-xs text-muted-foreground">Histórico de datas com venda registrada.</p>
         <div className="mt-4 h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={analysisData.evolution}>
+            <LineChart data={analysisData.evolution ?? []}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="date"

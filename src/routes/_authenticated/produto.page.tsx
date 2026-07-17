@@ -156,7 +156,11 @@ function ProdutoPage() {
 
       {selected && analysisData && (
         <ProductKPIs
-          analysisData={analysisData}
+          analysisData={{
+            ...analysisData,
+            refDate: analysisData.refDate ?? undefined,
+            product: analysisData.product ?? undefined,
+          }}
           avgSame={avgSame} avgDaily={avgDaily}
           refWeekdayFull={refWeekdayFull} refWeekdayPlural={refWeekdayPlural}
           refArticle={refArticle} sameWeekdayAll={sameWeekdayAll}

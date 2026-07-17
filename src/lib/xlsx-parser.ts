@@ -13,7 +13,7 @@ interface ParsedSale {
   val_vda: number;
 }
 
-interface ParsedSalesFile {
+export interface ParsedSalesFile {
   kind: "sales";
   sale_date: string; // YYYY-MM-DD
   sales: ParsedSale[];
