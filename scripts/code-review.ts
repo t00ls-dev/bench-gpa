@@ -272,7 +272,7 @@ async function main() {
 
   // --- BUILD THE DOC ---
 
-  const fileName = `analise-${DATE_ISO}.md`;
+  const fileName = `analise-completa.md`;
   const filePath = join(IMPROV_DIR, fileName);
 
   const snapshotContent = [
