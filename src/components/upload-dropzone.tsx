@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
-import { parseAnyWorkbook } from "@/lib/xlsx-parser";
+import { parseAnyWorkbook, type ParsedSalesFile } from "@/lib/xlsx-parser";
 import { fmtInt } from "@/lib/utils";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -11,12 +11,15 @@ interface FileEntry {
   status: "pending" | "processing" | "done" | "error";
   totalLines?: number;
   errorMsg?: string;
+  parsed?: ParsedSalesFile;
 }
 
 export function UploadDropzone({
   onFilesSelected,
+  disabled,
 }: {
   onFilesSelected: (entries: FileEntry[]) => void;
+  disabled?: boolean;
 }) {
   return (
     <label
@@ -47,7 +50,7 @@ export function UploadDropzone({
             try {
               const buf = await f.arrayBuffer();
               const p = parseAnyWorkbook(buf);
-              parsed.push({ file: f, saleDate: p.sale_date, status: "pending" });
+              parsed.push({ file: f, saleDate: p.sale_date, status: "pending", parsed: p });
             } catch (err: any) {
               parsed.push({
                 file: f,

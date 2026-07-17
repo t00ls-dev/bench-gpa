@@ -3351,3 +3351,22 @@ $ bun run scripts/import-watch.ts
 [2026-07-17 21:00:04] REN: 2026-07-16.xlsx → 2026-07-16.xlsx (already imported)
 [2026-07-17 21:00:04] Git: no file operations — skip commit
 [2026-07-17 21:00:04] ====== import-watch end ======
+$ bun run scripts/import-watch.ts
+[2026-07-17 22:00:01] ====== import-watch start ======
+[2026-07-17 22:00:01] Pull: starting...
+[2026-07-17 22:00:02] Pull: ERROR — warning: fetch updated the current branch head.
+fast-forwarding your working tree from
+commit da345e7f611f8188a1aec938c136c366fea66aeb.
+error: Your local changes to the following files would be overwritten by merge:
+	src/styles.css
+	vite.config.ts
+Please commit your changes or stash them before you merge.
+Aborting
+fatal: Cannot fast-forward your working tree.
+After making sure that you saved anything precious from
+$ git diff da345e7f611f8188a1aec938c136c366fea66aeb
+output, run
+$ git reset --hard
+to recover.
+[2026-07-17 22:00:02] ====== import-watch abort ======
+error: script "cli:watch" exited with code 1

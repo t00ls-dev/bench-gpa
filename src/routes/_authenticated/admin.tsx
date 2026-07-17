@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async ({ context }) => {
     const u = context.user;
-    if (!u) throw redirect({ to: "/auth" });
+    if (!u) throw redirect({ to: "/auth", search: { next: undefined } });
     const { data: isAdmin } = await supabase.rpc("has_role", {
       _user_id: u.id,
       _role: "admin",

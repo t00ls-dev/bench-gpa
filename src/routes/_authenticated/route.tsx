@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) {
       const next = location.pathname + location.searchStr;
-      throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : undefined });
+      throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : { next: undefined } });
     }
     return { user: data.user };
   },
@@ -92,7 +92,7 @@ function AuthedLayout() {
         .maybeSingle();
       if (!data || !data.is_active) {
         await supabase.auth.signOut();
-        router.navigate({ to: "/auth", replace: true });
+        router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
         return;
       }
       setProfile({ isActive: true, isAdmin: data.role === "admin" });
@@ -101,7 +101,7 @@ function AuthedLayout() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    router.navigate({ to: "/auth", replace: true });
+    router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
 
   if (!profile) {

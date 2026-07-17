@@ -92,9 +92,7 @@ export function AreaTable({
 
   const openProduct = useCallback(
     (code: string) => {
-      const s: Record<string, string> = { plu: code };
-      if (storeCode) s.store = storeCode;
-      navigate({ to: "/produto", search: s });
+      navigate({ to: "/produto", search: { plu: code, store: storeCode ?? undefined } });
     },
     [navigate, storeCode],
   );

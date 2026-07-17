@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { beginImport, insertSalesChunk, finalizeImport } from "@/lib/upload.functions";
+import { beginImport, insertSalesChunk, finalizeImport, getImportedDates } from "@/lib/upload.functions";
 import { purgeOldAggs } from "@/lib/admin.functions";
-import { getImportedDates } from "@/lib/upload.functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,31 +20,21 @@ import { UploadDropzone } from "@/components/upload-dropzone";
 import { ImportProgress } from "@/components/import-progress";
 import { ImportHistory } from "@/components/import-history";
 import { fmtInt } from "@/components/kpi-card";
-import type { ParsedData } from "@/lib/xlsx-parser";
+import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 
 const CHUNK_SIZE = 1000;
 const MAX_TOTAL_ROWS = 200_000;
 
-type ImportEntry = {
-  file: string;
-  date: string;
+interface FileEntry {
+  file: File;
+  saleDate: string;
   status: "pending" | "processing" | "done" | "error";
-  progress: number;
-  total: number;
+  totalLines?: number;
   errorMsg?: string;
-};
+  parsed?: ParsedSalesFile;
+}
 
 export default function UploadPage() {
-  const imported = useQuery({
-    queryKey: ["imported-dates"],
-    queryFn: () => getImported(),
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
-  });
-  const importedDatesSet = new Set(
-    (imported.data ?? []).map((d) => d.sale_date),
-  );
-
   const queryClient = useQueryClient();
   const getImported = useServerFn(getImportedDates);
   const doBeginImport = useServerFn(beginImport);
@@ -53,48 +42,61 @@ export default function UploadPage() {
   const doFinalizeImport = useServerFn(finalizeImport);
   const doPurge = useServerFn(purgeOldAggs);
 
-  const [entries, setEntries] = useState<ImportEntry[]>([]);
-  const [confirmDialog, setConfirmDialog] = useState<{
+  const imported = useQuery({
+    queryKey: ["imported-dates"],
+    queryFn: () => getImported(),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  });
+
+  const [entries, setEntries] = useState<FileEntry[]>([]);
+  const [pendingData, setPendingData] = useState<{
     file: string;
     date: string;
-    parsed: ParsedData;
+    parsed: ParsedSalesFile;
   } | null>(null);
 
   const processingRef = useRef(false);
 
-  const handleFiles = async (files: { name: string; parsed: ParsedData }[]) => {
+  const handleFiles = (files: FileEntry[]) => {
     for (const entry of files) {
-      const totalLines = entry.parsed.rows.length;
+      if (entry.status === "error") {
+        toast.error(`Erro ao ler ${entry.file.name}: ${entry.errorMsg ?? "erro desconhecido"}`);
+        continue;
+      }
+      const parsed = entry.parsed;
+      if (!parsed) continue;
+      const totalLines = parsed.sales.length;
       if (totalLines > MAX_TOTAL_ROWS) {
         toast.error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
         continue;
       }
-      setConfirmDialog({ file: entry.name, date: entry.parsed.sale_date, parsed: entry.parsed });
+      setPendingData({ file: entry.saleDate, date: entry.saleDate, parsed });
     }
   };
 
   const confirmImport = async () => {
-    if (!confirmDialog || processingRef.current) return;
-    const { file, date, parsed } = confirmDialog;
-    setConfirmDialog(null);
+    if (!pendingData || processingRef.current) return;
+    const { file, date, parsed } = pendingData;
+    setPendingData(null);
 
-    const entry: ImportEntry = { file, date, status: "pending", progress: 0, total: parsed.rows.length };
+    const entry: FileEntry = { file: new File([], file), saleDate: date, status: "pending", totalLines: parsed.sales.length };
     setEntries((prev) => [entry, ...prev]);
 
     processingRef.current = true;
 
-    const update = (patch: Partial<ImportEntry>) =>
+    const update = (patch: Partial<FileEntry>) =>
       setEntries((prev) =>
-        prev.map((e) => (e.file === entry.file ? { ...e, ...patch } : e)),
+        prev.map((e) => (e.saleDate === entry.saleDate && e.file.name === entry.file.name ? { ...e, ...patch } : e)),
       );
 
     try {
       update({ status: "processing" });
 
       const batchId = crypto.randomUUID();
-      const stores = [...new Map(parsed.rows.map((r) => [r.store_code, { store_code: r.store_code, store_name: r.store_name }])).values()];
+      const stores = [...new Map(parsed.sales.map((r) => [r.store_code, { store_code: r.store_code, store_name: r.store_name }])).values()];
       const seen = new Set<string>();
-      const products = parsed.rows.filter((r) => {
+      const products = parsed.sales.filter((r) => {
         const k = r.prod_code;
         if (seen.has(k)) return false;
         seen.add(k);
@@ -105,23 +107,23 @@ export default function UploadPage() {
         data: {
           sale_date: date,
           batch_id: batchId,
-          total_rows: parsed.rows.length,
+          total_rows: parsed.sales.length,
           stores,
           products,
         },
       });
 
-      const totalChunks = Math.ceil(parsed.rows.length / CHUNK_SIZE);
+      const totalChunks = Math.ceil(parsed.sales.length / CHUNK_SIZE);
       for (let i = 0; i < totalChunks; i++) {
-        const chunk = parsed.rows.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const chunk = parsed.sales.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
-        update({ progress: Math.min((i + 1) * CHUNK_SIZE, parsed.rows.length) });
+        update({ totalLines: Math.min((i + 1) * CHUNK_SIZE, parsed.sales.length) });
       }
 
-      await doFinalizeImport({ data: { sale_date: date, batch_id: batchId, row_count: parsed.rows.length } });
+      await doFinalizeImport({ data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length } });
       doPurge({}).catch(() => {});
 
-      update({ status: "done", progress: parsed.rows.length });
+      update({ status: "done", totalLines: parsed.sales.length });
       imported.refetch();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
@@ -170,25 +172,22 @@ export default function UploadPage() {
 
       {tab === "upload" && (
         <div className="space-y-4">
-          <UploadDropzone onFilesReady={handleFiles} disabled={processingRef.current} />
-          {entries.length > 0 && <ImportProgress entries={entries} />}
+          <UploadDropzone onFilesSelected={handleFiles} disabled={processingRef.current} />
+          {entries.length > 0 && <ImportProgress entries={entries} busy={false} progressPct={0} speed={0} eta={0} processed={0} currentDate="" onProcess={confirmImport} />}
           <ImportHistory dates={imported.data} />
         </div>
       )}
 
       {tab === "calendario" && <ImportCalendar records={imported.data ?? []} />}
 
-      <AlertDialog open={!!confirmDialog} onOpenChange={(o) => { if (!o) setConfirmDialog(null); }}>
+      <AlertDialog open={!!pendingData} onOpenChange={(o) => { if (!o) setPendingData(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar importação</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja importar <strong>{confirmDialog?.file}</strong>{" "}
-              com {fmtInt(confirmDialog?.parsed.rows.length ?? 0)} linhas em{" "}
-              <strong>{confirmDialog?.date}</strong>?
-              {confirmDialog?.parsed.warnings?.map((w, i) => (
-                <span key={i} className="block mt-2 text-xs text-warning">{w}</span>
-              ))}
+              Deseja importar <strong>{pendingData?.file}</strong>{" "}
+              com {fmtInt(pendingData?.parsed.sales.length ?? 0)} linhas em{" "}
+              <strong>{pendingData?.date}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

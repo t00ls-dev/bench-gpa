@@ -4,7 +4,7 @@ import { lazy } from "react";
 export const Route = createFileRoute("/_authenticated/upload")({
   beforeLoad: async ({ context }) => {
     const u = context.user;
-    if (!u) throw redirect({ to: "/auth" });
+    if (!u) throw redirect({ to: "/auth", search: { next: undefined } });
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: isAdmin } = await supabase.rpc("has_role", {
       _user_id: u.id,
