@@ -84,7 +84,7 @@ function DocList() {
           <section key={category}>
             <h2 className="mb-3 text-lg font-semibold text-muted-foreground">{category}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {docs.map((doc) => (
+              {docs?.map((doc) => (
                 <button
                   key={doc.slug}
                   onClick={() => navigate({ search: { slug: doc.slug } })}

@@ -64,7 +64,7 @@ function AreaPage() {
   const hierarchy = hierData?.hierarchy ?? [];
   const opts = hierData;
 
-  const baseDateIso = dateTo || opts?.latestDate;
+  const baseDateIso = dateTo || opts?.latestDate || undefined;
   const daysSinceNum = (iso: string | null): number | null => {
     if (!iso || !baseDateIso) return null;
     return Math.floor((new Date(baseDateIso + "T00:00:00").getTime() - new Date(iso + "T00:00:00").getTime()) / 86400000);
@@ -234,7 +234,7 @@ function AreaPage() {
         dateFrom={dateFrom} dateTo={dateTo}
         fStores={fStores} fDeptos={fDeptos} fSecoes={fSecoes}
         fGrupos={fGrupos} fSubgrupos={fSubgrupos}
-        latestDate={opts?.latestDate}
+        latestDate={opts?.latestDate ?? undefined}
         availableDates={opts?.availableDates ?? []}
         onRangeChange={setRange}
         onStoresChange={setStores}
