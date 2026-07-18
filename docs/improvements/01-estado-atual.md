@@ -2,48 +2,55 @@
 
 Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado para refletir a migração **Supabase → MariaDB + JWT próprio**.
 
-> **Contexto**: app em transição. Hoje usa Supabase Auth + PostgreSQL (RPCs). Destino: MariaDB + JWT bcrypt, deploy no VPS Hestia.
-> Server functions ainda chamam Supabase RPCs — serão convertidas para queries MariaDB diretas ou fetch para PHP API.
+> **Contexto**: app em transição. Hoje usa Supabase Auth + PostgreSQL (RPCs). Destino: MariaDB + JWT bcrypt, deploy no VPS Hestia (`sv1.t00ls.dev`).
+> Server functions ainda chamam Supabase RPCs — serão convertidas para queries MariaDB diretas.
+>
+> **Já implementado na esteira da migração**: CSP nonce, rate limiting sliding window (4 tiers), Turnstile CAPTCHA, cache layer (SimpleCache), command palette (cmdk), atalhos de teclado (g+letra), navegação mobile (bottom tab bar + vaul Drawer), View Transitions API, exportação PDF (Dashboard + Produto + Área).
 
 ---
 
 ## Rotas
 
-### `/auth` — Login (`src/routes/auth.tsx`)
+### `/auth` — Login (`src/routes/auth.page.tsx`)
 - Login email/senha com Supabase Auth
 - Verifica se usuário está ativo (`is_active`) após login bem-sucedido
+- **Cloudflare Turnstile** integrado (non-interactive, fail-closed, 2 retries, bypass env)
+- **Rate limiting**: tier Auth (5/min IP, 20/min global)
 - Redireciona para `?next=` ou `/` via `sanitizeNext()` (proteção contra open redirect)
 - `ssr: false` — intencional (depende de Supabase client-side)
-- **Sem** "Esqueci minha senha", "Lembrar email", rate limiting, 2FA
+- **Sem** "Esqueci minha senha", "Lembrar email", 2FA
 - **Migração**: converter para `POST /api/auth/login` → JWT + cookie HttpOnly
 
-### `/` — Dashboard (`src/routes/_authenticated/index.tsx`)
+### `/` — Dashboard (`src/routes/_authenticated/index.page.tsx`, 234 linhas)
 - 1 KPI (Venda total) com delta vs período anterior
 - Gráfico: evolução diária (LineChart) e top lojas (BarChart)
 - Rankings: 5 RankingCards (depto, secao, grupo, subgrupo, produtos) — limitados a 10 itens
-- Filtros via `FilterBar` com `usePersistentState`
+- Filtros via `FilterDrawer` com `usePersistentState`
+- **Exportação PDF** (jspdf) com período, filtros, KPI e rankings
 - 3 chamadas server function paralelas: `getDashboard`, `getDashboardRankings`, `getFilterOptions`
 - **Dado não utilizado**: `data.previous.byDate` é retornado pelo RPC mas não renderizado
 - **Sem** comparação visual com período anterior, sem skeletons nos rankings durante primeiro load, sem `placeholderData`
 
-### `/produto` — Análise de Produto (`src/routes/_authenticated/produto.tsx`)
+### `/produto` — Análise de Produto (`src/routes/_authenticated/produto.page.tsx`, 255 linhas)
 - Busca com debounce (250ms) por PLU ou nome
 - KPIs: valor na data de referência, média histórica mesmo dia da semana (com delta), média diária
 - Gráficos: comparação por loja (BarChart) e evolução (LineChart)
 - Tabelas históricas paginadas (10 por página): mesmo dia da semana + completo
 - Suporte a `?plu=` na URL para deep linking
+- **Exportação PDF** (jspdf) com produto, KPIs e tabela de evolução
 - **Sem** multi-loja, export CSV/XLSX, linha de tendência, `placeholderData`
 
-### `/area` — Análise de Área (`src/routes/_authenticated/area.tsx` — 773 linhas)
-- **Server-side pagination** implementada (page, pageSize, search, sortBy, sortDir)
+### `/area` — Análise de Área (`src/routes/_authenticated/area.page.tsx` — 295 linhas)
+- **Server-side pagination** (page, pageSize, search, sortBy, sortDir)
 - **Filtro hierárquico unificado** via `getAreaFilterHierarchy` (1 chamada, cascata no cliente)
+- **Tabela virtualizada** com `@tanstack/react-virtual`
 - KPIs: Venda Total, PLUs área, PLUs com venda, PLUs sem venda, Venda média por PLU
 - Tabela sortável, paginação configurável (25/50/100/250)
 - PDF export com jsPDF (todas as linhas, sem paginação)
 - `placeholderData: (prev) => prev` — única rota com isso
-- **Problemas**: 773 linhas no componente, `filteredHierarchy` chamado 2x com mesmos args, PDF com colunas "QTD" e "VALIDADE" sempre vazias
+- **Problemas**: `filteredHierarchy` chamado 2x com mesmos args, PDF com colunas "QTD" e "VALIDADE" sempre vazias
 
-### `/upload` — Upload XLSX (`src/routes/_authenticated/upload.tsx`)
+### `/upload` — Importação XLSX (`src/routes/_authenticated/upload.page.tsx`, 299 linhas)
 - Drag-and-drop, valida tamanho (50MB) e linhas (500k). **Multi-drop corrigido** (pendingQueue)
 - Pipeline: parse (main thread) → beginImport → insertSalesChunk (1000 linhas) → finalizeImport
 - Progresso por arquivo (velocidade, ETA, barra)
@@ -104,9 +111,9 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 - **Auth middleware**: `auth-middleware.ts` valida Bearer token via Supabase. **Migrar** para validação JWT local com `jsonwebtoken`
 - **Auth attacher**: `auth-attacher.ts` anexa token às serverFn. **Migrar** para ler token do cookie/localStorage
 - **Cliente Supabase dual**: `client.ts` + `client.server.ts` — **remover** após migração
-- **Segurança**: CSP `frame-ancestors 'none'`, X-Frame-Options, nosniff, Referrer-Policy
+- **Segurança**: CSP completo (script-src nonce+strict-dynamic, style-src, frame-ancestors 'none'), X-Frame-Options, Turnstile CAPTCHA, rate limiting sliding window (4 tiers)
 - **Error handling**: `safeError()` + `error-capture.ts` + `normalizeCatastrophicSsrResponse()`
-- **CSS**: Tailwind v4 com OKLCH, `@theme inline`, `@utility kpi-card`. **Sem variáveis `.dark`** — dark mode não implementado
+- **CSS**: Tailwind v4 com OKLCH, `@theme inline`, `@utility kpi-card`. `.dark` block existe (completo) mas tema travado em light — toggle removido
 - **Vite**: config com TanStack Start + Nitro. Preset `vercel` para deploy atual. Trocar para `node-server` para VPS
 - **Migration**: docs em `docs/api-php-mariadb.md` e `docs/migracao-vps-autossuficiente.md`
 

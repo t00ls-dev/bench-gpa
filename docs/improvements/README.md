@@ -12,6 +12,7 @@ Doc obsoletas removidas: `migracao-sqlite.md`, `pereciveis-plano.md`, `analise-p
 | [`04-novas-analises.md`](./04-novas-analises.md) | Novas features possíveis (RPCs sem UI + dados disponíveis) |
 | [`05-arquitetura.md`](./05-arquitetura.md) | Observações arquiteturais (duplicações, padrões, segurança) |
 | [`06-performance.md`](./06-performance.md) | Issues de performance identificadas |
+| [`07-analise-completa.md`](./07-analise-completa.md) | Snapshot automático do code-review cron (06:00 diário) |
 
 > ⚠️ Análise original em julho/2026, atualizada para refletir migração pós-Supabase.
 > Itens que dependiam de Supabase Auth/RPCs foram recontextualizados para JWT + MariaDB.

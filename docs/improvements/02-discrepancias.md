@@ -10,15 +10,12 @@ Atualizado pós-migração Supabase → MariaDB.
 ## AGENTS.md vs Código
 
 | Item | Documentado | Real | Gravidade |
-|---|---|---|---|
-| `src/hooks/use-theme.ts` | Existe (toggle light/dark) | **Arquivo não existe** | 🔴 ALTA |
-| Dark mode | "script inline anti-flash no SSR shell" | `styles.css` **não tem variáveis `.dark`**; hook não existe | 🔴 ALTA |
+|---|---|---|---|---|
+| Dark mode | "script inline anti-flash no SSR shell" | `styles.css` **tem `.dark` block**, mas tema travado em light; toggle removido | 🟡 MÉDIA (código pronto, inativo) |
 | Env var name | `VITE_SUPABASE_ANON_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY` em `client.ts` | 🟡 MÉDIA (será removido na migração) |
 | "Product filtering client-side" (área) | "busca tudo e filtra/ordena/pagina no cliente" | **Já é server-side** (paginação, sorting, search) | 🟡 MÉDIA (desatualizado) |
 | RPC `products_in_decline` | Não mencionado | Existe no banco e types.ts, **sem UI** | 🟡 MÉDIA |
 | `staging_sales` tabela | Não listada em "Tabelas Principais" | Existe e é usada no pipeline de import | 🟡 MÉDIA |
-| `auth-attacher.ts` | Descrito como middleware | Confirmado, registrado em `start.ts` | ✅ OK (será adaptado para JWT local) |
-| `error-capture.ts` / h3 detection | Não mencionado | Implementado e referenciado por `server.ts` | ✅ OK |
 | `assertAdmin` | Mencionado como proteção server-side | Duplicado em 2 arquivos | 🟡 MÉDIA |
 
 ---
@@ -61,9 +58,23 @@ Atualizado pós-migração Supabase → MariaDB.
 
 | Item | O que mudou |
 |---|---|
-| 18 erros TS no upload | ✅ Corrigidos (ParsedSalesFile, onFilesSelected, getImportedOrder, etc.) |
-| Multi-drop upload | ✅ Corrigido (pendingQueue, confirm dialog com N arquivos) |
+| 18 erros TS no upload | ✅ Corrigidos (ParsedSalesFile, onFilesSelected, etc.) |
+| Multi-drop upload | ✅ Corrigido (pendingQueue, confirm dialog) |
 | `noUncheckedSideEffectImports` no tsconfig | ✅ Removido |
 | 5 componentes UI não usados | ✅ Removidos (carousel, resizable, input-otp, command, drawer) |
-| Code-review cron | ✅ Agora sobrescreve `07-analise-completa.md` em vez de acumular |
+| Code-review cron | ✅ Agora sobrescreve `07-analise-completa.md` |
 | Doc obsoletas removidas | ✅ SQLite, Perecíveis — eliminadas |
+| CSP incompleto | ✅ Completo com nonce (script-src, style-src, default-src, frame-ancestors) |
+| Rate limiting ausente | ✅ Sliding window por IP + global (4 tiers: SSR, API, Upload, Auth) |
+| Turnstile CAPTCHA | ✅ Integrado no login (fail-closed, bypass env) |
+| Puppeteer em dependencies | ✅ Movido para devDependencies |
+| Logs commitados | ✅ `logs/` no .gitignore, removidos do tracking |
+| Atalhos de teclado | ✅ Implementados (g+letra, Cmd+K palette, Shift+/ help) |
+| Navegação mobile | ✅ Bottom tab bar + vaul Drawer para admin |
+| Paleta de comandos | ✅ Implementada com cmdk |
+| View Transitions | ✅ View Transitions API + fallback opacity |
+| Exportação PDF (Dashboard) | ✅ Implementado com jspdf |
+| Exportação PDF (Produto) | ✅ Implementado com jspdf |
+| Shared PDF utility | ✅ `src/lib/export-pdf.ts` — reusado pelo Área |
+| Área componente reduzido | ✅ 773 → 295 linhas (AreaTable extraído) |
+| HOWTO page | ✅ Rota `/howto` criada com guia do sistema |
