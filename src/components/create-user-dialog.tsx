@@ -58,9 +58,9 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
         <DialogHeader><DialogTitle>Novo usuário</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>E-mail</Label>
+            <Label htmlFor="create-email">E-mail</Label>
             <div className="mt-1.5 flex">
-              <Input value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)}
+              <Input id="create-email" value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)}
                 placeholder="ex.: uilton.leite" className="rounded-r-none" autoComplete="off" />
               <span className="inline-flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
                 @gpabr.com
@@ -68,17 +68,17 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
             </div>
           </div>
           <div>
-            <Label>Nome</Label>
-            <Input className="mt-1.5" value={name} onChange={(e) => setName(e.target.value)} />
+            <Label htmlFor="create-name">Nome</Label>
+            <Input id="create-name" className="mt-1.5" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Senha</Label>
-            <Input className="mt-1.5" type="password" value={password}
+            <Label htmlFor="create-password">Senha</Label>
+            <Input id="create-password" className="mt-1.5" type="password" value={password}
               onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres"
               autoComplete="new-password" />
           </div>
           <div>
-            <Label>Papel</Label>
+            <Label htmlFor="create-role">Papel</Label>
             <Select value={role} onValueChange={(v) => setRole(v as "admin" | "user")}>
               <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>

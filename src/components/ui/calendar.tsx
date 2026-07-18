@@ -160,6 +160,7 @@ function CalendarDayButton({
       ref={ref}
       variant="ghost"
       size="icon"
+      aria-label={day.date.toLocaleDateString("pt-BR", { dateStyle: "full" })}
       data-day={day.date.toLocaleDateString("pt-BR")}
       data-selected-single={
         modifiers.selected &&
