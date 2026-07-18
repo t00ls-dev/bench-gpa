@@ -196,7 +196,7 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent
         style={{ width: triggerWidth || undefined }}
-        className="max-w-[calc(100vw-2rem)] p-0 flex flex-col overflow-y-auto"
+        className="max-w-[calc(100vw-2rem)] p-0 flex flex-col"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
