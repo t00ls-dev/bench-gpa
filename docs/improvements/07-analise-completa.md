@@ -1,11 +1,13 @@
-# 🔍 Análise Completa — 17/07/2026 23:47
+# Análise Completa
+
+> Data: 17/07/2026 23:47
 
 Snapshot automático do estado do código em 17/07/2026 às 23:47.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
 
-## 📊 Métricas Gerais
+## Métricas Gerais
 
 | Métrica | Valor |
 |---|---|
@@ -24,12 +26,12 @@ _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX
 
 ---
 
-## ⚙️ Lint
+## Lint
 
 Nenhum problema encontrado.
 ---
 
-## 🔒 Segurança
+## Segurança
 
 ### Credenciais e Exposição
 
@@ -61,7 +63,7 @@ Nenhum problema encontrado.
 
 ---
 
-## 🗄️ Banco de Dados
+## Banco de Dados
 
 - **Migrações**: 64 arquivos SQL
 - **RPCs em uso**: `has_role` (4x), `dashboard_metrics` (1x), `product_search` (1x), `get_product_by_code` (1x), `product_analysis` (1x), `area_analysis` (1x), `area_filter_hierarchy` (1x), `imported_dates` (1x), `filter_options` (1x), `dashboard_rankings` (1x)
@@ -148,7 +150,7 @@ Nenhum problema encontrado.
 
 ---
 
-## 🏗️ Dívida Técnica
+## Dívida Técnica
 
 - `admin-utils.ts` duplica lógica de `has_role` que já existe em `auth-middleware.ts`
 - Duas versões de `purge_old_aggs` (00000 e 00001) — a 00000 deveria ser dropada
