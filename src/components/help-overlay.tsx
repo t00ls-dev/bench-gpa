@@ -19,7 +19,7 @@ const SHORTCUTS = [
 export function HelpOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Command.Dialog open={open} onOpenChange={onClose} label="Atalhos de teclado">
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" aria-hidden="true" onClick={onClose}>
         <div
           className="relative z-10 w-full max-w-md rounded-xl border border-border bg-popover p-6 shadow-elevated"
           onClick={(e) => e.stopPropagation()}

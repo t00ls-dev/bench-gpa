@@ -34,6 +34,7 @@ export function ProductSearch({
       <div className="flex items-center gap-2 flex-wrap">
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <Input
+          aria-label="Buscar produto"
           className="min-w-[180px] flex-1 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
           placeholder="Digite ao menos 3 caracteres (nome ou código)…"
           value={query}

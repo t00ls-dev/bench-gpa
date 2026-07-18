@@ -49,8 +49,8 @@ export function ResetPasswordDialog({
         <DialogHeader><DialogTitle>Redefinir senha</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{target?.email}</p>
         <div>
-          <Label>Nova senha</Label>
-          <Input className="mt-1.5" type="password" value={newPw}
+          <Label htmlFor="reset-password">Nova senha</Label>
+          <Input id="reset-password" className="mt-1.5" type="password" value={newPw}
             onChange={(e) => setNewPw(e.target.value)} placeholder="Mínimo 8 caracteres"
             autoComplete="new-password" />
         </div>
