@@ -1,37 +1,37 @@
 # Análise Completa
 
-> Data: 17/07/2026 — Atualizado manualmente
+> Data: 18/07/2026 06:00
 
-Snapshot automático do estado do código (gerado pelo cron `code-review` às 06:00 diário).
+Snapshot automático do estado do código em 18/07/2026 às 06:00.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
 
-## Métricas Gerais
+## 📊 Métricas Gerais
 
 | Métrica | Valor |
 |---|---|
 | Arquivos .ts/.tsx | 125 |
-| Total de arquivos no projeto | 243 |
-| Linhas de código (src) | ~11.500 |
-| Linhas totais (projeto) | ~19.500 |
-| Arquivos grandes (>300 linhas) | 2 (sidebar.tsx, types.ts) |
+| Total de arquivos no projeto | 158 |
+| Linhas de código (src) | 12.265 |
+| Linhas totais (projeto) | 17.367 |
+| Arquivos grandes (>300 linhas) | 3 |
 | Erros de lint | 0 |
 | Avisos de lint | 0 |
 | Build | ✅ OK |
 | TODOs/FIXMEs | 0 |
-| Scripts | 10 |
-| Migrações SQL | 64 |
+| Scripts | 11 |
+| Migrações SQL | 65 |
 | RPCs distintas usadas | 10 |
 
 ---
 
-## Lint
+## ⚙️ Lint
 
 Nenhum problema encontrado.
 ---
 
-## Segurança
+## 🔒 Segurança
 
 ### Credenciais e Exposição
 
@@ -41,31 +41,29 @@ Nenhum problema encontrado.
 
 ### Content Security Policy
 
-- **default-src**: ✅ `'self'`
-- **script-src**: ✅ Nonce + `strict-dynamic`
-- **style-src**: ✅ `'self' 'unsafe-inline'`
-- **frame-ancestors**: ✅ `'none'`
-- **frame-src**: ✅ `challenges.cloudflare.com` (Turnstile)
-- **X-Frame-Options**: ✅ `DENY`
+- **frame-ancestors**: ✅ Configurado
+- **script-src**: ✅ Configurado
+- **style-src**: ✅ Configurado
 
 ### Riscos Identificados
 
 🔴 **CRÍTICO**: `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` estão no `.env` versionado.
+   Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role bypassa RLS).
    **Ação**: `echo '.env' >> .gitignore && git rm --cached .env && rotacionar chaves no Supabase`
 
-🔴 **DB ~600 MB acima do Free tier (500 MB)** — risco de suspensão.
-   **Ação**: migrar para MariaDB (planejado) ou reduzir retenção para 14 dias.
+🔴 **Sem rate limiting server-side** — Supabase Free tier tem 60 req/min, mas o servidor não controla.
+   Cliente pode disparar N requisições simultâneas.
 
-🟡 **Turnstile Bypass ativo** — `TURNSTILE_BYPASS` permite login sem CAPTCHA em dev.
-   Verificar se não está setado em produção.
+🟡 **Logs commitados** — `logs/import.log` e `logs/cron.log` vão para o git.
+   Se alguma exceção vazar dados de vendas, fica no histórico para sempre.
 
 ---
 
-## Banco de Dados
+## 🗄️ Banco de Dados
 
-- **Migrações**: 64 arquivos SQL
+- **Migrações**: 65 arquivos SQL
 - **RPCs em uso**: `has_role` (4x), `dashboard_metrics` (1x), `product_search` (1x), `get_product_by_code` (1x), `product_analysis` (1x), `area_analysis` (1x), `area_filter_hierarchy` (1x), `imported_dates` (1x), `filter_options` (1x), `dashboard_rankings` (1x)
-- **Import log**: 4092 linhas
+- **Import log**: 4516 linhas
 
 ### Problemas Conhecidos
 
@@ -103,18 +101,23 @@ Nenhum problema encontrado.
 
 ## 🎨 UX/UI
 
-🟡 **Dark mode implementado mas inativo** — `styles.css` tem `.dark` block completo, mas tema travado em light (toggle removido).
-   Faltam ajustes em componentes com cores hardcoded (KpiCard, ImportCalendar).
+🔴 **Dark mode não implementado** — `styles.css` só tem `:root` (light).
+   shadcn/ui gera `.dark` automaticamente se configurado.
+   Usuários que preferem tema escuro não têm suporte.
 
-🟡 **Sem skeleton loaders** nas páginas de dashboard/área/produto primeiro load.
+🟡 **Sem skeleton loaders** nas páginas de dashboard/área/produto.
+   Upload tem progress bar, mas demais páginas mostram blank durante carregamento.
+
+🟡 **Sem atalhos de teclado** — navegação 100% mouse.
+   Sugestão: `g+d` dashboard, `g+p` produto, `/` focus search, `?` atalhos.
 
 🟡 **Sem feedback visual em operações longas** — dashboard/área sem loading state explícito.
 
-✅ **Atalhos de teclado implementados** — `g+d/p/a/u/o/n/h` navegam, `Shift+/` help, `Cmd+K` palette.
-✅ **Command palette** — `cmdk` integrado com busca de produtos.
-✅ **Navegação mobile** — bottom tab bar fixa (Dashboard, Produto, Área, Como usar) + "Mais" admin via vaul Drawer.
-✅ **View Transitions API** — transições suaves entre páginas.
-✅ **HOWTO page** — `/howto` com guia do sistema.
+🟢 **Busca global** — `cmdk` já está nas deps, mas não há CommandPalette.
+   Poderia buscar produtos, lojas, documentação.
+
+🟢 **Navegação mobile** — sidebar funciona mas sem gestos swipe.
+   `vaul` já instalado — usar Drawer para navegação mobile.
 
 ---
 
@@ -124,7 +127,8 @@ Nenhum problema encontrado.
    Qualquer refactor pode quebrar funcionalidades sem detecção.
    **Ação**: integrar Vitest + @testing-library/react + mocks Supabase.
 
-✅ **Puppeteer movido para devDependencies** — não entra no build de produção.
+🟡 **Puppeteer em produção** — `puppeteer` (~300 MB) está em `dependencies` (não `devDependencies`).
+   Aumenta desnecessariamente o tamanho do build/deploy.
 
 ---
 
@@ -142,7 +146,7 @@ Nenhum problema encontrado.
 
 ---
 
-## Dívida Técnica
+## 🏗️ Dívida Técnica
 
 - `admin-utils.ts` duplica lógica de `has_role` que já existe em `auth-middleware.ts`
 - Duas versões de `purge_old_aggs` (00000 e 00001) — a 00000 deveria ser dropada
@@ -156,22 +160,16 @@ Nenhum problema encontrado.
 
 ## ⚡ Quick Wins
 
-| # | Ação | Tempo | Prioridade | Status |
-|---|---|---|---|---|
-| 1 | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min | 🔴 | ❌ Pendente |
-| 2 | Rotacionar chaves Supabase | 5 min | 🔴 | ❌ Pendente |
-| 3 | Mover puppeteer para devDependencies | 2 min | 🟡 | ✅ Feito |
-| 4 | Adicionar skeleton loaders nos charts | 15 min | 🟡 | ❌ Pendente |
-| 5 | Título `<title>` dinâmico por rota | 10 min | 🟢 | ❌ Pendente |
-| 6 | Atalho `/` para focus no search de produto | 5 min | 🟢 | ❌ Pendente |
-| 7 | Aumentar staleTime para 10min | 5 min | 🟢 | ❌ Pendente |
-| 8 | CSP completo (default-src, script-src, style-src) | 10 min | 🟡 | ✅ Feito |
-| 9 | Rate limiting server-side | 30 min | 🟡 | ✅ Feito |
-| 10 | Turnstile CAPTCHA no login | 20 min | 🟡 | ✅ Feito |
-| 11 | Atalhos de teclado (g+letra, Cmd+K, Shift+/) | 60 min | 🟡 | ✅ Feito |
-| 12 | Navegação mobile (bottom tab + vaul Drawer) | 45 min | 🟡 | ✅ Feito |
-| 13 | Remover logs do git | 5 min | 🟡 | ✅ Feito |
-| 14 | Exportação PDF (Dashboard + Produto + Área) | 90 min | 🟡 | ✅ Feito |
+| # | Ação | Tempo | Prioridade |
+|---|---|---|---|
+| 1 | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min | 🔴 |
+| 2 | Rotacionar chaves Supabase (service_role + anon) | 5 min | 🔴 |
+| 3 | Mover puppeteer/jspdf para devDependencies | 2 min | 🟡 |
+| 4 | Adicionar skeleton loaders nos charts do dashboard | 15 min | 🟡 |
+| 5 | Título `<title>` dinâmico por rota | 10 min | 🟢 |
+| 6 | Atalho `/` para focus no search de produto | 5 min | 🟢 |
+| 7 | Aumentar staleTime de 5min para 10min | 5 min | 🟢 |
+| 8 | Adicionar `default-src 'self'` ao CSP | 10 min | 🟡 |
 
 ---
 
@@ -180,61 +178,55 @@ Nenhum problema encontrado.
 ### 🔴 Críticas (agir imediatamente)
 
 1. **Remover .env do git + rotacionar chaves** — exposição de service_role key
-2. **Migrar banco para MariaDB** — DB 20% acima do Free tier
+2. **Migrar banco para SQLite ou MariaDB** — DB 20% acima do Free tier
 3. **Adicionar testes unitários** — Vitest + @testing-library/react
-4. **Deploy Hestia VPS** — executar plano em `docs/deploy-hestia-vps.md`
+4. **Rate limiting server-side** — proteger contra abuso do Free tier
 
 ### 🟠 Alta (próxima sprint)
 
-5. **Dark mode completo** — ativar toggle, corrigir cores hardcoded
-6. **Separar server functions** — camada services/ para lógica de negócio
-7. **Retenção de dados reduzida** — 14 dias em vez de 28 para economizar DB
-8. **Unificar `getDashboard`** — 1 RPC em vez de 2
+5. **Dark mode completo** — bloco `.dark` no CSS + toggle no sidebar
+6. **CSP completo** — default-src, script-src, style-src com nonce
+7. **Separar server functions** — camada services/ para lógica de negócio
+8. **Retenção de dados reduzida** — 14 dias em vez de 28 para economizar DB
 
 ### 🟡 Média (próximas semanas)
 
-9. Skeleton loaders consistente em toda app
-10. Banner de cookies LGPD para analytics
-11. Exportar XLSX (SheetJS já é dependência)
-12. Histórico de buscas de produto (localStorage)
-13. Confirmação em ações destrutivas no Admin
-14. `placeholderData` em Dashboard e Produto
+9. Lazy loading de rotas
+10. Virtualização de tabelas (react-virtual)
+11. Skeleton loaders
+12. Atalhos de teclado
+13. Banner de cookies LGPD para analytics
+14. Paleta de comandos (cmd+k com cmdk)
 
 ### 🟢 Baixa (melhorias contínuas)
 
-15. Título `<title>` dinâmico por rota
-16. Atalho `/` para focus search
+16. Exportar CSV em todas as páginas
 17. PWA manifest + service worker
-18. SEO meta tags por rota
-19. Remover `getServerConfig` morto
-20. Remover `parseWorkbook` alias
+18. Gestos swipe para navegação mobile
+19. Busca global (cmd+k)
+20. SEO meta tags por rota
 
 ---
 
 ## 🚀 Próxima Funcionalidade Recomendada
 
-**🔴 MIGRAÇÃO DO BANCO + DEPLOY VPS — sair do Supabase Free tier**
+**🔴 MIGRAÇÃO DO BANCO — sair do Supabase Free tier**
 
-O DB está 20% acima do limite de 500 MB. Rota definida:
+O DB está 20% acima do limite de 500 MB. Duas rotas:
 
-| Rota | Status |
-|---|---|
-| **MariaDB no VPS + Node.js (Bun SSR)** | Plano em `docs/deploy-hestia-vps.md` e `docs/migracao-vps-autossuficiente.md` |
-| **Auth JWT próprio** (bcrypt + jsonwebtoken) | Plano documentado |
-| **Deploy**: `gpa.t00ls.dev` via Hestia CP | Template nginx `node-ssr` pronto |
+| Rota | Prós | Contras |
+|---|---|---|
+| **SQLite** | Zero custo, backup = copiar arquivo, perf excelente para leitura | Sem escrita concorrente (já é o caso — 1 import por vez) |
+| **MariaDB (PHP Slim 4)** | Controle total, sem rate limit, ~$10/mês VPS | Reescrever RPCs em PHP, perder Supabase Auth |
 
-**Recomendação**: Executar deploy Hestia VPS conforme checklist em `docs/deploy-hestia-vps.md`.
+**Recomendação**: SQLite + manter Supabase Auth. Vendas em SQLite no servidor.
+Docs existentes em `docs/migracao-sqlite.md` e `docs/api-php-mariadb.md`.
 
 ---
 
 ## Observações
 
-Análise gerada via framework AGENTS.md em 17/07/2026 (atualizada manualmente).
+Análise gerada automaticamente via framework AGENTS.md em 18/07/2026.
 
-- 🟡 2 arquivos com mais de 300 linhas (sidebar.tsx, types.ts) — considerar refatoração.
+- 🟡 3 arquivos com mais de 300 linhas — considerar refatoração.
 - 🔴 .env com service_role key está versionado no git!
-- ✅ CSP completo com nonce e strict-dynamic.
-- ✅ Rate limiting sliding window (4 tiers) implementado.
-- ✅ Turnstile CAPTCHA integrado no login.
-- ✅ Atalhos de teclado, command palette, navegação mobile implementados.
-- ✅ Exportação PDF disponível em Dashboard, Produto e Área.
