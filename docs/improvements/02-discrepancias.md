@@ -65,5 +65,5 @@ Atualizado pós-migração Supabase → MariaDB.
 | Multi-drop upload | ✅ Corrigido (pendingQueue, confirm dialog com N arquivos) |
 | `noUncheckedSideEffectImports` no tsconfig | ✅ Removido |
 | 5 componentes UI não usados | ✅ Removidos (carousel, resizable, input-otp, command, drawer) |
-| Code-review cron | ✅ Agora sobrescreve `analise-completa.md` em vez de acumular |
+| Code-review cron | ✅ Agora sobrescreve `07-analise-completa.md` em vez de acumular |
 | Doc obsoletas removidas | ✅ SQLite, Perecíveis — eliminadas |
