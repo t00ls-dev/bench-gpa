@@ -135,7 +135,6 @@ export function MultiSelect({
             const allVals = options.map((x) => x.value);
             onChange(allSelected ? [] : allVals);
           }}
-          onMouseEnter={() => setFocusedIdx(idx)}
           className={cn(
             "flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium",
             focusedIdx === idx ? "bg-muted" : "hover:bg-muted",
@@ -159,7 +158,6 @@ export function MultiSelect({
           e.stopPropagation();
           handleToggle(o.value);
         }}
-        onMouseEnter={() => setFocusedIdx(idx)}
         className={cn(
           "flex w-full items-center gap-2 px-3 py-2 text-sm",
           focusedIdx === idx ? "bg-muted" : "hover:bg-muted",
