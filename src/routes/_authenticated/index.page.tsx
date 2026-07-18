@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getDashboard, getDashboardRankings } from "@/lib/dashboard.functions";
 import { type Filters } from "@/components/filter-bar";
 import { FilterDrawer } from "@/components/filter-drawer";
+import { FilterChips } from "@/components/filter-chips";
 import { KpiCard } from "@/components/kpi-card";
 import { fmtBRL } from "@/lib/utils";
 import { RankingCard } from "@/components/ranking-card";
@@ -149,6 +150,7 @@ function Dashboard() {
       </header>
 
       <FilterDrawer value={filters} onChange={setFilters} />
+      <FilterChips filters={filters} onChange={setFilters} />
 
       <section className="grid gap-4 sm:grid-cols-1">
         {isLoading ? (
