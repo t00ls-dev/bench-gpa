@@ -90,8 +90,8 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **ARIA labels**: vários botões de ação sem `aria-label` (MultiSelect, comparison pills, presets)
 - **MultiSelect sem navegação por teclado**: apenas mouse/touch
 - **AdminGate sem tratamento de erro**: erro de rede cai em "deny" permanentemente
-- **`getServerConfig` morto**: função exportada mas nunca chamada
-- **`parseWorkbook` alias morto**: poderia ser removido
+- ~~**`getServerConfig` morto**~~: ✅ removido
+- ~~**`parseWorkbook` alias morto**~~: ✅ removido
 - **`fmtBRL` em local errado**: exportado de `kpi-card.tsx` em vez de `utils.ts`
 - **`LastUpdateInfo` ineficiente**: busca todas as datas importadas só para achar a mais recente
 - **Nenhum teste**: unitários para utils (shiftPeriod, computePreset, parsers), integração para server functions
