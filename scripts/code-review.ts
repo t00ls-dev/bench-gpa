@@ -272,11 +272,13 @@ async function main() {
 
   // --- BUILD THE DOC ---
 
-  const fileName = `analise-completa.md`;
+  const fileName = `07-analise-completa.md`;
   const filePath = join(IMPROV_DIR, fileName);
 
   const snapshotContent = [
-    `# 🔍 Análise Completa — ${DATE_BR} ${TIME_BR}`,
+    `# Análise Completa`,
+    "",
+    `> Data: ${DATE_BR} ${TIME_BR}`,
     "",
     `Snapshot automático do estado do código em ${DATE_BR} às ${TIME_BR}.`,
     `_Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._`,
