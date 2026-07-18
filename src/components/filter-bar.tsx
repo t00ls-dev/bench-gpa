@@ -91,8 +91,8 @@ export function FilterBar({ value, onChange }: Props) {
   const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
 
   return (
-    <div className="kpi-card mb-6 space-y-3 min-w-0 overflow-hidden">
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
+    <div className="kpi-card mb-6">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <div className="lg:col-span-2">
           <Label className="text-xs">Período</Label>
           <div className="mt-1">
@@ -144,7 +144,7 @@ export function FilterBar({ value, onChange }: Props) {
             onChange={setGrupos}
           />
         </div>
-        <div className="md:col-span-2">
+        <div>
           <Label className="text-xs">Subgrupo</Label>
           <MultiSelect
             label="Todos"
@@ -153,31 +153,31 @@ export function FilterBar({ value, onChange }: Props) {
             onChange={(v) => setF({ subgrupos: v })}
           />
         </div>
-        <div className="md:col-span-2 lg:col-span-4">
-          <Label className="text-xs">Comparar com</Label>
-          <div className="mt-1 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Comparar com">
-            {[
-              { v: "prev_period", l: "Período anterior" },
-              { v: "prev_week", l: "Semana anterior" },
-              { v: "prev_month", l: "Mês anterior" },
-              { v: "none", l: "Sem comparação" },
-            ].map((o) => (
-              <button
-                key={o.v}
-                role="radio"
-                aria-checked={value.compare === o.v}
-                onClick={() => setF({ compare: o.v as Filters["compare"] })}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs font-medium transition",
-                  value.compare === o.v
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-primary/50",
-                )}
-              >
-                {o.l}
-              </button>
-            ))}
-          </div>
+      </div>
+      <div className="mt-3">
+        <Label className="text-xs">Comparar com</Label>
+        <div className="mt-1 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Comparar com">
+          {[
+            { v: "prev_period", l: "Período anterior" },
+            { v: "prev_week", l: "Semana anterior" },
+            { v: "prev_month", l: "Mês anterior" },
+            { v: "none", l: "Sem comparação" },
+          ].map((o) => (
+            <button
+              key={o.v}
+              role="radio"
+              aria-checked={value.compare === o.v}
+              onClick={() => setF({ compare: o.v as Filters["compare"] })}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition",
+                value.compare === o.v
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/50",
+              )}
+            >
+              {o.l}
+            </button>
+          ))}
         </div>
       </div>
     </div>
