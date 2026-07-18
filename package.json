@@ -94,8 +94,8 @@
     "globals": "^15.15.0",
     "lightningcss": "^1.30.0",
     "nitro": "3.0.260603-beta",
-    "puppeteer": "^25.3.0",
     "prettier": "^3.7.3",
+    "puppeteer": "^25.3.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
