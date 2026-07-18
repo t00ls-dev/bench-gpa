@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport, getImportedDates } from "@/lib/upload.functions";
-import { purgeOldAggs } from "@/lib/admin.functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,8 +58,6 @@ export default function UploadPage() {
   const doBeginImport = useServerFn(beginImport);
   const doInsertChunk = useServerFn(insertSalesChunk);
   const doFinalizeImport = useServerFn(finalizeImport);
-  const doPurge = useServerFn(purgeOldAggs);
-
   const imported = useQuery({
     queryKey: ["imported-dates"],
     queryFn: () => getImported(),
@@ -169,7 +166,6 @@ export default function UploadPage() {
       for (const item of queue) {
         await processOne(item);
       }
-      doPurge({}).catch(() => {});
       imported.refetch();
       toast.success("Importação concluída!");
     } catch (err) {
