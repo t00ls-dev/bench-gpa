@@ -11,15 +11,18 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **App:** Bench GPA — análise operacional/comercial do Grupo Pão de Açúcar
 - **Stack:** TanStack Start (SSR) + React 19 + Vite 7 + TypeScript 5
 - **DB atual:** Supabase PostgreSQL (~600 MB)
-- **DB futuro:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md`)
-- **Auth atual:** Supabase Auth
+- **DB futuro:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md` e `docs/deploy-hestia-vps.md`)
+- **Auth atual:** Supabase Auth (com Turnstile CAPTCHA)
 - **Auth futuro:** JWT manual com bcrypt + jsonwebtoken
-- **Deploy:** Vercel (produção), Nitro v3 como adapter SSR
-- **Crons:** `scripts/import-watch.ts` (horário), `scripts/code-review.ts` (06:00 diário)
+- **Deploy:** Vercel (produção), Nitro v3 como adapter SSR. **Próximo:** Hestia VPS (`sv1.t00ls.dev`, domínio `gpa.t00ls.dev`)
+- **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 20 server functions
+- **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
+- **Crons:** `scripts/import-watch.ts` (horário), `scripts/code-review.ts` (06:00 diário, sobrescreve `docs/improvements/07-analise-completa.md`)
 - **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
-- **Server functions:** arquivos `*.functions.ts` com schemas Zod
+- **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
-- **Migração não iniciada:** postergada, doc pronta
+- **UX implementado:** atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard/Produto/Área), HOWTO page
+- **Migração não iniciada:** postergada, docs prontas
 
 ---
 
@@ -168,7 +171,7 @@ Normalização, desnormalização quando útil, índices, constraints, triggers,
 - **Imports:** alias `@/` para `src/` — sem imports relativos profundos (`../../`)
 - **Arquivo:** uma responsabilidade por arquivo
 - **Componentes:** React Server Components por default; `"use client"` só quando necessário (eventos, hooks, estado)
-- **Nomes:** arquivos em kebab-case, exports nomeados (não `default`)
+- **Nomes:** arquivos em kebab-case, exports nomeados (não `default`). Exceção: páginas (`.page.tsx`) usam `export default function` (exigência do TanStack Router)
 
 ---
 
@@ -178,6 +181,7 @@ Normalização, desnormalização quando útil, índices, constraints, triggers,
 - Teste componentes críticos (tabelas, formulários, importação)
 - Teste fluxos de autenticação (login, logout, sessão expirada)
 - Teste de build: `bun run build` antes de finalizar qualquer sessão
+- **Bun obrigatório:** todas as scripts usam `bun run`, não `node` ou `npm run`
 
 ---
 
