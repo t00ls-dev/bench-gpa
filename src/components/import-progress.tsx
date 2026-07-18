@@ -19,6 +19,7 @@ export function ImportProgress({
   processed,
   currentDate,
   onProcess,
+  onCancel,
 }: {
   entries: FileEntry[];
   busy: boolean;
@@ -28,20 +29,28 @@ export function ImportProgress({
   processed: number;
   currentDate: string;
   onProcess: () => void;
+  onCancel?: () => void;
 }) {
   return (
     <div className="mt-4 kpi-card">
-      <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between">
         <div className="text-sm font-medium">{entries.length} arquivo(s) selecionado(s)</div>
-        <Button onClick={onProcess} disabled={busy}>
-          {busy ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> Importando…
-            </>
-          ) : (
-            "Iniciar importação"
+        <div className="flex gap-2">
+          {busy && onCancel && (
+            <Button variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
           )}
-        </Button>
+          <Button onClick={onProcess} disabled={busy}>
+            {busy ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" /> Importando…
+              </>
+            ) : (
+              "Iniciar importação"
+            )}
+          </Button>
+        </div>
       </div>
 
       {busy && (

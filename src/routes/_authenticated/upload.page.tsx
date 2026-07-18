@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { beginImport, insertSalesChunk, finalizeImport, getImportedDates } from "@/lib/upload.functions";
@@ -74,6 +74,7 @@ export default function UploadPage() {
   const [processing, setProcessing] = useState<ProcessingState>(IDLE_STATE);
 
   const processingRef = useRef(false);
+  const cancelRef = useRef(false);
   const startTimeRef = useRef(0);
   const processedTotalRef = useRef(0);
 
@@ -131,6 +132,10 @@ export default function UploadPage() {
 
     const totalChunks = Math.ceil(parsed.sales.length / CHUNK_SIZE);
     for (let i = 0; i < totalChunks; i++) {
+      if (cancelRef.current) {
+        update({ status: "error", errorMsg: "Cancelado" });
+        return;
+      }
       const chunk = parsed.sales.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
       await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
       const processed = Math.min((i + 1) * CHUNK_SIZE, parsed.sales.length);
@@ -158,6 +163,7 @@ export default function UploadPage() {
     const queue = [...pendingQueue];
     setPendingQueue([]);
     processingRef.current = true;
+    cancelRef.current = false;
     startTimeRef.current = Date.now();
     processedTotalRef.current = 0;
     setProcessing((p) => ({ ...p, busy: true, progressPct: 0, speed: 0, eta: 0, processed: 0 }));
@@ -165,9 +171,14 @@ export default function UploadPage() {
     try {
       for (const item of queue) {
         await processOne(item);
+        if (cancelRef.current) break;
       }
-      imported.refetch();
-      toast.success("Importação concluída!");
+      if (cancelRef.current) {
+        toast.info("Importação cancelada.");
+      } else {
+        imported.refetch();
+        toast.success("Importação concluída!");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(msg);
@@ -227,6 +238,7 @@ export default function UploadPage() {
               processed={processing.processed}
               currentDate={processing.currentDate}
               onProcess={confirmImport}
+              onCancel={() => { cancelRef.current = true; }}
             />
           )}
           {imported.isPending ? (
