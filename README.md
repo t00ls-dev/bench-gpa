@@ -15,6 +15,8 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 | Planilhas | SheetJS (xlsx) |
 | PDF | jsPDF + jspdf-autotable |
 | Virtualização | @tanstack/react-virtual |
+| Drawer (mobile) | vaul |
+| Paleta de comandos | cmdk |
 | Auth/DB | Supabase (Auth, PostgreSQL, RPCs, RLS) — migrando para MariaDB + JWT próprio |
 | CAPTCHA | Cloudflare Turnstile (non-interactive, fail-closed) |
 | Segurança | CSP nonce, rate limiting sliding window (4 tiers) |
@@ -52,7 +54,7 @@ bun run lint
 ## Rotas
 
 | Rota | Path | Auth | Descrição |
-|---|---|---|---|---|
+|---|---|---|---|
 | Login | `/auth` | Não | Login email/senha + Turnstile CAPTCHA |
 | Dashboard | `/` | Sim | KPIs, evolução diária, top lojas, rankings, PDF export |
 | Produto | `/produto` | Sim | Análise de produto com weekday-aware, PDF export |
