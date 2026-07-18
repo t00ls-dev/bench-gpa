@@ -5,19 +5,7 @@ Baseado nos RPCs existentes no banco sem UI e nos dados disponíveis.
 
 ---
 
-## 1. Produtos em Declínio (`products_in_decline`)
-
-**RPC já existe no banco** e está tipado em `types.ts`. Classifica produtos como **crítico**, **alerta** ou **atenção** comparando vendas recentes vs média histórica (30 dias). **Zero UI.**
-
-### Sugestão: Rota `/declinio` ou widget no Dashboard
-- Cards com contagem por severidade
-- Tabela filtrável (loja, departamento, severidade)
-- Ações sugeridas para cada categoria
-- Esforço: **baixo** | Impacto: **alto**
-
----
-
-## 2. Dashboard de Performance por Loja
+## 1. Dashboard de Performance por Loja
 
 Dados disponíveis: 18 lojas com vendas diárias.
 
@@ -29,7 +17,7 @@ Dados disponíveis: 18 lojas com vendas diárias.
 
 ---
 
-## 3. Sazonalidade / Dia da Semana
+## 2. Sazonalidade / Dia da Semana
 
 O RPC `product_analysis` já calcula dia da semana. Generalizar:
 
@@ -40,7 +28,7 @@ O RPC `product_analysis` já calcula dia da semana. Generalizar:
 
 ---
 
-## 4. Previsão / Tendências
+## 3. Previsão / Tendências
 
 - Projeção baseada em média móvel dos últimos N dias
 - Sazonalidade semanal (média do dia da semana)
@@ -50,7 +38,7 @@ O RPC `product_analysis` já calcula dia da semana. Generalizar:
 
 ---
 
-## 5. Análise de Sortimento / Gap
+## 4. Análise de Sortimento / Gap
 
 Área analysis já mostra PLUs sem venda. Expandir:
 
@@ -62,7 +50,7 @@ O RPC `product_analysis` já calcula dia da semana. Generalizar:
 
 ---
 
-## 6. Exportação e Relatórios Programados
+## 5. Exportação e Relatórios Programados
 
 - Relatório diário automático (PDF) por email
 - Dashboard impresso (versão otimizada para PDF)
@@ -74,8 +62,7 @@ O RPC `product_analysis` já calcula dia da semana. Generalizar:
 ## Resumo
 
 | Prioridade | Análise | Esforço | Impacto | Observação |
-|---|---|---|---|---|
-| **Alta** | Produtos em Declínio | Baixo | Alto | RPC existe, sem UI |
+|---|---|---|---|---|---|
 | **Alta** | Performance por Loja | Médio | Alto | Dados disponíveis |
 | **Média** | Sazonalidade | Baixo | Alto | Lógica já existe em product_analysis |
 | **Média** | Previsão/Tendências | Médio | Médio | Média móvel simples |
