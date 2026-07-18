@@ -1,6 +1,9 @@
 # Discrepâncias entre Documentação e Implementação
 
-Gaps encontrados entre o que está documentado (AGENTS.md, docs antigos) e o código real.
+Gaps encontrados entre o que está documentado (AGENTS.md, docs) e o código real.
+Atualizado pós-migração Supabase → MariaDB.
+
+> ⚠️ Docs obsoletas removidas: `migracao-sqlite.md`, `pereciveis-plano.md`, `analise-pereciveis.md`.
 
 ---
 
@@ -10,31 +13,31 @@ Gaps encontrados entre o que está documentado (AGENTS.md, docs antigos) e o có
 |---|---|---|---|
 | `src/hooks/use-theme.ts` | Existe (toggle light/dark) | **Arquivo não existe** | 🔴 ALTA |
 | Dark mode | "script inline anti-flash no SSR shell" | `styles.css` **não tem variáveis `.dark`**; hook não existe | 🔴 ALTA |
-| Env var name | `VITE_SUPABASE_ANON_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY` em `client.ts` | 🟡 MÉDIA |
+| Env var name | `VITE_SUPABASE_ANON_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY` em `client.ts` | 🟡 MÉDIA (será removido na migração) |
 | "Product filtering client-side" (área) | "busca tudo e filtra/ordena/pagina no cliente" | **Já é server-side** (paginação, sorting, search) | 🟡 MÉDIA (desatualizado) |
 | RPC `products_in_decline` | Não mencionado | Existe no banco e types.ts, **sem UI** | 🟡 MÉDIA |
 | `staging_sales` tabela | Não listada em "Tabelas Principais" | Existe e é usada no pipeline de import | 🟡 MÉDIA |
-| `auth-attacher.ts` | Descrito como middleware | Confirmado, registrado em `start.ts` | ✅ OK |
-| `error-capture.ts` / h3 detection | Não mencionado | Implementado e referenciado por `server.ts` | ✅ OK (não documentado) |
+| `auth-attacher.ts` | Descrito como middleware | Confirmado, registrado em `start.ts` | ✅ OK (será adaptado para JWT local) |
+| `error-capture.ts` / h3 detection | Não mencionado | Implementado e referenciado por `server.ts` | ✅ OK |
 | `assertAdmin` | Mencionado como proteção server-side | Duplicado em 2 arquivos | 🟡 MÉDIA |
 
 ---
 
-## Docs Antigos (`docs/improvements/` versão anterior) vs Realidade
+## Docs de Migração vs Realidade
 
-### `otimizacao-carga.md`
-- **#1 + #3: Paginação server-side na área** — documentado como crítico a implementar, mas **já está implementado** (RPC `area_analysis` com overloads paginados)
-- **#2: Otimização `product_analysis`** — já implementado (60 dias, CTE consolidada)
-- **#4: Hierarquia unificada** — já implementado (`getAreaFilterHierarchy` + cascata cliente)
-- **#5: Dashboard chamada única** — ainda não implementado (faz 2 chamadas RPC)
+### `docs/api-php-mariadb.md` (plano vigente)
+- **Plano completo** para Vercel + PHP API + MariaDB
+- Auth JWT próprio, zero Supabase
+- **Ainda não executado** — app ainda roda com Supabase
 
-### `global.md`
-- `staleTime: 5min` para filter options — código usa `10 * 60_000` (10min)
-- `use-theme.ts` mencionado como existente — não existe
-- "ImportCalendar com cores hardcoded" — ainda verdadeiro
+### `docs/migracao-vps-autossuficiente.md`
+- Alternativa Node.js + MariaDB puro, sem PHP
+- **Compatível** com deploy Hestia VPS (`sv1.t00ls.dev`)
 
-### `dashboard.md`
-- Skeleton nos rankings: o problema não é no `RankingCard` (que trata skeleton corretamente), é no **pai** que não passa `isLoading=true` antes da primeira query
+### `docs/deploy-hestia-vps.md` (novo)
+- Plano específico para deploy em `sv1.t00ls.dev` com Hestia CP
+- Template nginx `node-ssr` para proxy reverso
+- **Ainda não executado** — aguardando autorização
 
 ---
 
@@ -49,4 +52,18 @@ Gaps encontrados entre o que está documentado (AGENTS.md, docs antigos) e o có
 | `parseWorkbook` | É um alias de `parseAnyWorkbook` sem razão de existir |
 | `getServerConfig` em `config.server.ts` | Só retorna `nodeEnv` e **não é usado em lugar nenhum** |
 | `FilterBar` re-clampa datas | Efeito colateral silencioso, sem notificação ao usuário |
-| `LastUpdateInfo` busca todas as datas | Só precisa da mais recente — RPC poderia expor endpoint dedicado |
+| `LastUpdateInfo` busca todas as datas | Só precisa da mais recente |
+| `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY` | 🔴 Crítico — será resolvido na migração (remoção do Supabase) |
+
+---
+
+## Itens Resolvidos (julho/2026)
+
+| Item | O que mudou |
+|---|---|
+| 18 erros TS no upload | ✅ Corrigidos (ParsedSalesFile, onFilesSelected, getImportedOrder, etc.) |
+| Multi-drop upload | ✅ Corrigido (pendingQueue, confirm dialog com N arquivos) |
+| `noUncheckedSideEffectImports` no tsconfig | ✅ Removido |
+| 5 componentes UI não usados | ✅ Removidos (carousel, resizable, input-otp, command, drawer) |
+| Code-review cron | ✅ Agora sobrescreve `analise-completa.md` em vez de acumular |
+| Doc obsoletas removidas | ✅ SQLite, Perecíveis — eliminadas |
