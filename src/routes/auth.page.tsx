@@ -61,6 +61,7 @@ function AuthPage() {
         clearInterval(poll);
         widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
+          theme: "light",
           callback: (token: string) => setTurnstileToken(token),
           "expired-callback": () => setTurnstileToken(""),
           "error-callback": () => setTurnstileToken(""),
@@ -152,7 +153,7 @@ function AuthPage() {
               />
             </div>
 
-            <div ref={turnstileRef} />
+            <div className="flex justify-center" ref={turnstileRef} />
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
