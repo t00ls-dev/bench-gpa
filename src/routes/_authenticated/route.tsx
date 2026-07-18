@@ -67,7 +67,7 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
           return (
             <SidebarMenuItem key={n.to}>
               <SidebarMenuButton asChild isActive={isActive}>
-                <Link to={n.to} onClick={() => setOpenMobile(false)}>
+                <Link to={n.to} preload="intent" onClick={() => setOpenMobile(false)}>
                   <n.icon />
                   <span>{n.label}</span>
                 </Link>
@@ -185,7 +185,6 @@ function AuthedLayout() {
         <SidebarInset>
           <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
             <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
-              <SidebarTrigger className="md:hidden" />
               <Link
                 to="/"
                 className="flex items-center gap-2 font-display text-lg font-bold md:hidden"
@@ -211,7 +210,9 @@ function AuthedLayout() {
             id="main-content"
             className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10 pb-20 md:pb-10"
           >
-            <Outlet />
+            <div className="transition-opacity duration-150">
+              <Outlet />
+            </div>
             <AppFooter />
           </main>
         </SidebarInset>

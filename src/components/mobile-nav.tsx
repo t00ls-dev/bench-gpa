@@ -58,6 +58,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
             <Link
               key={tab.to}
               to={tab.to}
+              preload="intent"
               className={`flex flex-col items-center gap-0.5 px-3 py-1.5 text-[10px] font-medium transition-colors ${
                 isActive(tab.to)
                   ? "text-primary"
@@ -94,6 +95,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
               <Link
                 key={item.to}
                 to={item.to}
+                preload="intent"
                 onClick={() => setDrawerOpen(false)}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive(item.to)
