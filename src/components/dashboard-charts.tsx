@@ -43,11 +43,11 @@ export function DashboardCharts({
 }) {
   const chartData: ChartRow[] = useMemo(() => {
     const raw = data?.current.byDate ?? [];
-    const prev = data?.previous?.byDate ?? [];
-    const result: ChartRow[] = raw.map((d, i) => ({
+    const prevByDate = new Map((data?.previous?.byDate ?? []).map((d) => [d.date, d.val]));
+    const result: ChartRow[] = raw.map((d) => ({
       date: d.date,
       Atual: d.val,
-      Anterior: prev[i]?.val ?? null,
+      Anterior: prevByDate.get(d.date) ?? null,
       ma7: null,
     }));
     for (let i = 6; i < result.length; i++) {
