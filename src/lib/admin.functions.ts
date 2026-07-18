@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import { z } from "zod";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
 
 export const listUsers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -20,7 +21,7 @@ export const listUsers = createServerFn({ method: "GET" })
   });
 
 export const createUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((data: unknown) =>
     z
       .object({
@@ -59,7 +60,7 @@ export const createUser = createServerFn({ method: "POST" })
   });
 
 export const setUserRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((data: unknown) =>
     z.object({ userId: UserIdSchema, role: RoleEnum }).parse(data),
   )
@@ -79,7 +80,7 @@ export const setUserRole = createServerFn({ method: "POST" })
   });
 
 export const setUserActive = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((data: unknown) =>
     z.object({ userId: UserIdSchema, isActive: z.boolean() }).parse(data),
   )
@@ -99,7 +100,7 @@ export const setUserActive = createServerFn({ method: "POST" })
   });
 
 export const resetPassword = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((data: unknown) =>
     z.object({ userId: UserIdSchema, password: PasswordSchema }).parse(data),
   )
@@ -145,7 +146,7 @@ async function fetchDistinctDates(
 }
 
 export const diagnoseData = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -189,7 +190,7 @@ export interface DbHealthData {
 }
 
 export const purgeOldAggs = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -199,7 +200,7 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   });
 
 export const dbHealthCheck = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -222,7 +223,7 @@ const docModules = import.meta.glob("/docs/**/*.md", {
 }) as Record<string, string>;
 
 export const listDocs = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const entries: DocEntry[] = [];
@@ -243,7 +244,7 @@ export const listDocs = createServerFn({ method: "GET" })
   });
 
 export const getDocContent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((data: unknown) => SingleSlugSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);

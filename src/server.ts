@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
+import { ssrLimiter, getClientIp } from "./lib/rate-limit";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -64,6 +65,18 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const nonce = crypto.randomUUID();
     setCspNonce(nonce);
+
+    const ip = getClientIp(request);
+    const rl = ssrLimiter.check(ip);
+    if (!rl.allowed) {
+      return new Response("Muitas requisições. Aguarde um momento.", {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          "content-type": "text/plain; charset=utf-8",
+        },
+      });
+    }
 
     try {
       const handler = await getServerEntry();
