@@ -2,6 +2,7 @@ import { QueryClient, QueryCache } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { routeTree } from "./routeTree.gen";
+import { getCspNonce } from "./lib/csp";
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
@@ -30,11 +31,13 @@ export const getRouter = () => {
     }),
   });
 
+  const nonce = getCspNonce();
   const router = createRouter({
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    ...(nonce ? { ssr: { nonce } } : {}),
   });
 
   return router;

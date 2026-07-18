@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { setCspNonce } from "./lib/csp";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -18,12 +19,20 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-// Segurança: impede que a aplicação seja carregada dentro de um <iframe> de
-// outra origem (clickjacking). CSP frame-ancestors é a abordagem moderna;
-// X-Frame-Options garante compatibilidade com navegadores mais antigos.
-function applySecurityHeaders(response: Response): Response {
+function applySecurityHeaders(response: Response, nonce: string): Response {
   const headers = new Headers(response.headers);
-  headers.set("Content-Security-Policy", "frame-ancestors 'none';");
+
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com",
+    "frame-ancestors 'none'",
+  ].join("; ");
+
+  headers.set("Content-Security-Policy", csp);
   headers.set("X-Frame-Options", "DENY");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -34,8 +43,6 @@ function applySecurityHeaders(response: Response): Response {
   });
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
@@ -55,11 +62,14 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const nonce = crypto.randomUUID();
+    setCspNonce(nonce);
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
-      return applySecurityHeaders(normalized);
+      return applySecurityHeaders(normalized, nonce);
     } catch (error) {
       console.error(error);
       return applySecurityHeaders(
@@ -67,6 +77,7 @@ export default {
           status: 500,
           headers: { "content-type": "text/html; charset=utf-8" },
         }),
+        nonce,
       );
     }
   },
