@@ -231,3 +231,10 @@
   a { color: var(--primary); text-decoration: underline; }
   strong { font-weight: 600; }
 }
+
+@view-transition { navigation: auto; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 150ms;
+}
