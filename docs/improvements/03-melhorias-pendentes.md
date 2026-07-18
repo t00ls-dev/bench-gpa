@@ -6,12 +6,12 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 
 ## 🔴 Alta Prioridade
 
-### 1. Dark Mode não funcional
-- `src/hooks/use-theme.ts` **não existe**
-- `styles.css` não tem variáveis `.dark`
-- **Afeta**: KpiCard (delta badge OKLCH hardcoded), ImportCalendar (cores emerald/amber), LastUpdateInfo (banner stale), todos os gráficos
-- **Onde**: `src/styles.css`, `src/hooks/`, componentes com cores hardcoded
-- **Impacto**: Experiência quebrada se dark mode for ativado
+### 1. Dark Mode inativo (código pronto, mas não ativado)
+- `.dark` CSS existe em `styles.css`, mas usuário não pode alternar (tema travado em light)
+- **Afeta**: KpiCard, ImportCalendar, LastUpdateInfo ainda com cores hardcoded que podem quebrar em dark
+- **Onde**: Falta ativar toggle, ajustar hardcoded colors
+- **Impacto**: Experiência incompleta (dark mode não disponível)
+- **Nota**: `.dark` block adicionado como preparação; reativar toggle é o passo restante
 
 ### 2. RPC `products_in_decline` sem UI
 - RPC existe no banco e em `types.ts` — classifica produtos como crítico/alerta/atenção
@@ -50,18 +50,17 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Skeleton nos rankings**: pai não passa `isLoading=true` antes da 1ª query
 - **Click-through**: rankings e top lojas deveriam navegar para `/area` ou `/produto`
 - **Filtros ativos como chips**: exibir seleção atual acima do conteúdo
-- **Exportar**: PDF (jsPDF já é dependência) e XLSX (SheetJS já é dependência)
+- **Exportar XLSX**: PDF já implementado, falta XLSX (SheetJS já é dependência)
 
 ### Produto
 - **Multi-loja**: store selector permite apenas 1 loja ou "todas". Usar MultiSelect para comparar
 - **`placeholderData: keepPreviousData`**: evitar flash ao trocar loja
-- **Exportar tabela histórica**: CSV/XLSX
+- **Exportar tabela histórica**: XLSX (PDF já implementado)
 - **Histórico de buscas**: salvar últimos 5-10 produtos no localStorage
 - **Linha de tendência**: média móvel 7/30 dias no gráfico de evolução
 
 ### Área
-- **Componentizar**: 773 linhas é grande demais — extrair tabela sortável, paginação, PDF
-- **`filteredHierarchy` chamado 2x**: linhas 138 e 156 com mesmos args — computação duplicada
+- **`filteredHierarchy` chamado 2x**: computação duplicada
 - **PDF com colunas vazias**: "QTD" e "VALIDADE" sempre vazias — ocupam espaço
 - **PDF com KPIs**: exportar também os cards de KPI, não só a tabela
 - **Nome de arquivo descritivo**: incluir loja, departamento, período
@@ -83,7 +82,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 
 ### Auth (pós-migração)
 - **Esqueci minha senha**: sem fluxo de recuperação — implementar endpoint `PUT /api/auth/forgot-password`
-- **Rate limiting**: sem proteção contra brute force — implementar no middleware JWT
+- **Rate limiting**: já implementado (tier Auth: 5/min IP, 20/min global), ajustar para JWT
 - **Sessão expirada**: redirecionar para `/auth?next=/rota-atual`
 - **Cookie HttpOnly**: garantir que JWT seja armazenado com `Secure; SameSite=Lax`
 
@@ -94,7 +93,6 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 ### Globais
 - **Error boundaries por widget**: hoje um erro derruba a página inteira
 - **`safeError` preservar stack trace**: usar `error.cause` para não perder a origem
-- **Atalhos de teclado**: navegação entre páginas (1-Dashboard, 2-Produto, etc.)
 - **Internacionalização**: algumas strings de erro do Supabase podem vir em inglês
 - **ARIA labels**: vários botões de ação sem `aria-label` (MultiSelect, comparison pills, presets)
 - **MultiSelect sem navegação por teclado**: apenas mouse/touch
