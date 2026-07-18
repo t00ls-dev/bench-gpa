@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
 import {
   DB,
@@ -18,7 +19,7 @@ import {
 import { AreaAnalysisSchema } from "./schemas";
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data, context }): Promise<AreaAnalysisResult> => {
     const supabase = context.supabase as DB;
@@ -67,7 +68,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   });
 
 export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }): Promise<AreaFilterHierarchyResult> => {
     const supabase = context.supabase as DB;
     const { data: res, error } = await supabase.rpc("area_filter_hierarchy");

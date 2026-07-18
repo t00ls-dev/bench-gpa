@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
@@ -7,7 +8,7 @@ import { DB } from "./rpc-utils";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -55,7 +56,7 @@ export const beginImport = createServerFn({ method: "POST" })
   });
 
 export const insertSalesChunk = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z.object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRowSchema) }).parse(d),
   )
@@ -73,7 +74,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   });
 
 export const getImportedDates = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     const supabase = context.supabase as DB;
     const { data, error } = await supabase.rpc("imported_dates");
@@ -82,7 +83,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
   });
 
 export const finalizeImport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z
       .object({
