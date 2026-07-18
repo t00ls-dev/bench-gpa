@@ -1,6 +1,9 @@
 # Estado Atual do Código
 
-Diagnóstico baseado na leitura completa dos fontes (julho/2026).
+Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado para refletir a migração **Supabase → MariaDB + JWT próprio**.
+
+> **Contexto**: app em transição. Hoje usa Supabase Auth + PostgreSQL (RPCs). Destino: MariaDB + JWT bcrypt, deploy no VPS Hestia.
+> Server functions ainda chamam Supabase RPCs — serão convertidas para queries MariaDB diretas ou fetch para PHP API.
 
 ---
 
@@ -12,6 +15,7 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026).
 - Redireciona para `?next=` ou `/` via `sanitizeNext()` (proteção contra open redirect)
 - `ssr: false` — intencional (depende de Supabase client-side)
 - **Sem** "Esqueci minha senha", "Lembrar email", rate limiting, 2FA
+- **Migração**: converter para `POST /api/auth/login` → JWT + cookie HttpOnly
 
 ### `/` — Dashboard (`src/routes/_authenticated/index.tsx`)
 - 1 KPI (Venda total) com delta vs período anterior
@@ -40,11 +44,12 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026).
 - **Problemas**: 773 linhas no componente, `filteredHierarchy` chamado 2x com mesmos args, PDF com colunas "QTD" e "VALIDADE" sempre vazias
 
 ### `/upload` — Upload XLSX (`src/routes/_authenticated/upload.tsx`)
-- Drag-and-drop, valida tamanho (50MB) e linhas (500k)
+- Drag-and-drop, valida tamanho (50MB) e linhas (500k). **Multi-drop corrigido** (pendingQueue)
 - Pipeline: parse (main thread) → beginImport → insertSalesChunk (1000 linhas) → finalizeImport
 - Progresso por arquivo (velocidade, ETA, barra)
 - Wake Lock API (impede suspensão)
 - Calendário de importações, tabela de histórico
+- **Erros TS corrigidos** (ParsedSalesFile, onFilesSelected, FileEntry, sales order, imported dates)
 - **Sem** Web Worker, cancelar, pausar/retomar, preview, validação de schema
 
 ### `/admin` — Gestão de Usuários (`src/routes/_authenticated/admin.tsx`)
@@ -52,12 +57,14 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026).
 - Seção Diagnose/Repair (contagem de registros, rebuild de agregações)
 - Double-gated: `beforeLoad` + `<AdminGate>` + `assertAdmin` server-side
 - **Sem** confirmação em ações destrutivas, loading inline no Switch, busca/filtro na lista, paginação, auditoria
+- **Migração**: converter `supabaseAdmin.auth.admin.*` para fetch → PHP API (ou queries MariaDB diretas)
 
 ---
 
 ## Server Functions
 
 ### `analytics.functions.ts` (10 funções)
+- Fazem chamadas `supabase.rpc()` — serão substituídas por `fetch()` para PHP API ou queries MariaDB
 - `getDashboard` faz **2 chamadas RPC** (período atual + anterior) — poderia ser 1
 - `getAreaAnalysis` com paginação/sorting/search server-side
 - `getAreaFilterHierarchy` substitui 5 queries individuais
@@ -67,11 +74,13 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026).
 - `assertAdmin` implementado inline (duplicado em `upload.functions.ts`)
 - `createUser` com rollback manual (apaga auth user se insert na tabela falhar)
 - `repairAggregations`: itera datas individualmente — lento para muitos dias
+- **Migração**: substituir chamadas Supabase Admin API por queries MariaDB + JWT validation
 
 ### `upload.functions.ts` (3 funções)
 - Pipeline trifásico com atomic swap via RPC `finalize_import`
 - `upsert_products_bulk` RPC evita "URI too large" do PostgREST
 - **`assertAdmin` idêntico ao de `admin.functions.ts`** — duplicado
+- **Migração**: converter stored procedures para queries MariaDB ou PHP API
 
 ---
 
@@ -92,19 +101,24 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026).
 
 ## Infraestrutura
 
-- **Auth middleware**: `auth-middleware.ts` valida Bearer token, injeta `supabase` + `userId` + `claims`
-- **Auth attacher**: `auth-attacher.ts` anexa token às serverFn client-side
-- **Cliente Supabase dual**: `client.ts` (anon, Proxy lazy singleton) + `client.server.ts` (service role, dynamic import)
+- **Auth middleware**: `auth-middleware.ts` valida Bearer token via Supabase. **Migrar** para validação JWT local com `jsonwebtoken`
+- **Auth attacher**: `auth-attacher.ts` anexa token às serverFn. **Migrar** para ler token do cookie/localStorage
+- **Cliente Supabase dual**: `client.ts` + `client.server.ts` — **remover** após migração
 - **Segurança**: CSP `frame-ancestors 'none'`, X-Frame-Options, nosniff, Referrer-Policy
 - **Error handling**: `safeError()` + `error-capture.ts` + `normalizeCatastrophicSsrResponse()`
 - **CSS**: Tailwind v4 com OKLCH, `@theme inline`, `@utility kpi-card`. **Sem variáveis `.dark`** — dark mode não implementado
+- **Vite**: config com TanStack Start + Nitro. Preset `vercel` para deploy atual. Trocar para `node-server` para VPS
+- **Migration**: docs em `docs/api-php-mariadb.md` e `docs/migracao-vps-autossuficiente.md`
 
 ---
 
-## Banco de Dados (tipos em `types.ts`)
+## Banco de Dados
 
-### Tabelas (8)
-`sales`, `products`, `stores`, `users`, `import_log`, `filter_hierarchy`, `sales_daily_agg`, `staging_sales`
+### Hoje (Supabase PostgreSQL)
+- **Tabelas** (8): `sales`, `products`, `stores`, `users`, `import_log`, `filter_hierarchy`, `sales_daily_agg`, `staging_sales`
+- **RPCs** (16): `dashboard_metrics`, `dashboard_rankings`, `filter_options`, `area_analysis`, `area_filter_hierarchy`, `product_analysis`, `product_search`, `products_in_decline`, `imported_dates`, `has_role`, `finalize_import`, `upsert_products_bulk`, `refresh_filter_hierarchy`, `refresh_sales_daily_agg`, `show_limit`, `show_trgm`
 
-### RPCs (16)
-`dashboard_metrics`, `dashboard_rankings`, `filter_options`, `area_analysis`, `area_filter_hierarchy`, `product_analysis`, `product_search`, `products_in_decline`, `imported_dates`, `has_role`, `finalize_import`, `upsert_products_bulk`, `refresh_filter_hierarchy`, `refresh_sales_daily_agg`, `show_limit`, `show_trgm`
+### Amanhã (MariaDB)
+- Mesmas tabelas + `users` com auth próprio (bcrypt)
+- RPCs viram stored procedures ou queries diretas via PHP/mysql2
+- Auth sai do Supabase: JWT próprio, cookie HttpOnly

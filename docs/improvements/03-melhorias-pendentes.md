@@ -1,6 +1,6 @@
 # Melhorias Pendentes
 
-Consolidadas por criticidade e área. Baseado exclusivamente em análise do código real.
+Consolidadas por criticidade e área. Atualizado pós-migração Supabase → MariaDB.
 
 ---
 
@@ -34,6 +34,11 @@ Consolidadas por criticidade e área. Baseado exclusivamente em análise do cód
 - `repairAggregations` em `admin.functions.ts` e fallback em `upload.functions.ts:finalizeImport`
 - **Onde**: Extrair para função compartilhada
 - **Impacto**: Duas implementações que podem divergir
+
+### 6. `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`
+- Chave com permissão total no banco exposta no repositório
+- **Resolvido na migração**: ao remover Supabase, a chave deixa de existir
+- **Temporário**: enquanto não migra, manter como está (decisão do usuário)
 
 ---
 
@@ -76,12 +81,11 @@ Consolidadas por criticidade e área. Baseado exclusivamente em análise do cód
 - **Paginação**: quando houver muitos usuários
 - **Audit log**: registrar quem criou/alterou/desativou cada usuário
 
-### Auth
-- **Esqueci minha senha**: sem fluxo de recuperação
-- **Auto-focus no email**: ao carregar a página
-- **Rate limiting**: sem proteção contra brute force
+### Auth (pós-migração)
+- **Esqueci minha senha**: sem fluxo de recuperação — implementar endpoint `PUT /api/auth/forgot-password`
+- **Rate limiting**: sem proteção contra brute force — implementar no middleware JWT
 - **Sessão expirada**: redirecionar para `/auth?next=/rota-atual`
-- **Placeholder genérico**: mostra email real de pessoa (`uilton.leite@gpabr.com`) — risco de privacy
+- **Cookie HttpOnly**: garantir que JWT seja armazenado com `Secure; SameSite=Lax`
 
 ---
 
@@ -100,3 +104,11 @@ Consolidadas por criticidade e área. Baseado exclusivamente em análise do cód
 - **`fmtBRL` em local errado**: exportado de `kpi-card.tsx` em vez de `utils.ts`
 - **`LastUpdateInfo` ineficiente**: busca todas as datas importadas só para achar a mais recente
 - **Nenhum teste**: unitários para utils (shiftPeriod, computePreset, parsers), integração para server functions
+
+### Migração
+- **Remover `@supabase/supabase-js`** do `package.json` após migração completa
+- **Remover `src/integrations/supabase/`** — diretório inteiro
+- **Remover `client.ts` + `client.server.ts`** — não serão mais necessários
+- **Atualizar `auth-middleware.ts`** para validar JWT local com `jsonwebtoken`
+- **Atualizar `auth-attacher.ts`** para ler token do cookie/localStorage
+- **Configurar Nginx** no VPS com template `node-ssr`
