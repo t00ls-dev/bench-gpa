@@ -236,7 +236,7 @@ export function MultiSelect({
         )}
         <div
           ref={listRef}
-          className="max-h-72 overflow-y-auto outline-none"
+          className="max-h-72 scrollbar-always outline-none"
           role="listbox"
           aria-label={label}
           tabIndex={-1}

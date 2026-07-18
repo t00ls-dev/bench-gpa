@@ -232,6 +232,16 @@
   strong { font-weight: 600; }
 }
 
+@utility scrollbar-always {
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+  &::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
+}
+
 @view-transition { navigation: auto; }
 
 ::view-transition-old(root),
