@@ -25,7 +25,6 @@ const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/produto", label: "Produto", icon: Package },
   { to: "/area", label: "Área", icon: Layers },
-  { to: "/howto", label: "Como usar", icon: HelpCircle },
 ] as const;
 
 const ADMIN_ITEMS = [
@@ -69,19 +68,17 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
               <span>{tab.label}</span>
             </Link>
           ))}
-          {isAdmin && (
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 text-[10px] font-medium transition-colors ${
-                drawerOpen
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Ellipsis className="size-5" />
-              <span>Mais</span>
-            </button>
-          )}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 text-[10px] font-medium transition-colors ${
+              drawerOpen
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Ellipsis className="size-5" />
+            <span>Mais</span>
+          </button>
         </div>
       </nav>
 
@@ -91,7 +88,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
             <DrawerTitle>Menu</DrawerTitle>
           </DrawerHeader>
           <div className="space-y-1 px-2 pb-4">
-            {ADMIN_ITEMS.map((item) => (
+            {isAdmin && ADMIN_ITEMS.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -107,6 +104,15 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
                 {item.label}
               </Link>
             ))}
+            <Link
+              to="/howto"
+              preload="intent"
+              onClick={() => setDrawerOpen(false)}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <HelpCircle className="size-5 shrink-0" />
+              Como usar
+            </Link>
             <div className="border-t border-border pt-2 mt-2">
               <div className="px-3 pb-2 text-xs text-muted-foreground truncate">
                 {userEmail}
