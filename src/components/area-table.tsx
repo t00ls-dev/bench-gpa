@@ -37,6 +37,8 @@ function SortBtn({ label, k, sortKey, sortAsc, toggle, align = "left", hint }: {
       <button
         onClick={() => toggle(k)}
         title={hint}
+        aria-pressed={active}
+        aria-label={`${label}${active ? ` (ordenado ${sortAsc ? "crescente" : "decrescente"})` : ""}`}
         className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
       >
         {label}
@@ -114,12 +116,15 @@ export function AreaTable({
             <Search className="size-3.5 text-muted-foreground shrink-0" />
             <Input
               placeholder="Buscar PLU ou descrição…"
+              aria-label="Buscar PLU ou descrição"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               className="h-7 w-40 sm:w-56 border-0 px-1 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {search && (
               <button
+                type="button"
+                aria-label="Limpar busca"
                 onClick={onClearSearch}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -217,6 +222,7 @@ export function AreaTable({
             variant="outline"
             size="sm"
             disabled={page <= 1}
+            aria-label="Página anterior"
             onClick={() => onPageChange(page - 1)}
           >
             <ChevronLeft className="size-4" />
@@ -228,6 +234,7 @@ export function AreaTable({
             variant="outline"
             size="sm"
             disabled={page >= totalPages}
+            aria-label="Próxima página"
             onClick={() => onPageChange(page + 1)}
           >
             <ChevronRight className="size-4" />

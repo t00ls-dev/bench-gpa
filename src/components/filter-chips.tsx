@@ -57,11 +57,12 @@ export function FilterChips({ filters, onChange }: Props) {
         <button
           key={c.label}
           type="button"
+          aria-label={`Remover filtro ${c.label}`}
           onClick={c.onRemove}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-destructive/50 hover:text-destructive"
         >
           {c.label}
-          <X className="size-3" />
+          <X className="size-3" aria-hidden="true" />
         </button>
       ))}
     </div>

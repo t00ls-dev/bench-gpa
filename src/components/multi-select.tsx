@@ -107,6 +107,7 @@ export function MultiSelect({
             <Input
               autoFocus
               placeholder="Buscar…"
+              aria-label="Buscar opções"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="h-7 border-0 px-0 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
