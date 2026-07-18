@@ -3,12 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/product.functions";
 import { getStores } from "@/lib/dashboard.functions";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
 import { ProductSearch } from "@/components/product-search";
 import { ProductKPIs } from "@/components/product-kpis";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Loader2 } from "lucide-react";
+import { fmtBRL } from "@/components/kpi-card";
+import { Package, FileText, Loader2 } from "lucide-react";
+import { fmtBRShort } from "@/lib/utils";
+import { openPdfBlob } from "@/lib/export-pdf";
 import { Route } from "./produto";
 
 const WEEKDAYS_FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -89,18 +93,84 @@ function ProdutoPage() {
     return ev.length ? ev.reduce((a, b) => a + b.val, 0) / ev.length : 0;
   }, [analysisData?.evolution]);
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const openProductPdf = async () => {
+    setPdfLoading(true);
+    try {
+      const jsPDF = (await import("jspdf")).default;
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const mX = 10;
+      let y = 12;
+
+      const pn = selected?.prod_name ?? "";
+      const pc = selected?.prod_code ?? "";
+      const storeLabel = storeCode === "__all__" || storeCode == null ? "Todas as lojas" : stores.find((s) => s.store_code === storeCode)?.store_name ?? storeCode;
+
+      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(17, 17, 17);
+      doc.text("Análise de Produto", mX, y); y += 7;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(85, 85, 85);
+      doc.text(pc + " — " + pn, mX, y); y += 4.5;
+      doc.text("Loja: " + storeLabel, mX, y); y += 4;
+      if (analysisData?.product) {
+        const prod = analysisData.product;
+        const hier: string[] = [];
+        if (prod.depto) hier.push(prod.depto); if (prod.secao) hier.push(prod.secao);
+        if (prod.grupo) hier.push(prod.grupo); if (prod.subgrupo) hier.push(prod.subgrupo);
+        if (hier.length) doc.text(hier.join(" › "), mX, y); y += 4;
+      }
+      if (analysisData?.refDate) doc.text("Data referência: " + fmtBRShort(analysisData.refDate), mX, y); y += 6;
+
+      if (analysisData) {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(17, 17, 17);
+        doc.text("Indicadores", mX, y); y += 5;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(85, 85, 85);
+        doc.text("Venda referência: " + fmtBRL(analysisData.refValue ?? 0), mX, y); y += 4;
+        doc.text("Média diária (28 dias): " + fmtBRL(avgDaily), mX, y); y += 4;
+        if (refWeekdayFull) doc.text("Média de " + (refWeekdayPlural?.toLowerCase() ?? "") + ": " + fmtBRL(avgSame), mX, y); y += 6;
+      }
+
+      if (analysisData?.evolution?.length) {
+        const ev = analysisData.evolution as Array<{ date: string; val: number }>;
+        if (y > 250) { doc.addPage(); y = 20; }
+        autoTable(doc, {
+          startY: y, margin: { left: mX, right: mX },
+          head: [["Data", "Venda"]],
+          body: ev.slice().reverse().map((e) => [fmtBRShort(e.date), fmtBRL(e.val)]),
+          theme: "grid",
+          styles: { font: "helvetica", fontSize: 8, cellPadding: 1.5, overflow: "hidden", valign: "middle", lineColor: [153, 153, 153], lineWidth: 0.1, textColor: [17, 17, 17] },
+          headStyles: { fillColor: [238, 238, 255], textColor: [17, 17, 17], fontStyle: "bold", fontSize: 8, halign: "center" },
+          columnStyles: { 0: { cellWidth: 60 }, 1: { cellWidth: 130, halign: "right" } },
+        });
+      }
+
+      openPdfBlob(doc);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const handleClear = () => { setQuery(""); setSelected(null); setDebounced(""); };
   const handleSelect = (s: { prod_code: string; prod_name: string }) => { setSelected(s); setQuery(""); };
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-          <Package className="size-7 text-primary shrink-0" /> Análise de Produto
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Pesquise um produto para ver comparações entre lojas, evolução e benchmarks semanais.
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+            <Package className="size-7 text-primary shrink-0" /> Análise de Produto
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Pesquise um produto para ver comparações entre lojas, evolução e benchmarks semanais.
+          </p>
+        </div>
+        {selected && analysisData && (
+          <Button variant="outline" size="sm" className="h-9" onClick={openProductPdf} disabled={pdfLoading}>
+            {pdfLoading ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <FileText className="mr-1.5 size-4" />}
+            PDF
+          </Button>
+        )}
       </header>
 
       <div className="kpi-card mb-4 min-w-0 overflow-hidden grid gap-3 md:grid-cols-2 [&>*]:min-w-0">
