@@ -14,7 +14,7 @@ Atualizado pós-migração Supabase → MariaDB.
 | Dark mode | "script inline anti-flash no SSR shell" | `styles.css` **tem `.dark` block**, mas tema travado em light; toggle removido | 🟡 MÉDIA (código pronto, inativo) |
 | Env var name | `VITE_SUPABASE_ANON_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY` em `client.ts` | 🟡 MÉDIA (será removido na migração) |
 | "Product filtering client-side" (área) | "busca tudo e filtra/ordena/pagina no cliente" | **Já é server-side** (paginação, sorting, search) | 🟡 MÉDIA (desatualizado) |
-| RPC `products_in_decline` | Não mencionado | Existe no banco e types.ts, **sem UI** | 🟡 MÉDIA |
+| RPC `products_in_decline` | Não mencionado | Foi removido do banco (18/07/2026) — RPC órfão sem UI | 🟢 RESOLVIDO |
 | `staging_sales` tabela | Não listada em "Tabelas Principais" | Existe e é usada no pipeline de import | 🟡 MÉDIA |
 | `assertAdmin` | Mencionado como proteção server-side | Duplicado em 2 arquivos | 🟡 MÉDIA |
 

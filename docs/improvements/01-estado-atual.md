@@ -123,7 +123,7 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 
 ### Hoje (Supabase PostgreSQL)
 - **Tabelas** (8): `sales`, `products`, `stores`, `users`, `import_log`, `filter_hierarchy`, `sales_daily_agg`, `staging_sales`
-- **RPCs** (16): `dashboard_metrics`, `dashboard_rankings`, `filter_options`, `area_analysis`, `area_filter_hierarchy`, `product_analysis`, `product_search`, `products_in_decline`, `imported_dates`, `has_role`, `finalize_import`, `upsert_products_bulk`, `refresh_filter_hierarchy`, `refresh_sales_daily_agg`, `show_limit`, `show_trgm`
+- **RPCs** (15): `dashboard_metrics`, `dashboard_rankings`, `filter_options`, `area_analysis`, `area_filter_hierarchy`, `product_analysis`, `product_search`, `imported_dates`, `has_role`, `finalize_import`, `upsert_products_bulk`, `refresh_filter_hierarchy`, `refresh_sales_daily_agg`, `show_limit`, `show_trgm`
 
 ### Amanhã (MariaDB)
 - Mesmas tabelas + `users` com auth próprio (bcrypt)

@@ -13,14 +13,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Impacto**: Experiência incompleta (dark mode não disponível)
 - **Nota**: `.dark` block adicionado como preparação; reativar toggle é o passo restante
 
-### 2. RPC `products_in_decline` sem UI
-- RPC existe no banco e em `types.ts` — classifica produtos como crítico/alerta/atenção
-- **Nenhuma página ou componente consome esses dados**
-- **Onde**: Nova rota `/declinio` ou widget no dashboard
-- **Impacto**: Baixo esforço, alto valor de negócio
-- **Referência**: `04-novas-analises.md`
-
-### 3. Dashboard: período anterior não exibido
+### 2. Dashboard: período anterior não exibido
 - `getDashboard` retorna `data.previous.byDate` mas o gráfico de evolução só mostra o período atual
 - **Onde**: `src/routes/_authenticated/index.tsx`
 - **Impacto**: Funcionalidade já implementada no backend, só falta frontend
