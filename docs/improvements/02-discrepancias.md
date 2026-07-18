@@ -46,10 +46,10 @@ Atualizado pós-migração Supabase → MariaDB.
 | `safeError` | Não preserva `error.cause` — stack trace original perdido |
 | `repairAggregations` (admin) vs fallback em `finalizeImport` (upload) | Lógica de rebuild de agregações duplicada |
 | `assertAdmin` | Cópia idêntica em `admin.functions.ts:6` e `upload.functions.ts:6` |
-| `parseWorkbook` | É um alias de `parseAnyWorkbook` sem razão de existir |
-| `getServerConfig` em `config.server.ts` | Só retorna `nodeEnv` e **não é usado em lugar nenhum** |
+| ~~`parseWorkbook`~~ | ~~Alias removido~~ | ✅ Resolvido |
+| ~~`getServerConfig`~~ | ~~Função removida~~ | ✅ Resolvido |
 | `FilterBar` re-clampa datas | Efeito colateral silencioso, sem notificação ao usuário |
-| `LastUpdateInfo` busca todas as datas | Só precisa da mais recente |
+| ~~`LastUpdateInfo`~~ | ~~Componente removido~~ | ✅ Resolvido |
 | `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY` | 🔴 Crítico — será resolvido na migração (remoção do Supabase) |
 
 ---
