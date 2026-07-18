@@ -1,5 +1,8 @@
 # Observações Arquiteturais
 
+> Contexto: app migrando de Supabase (Auth + PostgreSQL) para MariaDB + JWT próprio.
+> Observações abaixo são agnósticas de backend — salvo indicação contrária.
+
 ---
 
 ## Duplicações de Código
@@ -17,13 +20,12 @@
 ## Padrões e Boas Práticas
 
 ### ✅ Bem feitos
-- **Dynamic import** de `supabaseAdmin` em todas as admin functions — evita bundle client-side da service role key
-- **Atomic swap** no pipeline de import (staging → finalize_import RPC) — previne dados corrompidos
+- **Atomic swap** no pipeline de import (staging → finalize_import RPC) — previne dados corrompidos. Manter equivalente no MariaDB
 - **Defense-in-depth** em admin routes: `beforeLoad` + `<AdminGate>` + `assertAdmin` server-side
 - **Defensive parsing** em `analytics.functions.ts` (`asRecord`/`asArray`/`num()`/`str()`) — tolerante a null inesperado
-- **Proxy lazy singleton** em ambos clients Supabase — evita init até o primeiro uso
 - **Security headers** em `server.ts`: CSP, X-Frame-Options, nosniff, Referrer-Policy
 - **Zod validation** em todas as server functions — inputs sanitizados antes de chegar ao banco
+- **Lazy loading de rotas**: 8 rotas splitadas — mantido na migração
 
 ### ❌ Problemas
 - **`safeError` não preserva stack trace original**: usa `new Error(msg)` sem `error.cause`. Dificulta debug
@@ -33,6 +35,7 @@
 - **Componentes muito grandes**: `area.tsx` (773 linhas), `produto.tsx` (349), `upload.tsx` (380), `admin.tsx` (432) — todos poderiam ser decompostos
 - **Estados de loading inconsistentes**: mistura `isLoading` e `isFetching` sem padrão claro entre páginas
 - **`gcTime` e `staleTime` variados**: `30 * 60_000` em alguns lugares, `5 * 60_000` em outros, default em outros. Sem política global
+- **Dynamic import de `supabaseAdmin`**: será removido na migração — não será mais necessário
 
 ---
 
@@ -41,17 +44,22 @@
 ### OK
 - CSP com `frame-ancestors 'none'` (anti-clickjacking)
 - `X-Frame-Options: DENY` (fallback legacy)
-- Token JWT validado em toda server function via `requireSupabaseAuth`
+- Token JWT validado em toda server function
 - Admin functions validam role antes de qualquer operação
 - `safeError` não vaza detalhes internos para o cliente
 - `sanitizeNext()` na auth previne open redirect
 
 ### Ausente / Frágil
 - **Rate limiting**: nenhuma proteção contra brute force no login
-- **CSRF**: além do que Supabase PKCE provê, não há proteção adicional
-- **Sessão em localStorage**: vulnerável a XSS (padrão da indústria, mas relevante)
+- **Sessão em localStorage**: vulnerável a XSS. Migrar para cookie HttpOnly
 - **Token blacklisting**: sem mecanismo de revogação de sessão
-- **AdminGate sem fallback de erro de rede**: se a RPC `has_role` falhar (timeout), o usuário vê "Acesso restrito" permanentemente
+- **AdminGate sem fallback de erro de rede**: se a validação de role falhar (timeout), o usuário vê "Acesso restrito" permanentemente
+- **JWT sem refresh token**: após migração, garantir renovação silenciosa antes da expiração
+
+### Melhorias pós-migração
+- Cookie HttpOnly com `Secure; SameSite=Lax; Max-Age=604800`
+- Middleware de rate limiting no login (ex: 5 tentativas/min)
+- Hash bcrypt com custo 12 em vez de 10
 
 ---
 
@@ -61,7 +69,7 @@
 O `FilterBar` tem um `useEffect` que re-clampa o date range se ele cair fora de `availableDates` após mudança de filtros pai. Isso é bom, mas **silencioso** — o usuário não é notificado que o período foi ajustado.
 
 ### Comparação de períodos
-Os presets de comparação (`prev_period`, `prev_week`, `prev_month`) são passados para o RPC `dashboard_metrics` que calcula o shift. A lógica `shiftPeriod` em `analytics.functions.ts` lida com comprimentos diferentes (se o período atual tem 7 dias, o anterior também tem 7). Bom design.
+Os presets de comparação (`prev_period`, `prev_week`, `prev_month`) são passados para o RPC `dashboard_metrics` que calcula o shift. A lógica `shiftPeriod` em `analytics.functions.ts` lida com comprimentos diferentes (se o período atual tem 7 dias, o anterior também tem 7). Bom design — manter equivalente na migração.
 
 ### `placeholderData` disponível apenas em uma rota
 Apenas `area.tsx` usa `placeholderData: (prev) => prev`. Dashboard, produto e upload não usam — então qualquer mudança de filtro causa flash de loading.

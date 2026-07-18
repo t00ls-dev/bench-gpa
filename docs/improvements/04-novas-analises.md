@@ -1,6 +1,7 @@
 # Novas Análises Possíveis
 
 Baseado nos RPCs existentes no banco sem UI e nos dados disponíveis.
+> ⚠️ Independente da migração (Supabase → MariaDB) — todas as features abaixo são de frontend/UX e seguem válidas.
 
 ---
 
