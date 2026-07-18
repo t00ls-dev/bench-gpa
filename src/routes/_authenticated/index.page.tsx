@@ -10,6 +10,7 @@ import { fmtBRL } from "@/lib/utils";
 import { RankingCard } from "@/components/ranking-card";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { lazy, Suspense } from "react";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, LayoutDashboard, Loader2 } from "lucide-react";
@@ -187,49 +188,61 @@ function Dashboard() {
           </section>
         }
       >
-        <DashboardCharts data={data} isLoading={isLoading} hideStores={hideStores} />
+        <ErrorBoundary>
+          <DashboardCharts data={data} isLoading={isLoading} hideStores={hideStores} />
+        </ErrorBoundary>
       </Suspense>
 
       {hideDepto && hideSecao && hideGrupo && hideSubgrupo ? null : (
         <section className="mt-6 grid gap-4 lg:grid-cols-2">
-          {hideDepto ? null : (
-            <RankingCard
-              title="Top Departamentos"
-              items={rankings?.byDepto ?? []}
-              isLoading={rankingLoading}
-            />
-          )}
-          {hideSecao ? null : (
-            <RankingCard
-              title="Top Seções"
-              items={rankings?.bySecao ?? []}
-              isLoading={rankingLoading}
-            />
-          )}
-          {hideGrupo ? null : (
-            <RankingCard
-              title="Top Grupos"
-              items={rankings?.byGrupo ?? []}
-              isLoading={rankingLoading}
-            />
-          )}
-          {hideSubgrupo ? null : (
-            <RankingCard
-              title="Top Subgrupos"
-              items={rankings?.bySubgrupo ?? []}
-              isLoading={rankingLoading}
-            />
-          )}
+          <ErrorBoundary>
+            {hideDepto ? null : (
+              <RankingCard
+                title="Top Departamentos"
+                items={rankings?.byDepto ?? []}
+                isLoading={rankingLoading}
+              />
+            )}
+          </ErrorBoundary>
+          <ErrorBoundary>
+            {hideSecao ? null : (
+              <RankingCard
+                title="Top Seções"
+                items={rankings?.bySecao ?? []}
+                isLoading={rankingLoading}
+              />
+            )}
+          </ErrorBoundary>
+          <ErrorBoundary>
+            {hideGrupo ? null : (
+              <RankingCard
+                title="Top Grupos"
+                items={rankings?.byGrupo ?? []}
+                isLoading={rankingLoading}
+              />
+            )}
+          </ErrorBoundary>
+          <ErrorBoundary>
+            {hideSubgrupo ? null : (
+              <RankingCard
+                title="Top Subgrupos"
+                items={rankings?.bySubgrupo ?? []}
+                isLoading={rankingLoading}
+              />
+            )}
+          </ErrorBoundary>
         </section>
       )}
 
-      <section className="mt-6">
-        <RankingCard
-          title="Top Produtos"
-          items={rankings?.byProduto ?? []}
-          isLoading={rankingLoading}
-        />
-      </section>
+      <ErrorBoundary>
+        <section className="mt-6">
+          <RankingCard
+            title="Top Produtos"
+            items={rankings?.byProduto ?? []}
+            isLoading={rankingLoading}
+          />
+        </section>
+      </ErrorBoundary>
     </div>
   );
 }
