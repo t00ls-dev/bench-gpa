@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGotoHotkey } from "@/lib/use-hotkey";
+import { MobileNav } from "@/components/mobile-nav";
 import {
   SidebarProvider,
   Sidebar,
@@ -208,12 +209,13 @@ function AuthedLayout() {
           </header>
           <main
             id="main-content"
-            className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10"
+            className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10 pb-20 md:pb-10"
           >
             <Outlet />
             <AppFooter />
           </main>
         </SidebarInset>
+        <MobileNav isAdmin={profile.isAdmin} userEmail={user.email} onSignOut={signOut} />
       </SidebarProvider>
     </>
   );
