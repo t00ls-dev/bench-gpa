@@ -194,7 +194,7 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("purge_old_aggs", { p_days: 28 });
+    const { data, error } = await supabaseAdmin.rpc("purge_old_aggs");
     if (error) throw safeError("purgeOldAggs", error, undefined, true);
     return { deleted: data };
   });
