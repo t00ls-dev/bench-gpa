@@ -5,8 +5,7 @@ import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import { z } from "zod";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
-import { execSync } from "child_process";
-
+import docMeta from "@/generated/doc-meta.json";
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
@@ -239,7 +238,7 @@ export const listDocs = createServerFn({ method: "GET" })
       const category = slug.startsWith("improvements/")
         ? "Análise do Código"
         : "Documentação Técnica";
-      const lastModified = getDocLastModified(filePath);
+      const lastModified = (docMeta as Record<string, number | null>)[filePath] ?? null;
       entries.push({ slug, title, category, date, lastModified });
     }
     entries.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
@@ -254,7 +253,7 @@ export const getDocContent = createServerFn({ method: "POST" })
     const filePath = `/docs/${data.slug}.md`;
     const content = docModules[filePath];
     if (!content) throw new Error("Documento não encontrado.");
-    const lastModified = getDocLastModified(filePath);
+    const lastModified = (docMeta as Record<string, number | null>)[filePath] ?? null;
     return { content, lastModified };
   });
 
@@ -271,15 +270,4 @@ function extractDocDate(content: string): string | null {
   return null;
 }
 
-function getDocLastModified(filePath: string): number | null {
-  try {
-    const relative = filePath.replace(/^\//, "");
-    const output = execSync(
-      `git log -1 --format=%ct -- "${relative}"`,
-      { encoding: "utf-8", timeout: 5000 },
-    ).trim();
-    return output ? Number(output) : null;
-  } catch {
-    return null;
-  }
-}
+
