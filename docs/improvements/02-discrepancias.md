@@ -10,7 +10,7 @@ Atualizado pós-migração Supabase → MariaDB.
 ## AGENTS.md vs Código
 
 | Item | Documentado | Real | Gravidade |
-|---|---|---|---|---|
+|---|---|---|---|
 | Dark mode | "script inline anti-flash no SSR shell" | `styles.css` **tem `.dark` block**, mas tema travado em light; toggle removido | 🟡 MÉDIA (código pronto, inativo) |
 | Env var name | `VITE_SUPABASE_ANON_KEY` | `VITE_SUPABASE_PUBLISHABLE_KEY` em `client.ts` | 🟡 MÉDIA (será removido na migração) |
 | "Product filtering client-side" (área) | "busca tudo e filtra/ordena/pagina no cliente" | **Já é server-side** (paginação, sorting, search) | 🟡 MÉDIA (desatualizado) |
