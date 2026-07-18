@@ -36,24 +36,24 @@ function Dashboard() {
   const fnRank = useServerFn(getDashboardRankings);
   const enabled = !!filters.dateFrom && !!filters.dateTo;
 
-  const { compare, ...filterKey } = filters;
-
   const { data, isFetching, isLoading } = useQuery({
-    queryKey: ["dashboard", filterKey],
+    queryKey: ["dashboard", filters],
     queryFn: () => fn({ data: filters }),
     enabled,
     staleTime: 5 * 60_000,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const { data: rankings, isFetching: rankingLoading } = useQuery({
-    queryKey: ["dashboard-rankings", filterKey],
+    queryKey: ["dashboard-rankings", filters],
     queryFn: () => fnRank({ data: { ...filters, limit: 10 } }),
     enabled,
     staleTime: 5 * 60_000,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const delta = (cur: number, prev: number | undefined) =>
