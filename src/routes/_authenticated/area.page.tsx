@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { fmtBRL, fmtInt } from "@/components/kpi-card";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
+import { openPdfBlob } from "@/lib/export-pdf";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaTable } from "@/components/area-table";
 import { AreaKpiCards } from "@/components/area-kpi-cards";
@@ -208,11 +209,7 @@ function AreaPage() {
         },
       });
 
-      const blob = doc.output("blob");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      openPdfBlob(doc);
     } finally {
       setPdfLoading(false);
     }
