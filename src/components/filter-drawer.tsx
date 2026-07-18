@@ -28,11 +28,11 @@ export function FilterDrawer({ value, onChange }: Props) {
 
   return (
     <>
-      <div className="hidden md:block">
+      <div className="hidden md:block mb-6">
         <FilterBar value={value} onChange={onChange} />
       </div>
 
-      <div className="md:hidden">
+      <div className="md:hidden mb-4">
         <Button
           variant="outline"
           size="sm"
