@@ -197,13 +197,13 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        style={{ width: triggerWidth || undefined }}
-        className="max-w-[calc(100vw-2rem)] p-0"
+        style={{ width: triggerWidth || undefined, maxHeight: "min(var(--radix-popper-available-height,100dvh),50dvh)" }}
+        className="max-w-[calc(100vw-2rem)] p-0 flex flex-col overflow-y-auto"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {searchable && (
-          <div className="flex items-center gap-2 border-b px-2 py-1.5">
+          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-popover px-2 py-1.5 shrink-0">
             <Search className="size-3.5 text-muted-foreground" />
             <Input
               ref={searchInputRef}
@@ -238,7 +238,7 @@ export function MultiSelect({
         )}
         <div
           ref={listRef}
-          className="max-h-[50vh] overflow-y-auto overscroll-contain outline-none"
+          className="min-h-0 flex-1 outline-none"
           role="listbox"
           aria-label={label}
           tabIndex={-1}
@@ -250,7 +250,7 @@ export function MultiSelect({
           {visibleOptions.map((o, i) => renderOption(o, i))}
         </div>
         {!single && value.length > 0 && (
-          <div className="border-t p-2">
+          <div className="sticky bottom-0 z-10 border-t bg-popover p-2 shrink-0">
             <Button
               type="button"
               variant="ghost"
