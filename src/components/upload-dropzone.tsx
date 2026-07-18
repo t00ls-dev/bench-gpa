@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
-import { parseAnyWorkbook, type ParsedSalesFile } from "@/lib/xlsx-parser";
 import { fmtInt } from "@/lib/utils";
+import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -12,6 +12,22 @@ interface FileEntry {
   totalLines?: number;
   errorMsg?: string;
   parsed?: ParsedSalesFile;
+}
+
+function parseInWorker(buffer: ArrayBuffer): Promise<ParsedSalesFile> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("../lib/xlsx-worker.ts", import.meta.url), { type: "module" });
+    const id = crypto.randomUUID();
+    const handler = (e: MessageEvent) => {
+      if (e.data.id !== id) return;
+      worker.terminate();
+      if (e.data.error) reject(new Error(e.data.error));
+      else resolve(e.data.result);
+    };
+    worker.onmessage = handler;
+    worker.onerror = (err) => { worker.terminate(); reject(new Error(err.message)); };
+    worker.postMessage({ id, buffer });
+  });
 }
 
 export function UploadDropzone({
@@ -49,7 +65,7 @@ export function UploadDropzone({
           for (const f of valid) {
             try {
               const buf = await f.arrayBuffer();
-              const p = parseAnyWorkbook(buf);
+              const p = await parseInWorker(buf);
               parsed.push({ file: f, saleDate: p.sale_date, status: "pending", parsed: p });
             } catch (err: any) {
               parsed.push({
