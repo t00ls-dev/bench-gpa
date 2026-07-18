@@ -4,9 +4,20 @@ import { useServerFn } from "@tanstack/react-start";
 import { setUserRole, setUserActive } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldOff, KeyRound } from "lucide-react";
+import { ShieldCheck, ShieldOff, KeyRound, Loader2, Search } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
 import { CreateUserDialog } from "@/components/create-user-dialog";
 import { ResetPasswordDialog } from "@/components/reset-password-dialog";
@@ -31,24 +42,46 @@ export function AdminUserManagement({
   const setActive = useServerFn(setUserActive);
   const qc = useQueryClient();
 
-  const action = async (fn: Promise<any>, msg: string) => {
+  const [resetTarget, setResetTarget] = useState<{ id: string; email: string } | null>(null);
+  const [search, setSearch] = useState("");
+  const [pending, setPending] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{
+    type: "role" | "active";
+    user: User;
+    newValue: boolean;
+  } | null>(null);
+
+  const action = async (fn: Promise<any>, msg: string, key: string) => {
+    setPending(key);
     try {
       await fn;
       toast.success(msg);
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Erro");
+    } finally {
+      setPending(null);
     }
   };
 
-  const [resetTarget, setResetTarget] = useState<{ id: string; email: string } | null>(null);
+  const filtered = (data ?? []).filter(
+    (u) =>
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      u.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Cadastre novos usuários, ative/inative, redefina senhas e alterne o papel.
-        </p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative grow max-w-xs">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar por email ou nome…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <CreateUserDialog onCreated={() => qc.invalidateQueries({ queryKey: ["admin-users"] })} />
       </div>
 
@@ -72,7 +105,7 @@ export function AdminUserManagement({
               </tr>
             </thead>
             <tbody>
-              {(data ?? []).map((u) => {
+              {filtered.map((u) => {
                 const isAdmin = u.role === "admin";
                 return (
                   <tr key={u.id} className="border-b border-border/60">
@@ -83,14 +116,18 @@ export function AdminUserManagement({
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={u.is_active}
+                          disabled={pending === `active:${u.id}`}
                           onCheckedChange={(v) =>
-                            action(setActive({ data: { userId: u.id, isActive: v } }),
-                              v ? "Usuário ativado" : "Usuário inativado")
+                            setConfirm({ type: "active", user: u, newValue: v })
                           }
                         />
-                        <span className="text-xs text-muted-foreground">
-                          {u.is_active ? "Ativo" : "Inativo"}
-                        </span>
+                        {pending === `active:${u.id}` ? (
+                          <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {u.is_active ? "Ativo" : "Inativo"}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -101,12 +138,18 @@ export function AdminUserManagement({
                         <Button size="sm" variant="outline"
                           title={isAdmin ? "Remover administrador" : "Tornar administrador"}
                           aria-label={isAdmin ? "Remover administrador" : "Tornar administrador"}
+                          disabled={pending === `role:${u.id}`}
                           onClick={() =>
-                            action(setRole({ data: { userId: u.id, role: isAdmin ? "user" : "admin" } }),
-                              isAdmin ? "Admin removido" : "Promovido a admin")
+                            setConfirm({ type: "role", user: u, newValue: !isAdmin })
                           }
                         >
-                          {isAdmin ? <ShieldOff className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
+                          {pending === `role:${u.id}` ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : isAdmin ? (
+                            <ShieldOff className="size-3.5" />
+                          ) : (
+                            <ShieldCheck className="size-3.5" />
+                          )}
                         </Button>
                         <Button size="sm" variant="outline"
                           title="Redefinir senha" aria-label="Redefinir senha"
@@ -119,10 +162,65 @@ export function AdminUserManagement({
                   </tr>
                 );
               })}
+              {filtered.length === 0 && !isLoading && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    {search ? "Nenhum usuário encontrado." : "Nenhum usuário cadastrado."}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
       </div>
+
+      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.type === "role"
+                ? confirm?.newValue
+                  ? "Promover a administrador?"
+                  : "Remover administrador?"
+                : confirm?.newValue
+                  ? "Ativar usuário?"
+                  : "Inativar usuário?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.type === "role"
+                ? confirm?.newValue
+                  ? `Tem certeza que deseja tornar "${confirm.user.email}" administrador?`
+                  : `Tem certeza que deseja remover "${confirm.user.email}" do papel de administrador?`
+                : confirm?.newValue
+                  ? `Tem certeza que deseja ativar "${confirm.user.email}"?`
+                  : `Tem certeza que deseja inativar "${confirm.user.email}"? O usuário não poderá acessar o sistema.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (!confirm) return;
+              const c = confirm;
+              setConfirm(null);
+              if (c.type === "role") {
+                await action(
+                  setRole({ data: { userId: c.user.id, role: c.newValue ? "admin" : "user" } }),
+                  c.newValue ? "Promovido a admin" : "Admin removido",
+                  `role:${c.user.id}`,
+                );
+              } else {
+                await action(
+                  setActive({ data: { userId: c.user.id, isActive: c.newValue } }),
+                  c.newValue ? "Usuário ativado" : "Usuário inativado",
+                  `active:${c.user.id}`,
+                );
+              }
+            }}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ResetPasswordDialog
         target={resetTarget}
