@@ -2,11 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { listDocs, getDocContent } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookText, FileText } from "lucide-react";
 import { Route } from "./admin.docs";
+
+function timeago(ts: number): string {
+  return formatDistanceToNow(ts * 1000, { addSuffix: true, locale: ptBR });
+}
 
 export default function AdminDocsPage() {
   const { slug } = Route.useSearch();
@@ -93,8 +99,12 @@ function DocList() {
                   <FileText className="mt-0.5 size-5 shrink-0 text-primary" />
                   <div className="min-w-0">
                     <div className="font-medium">{doc.title}</div>
-                    {doc.date && (
-                      <div className="mt-0.5 text-xs text-muted-foreground">{doc.date}</div>
+                    {(doc.lastModified || doc.date) && (
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {doc.lastModified && timeago(doc.lastModified)}
+                        {doc.lastModified && doc.date && " · "}
+                        {doc.date}
+                      </div>
                     )}
                   </div>
                 </button>
@@ -112,13 +122,16 @@ function DocViewer({ slug }: { slug: string }) {
   const getContent = useServerFn(getDocContent);
 
   const {
-    data: content,
+    data,
     isLoading,
     error,
   } = useQuery({
     queryKey: ["admin-doc", slug],
     queryFn: () => getContent({ data: { slug } }),
   });
+
+  const content = data?.content ?? "";
+  const lastModified = data?.lastModified ?? null;
 
   return (
     <div className="space-y-4">
@@ -136,9 +149,16 @@ function DocViewer({ slug }: { slug: string }) {
           Erro ao carregar documento: {(error as Error).message}
         </div>
       ) : (
-        <article className="markdown-content overflow-x-auto">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content ?? ""}</ReactMarkdown>
-        </article>
+        <>
+          {lastModified && (
+            <p className="text-xs text-muted-foreground">
+              Atualizado {timeago(lastModified)}
+            </p>
+          )}
+          <article className="markdown-content overflow-x-auto">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          </article>
+        </>
       )}
     </div>
   );
