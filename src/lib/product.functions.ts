@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
 import { z } from "zod";
 import {
@@ -16,7 +17,7 @@ import {
 import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
 
 export const searchProducts = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => SingleQuerySchema.parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
@@ -26,7 +27,7 @@ export const searchProducts = createServerFn({ method: "POST" })
   });
 
 export const getProductByCode = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => SingleProdCodeSchema.parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
@@ -39,7 +40,7 @@ export const getProductByCode = createServerFn({ method: "POST" })
   });
 
 export const getProductAnalysis = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z
       .object({
