@@ -12,9 +12,9 @@
 | `assertAdmin` | `admin.functions.ts:6-10` e `upload.functions.ts:6-10` | Cópia exata. Extrair para shared util |
 | Rebuild agregações | `admin.functions.ts:repairAggregations` e `upload.functions.ts:finalizeImport` (fallback manual) | Mesma lógica de iterar datas, deletar, reinserir |
 | `fmtBRL` | `kpi-card.tsx` exporta, `ranking-card.tsx` importa de lá | Deveria estar em `lib/utils.ts` |
-| `parseWorkbook` | `xlsx-parser.ts:125-127` — alias para `parseAnyWorkbook` | Morto, remover |
-| `getServerConfig` | `config.server.ts` — função que só retorna `nodeEnv` | **Nunca é chamada** em lugar nenhum |
+| ~~`parseWorkbook`~~ | ~~Alias removido~~ | ✅ Resolvido |
 
+| ~~`getServerConfig`~~ | ~~Função removida~~ | ✅ Resolvido |
 ---
 
 ## Padrões e Boas Práticas
