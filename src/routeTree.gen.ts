@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as AuthenticatedProdutoRouteImport } from './routes/_authenticated/produto'
+import { Route as AuthenticatedHowtoRouteImport } from './routes/_authenticated/howto'
 import { Route as AuthenticatedAreaRouteImport } from './routes/_authenticated/area'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -43,6 +44,11 @@ const AuthenticatedProdutoRoute = AuthenticatedProdutoRouteImport.update({
   path: '/produto',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHowtoRoute = AuthenticatedHowtoRouteImport.update({
+  id: '/howto',
+  path: '/howto',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAreaRoute = AuthenticatedAreaRouteImport.update({
   id: '/area',
   path: '/area',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/area': typeof AuthenticatedAreaRoute
+  '/howto': typeof AuthenticatedHowtoRoute
   '/produto': typeof AuthenticatedProdutoRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/admin/docs': typeof AuthenticatedAdminDocsRoute
@@ -77,6 +84,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/area': typeof AuthenticatedAreaRoute
+  '/howto': typeof AuthenticatedHowtoRoute
   '/produto': typeof AuthenticatedProdutoRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/area': typeof AuthenticatedAreaRoute
+  '/_authenticated/howto': typeof AuthenticatedHowtoRoute
   '/_authenticated/produto': typeof AuthenticatedProdutoRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/area'
+    | '/howto'
     | '/produto'
     | '/upload'
     | '/admin/docs'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/area'
+    | '/howto'
     | '/produto'
     | '/upload'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/area'
+    | '/_authenticated/howto'
     | '/_authenticated/produto'
     | '/_authenticated/upload'
     | '/_authenticated/'
@@ -170,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProdutoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/howto': {
+      id: '/_authenticated/howto'
+      path: '/howto'
+      fullPath: '/howto'
+      preLoaderRoute: typeof AuthenticatedHowtoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/area': {
       id: '/_authenticated/area'
       path: '/area'
@@ -217,6 +236,7 @@ const AuthenticatedAdminRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAreaRoute: typeof AuthenticatedAreaRoute
+  AuthenticatedHowtoRoute: typeof AuthenticatedHowtoRoute
   AuthenticatedProdutoRoute: typeof AuthenticatedProdutoRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -225,6 +245,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAreaRoute: AuthenticatedAreaRoute,
+  AuthenticatedHowtoRoute: AuthenticatedHowtoRoute,
   AuthenticatedProdutoRoute: AuthenticatedProdutoRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
