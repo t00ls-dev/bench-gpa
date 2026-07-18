@@ -27,9 +27,10 @@ function applySecurityHeaders(response: Response, nonce: string): Response {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://challenges.cloudflare.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com",
+    "connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
     "frame-ancestors 'none'",
   ].join("; ");
 
