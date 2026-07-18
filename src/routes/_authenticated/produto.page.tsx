@@ -9,7 +9,7 @@ import { MultiSelect } from "@/components/multi-select";
 import { ProductSearch } from "@/components/product-search";
 import { ProductKPIs } from "@/components/product-kpis";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fmtBRL } from "@/components/kpi-card";
+import { fmtBRL } from "@/lib/utils";
 import { Package, FileText, Loader2 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
 import { openPdfBlob } from "@/lib/export-pdf";

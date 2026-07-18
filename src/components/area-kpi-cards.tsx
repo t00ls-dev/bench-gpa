@@ -1,4 +1,5 @@
-import { KpiCard, fmtBRL, fmtInt } from "@/components/kpi-card";
+import { KpiCard } from "@/components/kpi-card";
+import { fmtBRL, fmtInt } from "@/lib/utils";
 
 export function AreaKpiCards({
   total,

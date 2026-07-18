@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts";
-import { fmtBRL } from "@/components/kpi-card";
+import { fmtBRL } from "@/lib/utils";
 import { fmtBRShort } from "@/lib/utils";
 
 interface StorePoint {

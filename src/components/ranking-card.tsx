@@ -1,4 +1,4 @@
-import { fmtBRL } from "@/components/kpi-card";
+import { fmtBRL } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Item {

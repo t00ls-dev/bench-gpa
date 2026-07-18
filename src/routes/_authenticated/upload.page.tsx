@@ -19,7 +19,7 @@ import { ImportCalendar } from "@/components/import-calendar";
 import { UploadDropzone } from "@/components/upload-dropzone";
 import { ImportProgress } from "@/components/import-progress";
 import { ImportHistory } from "@/components/import-history";
-import { fmtInt } from "@/components/kpi-card";
+import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 
 const CHUNK_SIZE = 1000;
