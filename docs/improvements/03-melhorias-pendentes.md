@@ -18,17 +18,14 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Onde**: `src/routes/_authenticated/index.tsx`
 - **Impacto**: Funcionalidade já implementada no backend, só falta frontend
 
-### 4. `assertAdmin` duplicado
-- Cópia idêntica em `admin.functions.ts:6` e `upload.functions.ts:6`
-- **Onde**: Extrair para `src/lib/admin-utils.ts` ou `safe-error.ts`
-- **Impacto**: Manutenção propensa a divergência
+### ~~4. `assertAdmin` duplicado~~ ✅ Já resolvido (ambos importam de `admin-utils.ts`)
 
-### 5. Duplicação de lógica de rebuild de agregações
+### 4. Duplicação de lógica de rebuild de agregações
 - `repairAggregations` em `admin.functions.ts` e fallback em `upload.functions.ts:finalizeImport`
 - **Onde**: Extrair para função compartilhada
 - **Impacto**: Duas implementações que podem divergir
 
-### 6. `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`
+### 5. `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`
 - Chave com permissão total no banco exposta no repositório
 - **Resolvido na migração**: ao remover Supabase, a chave deixa de existir
 - **Temporário**: enquanto não migra, manter como está (decisão do usuário)
@@ -85,7 +82,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 
 ### Globais
 - **Error boundaries por widget**: hoje um erro derruba a página inteira
-- **`safeError` preservar stack trace**: usar `error.cause` para não perder a origem
+- ~~**`safeError` preservar stack trace**~~: ✅ `{ cause: error }` adicionado
 - **Internacionalização**: algumas strings de erro do Supabase podem vir em inglês
 - **ARIA labels**: vários botões de ação sem `aria-label` (MultiSelect, comparison pills, presets)
 - **MultiSelect sem navegação por teclado**: apenas mouse/touch
@@ -93,7 +90,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - ~~**`getServerConfig` morto**~~: ✅ removido
 - ~~**`parseWorkbook` alias morto**~~: ✅ removido
 - **`fmtBRL` em local errado**: exportado de `kpi-card.tsx` em vez de `utils.ts`
-- **`LastUpdateInfo` ineficiente**: busca todas as datas importadas só para achar a mais recente
+- ~~**`LastUpdateInfo` ineficiente**~~: ✅ Componente já removido
 - **Nenhum teste**: unitários para utils (shiftPeriod, computePreset, parsers), integração para server functions
 
 ### Migração
