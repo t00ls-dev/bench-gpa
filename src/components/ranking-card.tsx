@@ -41,7 +41,7 @@ export function RankingCard({
                 </tr>
               );
             })}
-            {items.length === 0 && isLoading && (
+            {isLoading && (
               <tr>
                 <td colSpan={2}>
                   <div className="space-y-2 py-4">
