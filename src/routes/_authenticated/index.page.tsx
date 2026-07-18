@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDashboard, getDashboardRankings } from "@/lib/dashboard.functions";
 import { FilterBar, type Filters } from "@/components/filter-bar";
-import { FilterChips } from "@/components/filter-chips";
 import { KpiCard } from "@/components/kpi-card";
 import { fmtBRL } from "@/lib/utils";
 import { RankingCard } from "@/components/ranking-card";
@@ -150,7 +149,6 @@ function Dashboard() {
       </header>
 
       <FilterBar value={filters} onChange={setFilters} />
-      <FilterChips filters={filters} onChange={setFilters} />
 
       <section className="grid gap-4 sm:grid-cols-1">
         {isLoading ? (
