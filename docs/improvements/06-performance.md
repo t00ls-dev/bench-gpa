@@ -29,8 +29,8 @@
 
 ## 🟡 Médias
 
-### `filteredHierarchy` chamado 2x
-- Em `area.tsx`, linhas 138 e 156 chamam a mesma função com mesmos args
+### `filteredHierarchy` chamado 2x (ainda presente)
+- Em `area.page.tsx` a função é chamada 2x com mesmos args
 - **Ganha**: 1 execução a menos por render
 
 ### `gcTime` e `staleTime` sem política global

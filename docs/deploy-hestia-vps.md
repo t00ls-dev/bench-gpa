@@ -182,6 +182,8 @@ DB_USER="bench_gpa"
 DB_PASS="<senha_segura>"
 JWT_SECRET="<base64_random_64_chars>"
 JWT_EXPIRY="604800"
+TURNSTILE_SECRET_KEY="<secret>"
+VITE_TURNSTILE_SITE_KEY="<site_key>"
 ENVEOF
 
 # Build
@@ -246,8 +248,9 @@ DB_PASS="<senha>"
 JWT_SECRET="<base64:64-chars>"
 JWT_EXPIRY="604800"
 
-# API (auto-referência para server functions)
-API_PHP_URL="http://127.0.0.1:3000"
+# Turnstile (Cloudflare)
+TURNSTILE_SECRET_KEY="<secret>"
+VITE_TURNSTILE_SITE_KEY="<site_key>"
 ```
 
 ## Verificar deploy
@@ -282,5 +285,7 @@ tail -f /var/log/nginx/domains/gpa.t00ls.dev.error.log
 - [ ] App rodando com PM2 (`bun run start` na porta 3000)
 - [ ] nginx Hestia faz proxy para `127.0.0.1:3000`
 - [ ] `https://gpa.t00ls.dev` responde
-- [ ] Login/Logout funcional
+- [ ] Login/Logout funcional (com Turnstile)
 - [ ] Dashboard com dados
+- [ ] CSP nonce funcionando (verificar console)
+- [ ] Turnstile carregando na página de login
