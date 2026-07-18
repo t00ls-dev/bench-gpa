@@ -50,15 +50,14 @@
 - `sanitizeNext()` na auth previne open redirect
 
 ### Ausente / Frágil
-- **Rate limiting**: nenhuma proteção contra brute force no login
-- **Sessão em localStorage**: vulnerável a XSS. Migrar para cookie HttpOnly
+- **Sessão em localStorage**: vulnerável a XSS. Migrar para cookie HttpOnly (planejado na migração)
 - **Token blacklisting**: sem mecanismo de revogação de sessão
 - **AdminGate sem fallback de erro de rede**: se a validação de role falhar (timeout), o usuário vê "Acesso restrito" permanentemente
 - **JWT sem refresh token**: após migração, garantir renovação silenciosa antes da expiração
 
 ### Melhorias pós-migração
 - Cookie HttpOnly com `Secure; SameSite=Lax; Max-Age=604800`
-- Middleware de rate limiting no login (ex: 5 tentativas/min)
+- Rate limiting no login já implementado (tier Auth: 5/min IP). Adaptar para JWT
 - Hash bcrypt com custo 12 em vez de 10
 
 ---
