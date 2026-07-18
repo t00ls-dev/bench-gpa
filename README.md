@@ -5,23 +5,25 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 ## Stack
 
 | Camada | Tecnologia |
-|---|---|
+|---|---|---|
 | Runtime | Bun |
 | Framework | TanStack Start (React 19, SSR) |
 | Roteamento | TanStack Router v1 (file-based) |
 | Data Fetching | TanStack React Query v5 + Server Functions |
 | UI | shadcn/ui (New York) + Radix UI + Tailwind CSS v4 |
 | Charts | Recharts |
-| Formulários | React Hook Form + Zod |
 | Planilhas | SheetJS (xlsx) |
 | PDF | jsPDF + jspdf-autotable |
-| Auth/DB | Supabase (Auth, PostgreSQL, RPCs, RLS) |
+| Virtualização | @tanstack/react-virtual |
+| Auth/DB | Supabase (Auth, PostgreSQL, RPCs, RLS) — migrando para MariaDB + JWT próprio |
+| CAPTCHA | Cloudflare Turnstile (non-interactive, fail-closed) |
+| Segurança | CSP nonce, rate limiting sliding window (4 tiers) |
 
 ## Pré-requisitos
 
 - [Bun](https://bun.sh) >= 1.2
 - Projeto Supabase com as migrations em `supabase/migrations/`
-- Arquivo `.env` com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
+- Arquivo `.env` (copie `.env.example` e preencha) com credenciais Supabase + Turnstile
 
 ## Instalação
 
@@ -50,13 +52,14 @@ bun run lint
 ## Rotas
 
 | Rota | Path | Auth | Descrição |
-|---|---|---|---|
-| Login | `/auth` | Não | Login email/senha |
-| Dashboard | `/` | Sim | KPIs, evolução diária, top lojas, rankings |
-| Produto | `/produto` | Sim | Análise de produto com weekday-aware |
-| Área | `/area` | Sim | Drill-down hierárquico, PDF export |
+|---|---|---|---|---|
+| Login | `/auth` | Não | Login email/senha + Turnstile CAPTCHA |
+| Dashboard | `/` | Sim | KPIs, evolução diária, top lojas, rankings, PDF export |
+| Produto | `/produto` | Sim | Análise de produto com weekday-aware, PDF export |
+| Área | `/area` | Sim | Drill-down hierárquico, tabela virtualizada, PDF export |
 | Upload | `/upload` | Admin | Upload de planilhas XLSX |
 | Admin | `/admin` | Admin | Gestão de usuários |
+| Como usar | `/howto` | Sim | Guia do sistema, atalhos, exportação |
 
 ## Importação de Dados
 
@@ -78,10 +81,15 @@ Escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da jan
 
 ## Arquitetura
 
-- **Auth**: Supabase Auth com login email/senha. Token JWT anexado automaticamente às server functions via middleware.
+- **Auth**: Supabase Auth + Turnstile CAPTCHA (fail-closed). Rate limiting: 5/min IP (tier Auth).
+- **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers: SSR (120/min), API (120/min), Upload (30/min), Auth (5/min).
+- **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard (30s), hierarquia área (5min), datas importadas (1min), role (5min/user).
+- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), Turnstile, rate limit em todas as 20 server functions (`requireRateLimit`).
 - **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas).
 - **Retenção**: 28 dias corridos, exatamente 4 ocorrências por dia da semana. Purga automática pós-import.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
+- **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área).
+- **Migração planejada**: Deploy no VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) com MariaDB + JWT próprio. Docs em `docs/`.
 
 ## Estrutura
 
@@ -89,12 +97,11 @@ Escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da jan
 ├── src/
 │   ├── components/   → Componentes React
 │   ├── hooks/        → Hooks customizados
-│   ├── integrations/ → Clientes Supabase + auth middleware
-│   ├── lib/          → Server functions, parsers, utilitários
-│   └── routes/       → Rotas TanStack Router
+│   ├── integrations/ → Clientes Supabase + auth middleware (a remover na migração)
+│   ├── lib/          → Server functions, schemas Zod, cache, CSP, rate limit, Turnstile, PDF export
+│   └── routes/       → Rotas TanStack Router (lazy loaded)
 ├── scripts/          → CLI de import (manual e automático)
 ├── supabase/         → Config + migrations SQL
-├── logs/             → Logs do import-watch
 ├── data/             → Planilhas XLSX organizadas por mês
 └── docs/             → Documentação técnica e planos de migração
 ```
