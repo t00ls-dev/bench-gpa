@@ -76,10 +76,13 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
 export const getImportedDates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
+    const { cache } = await import("./cache");
     const supabase = context.supabase as DB;
-    const { data, error } = await supabase.rpc("imported_dates");
-    if (error) throw safeError("analytics", error);
-    return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
+    return cache.wrap("imported_dates", async () => {
+      const { data, error } = await supabase.rpc("imported_dates");
+      if (error) throw safeError("analytics", error);
+      return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
+    }, 60_000);
   });
 
 export const finalizeImport = createServerFn({ method: "POST" })
