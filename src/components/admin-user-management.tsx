@@ -177,51 +177,53 @@ export function AdminUserManagement({
       </div>
 
       <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm?.type === "role"
-                ? confirm?.newValue
-                  ? "Promover a administrador?"
-                  : "Remover administrador?"
-                : confirm?.newValue
-                  ? "Ativar usuário?"
-                  : "Inativar usuário?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm?.type === "role"
-                ? confirm?.newValue
-                  ? `Tem certeza que deseja tornar "${confirm.user.email}" administrador?`
-                  : `Tem certeza que deseja remover "${confirm.user.email}" do papel de administrador?`
-                : confirm?.newValue
-                  ? `Tem certeza que deseja ativar "${confirm.user.email}"?`
-                  : `Tem certeza que deseja inativar "${confirm.user.email}"? O usuário não poderá acessar o sistema.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => {
-              if (!confirm) return;
-              const c = confirm;
-              setConfirm(null);
-              if (c.type === "role") {
-                await action(
-                  setRole({ data: { userId: c.user.id, role: c.newValue ? "admin" : "user" } }),
-                  c.newValue ? "Promovido a admin" : "Admin removido",
-                  `role:${c.user.id}`,
-                );
-              } else {
-                await action(
-                  setActive({ data: { userId: c.user.id, isActive: c.newValue } }),
-                  c.newValue ? "Usuário ativado" : "Usuário inativado",
-                  `active:${c.user.id}`,
-                );
-              }
-            }}>
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        {confirm && (
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirm.type === "role"
+                  ? confirm.newValue
+                    ? "Promover a administrador?"
+                    : "Remover administrador?"
+                  : confirm.newValue
+                    ? "Ativar usuário?"
+                    : "Inativar usuário?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirm.type === "role"
+                  ? confirm.newValue
+                    ? `Tem certeza que deseja tornar "${confirm.user.email}" administrador?`
+                    : `Tem certeza que deseja remover "${confirm.user.email}" do papel de administrador?`
+                  : confirm.newValue
+                    ? `Tem certeza que deseja ativar "${confirm.user.email}"?`
+                    : `Tem certeza que deseja inativar "${confirm.user.email}"? O usuário não poderá acessar o sistema.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={async () => {
+                if (!confirm) return;
+                const c = confirm;
+                setConfirm(null);
+                if (c.type === "role") {
+                  await action(
+                    setRole({ data: { userId: c.user.id, role: c.newValue ? "admin" : "user" } }),
+                    c.newValue ? "Promovido a admin" : "Admin removido",
+                    `role:${c.user.id}`,
+                  );
+                } else {
+                  await action(
+                    setActive({ data: { userId: c.user.id, isActive: c.newValue } }),
+                    c.newValue ? "Usuário ativado" : "Usuário inativado",
+                    `active:${c.user.id}`,
+                  );
+                }
+              }}>
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )}
       </AlertDialog>
 
       <ResetPasswordDialog
