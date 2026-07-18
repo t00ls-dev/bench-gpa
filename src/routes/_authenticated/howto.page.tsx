@@ -20,7 +20,7 @@ function Kbd({ children }: { children: string }) {
   return <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">{children}</kbd>;
 }
 
-function Section({ title, icon: Icon, children }: { title: string; icon: typeof BookText; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: typeof HelpCircle; children: React.ReactNode }) {
   return (
     <section className="kpi-card mb-6">
       <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
@@ -82,8 +82,10 @@ export default function HowToPage() {
 
       <Section title="Navegação" icon={Keyboard}>
         <p className="mb-3 text-sm text-muted-foreground">
-          A sidebar à esquerda dá acesso a todas as páginas. Em mobile, abre como gaveta.
-          Use os atalhos de teclado para navegar sem clicar:
+          No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas.
+          Em mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto,
+          Área, Como usar) e o botão <strong>"Mais"</strong> para funções administrativas.
+          Use também os atalhos de teclado:
         </p>
         <ShortcutTable rows={shortcutRows} />
         <p className="mt-3 text-sm text-muted-foreground">
@@ -164,8 +166,12 @@ export default function HowToPage() {
 
       <Section title="Conta" icon={HelpCircle}>
         <p className="text-sm text-muted-foreground">
-          Seu email aparece no rodapé da sidebar e no topo da página.
-          Para sair, clique no ícone de saída (<Kbd>LogOut</Kbd>) ao lado do email.
+          No desktop, seu email aparece no rodapé da sidebar.
+          Para sair, clique no ícone de saída ao lado do email.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Em mobile, abra o botão <strong>"Mais"</strong> na barra inferior
+          e selecione <strong>Sair</strong>.
         </p>
       </Section>
 
