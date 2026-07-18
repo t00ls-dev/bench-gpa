@@ -1,8 +1,8 @@
 # Análise Completa
 
-> Data: 18/07/2026 11:59
+> Data: 18/07/2026 12:07
 
-Snapshot automático do estado do código em 18/07/2026 às 11:59.
+Snapshot automático do estado do código em 18/07/2026 às 12:07.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
@@ -21,7 +21,7 @@ _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX
 | Build | ✅ OK |
 | TODOs/FIXMEs | 0 |
 | Scripts | 11 |
-| Migrações SQL | 66 |
+| Migrações SQL | 67 |
 | RPCs distintas usadas | 10 |
 
 ---
@@ -59,7 +59,7 @@ Nenhum problema encontrado.
 
 ## 🗄️ Banco de Dados
 
-- **Migrações**: 66 arquivos SQL
+- **Migrações**: 67 arquivos SQL
 - **RPCs em uso**: `has_role` (4x), `dashboard_metrics` (1x), `product_search` (1x), `get_product_by_code` (1x), `product_analysis` (1x), `area_analysis` (1x), `area_filter_hierarchy` (1x), `filter_options` (1x), `dashboard_rankings` (1x), `imported_dates` (1x)
 - **Import log**: Não encontrado
 
