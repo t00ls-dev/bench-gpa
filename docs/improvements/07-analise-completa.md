@@ -1,8 +1,8 @@
 # Análise Completa
 
-> Data: 18/07/2026 13:04
+> Data: 18/07/2026 13:08
 
-Snapshot automático do estado do código em 18/07/2026 às 13:04.
+Snapshot automático do estado do código em 18/07/2026 às 13:08.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
@@ -13,8 +13,8 @@ _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX
 |---|---|
 | Arquivos .ts/.tsx | 126 |
 | Total de arquivos no projeto | 158 |
-| Linhas de código (src) | 12.462 |
-| Linhas totais (projeto) | 17.591 |
+| Linhas de código (src) | 12.477 |
+| Linhas totais (projeto) | 17.606 |
 | Arquivos grandes (>300 linhas) | 3 |
 | Erros de lint | 0 |
 | Avisos de lint | 0 |
