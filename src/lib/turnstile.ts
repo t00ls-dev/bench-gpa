@@ -5,8 +5,6 @@ export async function verifyTurnstile(token: string, ip?: string): Promise<boole
     console.warn("[Turnstile] Bypass ativado via TURNSTILE_BYPASS=true");
     return true;
   }
-  return true; // ★ bypass temporário para debug do filtro
-
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
     console.error("[Turnstile] TURNSTILE_SECRET_KEY não configurada");
