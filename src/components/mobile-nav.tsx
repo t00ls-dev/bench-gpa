@@ -11,14 +11,11 @@ import {
   Shield,
   BookText,
   LogOut,
-  Ellipsis,
+  Menu,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
 } from "@/components/ui/drawer";
 
 const TABS = [
@@ -76,7 +73,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Ellipsis className="size-5" />
+            <Menu className="size-5" />
             <span>Mais</span>
           </button>
         </div>
@@ -84,26 +81,39 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
 
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Menu</DrawerTitle>
-          </DrawerHeader>
+          <div className="flex flex-col items-center pt-6 pb-2">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
+              {userEmail[0].toUpperCase()}
+            </div>
+            <span className="mt-2 text-sm text-muted-foreground truncate max-w-[80%]">{userEmail}</span>
+          </div>
           <div className="space-y-1 px-2 pb-4">
-            {isAdmin && ADMIN_ITEMS.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                preload="intent"
-                onClick={() => setDrawerOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive(item.to)
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted"
-                }`}
-              >
-                <item.icon className="size-5 shrink-0" />
-                {item.label}
-              </Link>
-            ))}
+            {isAdmin && (
+              <>
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                {ADMIN_ITEMS.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    preload="intent"
+                    onClick={() => setDrawerOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive(item.to)
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <item.icon className="size-5 shrink-0" />
+                    {item.label}
+                  </Link>
+                ))}
+              </>
+            )}
+            <div className="flex items-center gap-2 px-3 py-2">
+              <div className="h-px flex-1 bg-border" />
+            </div>
             <Link
               to="/howto"
               preload="intent"
@@ -113,21 +123,19 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
               <HelpCircle className="size-5 shrink-0" />
               Como usar
             </Link>
-            <div className="border-t border-border pt-2 mt-2">
-              <div className="px-3 pb-2 text-xs text-muted-foreground truncate">
-                {userEmail}
-              </div>
-              <button
-                onClick={() => {
-                  setDrawerOpen(false);
-                  onSignOut();
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="size-5 shrink-0" />
-                Sair
-              </button>
+            <div className="flex items-center gap-2 px-3 py-2">
+              <div className="h-px flex-1 bg-border" />
             </div>
+            <button
+              onClick={() => {
+                setDrawerOpen(false);
+                onSignOut();
+              }}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="size-5 shrink-0" />
+              Sair
+            </button>
           </div>
         </DrawerContent>
       </Drawer>
