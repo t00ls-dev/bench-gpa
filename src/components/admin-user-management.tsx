@@ -78,6 +78,7 @@ export function AdminUserManagement({
           <Input
             className="pl-9"
             placeholder="Buscar por email ou nome…"
+            aria-label="Buscar por email ou nome"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -117,6 +118,7 @@ export function AdminUserManagement({
                         <Switch
                           checked={u.is_active}
                           disabled={pending === `active:${u.id}`}
+                          aria-label={u.is_active ? `Desativar ${u.email}` : `Ativar ${u.email}`}
                           onCheckedChange={(v) =>
                             setConfirm({ type: "active", user: u, newValue: v })
                           }

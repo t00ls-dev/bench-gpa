@@ -27,6 +27,8 @@ export function AreaTh({
       <button
         onClick={() => toggle(k)}
         title={hint}
+        aria-pressed={active}
+        aria-label={`${label}${active ? ` (ordenado ${sortAsc ? "crescente" : "decrescente"})` : ""}`}
         className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
       >
         {label}
