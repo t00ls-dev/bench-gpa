@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/area.functions";
 import { Button } from "@/components/ui/button";
-import { fmtBRL, fmtInt } from "@/components/kpi-card";
+import { fmtBRL, fmtInt } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { fmtBRShort } from "@/lib/utils";
 import { openPdfBlob } from "@/lib/export-pdf";

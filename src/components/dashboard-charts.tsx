@@ -12,7 +12,7 @@ import {
   Customized,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fmtBRL } from "@/components/kpi-card";
+import { fmtBRL } from "@/lib/utils";
 import { fmtBRShort } from "@/lib/utils";
 
 interface DashboardData {

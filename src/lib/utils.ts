@@ -22,6 +22,14 @@ export function fmtDT(iso: string): string {
  * Formato compacto padrão para exibição visual: DD/MM/AA.
  * Aceita string ISO (YYYY-MM-DD) ou Date.
  */
+export function fmtBRL(n: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
 export function fmtBRShort(input: string | Date | null | undefined): string {
   if (!input) return "(sem)";
   let y: number, m: number, d: number;
