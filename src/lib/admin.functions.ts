@@ -204,7 +204,7 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await (supabaseAdmin.rpc as any)("db_health_check");
+    const { data, error } = await supabaseAdmin.rpc("db_health_check");
     if (error) throw safeError("dbHealthCheck", error, undefined, true);
     return data as unknown as DbHealthData;
   });

@@ -347,7 +347,6 @@ export type Database = {
           sale_date: string;
         }[];
       };
-      is_active_user: { Args: { _user_id: string }; Returns: boolean };
       product_analysis: {
         Args: {
           p_prod_code: string;
@@ -365,6 +364,7 @@ export type Database = {
       };
       purge_old_aggs: { Args: { p_days?: number }; Returns: number };
       refresh_filter_hierarchy: { Args: never; Returns: undefined };
+      db_health_check: { Args: never; Returns: Json };
       upsert_products_bulk: {
         Args: { p_rows: Json; p_sale_date: string };
         Returns: undefined;
