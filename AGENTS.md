@@ -11,7 +11,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **App:** Bench GPA — análise operacional/comercial do Grupo Pão de Açúcar
 - **Stack:** TanStack Start (SSR) + React 19 + Vite 7 + TypeScript 5
 - **DB atual:** Supabase PostgreSQL (~600 MB)
-- **DB futuro:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md` e `docs/deploy-hestia-vps.md`)
+- **DB futuro:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md`)
 - **Auth atual:** Supabase Auth (com Turnstile CAPTCHA)
 - **Auth futuro:** JWT manual com bcrypt + jsonwebtoken
 - **Deploy:** Vercel (produção), Nitro v3 como adapter SSR. **Próximo:** Hestia VPS (`sv1.t00ls.dev`, domínio `gpa.t00ls.dev`)
