@@ -7,13 +7,16 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { supabase } from "@/integrations/supabase/client";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { CommandPalette } from "@/components/command-palette";
+import { HelpOverlay } from "@/components/help-overlay";
+import { useHotkey } from "@/lib/use-hotkey";
 
 function NotFoundComponent() {
   return (
@@ -109,9 +112,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("theme");if(!t)t="system";var d=document.documentElement;if(t==="dark")d.classList.add("dark");else if(t==="system"&&window.matchMedia("(prefers-color-scheme:dark)").matches)d.classList.add("dark")}catch(e){}})()`,
+          }}
+        />
       </head>
       <body>
         {children}
@@ -124,6 +132,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useHotkey("?", openHelp, !helpOpen);
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
@@ -136,6 +147,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Outlet />
       <Toaster richColors position="top-right" />
+      <CommandPalette />
+      <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
       <Analytics />
       <SpeedInsights />
     </QueryClientProvider>

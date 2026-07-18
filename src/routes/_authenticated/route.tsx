@@ -9,11 +9,13 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield, BookText } from "lucide-react";
+import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield, BookText, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useGotoHotkey } from "@/lib/use-hotkey";
 import {
   SidebarProvider,
   Sidebar,
@@ -104,6 +106,14 @@ function AuthedLayout() {
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
 
+  useGotoHotkey("d", () => router.navigate({ to: "/" }));
+  useGotoHotkey("p", () => router.navigate({ to: "/produto" }));
+  useGotoHotkey("a", () => router.navigate({ to: "/area" }));
+  useGotoHotkey("u", () => router.navigate({ to: "/upload" }));
+  useGotoHotkey("o", () => router.navigate({ to: "/admin/docs" }));
+  useGotoHotkey("n", () => router.navigate({ to: "/admin" }));
+  useGotoHotkey("h", () => router.navigate({ to: "/howto" }));
+
   if (!profile) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -119,6 +129,7 @@ function AuthedLayout() {
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/produto", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
+    { to: "/howto", label: "Como usar", icon: HelpCircle },
   ] as const;
 
   const adminNav = [
@@ -155,10 +166,11 @@ function AuthedLayout() {
             )}
           </SidebarContent>
           <SidebarFooter>
-            <div className="flex items-center gap-2 px-3 py-2">
+            <div className="flex items-center gap-1 px-3 py-2">
               <span className="flex-1 truncate text-xs text-sidebar-foreground/60">
                 {user.email}
               </span>
+              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
