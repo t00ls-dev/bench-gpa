@@ -36,14 +36,4 @@ export function KpiCard({ label, value, delta, hint }: Props) {
   );
 }
 
-export function fmtBRL(n: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
 
-export function fmtInt(n: number) {
-  return new Intl.NumberFormat("pt-BR").format(n);
-}
