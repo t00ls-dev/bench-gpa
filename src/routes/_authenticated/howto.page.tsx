@@ -125,7 +125,7 @@ export default function HowToPage() {
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
           <li>Use os <strong>filtros hierárquicos</strong> para navegar entre níveis.</li>
           <li><strong>Ranking</strong> de performance por área.</li>
-          <li><strong>Exportação</strong> dos dados em PNG ou PDF.</li>
+          <li><strong>Exportação</strong> em PDF dos produtos listados.</li>
         </ul>
       </Section>
 
