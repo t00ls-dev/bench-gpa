@@ -10,7 +10,7 @@ import { LogIn, Loader2 } from "lucide-react";
 
 const TURNSTILE_SITE_KEY =
   import.meta.env.VITE_TURNSTILE_SITE_KEY;
-const TURNSTILE_BYPASS = true;
+const TURNSTILE_BYPASS = import.meta.env.VITE_TURNSTILE_BYPASS === "true";
 
 function sanitizeNext(next: unknown): string {
   if (typeof next !== "string") return "/";
