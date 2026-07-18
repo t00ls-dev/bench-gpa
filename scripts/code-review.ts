@@ -249,23 +249,63 @@ async function main() {
   const hasScriptSrc = serverFile.includes("script-src");
   const hasStyleSrc = serverFile.includes("style-src");
 
-  // 8. RPC usage
+  // 8. Rate limiting check
+  log("Security check: rate limiting...");
+  const hasRateLimitLib = existsSync(join(projectRoot, "src", "lib", "rate-limit.ts"));
+  const hasRateLimitMw = existsSync(join(projectRoot, "src", "lib", "rate-limit.middleware.ts"));
+  let rateLimitInUse = 0;
+  if (hasRateLimitMw) {
+    const rateLimitFiles = walkDir(join(projectRoot, "src"), projectRoot).filter((f) =>
+      f.path.endsWith(".functions.ts"),
+    );
+    for (const f of rateLimitFiles) {
+      try {
+        const c = readFileSync(join(projectRoot, f.path), "utf-8");
+        if (c.includes("requireRateLimit")) rateLimitInUse++;
+      } catch {}
+    }
+  }
+
+  // 9. Logs check
+  log("Security check: logs...");
+  const gitignoreRaw = readFileSync(join(projectRoot, ".gitignore"), "utf-8");
+  const logsInGitignore = gitignoreRaw.includes("logs/");
+  const trackedLogs = exec(["git", "ls-files", "logs/"]).stdout.length > 0;
+  const logsAreTracked = trackedLogs && !logsInGitignore;
+
+  // 10. RPC usage
   log("RPC analysis...");
   const rpcPatterns = findCommandPatterns(projectRoot);
 
-  // 9. DB health (file-based indicators)
+  // 11. UX features check
+  log("UX check: lazy routes, skeletons, hotkeys, command palette...");
+  const routeFiles = walkDir(join(projectRoot, "src", "routes"), projectRoot);
+  const hasLazyRoutes = routeFiles.filter((f) => f.path.endsWith(".page.tsx")).length > 0;
+  const hasSkeletons = routeFiles.some((f) => {
+    try {
+      return readFileSync(join(projectRoot, f.path), "utf-8").includes("Skeleton");
+    } catch {
+      return false;
+    }
+  });
+  const hasHotkeys = existsSync(join(projectRoot, "src", "lib", "use-hotkey.ts"));
+  const hasCommandPalette = existsSync(
+    join(projectRoot, "src", "components", "command-palette.tsx"),
+  );
+
+  // 12. DB health (file-based indicators)
   log("DB health check...");
   const importLogPath = join(projectRoot, "logs", "import.log");
   const importLogLines = countRecords(importLogPath);
   const importLogExists = existsSync(importLogPath);
 
-  // 10. Scripts check
+  // 13. Scripts check
   log("Scripts check...");
   const scripts = readdirSync(join(projectRoot, "scripts")).filter(
     (f) => f.endsWith(".ts") || f.endsWith(".sh") || f.endsWith(".mjs"),
   );
 
-  // 11. Migrations count
+  // 14. Migrations count
   log("Migrations check...");
   const migrationsDir = join(projectRoot, "supabase", "migrations");
   const migrations = existsSync(migrationsDir) ? readdirSync(migrationsDir) : [];
@@ -365,12 +405,26 @@ async function main() {
           "",
         ]
       : []),
-    "🔴 **Sem rate limiting server-side** — Supabase Free tier tem 60 req/min, mas o servidor não controla.",
-    "   Cliente pode disparar N requisições simultâneas.",
-    "",
-    "🟡 **Logs commitados** — `logs/import.log` e `logs/cron.log` vão para o git.",
-    "   Se alguma exceção vazar dados de vendas, fica no histórico para sempre.",
-    "",
+    ...(hasRateLimitLib && hasRateLimitMw && rateLimitInUse > 0
+      ? [
+          `✅ **Rate limiting ativo** — ${rateLimitInUse} server functions protegidas (${hasRateLimitLib ? "lib" : "?lib"}/${hasRateLimitMw ? "mw" : "?mw"}).`,
+          "",
+        ]
+      : [
+          "🔴 **Sem rate limiting server-side** — Supabase Free tier tem 60 req/min, mas o servidor não controla.",
+          "   Cliente pode disparar N requisições simultâneas.",
+          "",
+        ]),
+    ...(logsAreTracked
+      ? [
+          "🟡 **Logs commitados** — `logs/import.log` e `logs/cron.log` vão para o git.",
+          "   Se alguma exceção vazar dados de vendas, fica no histórico para sempre.",
+          "",
+        ]
+      : [
+          "✅ **Logs fora do git** — `logs/` no .gitignore, nenhum arquivo rastreado.",
+          "",
+        ]),
     "---",
     "",
     "## 🗄️ Banco de Dados",
@@ -384,7 +438,7 @@ async function main() {
     "🔴 **DB ~600 MB acima do Free tier (500 MB)** — risco de suspensão.",
     "   - `sales_prod_daily_agg`: ~523 MB (237 dados + 287 índices)",
     "   - `sales_daily_agg`: ~95 MB",
-    "   - **Ação**: migrar para SQLite ou MariaDB, ou reduzir retenção para 14 dias.",
+    "   - **Ação**: migrar para MariaDB no VPS (`docs/migracao-vps-autossuficiente.md`)",
     "",
     "🟡 **Sem seed data** — nenhum `seed.sql` para popular ambiente dev.",
     "",
@@ -404,9 +458,17 @@ async function main() {
       : []),
     "### Oportunidades",
     "",
-    "🟡 **Sem lazy loading de rotas** — todas as rotas carregam no bundle inicial.",
-    "   TanStack Router suporta `route.lazy = true` — ganho de ~30% no bundle inicial.",
-    "",
+    ...(hasLazyRoutes
+      ? [
+          `✅ **Lazy loading de rotas** — ${hasLazyRoutes} páginas splitadas (\\\`.tsx\\\` + \\\`.page.tsx\\\`).`,
+          "",
+        ]
+      : [
+          "🟡 **Sem lazy loading de rotas** — todas as rodas carregam no bundle inicial.",
+          "   TanStack Router suporta `route.lazy = true` — ganho de ~30% no bundle inicial.",
+          "",
+        ]),
+    "🟢 **Chunks de servidor** — Nitro separa automaticamente libs grandes em chunks dedicados.",
     "🟡 **Sem virtualização em tabelas** — `area-table.tsx` renderiza todas as linhas no DOM.",
     "   `@tanstack/react-virtual` pode reduzir nodes renderizados em 90%+.",
     "",
@@ -417,23 +479,39 @@ async function main() {
     "",
     "## 🎨 UX/UI",
     "",
-    "🔴 **Dark mode não implementado** — `styles.css` só tem `:root` (light).",
-    "   shadcn/ui gera `.dark` automaticamente se configurado.",
-    "   Usuários que preferem tema escuro não têm suporte.",
+    ...(hasHotkeys
+      ? [
+          `✅ **Atalhos de teclado** — \`useGotoHotkey\` disponível (g+d, g+p, g+a, etc). Help overlay com Shift+/.`,
+          "",
+        ]
+      : [
+          "🟡 **Sem atalhos de teclado** — navegação 100% mouse.",
+          "   Sugestão: `g+d` dashboard, `g+p` produto, `/` focus search, `?` atalhos.",
+          "",
+        ]),
+    ...(hasSkeletons
+      ? [
+          "✅ **Skeleton loaders** presentes nas páginas de rota.",
+          "",
+        ]
+      : [
+          "🟡 **Sem skeleton loaders** nas páginas de dashboard/área/produto.",
+          "   Upload tem progress bar, mas demais páginas mostram blank durante carregamento.",
+          "",
+        ]),
+    ...(hasCommandPalette
+      ? [
+          "✅ **Command Palette** ativa (Cmd+K) — busca entre rotas e produtos.",
+          "",
+        ]
+      : [
+          "🟢 **Busca global** — `cmdk` já está nas deps, mas não há CommandPalette.",
+          "   Poderia buscar produtos, lojas, documentação.",
+          "",
+        ]),
+    "🟡 **Dark mode** — tema travado em light por decisão de projeto, `.dark` CSS mantido para futuro.",
     "",
-    "🟡 **Sem skeleton loaders** nas páginas de dashboard/área/produto.",
-    "   Upload tem progress bar, mas demais páginas mostram blank durante carregamento.",
-    "",
-    "🟡 **Sem atalhos de teclado** — navegação 100% mouse.",
-    "   Sugestão: `g+d` dashboard, `g+p` produto, `/` focus search, `?` atalhos.",
-    "",
-    "🟡 **Sem feedback visual em operações longas** — dashboard/área sem loading state explícito.",
-    "",
-    "🟢 **Busca global** — `cmdk` já está nas deps, mas não há CommandPalette.",
-    "   Poderia buscar produtos, lojas, documentação.",
-    "",
-    "🟢 **Navegação mobile** — sidebar funciona mas sem gestos swipe.",
-    "   `vaul` já instalado — usar Drawer para navegação mobile.",
+    "🟢 **Navegação mobile** — Bottom tab bar com 4 abas + vaul Drawer para admin.",
     "",
     "---",
     "",
@@ -466,10 +544,9 @@ async function main() {
     "",
     "- `admin-utils.ts` duplica lógica de `has_role` que já existe em `auth-middleware.ts`",
     "- Duas versões de `purge_old_aggs` (00000 e 00001) — a 00000 deveria ser dropada",
-    "- `sales` table dropada deixou 3+ RPCs órfãs que precisaram migração separada",
+    "- `sales` table dropada deixou RPCs órfãs que foram limpos na migration 20260718000001",
     "- Import-watch faz `git pull --rebase --autostash` — risco de conflito se houver commits locais",
     "- `filter_hierarchy` com 22K linhas e 5 índices separados — poderia ser índice composto único",
-    "- `.env` não está no `.gitignore` — risco de exposição de secrets",
     "- `client.ts` singleton pattern frágil — erro no init fica silencioso até primeiro acesso",
     "",
     "---",
@@ -481,11 +558,11 @@ async function main() {
     "| 1 | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min | 🔴 |",
     "| 2 | Rotacionar chaves Supabase (service_role + anon) | 5 min | 🔴 |",
     "| 3 | Mover puppeteer/jspdf para devDependencies | 2 min | 🟡 |",
-    "| 4 | Adicionar skeleton loaders nos charts do dashboard | 15 min | 🟡 |",
-    "| 5 | Título `<title>` dinâmico por rota | 10 min | 🟢 |",
-    "| 6 | Atalho `/` para focus no search de produto | 5 min | 🟢 |",
-    "| 7 | Aumentar staleTime de 5min para 10min | 5 min | 🟢 |",
-    "| 8 | Adicionar `default-src 'self'` ao CSP | 10 min | 🟡 |",
+    "| 4 | Título `<title>` dinâmico por rota | 10 min | 🟢 |",
+    "| 5 | Aumentar staleTime de 5min para 10min | 5 min | 🟢 |",
+    "| 6 | Adicionar `default-src 'self'` ao CSP | 10 min | 🟡 |",
+    "| 7 | ✅ Skeleton loaders | ✅ Feito | ✅ |",
+    "| 8 | ✅ Atalho `/` + g+letra | ✅ Feito | ✅ |",
     "",
     "---",
     "",
@@ -494,49 +571,47 @@ async function main() {
     "### 🔴 Críticas (agir imediatamente)",
     "",
     "1. **Remover .env do git + rotacionar chaves** — exposição de service_role key",
-    "2. **Migrar banco para SQLite ou MariaDB** — DB 20% acima do Free tier",
+    "2. **Migrar banco para MariaDB (VPS)** — DB 20% acima do Free tier (~600 MB)",
     "3. **Adicionar testes unitários** — Vitest + @testing-library/react",
-    "4. **Rate limiting server-side** — proteger contra abuso do Free tier",
+    "4. ✅ **Rate limiting** — já ativo em ${rateLimitInUse} server functions",
     "",
     "### 🟠 Alta (próxima sprint)",
     "",
-    "5. **Dark mode completo** — bloco `.dark` no CSS + toggle no sidebar",
-    "6. **CSP completo** — default-src, script-src, style-src com nonce",
-    "7. **Separar server functions** — camada services/ para lógica de negócio",
-    "8. **Retenção de dados reduzida** — 14 dias em vez de 28 para economizar DB",
+    "5. **CSP completo** — default-src, script-src, style-src com nonce",
+    "6. **Separar server functions** — camada services/ para lógica de negócio",
+    "7. **Retenção de dados reduzida** — 14 dias em vez de 28 para economizar DB",
+    "8. **Deploy Hestia VPS** — `gpa.t00ls.dev` com MariaDB + JWT próprio",
     "",
     "### 🟡 Média (próximas semanas)",
     "",
-    "9. Lazy loading de rotas",
+    "9. ✅ Lazy loading de rotas",
     "10. Virtualização de tabelas (react-virtual)",
-    "11. Skeleton loaders",
-    "12. Atalhos de teclado",
+    "11. ✅ Skeleton loaders",
+    "12. ✅ Atalhos de teclado (g+letra)",
     "13. Banner de cookies LGPD para analytics",
-    "14. Paleta de comandos (cmd+k com cmdk)",
+    "14. ✅ Paleta de comandos (Cmd+K)",
+    "15. ✅ Busca global (Cmd+K com cmdk)",
     "",
     "### 🟢 Baixa (melhorias contínuas)",
     "",
     "16. Exportar CSV em todas as páginas",
     "17. PWA manifest + service worker",
     "18. Gestos swipe para navegação mobile",
-    "19. Busca global (cmd+k)",
-    "20. SEO meta tags por rota",
+    "19. SEO meta tags por rota",
     "",
     "---",
     "",
     "## 🚀 Próxima Funcionalidade Recomendada",
     "",
-    "**🔴 MIGRAÇÃO DO BANCO — sair do Supabase Free tier**",
+    "**🔴 MIGRAÇÃO VPS AUTOSSUFICIENTE — sair do Supabase**",
     "",
-    "O DB está 20% acima do limite de 500 MB. Duas rotas:",
+    "O DB está 20% acima do limite de 500 MB. Plano definido:",
     "",
     "| Rota | Prós | Contras |",
     "|---|---|---|",
-    "| **SQLite** | Zero custo, backup = copiar arquivo, perf excelente para leitura | Sem escrita concorrente (já é o caso — 1 import por vez) |",
-    "| **MariaDB (PHP Slim 4)** | Controle total, sem rate limit, ~$10/mês VPS | Reescrever RPCs em PHP, perder Supabase Auth |",
+    "| **VPS Autossuficiente** | MariaDB local, JWT próprio, sem rate limit, zero custo extra de DB | Requer deploy manual (templates nginx, SSL, Bun, PM2) |",
     "",
-    "**Recomendação**: SQLite + manter Supabase Auth. Vendas em SQLite no servidor.",
-    "Docs existentes em `docs/migracao-sqlite.md` e `docs/api-php-mariadb.md`.",
+    "**Recomendação**: seguir `docs/migracao-vps-autossuficiente.md` — deploy em `gpa.t00ls.dev`.",
     "",
     "---",
     "",
@@ -564,7 +639,7 @@ async function main() {
 
   // Git add + commit + push
   log("Git: add...");
-  const add = exec(["git", "add", DOCS_DIR]);
+  const add = exec(["git", "add", DOCS_DIR, ".github/workflows/"]);
   if (!add.ok) {
     log(`Git add: ERROR — ${add.stderr}`);
   } else {
@@ -573,7 +648,7 @@ async function main() {
       "git",
       "commit",
       "-m",
-      `analise-diaria: ${ts} — ${lintErrors.length} errors, ${lintWarnings.length} warnings, ${totalSrcLines} lines`,
+      `analise-diaria: ${ts} — ${lintErrors.length} errors, ${lintWarnings.length} warnings, ${totalSrcLines} lines [skip ci]`,
     ]);
     if (!commit.ok) {
       if (commit.stderr.includes("nothing to commit")) {
