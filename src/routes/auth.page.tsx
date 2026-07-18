@@ -10,6 +10,8 @@ import { LogIn, Loader2 } from "lucide-react";
 
 const TURNSTILE_SITE_KEY =
   import.meta.env.VITE_TURNSTILE_SITE_KEY;
+const TURNSTILE_BYPASS =
+  import.meta.env.VITE_TURNSTILE_BYPASS === "true";
 
 function sanitizeNext(next: unknown): string {
   if (typeof next !== "string") return "/";
@@ -23,7 +25,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState(TURNSTILE_BYPASS ? "bypass" : "");
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
 
@@ -46,6 +48,7 @@ function AuthPage() {
   }, [router, next]);
 
   useEffect(() => {
+    if (TURNSTILE_BYPASS) return;
     if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
     if (widgetIdRef.current) return;
 
@@ -83,7 +86,7 @@ function AuthPage() {
     e.preventDefault();
     if (!email || !password || loading) return;
 
-    if (!turnstileToken) {
+    if (!TURNSTILE_BYPASS && !turnstileToken) {
       toast.error("Aguardando verificação de segurança. Tente novamente.");
       return;
     }
