@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Route } from "./howto";
-import { Sun, Keyboard, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
+import { Keyboard, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
 
 const shortcutRows = [
   { keys: "Cmd / Ctrl + K", desc: "Abrir paleta de comandos" },
@@ -89,14 +89,6 @@ export default function HowToPage() {
         <p className="mt-3 text-sm text-muted-foreground">
           A <strong>paleta de comandos</strong> (<Kbd>Cmd+K</Kbd>) permite buscar páginas e
           produtos rapidamente. Digite o nome do produto para ir direto à análise.
-        </p>
-      </Section>
-
-      <Section title="Aparência" icon={Sun}>
-        <p className="text-sm text-muted-foreground">
-          Alterne entre os temas <strong>Claro</strong>, <strong>Escuro</strong> e{' '}
-          <strong>Sistema</strong> pelo botão de sol/lua no rodapé da sidebar (ao lado do email).
-          A escolha é salva no navegador.
         </p>
       </Section>
 

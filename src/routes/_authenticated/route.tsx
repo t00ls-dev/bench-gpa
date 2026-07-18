@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useGotoHotkey } from "@/lib/use-hotkey";
 import {
   SidebarProvider,
@@ -170,7 +169,6 @@ function AuthedLayout() {
               <span className="flex-1 truncate text-xs text-sidebar-foreground/60">
                 {user.email}
               </span>
-              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
