@@ -53,8 +53,12 @@ function AuthPage() {
     script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
     script.async = true;
     script.defer = true;
-    script.onload = () => {
-      if (turnstileRef.current && typeof (window as any).turnstile !== "undefined") {
+    document.head.appendChild(script);
+
+    let attempts = 0;
+    const poll = setInterval(() => {
+      if (typeof (window as any).turnstile !== "undefined" && turnstileRef.current) {
+        clearInterval(poll);
         widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
           callback: (token: string) => setTurnstileToken(token),
@@ -62,10 +66,11 @@ function AuthPage() {
           "error-callback": () => setTurnstileToken(""),
         });
       }
-    };
-    document.head.appendChild(script);
+      if (++attempts > 100) clearInterval(poll);
+    }, 100);
 
     return () => {
+      clearInterval(poll);
       if (widgetIdRef.current && typeof (window as any).turnstile !== "undefined") {
         (window as any).turnstile.remove(widgetIdRef.current);
       }
