@@ -5,7 +5,7 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 ## Stack
 
 | Camada | Tecnologia |
-|---|---|---|
+|---|---|
 | Runtime | Bun |
 | Framework | TanStack Start (React 19, SSR) |
 | Roteamento | TanStack Router v1 (file-based) |
