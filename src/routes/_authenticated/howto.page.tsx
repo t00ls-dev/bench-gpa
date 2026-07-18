@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Route } from "./howto";
-import { BookText, Sun, Moon, Keyboard, Search, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
+import { Sun, Keyboard, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
 
 const shortcutRows = [
   { keys: "Cmd / Ctrl + K", desc: "Abrir paleta de comandos" },
@@ -34,23 +34,13 @@ function Section({ title, icon: Icon, children }: { title: string; icon: typeof 
 
 function ShortcutTable({ rows }: { rows: { keys: string; desc: string }[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
-            <th className="pb-2 pr-4 font-medium">Atalho</th>
-            <th className="pb-2 font-medium">Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.keys} className="border-b border-border/50 last:border-0">
-              <td className="py-2 pr-4"><Kbd>{r.keys}</Kbd></td>
-              <td className="py-2 text-muted-foreground">{r.desc}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="divide-y divide-border/50">
+      {rows.map((r) => (
+        <div key={r.keys} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0">
+          <Kbd>{r.keys}</Kbd>
+          <span className="text-sm text-muted-foreground">{r.desc}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -114,11 +104,11 @@ export default function HowToPage() {
         <p className="text-sm text-muted-foreground">
           A página inicial exibe KPIs e gráficos do período selecionado.
         </p>
-        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Use o <strong>filtro de datas</strong> no topo para ajustar o período.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Os <strong>cards</strong> mostram receita, margem, volume e tickets.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Gráficos de <strong>evolução diária</strong> e <strong>comparação</strong> entre períodos.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Dados têm <strong>cache de 30s</strong> — alterações recentes podem levar até 30s para refletir.</li>
+        <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
+          <li>Use o <strong>filtro de datas</strong> no topo para ajustar o período.</li>
+          <li>Os <strong>cards</strong> mostram receita, margem, volume e tickets.</li>
+          <li>Gráficos de <strong>evolução diária</strong> e <strong>comparação</strong> entre períodos.</li>
+          <li>Dados têm <strong>cache de 30s</strong> — alterações recentes podem levar até 30s para refletir.</li>
         </ul>
       </Section>
 
@@ -126,11 +116,11 @@ export default function HowToPage() {
         <p className="text-sm text-muted-foreground">
           Busque produtos por nome ou código (mínimo 3 caracteres).
         </p>
-        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Selecione um produto para ver <strong>análise completa</strong>: receita, margem, evolução.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Escolha uma <strong>loja específica</strong> ou veja todas.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> A <strong>hierarquia</strong> (departamento → seção → grupo) é exibida automaticamente.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Compare com <strong>semanas anteriores</strong> (mesmo dia da semana).</li>
+        <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
+          <li>Selecione um produto para ver <strong>análise completa</strong>: receita, margem, evolução.</li>
+          <li>Escolha uma <strong>loja específica</strong> ou veja todas.</li>
+          <li>A <strong>hierarquia</strong> (departamento → seção → grupo) é exibida automaticamente.</li>
+          <li>Compare com <strong>semanas anteriores</strong> (mesmo dia da semana).</li>
         </ul>
       </Section>
 
@@ -138,10 +128,10 @@ export default function HowToPage() {
         <p className="text-sm text-muted-foreground">
           Explore dados agrupados por departamento, seção, grupo ou subgrupo.
         </p>
-        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> Use os <strong>filtros hierárquicos</strong> para navegar entre níveis.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> <strong>Ranking</strong> de performance por área.</li>
-          <li className="flex gap-2"><span className="text-primary font-bold">•</span> <strong>Exportação</strong> dos dados em PNG ou PDF.</li>
+        <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
+          <li>Use os <strong>filtros hierárquicos</strong> para navegar entre níveis.</li>
+          <li><strong>Ranking</strong> de performance por área.</li>
+          <li><strong>Exportação</strong> dos dados em PNG ou PDF.</li>
         </ul>
       </Section>
 
@@ -150,12 +140,12 @@ export default function HowToPage() {
           <p className="text-sm text-muted-foreground">
             Faça upload de planilhas XLSX no formato GPA para importar dados de vendas.
           </p>
-          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-            <li className="flex gap-2"><span className="text-primary font-bold">•</span> Formatos aceitos: <strong>.xlsx</strong> (exportação GPA).</li>
-            <li className="flex gap-2"><span className="text-primary font-bold">•</span> Limite: <strong>200.000 linhas</strong> por arquivo.</li>
-            <li className="flex gap-2"><span className="text-primary font-bold">•</span> A importação é feita em <strong>lotes de 1.000 linhas</strong> com barra de progresso.</li>
-            <li className="flex gap-2"><span className="text-primary font-bold">•</span> Use o <strong>calendário</strong> para visualizar datas já importadas.</li>
-            <li className="flex gap-2"><span className="text-primary font-bold">•</span> Ao confirmar, os dados do período são <strong>substituídos</strong> (não acumulados).</li>
+          <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
+            <li>Formatos aceitos: <strong>.xlsx</strong> (exportação GPA).</li>
+            <li>Limite: <strong>200.000 linhas</strong> por arquivo.</li>
+            <li>A importação é feita em <strong>lotes de 1.000 linhas</strong> com barra de progresso.</li>
+            <li>Use o <strong>calendário</strong> para visualizar datas já importadas.</li>
+            <li>Ao confirmar, os dados do período são <strong>substituídos</strong> (não acumulados).</li>
           </ul>
         </Section>
       )}
@@ -165,23 +155,13 @@ export default function HowToPage() {
           <p className="mb-3 text-sm text-muted-foreground">
             Para performance, algumas consultas usam cache com TTL (time-to-live):
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Consulta</th>
-                  <th className="pb-2 font-medium">Cache</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cacheRows.map((r) => (
-                  <tr key={r.key} className="border-b border-border/50 last:border-0">
-                    <td className="py-2 pr-4 font-mono text-xs">{r.key}</td>
-                    <td className="py-2 text-muted-foreground">{r.ttl}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y divide-border/50 text-sm">
+            {cacheRows.map((r) => (
+              <div key={r.key} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0">
+                <span className="font-mono text-xs">{r.key}</span>
+                <span className="text-muted-foreground">{r.ttl}</span>
+              </div>
+            ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             O cache é invalidado automaticamente após o TTL. Dados recentemente importados
