@@ -73,6 +73,7 @@ function ProdutoPage() {
     queryFn: () => analysis({ data: { prodCode: selected!.prod_code, storeCode: storeCode === "__all__" ? null : storeCode, referenceDate: null } }),
     enabled: !!selected,
     staleTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
   });
 
   const refWeekdayIdx = analysisData?.refDate ? new Date(analysisData.refDate + "T00:00:00Z").getUTCDay() : null;
