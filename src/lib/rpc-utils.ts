@@ -160,22 +160,30 @@ export function shiftPeriod(
   return { dateFrom: iso(nf), dateTo: iso(nt) };
 }
 
+function metricsCacheKey(f: Filters): string {
+  return `metrics:${f.dateFrom ?? ""}:${f.dateTo ?? ""}:${(f.stores ?? []).join(",")}:${(f.deptos ?? []).join(",")}:${(f.secoes ?? []).join(",")}:${(f.grupos ?? []).join(",")}:${(f.subgrupos ?? []).join(",")}`;
+}
+
 export async function callMetrics(supabase: DB, f: Filters): Promise<DashboardMetricsResult> {
-  const { data, error } = await supabase.rpc("dashboard_metrics", {
-    p_date_from: f.dateFrom || (null as unknown as string),
-    p_date_to: f.dateTo || (null as unknown as string),
-    p_stores: f.stores ?? [],
-    p_deptos: f.deptos ?? [],
-    p_secoes: f.secoes ?? [],
-    p_grupos: f.grupos ?? [],
-    p_subgrupos: f.subgrupos ?? [],
+  const { cache } = await import("./cache");
+  const key = metricsCacheKey(f);
+  return cache.wrap(key, async () => {
+    const { data, error } = await supabase.rpc("dashboard_metrics", {
+      p_date_from: f.dateFrom || (null as unknown as string),
+      p_date_to: f.dateTo || (null as unknown as string),
+      p_stores: f.stores ?? [],
+      p_deptos: f.deptos ?? [],
+      p_secoes: f.secoes ?? [],
+      p_grupos: f.grupos ?? [],
+      p_subgrupos: f.subgrupos ?? [],
+    });
+    if (error) throw safeError("analytics", error);
+    const d = asRecord(data);
+    return {
+      total: num(d.total),
+      byStore: parseCodeNameVal(d.byStore),
+      byDepto: parseNameVal(d.byDepto),
+      byDate: parseDateVal(d.byDate),
+    };
   });
-  if (error) throw safeError("analytics", error);
-  const d = asRecord(data);
-  return {
-    total: num(d.total),
-    byStore: parseCodeNameVal(d.byStore),
-    byDepto: parseNameVal(d.byDepto),
-    byDate: parseDateVal(d.byDate),
-  };
 }
