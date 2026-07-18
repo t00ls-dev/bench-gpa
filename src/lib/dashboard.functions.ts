@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
 import {
   DB,
@@ -20,7 +21,7 @@ import {
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     FilterSchema.omit({ subgrupos: true }).parse(d ?? {}),
   )
@@ -51,7 +52,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   });
 
 export const getStores = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }): Promise<StoreOption[]> => {
     const supabase = context.supabase as DB;
     const { data, error } = await supabase
@@ -63,7 +64,7 @@ export const getStores = createServerFn({ method: "GET" })
   });
 
 export const getDashboard = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardSchema.parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as DB;
@@ -82,7 +83,7 @@ export const getDashboard = createServerFn({ method: "POST" })
   });
 
 export const getLatestSaleInfo = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     const supabase = context.supabase as DB;
     const { data, error } = await supabase
@@ -96,7 +97,7 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data, context }): Promise<DashboardRankingsResult> => {
     const supabase = context.supabase as DB;

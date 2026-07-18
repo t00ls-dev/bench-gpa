@@ -1,5 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Route } from "./auth";
 import { LogIn, Loader2 } from "lucide-react";
+
+const TURNSTILE_SITE_KEY =
+  import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 function sanitizeNext(next: unknown): string {
   if (typeof next !== "string") return "/";
@@ -20,6 +23,9 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | undefined>(undefined);
 
   const goNext = () => {
     const target = sanitizeNext(next);
@@ -39,36 +45,68 @@ function AuthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, next]);
 
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
+    if (widgetIdRef.current) return;
+
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (turnstileRef.current && typeof (window as any).turnstile !== "undefined") {
+        widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token: string) => setTurnstileToken(token),
+          "expired-callback": () => setTurnstileToken(""),
+          "error-callback": () => setTurnstileToken(""),
+        });
+      }
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      if (widgetIdRef.current && typeof (window as any).turnstile !== "undefined") {
+        (window as any).turnstile.remove(widgetIdRef.current);
+      }
+      script.remove();
+    };
+  }, []);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || loading) return;
+
+    if (!turnstileToken) {
+      toast.error("Aguardando verificação de segurança. Tente novamente.");
+      return;
+    }
+
     setLoading(true);
-    const normalized = email.trim().toLowerCase();
-    const { data: signInData, error } = await supabase.auth.signInWithPassword({
-      email: normalized,
-      password,
-    });
-    if (error || !signInData.user) {
+
+    try {
+      const { login } = await import("@/lib/auth.functions");
+      const session = await login({
+        data: {
+          email: email.trim().toLowerCase(),
+          password,
+          turnstileToken,
+        },
+      });
+
+      await supabase.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao fazer login.";
+      toast.error(msg);
       setLoading(false);
-      toast.error("E-mail ou senha inválidos.");
-      return;
+      setTurnstileToken("");
+      if (turnstileRef.current && typeof (window as any).turnstile !== "undefined") {
+        (window as any).turnstile.reset(widgetIdRef.current);
+      }
     }
-
-    const { data: u } = await supabase
-      .from("users")
-      .select("is_active")
-      .eq("id", signInData.user.id)
-      .maybeSingle();
-
-    if (!u || !u.is_active) {
-      await supabase.auth.signOut();
-      setLoading(false);
-      toast.error("Usuário inativo, procure o administrador.");
-      return;
-    }
-
-    setLoading(false);
-    goNext();
   };
 
   return (
@@ -108,6 +146,9 @@ function AuthPage() {
                 autoComplete="current-password"
               />
             </div>
+
+            <div ref={turnstileRef} />
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <Loader2 className="size-4 animate-spin" />
