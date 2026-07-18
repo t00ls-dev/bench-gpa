@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { fmtBRL, fmtInt } from "@/components/kpi-card";
+import { fmtBRL, fmtInt } from "@/lib/utils";
 import { fmtBRShort } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 

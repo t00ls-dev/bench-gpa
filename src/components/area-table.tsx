@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fmtBRL, fmtInt } from "@/components/kpi-card";
+import { fmtBRL, fmtInt } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, Loader2, Search, X } from "lucide-react";
 
 type Product = {

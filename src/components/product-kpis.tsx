@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
-import { KpiCard, fmtBRL } from "@/components/kpi-card";
+import { KpiCard } from "@/components/kpi-card";
+import { fmtBRL } from "@/lib/utils";
 import { PaginatedHistory } from "@/components/paginated-history";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtBRShort } from "@/lib/utils";
