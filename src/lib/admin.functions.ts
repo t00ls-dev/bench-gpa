@@ -5,6 +5,7 @@ import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import { z } from "zod";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
+import { execSync } from "child_process";
 
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
@@ -214,6 +215,7 @@ interface DocEntry {
   title: string;
   category: string;
   date: string;
+  lastModified: number | null;
 }
 
 const docModules = import.meta.glob("/docs/**/*.md", {
@@ -237,7 +239,8 @@ export const listDocs = createServerFn({ method: "GET" })
       const category = slug.startsWith("improvements/")
         ? "Análise do Código"
         : "Documentação Técnica";
-      entries.push({ slug, title, category, date });
+      const lastModified = getDocLastModified(filePath);
+      entries.push({ slug, title, category, date, lastModified });
     }
     entries.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
     return entries;
@@ -248,9 +251,11 @@ export const getDocContent = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => SingleSlugSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const content = docModules[`/docs/${data.slug}.md`];
+    const filePath = `/docs/${data.slug}.md`;
+    const content = docModules[filePath];
     if (!content) throw new Error("Documento não encontrado.");
-    return content;
+    const lastModified = getDocLastModified(filePath);
+    return { content, lastModified };
   });
 
 function extractDocTitle(content: string): string | null {
@@ -264,4 +269,17 @@ function extractDocDate(content: string): string | null {
   const mm = content.match(/(\w{3,4}o?\/\d{4})/i);
   if (mm) return mm[1].replace(/^(\w)/, (c) => c.toUpperCase());
   return null;
+}
+
+function getDocLastModified(filePath: string): number | null {
+  try {
+    const relative = filePath.replace(/^\//, "");
+    const output = execSync(
+      `git log -1 --format=%ct -- "${relative}"`,
+      { encoding: "utf-8", timeout: 5000 },
+    ).trim();
+    return output ? Number(output) : null;
+  } catch {
+    return null;
+  }
 }
