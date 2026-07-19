@@ -58,21 +58,27 @@ export function MultiSelect({
   const allSelected = !single && options.length > 0 && value.length === options.length;
 
   useEffect(() => {
-    if (!open) { setFocusedIdx(-1); return; }
+    if (!open) {
+      setFocusedIdx(-1);
+      return;
+    }
     if (searchable && searchInputRef.current) {
       searchInputRef.current.focus();
     }
     if (!searchable) setFocusedIdx(0);
   }, [open, searchable, options]);
 
-  const handleToggle = useCallback((v: string) => {
-    if (single) {
-      onChange(value.length === 1 && value[0] === v ? [] : [v]);
-      setOpen(false);
-      return;
-    }
-    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
-  }, [value, onChange, single]);
+  const handleToggle = useCallback(
+    (v: string) => {
+      if (single) {
+        onChange(value.length === 1 && value[0] === v ? [] : [v]);
+        setOpen(false);
+        return;
+      }
+      onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+    },
+    [value, onChange, single],
+  );
 
   const visibleOptions = useMemo(() => {
     const items = searchable && q.trim() ? filtered : options;
@@ -80,39 +86,42 @@ export function MultiSelect({
     return [{ value: "__all__", label: "Selecionar todos" } as MSOption, ...items];
   }, [options, filtered, searchable, q, single]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!open) return;
-    const len = visibleOptions.length;
-    if (len === 0) return;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!open) return;
+      const len = visibleOptions.length;
+      if (len === 0) return;
 
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setFocusedIdx((i) => (i + 1) % len);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setFocusedIdx((i) => (i - 1 + len) % len);
-        break;
-      case "Enter":
-      case " ":
-        e.preventDefault();
-        if (focusedIdx >= 0 && focusedIdx < len) {
-          const target = visibleOptions[focusedIdx];
-          if (target.value === "__all__") {
-            const allVals = options.map((o) => o.value);
-            onChange(allSelected ? [] : allVals);
-          } else {
-            handleToggle(target.value);
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedIdx((i) => (i + 1) % len);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedIdx((i) => (i - 1 + len) % len);
+          break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          if (focusedIdx >= 0 && focusedIdx < len) {
+            const target = visibleOptions[focusedIdx];
+            if (target.value === "__all__") {
+              const allVals = options.map((o) => o.value);
+              onChange(allSelected ? [] : allVals);
+            } else {
+              handleToggle(target.value);
+            }
           }
-        }
-        break;
-      case "Escape":
-        setOpen(false);
-        triggerRef.current?.focus();
-        break;
-    }
-  }, [open, visibleOptions, focusedIdx, options, allSelected, onChange, handleToggle, setOpen]);
+          break;
+        case "Escape":
+          setOpen(false);
+          triggerRef.current?.focus();
+          break;
+      }
+    },
+    [open, visibleOptions, focusedIdx, options, allSelected, onChange, handleToggle, setOpen],
+  );
 
   useEffect(() => {
     if (focusedIdx < 0 || !listRef.current) return;
@@ -209,7 +218,10 @@ export function MultiSelect({
               placeholder="Buscar…"
               aria-label="Buscar opções"
               value={q}
-              onChange={(e) => { setQ(e.target.value); setFocusedIdx(0); }}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setFocusedIdx(0);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                   e.preventDefault();

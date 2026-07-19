@@ -33,7 +33,7 @@ export function ImportProgress({
 }) {
   return (
     <div className="mt-4 kpi-card">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div className="text-sm font-medium">{entries.length} arquivo(s) selecionado(s)</div>
         <div className="flex gap-2">
           {busy && onCancel && (

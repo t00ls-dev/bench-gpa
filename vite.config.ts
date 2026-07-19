@@ -11,7 +11,9 @@ let commitTimestamp = "0";
 try {
   commitHash = execSync("git rev-parse --short HEAD").toString().trim();
   commitTimestamp = execSync("git log -1 --format=%ct").toString().trim();
-} catch {}
+} catch {
+  // commit info not available
+}
 
 export default defineConfig({
   build: { chunkSizeWarningLimit: 1000 },

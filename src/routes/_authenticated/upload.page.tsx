@@ -1,7 +1,12 @@
 import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { beginImport, insertSalesChunk, finalizeImport, getImportedDates } from "@/lib/upload.functions";
+import {
+  beginImport,
+  insertSalesChunk,
+  finalizeImport,
+  getImportedDates,
+} from "@/lib/upload.functions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,11 +71,13 @@ export default function UploadPage() {
   });
 
   const [entries, setEntries] = useState<FileEntry[]>([]);
-  const [pendingQueue, setPendingQueue] = useState<Array<{
-    file: File;
-    date: string;
-    parsed: ParsedSalesFile;
-  }>>([]);
+  const [pendingQueue, setPendingQueue] = useState<
+    Array<{
+      file: File;
+      date: string;
+      parsed: ParsedSalesFile;
+    }>
+  >([]);
   const [processing, setProcessing] = useState<ProcessingState>(IDLE_STATE);
 
   const processingRef = useRef(false);
@@ -89,7 +96,9 @@ export default function UploadPage() {
       if (!parsed) continue;
       const totalLines = parsed.sales.length;
       if (totalLines > MAX_TOTAL_ROWS) {
-        toast.error(`Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`);
+        toast.error(
+          `Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`,
+        );
         continue;
       }
       valid.push({ file: entry.file, date: entry.saleDate, parsed });
@@ -97,28 +106,44 @@ export default function UploadPage() {
     if (valid.length > 0) setPendingQueue(valid);
   };
 
-  const processOne = async (item: typeof pendingQueue[number]): Promise<void> => {
+  const processOne = async (item: (typeof pendingQueue)[number]): Promise<void> => {
     const { date, parsed } = item;
-    const entry: FileEntry = { file: item.file, saleDate: date, status: "pending", totalLines: parsed.sales.length };
+    const entry: FileEntry = {
+      file: item.file,
+      saleDate: date,
+      status: "pending",
+      totalLines: parsed.sales.length,
+    };
     setEntries((prev) => [entry, ...prev]);
 
     const update = (patch: Partial<FileEntry>) =>
       setEntries((prev) =>
-        prev.map((e) => (e.saleDate === entry.saleDate && e.file.name === entry.file.name ? { ...e, ...patch } : e)),
+        prev.map((e) =>
+          e.saleDate === entry.saleDate && e.file.name === entry.file.name ? { ...e, ...patch } : e,
+        ),
       );
 
     update({ status: "processing" });
     setProcessing((p) => ({ ...p, currentDate: date }));
 
     const batchId = crypto.randomUUID();
-    const stores = [...new Map(parsed.sales.map((r) => [r.store_code, { store_code: r.store_code, store_name: r.store_name }])).values()];
+    const stores = [
+      ...new Map(
+        parsed.sales.map((r) => [
+          r.store_code,
+          { store_code: r.store_code, store_name: r.store_name },
+        ]),
+      ).values(),
+    ];
     const seen = new Set<string>();
-    const products = parsed.sales.filter((r) => {
-      const k = r.prod_code;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    }).map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
+    const products = parsed.sales
+      .filter((r) => {
+        const k = r.prod_code;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
 
     await doBeginImport({
       data: {
@@ -153,7 +178,9 @@ export default function UploadPage() {
       }));
     }
 
-    await doFinalizeImport({ data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length } });
+    await doFinalizeImport({
+      data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length },
+    });
 
     update({ status: "done", totalLines: parsed.sales.length });
   };
@@ -238,7 +265,9 @@ export default function UploadPage() {
               processed={processing.processed}
               currentDate={processing.currentDate}
               onProcess={confirmImport}
-              onCancel={() => { cancelRef.current = true; }}
+              onCancel={() => {
+                cancelRef.current = true;
+              }}
             />
           )}
           {imported.isPending ? (
@@ -258,8 +287,8 @@ export default function UploadPage() {
         </div>
       )}
 
-      {tab === "calendario" && (
-        imported.isPending ? (
+      {tab === "calendario" &&
+        (imported.isPending ? (
           <div className="space-y-2">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-64 w-full" />
@@ -271,18 +300,28 @@ export default function UploadPage() {
           </div>
         ) : (
           <ImportCalendar records={imported.data ?? []} />
-        )
-      )}
+        ))}
 
-      <AlertDialog open={pendingQueue.length > 0} onOpenChange={(o) => { if (!o) setPendingQueue([]); }}>
+      <AlertDialog
+        open={pendingQueue.length > 0}
+        onOpenChange={(o) => {
+          if (!o) setPendingQueue([]);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar importação</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingQueue.length === 1 ? (
-                <>Deseja importar <strong>{pendingQueue[0].date}</strong> com {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?</>
+                <>
+                  Deseja importar <strong>{pendingQueue[0].date}</strong> com{" "}
+                  {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?
+                </>
               ) : (
-                <>Deseja importar <strong>{pendingQueue.length} arquivos</strong> totalizando {fmtInt(totalPendingLines)} linhas?</>
+                <>
+                  Deseja importar <strong>{pendingQueue.length} arquivos</strong> totalizando{" "}
+                  {fmtInt(totalPendingLines)} linhas?
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>

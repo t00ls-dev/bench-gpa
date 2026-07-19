@@ -118,7 +118,7 @@ async function main() {
   console.log("\n🔄 Finalizando...");
 
   const PAGE_SIZE = 2000;
-  const allStaging: any[] = [];
+  const allStaging: Record<string, unknown>[] = [];
   let offset = 0;
   for (;;) {
     const { data: rows, error: fetchErr } = await supabaseAdmin
@@ -156,9 +156,9 @@ async function main() {
   }
 
   // 4. Agrupa no cliente para sales_daily_agg
-  const dKey = (r: any) =>
+  const dKey = (r: Record<string, unknown>) =>
     `${r.sale_date}|${r.store_code}|${r.depto}|${r.secao}|${r.grupo}|${r.subgrupo}`;
-  const dailyMap = new Map<string, any>();
+  const dailyMap = new Map<string, Record<string, unknown>>();
   for (const r of allStaging) {
     const k = dKey(r);
     const existing = dailyMap.get(k);
@@ -181,9 +181,9 @@ async function main() {
   }
   const dailyAggs = Array.from(dailyMap.values());
 
-  const pKey = (r: any) =>
+  const pKey = (r: Record<string, unknown>) =>
     `${r.sale_date}|${r.store_code}|${r.depto}|${r.secao}|${r.grupo}|${r.subgrupo}|${r.prod_code}`;
-  const prodMap = new Map<string, any>();
+  const prodMap = new Map<string, Record<string, unknown>>();
   for (const r of allStaging) {
     const k = pKey(r);
     const existing = prodMap.get(k);

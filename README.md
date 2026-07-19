@@ -4,22 +4,22 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Runtime | Bun |
-| Framework | TanStack Start (React 19, SSR) |
-| Roteamento | TanStack Router v1 (file-based) |
-| Data Fetching | TanStack React Query v5 + Server Functions |
-| UI | shadcn/ui (New York) + Radix UI + Tailwind CSS v4 |
-| Charts | Recharts |
-| Planilhas | SheetJS (xlsx) |
-| PDF | jsPDF + jspdf-autotable |
-| Virtualização | @tanstack/react-virtual |
-| Drawer (mobile) | vaul |
-| Paleta de comandos | cmdk |
-| Auth/DB | Supabase (Auth, PostgreSQL, RPCs, RLS) — migrando para MariaDB + JWT próprio |
-| CAPTCHA | Cloudflare Turnstile (non-interactive, fail-closed) |
-| Segurança | CSP nonce, rate limiting sliding window (4 tiers) |
+| Camada             | Tecnologia                                                                   |
+| ------------------ | ---------------------------------------------------------------------------- |
+| Runtime            | Bun                                                                          |
+| Framework          | TanStack Start (React 19, SSR)                                               |
+| Roteamento         | TanStack Router v1 (file-based)                                              |
+| Data Fetching      | TanStack React Query v5 + Server Functions                                   |
+| UI                 | shadcn/ui (New York) + Radix UI + Tailwind CSS v4                            |
+| Charts             | Recharts                                                                     |
+| Planilhas          | SheetJS (xlsx)                                                               |
+| PDF                | jsPDF + jspdf-autotable                                                      |
+| Virtualização      | @tanstack/react-virtual                                                      |
+| Drawer (mobile)    | vaul                                                                         |
+| Paleta de comandos | cmdk                                                                         |
+| Auth/DB            | Supabase (Auth, PostgreSQL, RPCs, RLS) — migrando para MariaDB + JWT próprio |
+| CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
+| Segurança          | CSP nonce, rate limiting sliding window (4 tiers)                            |
 
 ## Pré-requisitos
 
@@ -53,15 +53,15 @@ bun run lint
 
 ## Rotas
 
-| Rota | Path | Auth | Descrição |
-|---|---|---|---|
-| Login | `/auth` | Não | Login email/senha + Turnstile CAPTCHA |
-| Dashboard | `/` | Sim | KPIs, evolução diária, top lojas, rankings, PDF export |
-| Produto | `/produto` | Sim | Análise de produto com weekday-aware, PDF export |
-| Área | `/area` | Sim | Drill-down hierárquico, tabela virtualizada, PDF export |
-| Upload | `/upload` | Admin | Upload de planilhas XLSX |
-| Admin | `/admin` | Admin | Gestão de usuários |
-| Como usar | `/howto` | Sim | Guia do sistema, atalhos, exportação |
+| Rota      | Path       | Auth  | Descrição                                               |
+| --------- | ---------- | ----- | ------------------------------------------------------- |
+| Login     | `/auth`    | Não   | Login email/senha + Turnstile CAPTCHA                   |
+| Dashboard | `/`        | Sim   | KPIs, evolução diária, top lojas, rankings, PDF export  |
+| Produto   | `/produto` | Sim   | Análise de produto com weekday-aware, PDF export        |
+| Área      | `/area`    | Sim   | Drill-down hierárquico, tabela virtualizada, PDF export |
+| Upload    | `/upload`  | Admin | Upload de planilhas XLSX                                |
+| Admin     | `/admin`   | Admin | Gestão de usuários                                      |
+| Como usar | `/howto`   | Sim   | Guia do sistema, atalhos, exportação                    |
 
 ## Importação de Dados
 

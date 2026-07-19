@@ -11,7 +11,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fmtBRL, fmtInt } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, FileText, Loader2, Search, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  FileText,
+  Loader2,
+  Search,
+  X,
+} from "lucide-react";
 
 type Product = {
   prod_code: string;
@@ -27,9 +36,22 @@ type Product = {
 
 type SortKey = "prod_code" | "prod_name" | "val" | "daysSince";
 
-function SortBtn({ label, k, sortKey, sortAsc, toggle, align = "left", hint }: {
-  label: string; k: SortKey; sortKey: SortKey; sortAsc: boolean;
-  toggle: (k: SortKey) => void; align?: "left" | "right"; hint?: string;
+function SortBtn({
+  label,
+  k,
+  sortKey,
+  sortAsc,
+  toggle,
+  align = "left",
+  hint,
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortAsc: boolean;
+  toggle: (k: SortKey) => void;
+  align?: "left" | "right";
+  hint?: string;
 }) {
   const active = sortKey === k;
   return (
@@ -42,7 +64,8 @@ function SortBtn({ label, k, sortKey, sortAsc, toggle, align = "left", hint }: {
         className={`inline-flex items-center gap-1 hover:text-foreground ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : ""}`}
       >
         {label}
-        {active && (sortAsc ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
+        {active &&
+          (sortAsc ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
       </button>
     </div>
   );
@@ -160,13 +183,44 @@ export function AreaTable({
         </div>
       </div>
 
-      <div ref={scrollRef} className="overflow-auto -mx-3 px-3 sm:mx-0 sm:px-0" style={{ maxHeight: "70vh" }}>
+      <div
+        ref={scrollRef}
+        className="overflow-auto -mx-3 px-3 sm:mx-0 sm:px-0"
+        style={{ maxHeight: "70vh" }}
+      >
         <div className="min-w-[420px] text-sm">
           <div className="grid grid-cols-[18%_42%_20%_20%] border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-            <SortBtn label="PLU" k="prod_code" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} />
-            <SortBtn label="Produto" k="prod_name" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} />
-            <SortBtn label="Venda" k="val" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} align="right" />
-            <SortBtn label="Dias S/ Venda" k="daysSince" sortKey={sortKey} sortAsc={sortAsc} toggle={onSortToggle} align="right" hint={`Referência: ${baseDateIso ?? "—"}`} />
+            <SortBtn
+              label="PLU"
+              k="prod_code"
+              sortKey={sortKey}
+              sortAsc={sortAsc}
+              toggle={onSortToggle}
+            />
+            <SortBtn
+              label="Produto"
+              k="prod_name"
+              sortKey={sortKey}
+              sortAsc={sortAsc}
+              toggle={onSortToggle}
+            />
+            <SortBtn
+              label="Venda"
+              k="val"
+              sortKey={sortKey}
+              sortAsc={sortAsc}
+              toggle={onSortToggle}
+              align="right"
+            />
+            <SortBtn
+              label="Dias S/ Venda"
+              k="daysSince"
+              sortKey={sortKey}
+              sortAsc={sortAsc}
+              toggle={onSortToggle}
+              align="right"
+              hint={`Referência: ${baseDateIso ?? "—"}`}
+            />
           </div>
           <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -198,8 +252,12 @@ export function AreaTable({
                 >
                   <div className="truncate self-center font-mono text-xs pl-3">{p.prod_code}</div>
                   <div className="truncate self-center">{p.prod_name}</div>
-                  <div className="num text-right self-center whitespace-nowrap font-medium pr-3">{fmtBRL(p.val)}</div>
-                  <div className="num text-right self-center whitespace-nowrap text-muted-foreground pr-3">{daysSinceLabel(p.lastSaleDate)}</div>
+                  <div className="num text-right self-center whitespace-nowrap font-medium pr-3">
+                    {fmtBRL(p.val)}
+                  </div>
+                  <div className="num text-right self-center whitespace-nowrap text-muted-foreground pr-3">
+                    {daysSinceLabel(p.lastSaleDate)}
+                  </div>
                 </div>
               );
             })}

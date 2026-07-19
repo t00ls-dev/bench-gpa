@@ -8,9 +8,18 @@ import { toast } from "sonner";
 import { Route } from "./auth";
 import { LogIn, Loader2 } from "lucide-react";
 
-const TURNSTILE_SITE_KEY =
-  import.meta.env.VITE_TURNSTILE_SITE_KEY;
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 const TURNSTILE_BYPASS = import.meta.env.VITE_TURNSTILE_BYPASS === "true";
+
+type TurnstileWidget = {
+  render: (container: HTMLElement, options: Record<string, unknown>) => string;
+  remove: (id: string) => void;
+  reset: (id: string) => void;
+};
+
+function getTurnstile(): TurnstileWidget | undefined {
+  return (window as unknown as { turnstile?: TurnstileWidget }).turnstile;
+}
 
 function sanitizeNext(next: unknown): string {
   if (typeof next !== "string") return "/";
@@ -59,9 +68,10 @@ function AuthPage() {
 
     let attempts = 0;
     const poll = setInterval(() => {
-      if (typeof (window as any).turnstile !== "undefined" && turnstileRef.current) {
+      const ts = getTurnstile();
+      if (ts && turnstileRef.current) {
         clearInterval(poll);
-        widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
+        widgetIdRef.current = ts.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
           theme: "light",
           callback: (token: string) => setTurnstileToken(token),
@@ -74,8 +84,9 @@ function AuthPage() {
 
     return () => {
       clearInterval(poll);
-      if (widgetIdRef.current && typeof (window as any).turnstile !== "undefined") {
-        (window as any).turnstile.remove(widgetIdRef.current);
+      const ts = getTurnstile();
+      if (widgetIdRef.current && ts) {
+        ts.remove(widgetIdRef.current);
       }
       script.remove();
     };
@@ -111,8 +122,9 @@ function AuthPage() {
       toast.error(msg);
       setLoading(false);
       setTurnstileToken("");
-      if (turnstileRef.current && typeof (window as any).turnstile !== "undefined") {
-        (window as any).turnstile.reset(widgetIdRef.current);
+      const ts = getTurnstile();
+      if (turnstileRef.current && ts) {
+        ts.reset(widgetIdRef.current);
       }
     }
   };

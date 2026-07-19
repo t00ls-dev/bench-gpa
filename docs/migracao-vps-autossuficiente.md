@@ -30,21 +30,21 @@
 
 ## 1. Resumo Executivo
 
-| Hoje | Amanhã |
-|---|---|
-| Supabase Postgres (500 MB limit) | **MariaDB 11.4 no VPS (8 GB livres)** |
-| Supabase Auth (14 chamadas auth) | **JWT + bcrypt próprio** |
-| Supabase RPCs (15 stored procedures) | **Stored Procedures MariaDB** |
-| Vercel (SSR) | **VPS (Bun + PM2, proxy nginx)** |
+| Hoje                                      | Amanhã                                         |
+| ----------------------------------------- | ---------------------------------------------- |
+| Supabase Postgres (500 MB limit)          | **MariaDB 11.4 no VPS (8 GB livres)**          |
+| Supabase Auth (14 chamadas auth)          | **JWT + bcrypt próprio**                       |
+| Supabase RPCs (15 stored procedures)      | **Stored Procedures MariaDB**                  |
+| Vercel (SSR)                              | **VPS (Bun + PM2, proxy nginx)**               |
 | Supabase Admin (service role key exposta) | **Nada — queries diretas com permissão admin** |
-| Dependência: `@supabase/supabase-js` | **Dependência removida** |
-| Custo DB extra se estourar: $25/mês | **$0 extra** |
+| Dependência: `@supabase/supabase-js`      | **Dependência removida**                       |
+| Custo DB extra se estourar: $25/mês       | **$0 extra**                                   |
 
 ### Arquivos a modificar/criar/remover
 
 - **Criar** (6): `src/lib/db.ts`, `src/lib/auth-middleware.ts`, `src/lib/auth-api.ts`, `ecosystem.config.js`, `scripts/deploy.sh`, `scripts/migrate-schema.sql`
 - **Modificar** (19): `src/lib/*.functions.ts` (5), `src/lib/admin-utils.ts`, `src/lib/rpc-utils.ts`, `src/routes/*` (6), `src/start.ts`, `src/router.tsx`, `src/components/admin-gate.tsx`, `package.json`, `vite.config.ts`
-- **Remover** (5): `src/integrations/supabase/` (diretório inteiro), `@supabase/supabase-js` do `package.json`, SUPABASE_* do `.env`
+- **Remover** (5): `src/integrations/supabase/` (diretório inteiro), `@supabase/supabase-js` do `package.json`, SUPABASE\_\* do `.env`
 
 ---
 
@@ -66,18 +66,18 @@ Usuário ──HTTPS──▶ Hestia nginx (:80/:443)
 
 ## 3. Servidor
 
-| Item | Valor |
-|---|---|
-| OS | Debian 12 (bookworm) |
-| CPU | 1 vCPU |
-| RAM | 1.9 GB + 4 GB swap |
-| Disco | 20 GB (~8 GB livres) |
-| IP | `192.99.246.57` |
-| Panel | Hestia CP 1.9.6 |
-| MariaDB | 11.4.12 (localhost:3306) |
-| Node.js | v22.23.1 |
-| nginx | 1.30.2 (Hestia gerencia) |
-| **Falta:** | Bun, PM2 |
+| Item       | Valor                    |
+| ---------- | ------------------------ |
+| OS         | Debian 12 (bookworm)     |
+| CPU        | 1 vCPU                   |
+| RAM        | 1.9 GB + 4 GB swap       |
+| Disco      | 20 GB (~8 GB livres)     |
+| IP         | `192.99.246.57`          |
+| Panel      | Hestia CP 1.9.6          |
+| MariaDB    | 11.4.12 (localhost:3306) |
+| Node.js    | v22.23.1                 |
+| nginx      | 1.30.2 (Hestia gerencia) |
+| **Falta:** | Bun, PM2                 |
 
 ---
 
@@ -391,48 +391,45 @@ export interface AuthContext {
   userEmail: string;
 }
 
-export const requireAuth = createMiddleware({ type: "function" }).server(
-  async ({ next }) => {
-    const JWT_SECRET = process.env.JWT_SECRET;
-    if (!JWT_SECRET) throw new Error("JWT_SECRET not configured");
+export const requireAuth = createMiddleware({ type: "function" }).server(async ({ next }) => {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) throw new Error("JWT_SECRET not configured");
 
-    const request = getRequest();
-    const cookie = request?.headers?.get("cookie") || "";
-    const parsed = parseCookie(cookie);
-    const token = parsed["session"];
-    if (!token) throw new Error("Unauthorized: no session cookie");
+  const request = getRequest();
+  const cookie = request?.headers?.get("cookie") || "";
+  const parsed = parseCookie(cookie);
+  const token = parsed["session"];
+  if (!token) throw new Error("Unauthorized: no session cookie");
 
-    try {
-      const payload = jwt.verify(token, JWT_SECRET) as {
-        userId: string;
-        role: string;
-        email: string;
-      };
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      role: string;
+      email: string;
+    };
 
-      const [rows] = await db.query<any[]>(
-        "SELECT id, role, is_active FROM users WHERE id = ?",
-        [payload.userId],
-      );
-      if (!rows.length || !rows[0].is_active) {
-        throw new Error("Unauthorized: user inactive or not found");
-      }
-
-      return next({
-        context: {
-          db,
-          userId: payload.userId,
-          userRole: payload.role,
-          userEmail: payload.email,
-        } satisfies AuthContext,
-      });
-    } catch (err) {
-      if (err instanceof Error && err.message.startsWith("Unauthorized")) {
-        throw err;
-      }
-      throw new Error("Unauthorized: invalid token");
+    const [rows] = await db.query<any[]>("SELECT id, role, is_active FROM users WHERE id = ?", [
+      payload.userId,
+    ]);
+    if (!rows.length || !rows[0].is_active) {
+      throw new Error("Unauthorized: user inactive or not found");
     }
-  },
-);
+
+    return next({
+      context: {
+        db,
+        userId: payload.userId,
+        userRole: payload.role,
+        userEmail: payload.email,
+      } satisfies AuthContext,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Unauthorized")) {
+      throw err;
+    }
+    throw new Error("Unauthorized: invalid token");
+  }
+});
 ```
 
 ### 8.3 Rotas de Auth — `src/lib/auth-api.ts`
@@ -469,10 +466,15 @@ function clearSession(): string {
 
 export const login = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      email: z.string().email().transform((e) => e.toLowerCase().trim()),
-      password: z.string().min(1),
-    }).parse(d),
+    z
+      .object({
+        email: z
+          .string()
+          .email()
+          .transform((e) => e.toLowerCase().trim()),
+        password: z.string().min(1),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const [rows] = await db.query<any[]>(
@@ -490,11 +492,9 @@ export const login = createServerFn({ method: "POST" })
     if (!valid) {
       return { ok: false, error: "E-mail ou senha inválidos." };
     }
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    const token = jwt.sign({ userId: user.id, role: user.role, email: user.email }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
     return {
       ok: true,
       token,
@@ -503,30 +503,32 @@ export const login = createServerFn({ method: "POST" })
     };
   });
 
-export const getMe = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const request = (await import("@tanstack/react-start/server")).getRequest();
-    const cookie = request?.headers?.get("cookie") || "";
-    const parsed = parse(cookie);
-    const token = parsed["session"];
-    if (!token) return null;
-    try {
-      const payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string; email: string };
-      const [rows] = await db.query<any[]>(
-        "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
-        [payload.userId],
-      );
-      if (!rows.length || !rows[0].is_active) return null;
-      return { id: rows[0].id, email: rows[0].email, name: rows[0].name, role: rows[0].role };
-    } catch {
-      return null;
-    }
-  });
+export const getMe = createServerFn({ method: "GET" }).handler(async () => {
+  const request = (await import("@tanstack/react-start/server")).getRequest();
+  const cookie = request?.headers?.get("cookie") || "";
+  const parsed = parse(cookie);
+  const token = parsed["session"];
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      role: string;
+      email: string;
+    };
+    const [rows] = await db.query<any[]>(
+      "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
+      [payload.userId],
+    );
+    if (!rows.length || !rows[0].is_active) return null;
+    return { id: rows[0].id, email: rows[0].email, name: rows[0].name, role: rows[0].role };
+  } catch {
+    return null;
+  }
+});
 
-export const logout = createServerFn({ method: "POST" })
-  .handler(async () => {
-    return { ok: true, cookie: clearSession() };
-  });
+export const logout = createServerFn({ method: "POST" }).handler(async () => {
+  return { ok: true, cookie: clearSession() };
+});
 ```
 
 > **Nota**: Em TanStack Start, server functions não podem setar cookies diretamente como headers de resposta. O login deve retornar o cookie como string e o front-end aplicá-lo via `document.cookie`. Alternativa futura: criar rota API dedicada com Hono/Express.
@@ -537,23 +539,23 @@ export const logout = createServerFn({ method: "POST" })
 
 ### 9.1 Lista completa
 
-| # | Nome | Parâmetros | Tipo |
-|---|---|---|---|
-| 1 | `dashboard_metrics` | date_from, date_to, stores[], deptos[], secoes[], grupos[], subgrupos[] | SELECT |
-| 2 | `dashboard_rankings` | date_from, date_to, stores[], deptos[], secoes[], grupos[], subgrupos[], limit | SELECT |
-| 3 | `filter_options` | date_from, date_to, stores[], deptos[], secoes[], grupos[] | SELECT |
-| 4 | `area_analysis` | date_from, date_to, stores[], deptos[], secoes[], grupos[], subgrupos[], page, page_size, search, sort_by, sort_dir | SELECT |
-| 5 | `area_filter_hierarchy` | (nenhum) | SELECT |
-| 6 | `product_search` | q | SELECT |
-| 7 | `get_product_by_code` | code | SELECT |
-| 8 | `product_analysis` | prod_code, store_code, ref_date | SELECT |
-| 9 | `upsert_products_bulk` | rows[], sale_date | INSERT |
-| 10 | `finalize_import` | batch_id, sale_date, row_count, imported_by | INSERT/MULTI |
-| 11 | `imported_dates` | (nenhum) | SELECT |
-| 12 | `purge_old_aggs` | days | DELETE |
-| 13 | `db_health_check` | (nenhum) | SELECT |
-| 14 | `refresh_filter_hierarchy` | (nenhum) | INSERT |
-| 15 | `has_role` | user_id, role | SELECT |
+| #   | Nome                       | Parâmetros                                                                                                          | Tipo         |
+| --- | -------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 1   | `dashboard_metrics`        | date_from, date_to, stores[], deptos[], secoes[], grupos[], subgrupos[]                                             | SELECT       |
+| 2   | `dashboard_rankings`       | date_from, date_to, stores[], deptos[], secoes[], grupos[], subgrupos[], limit                                      | SELECT       |
+| 3   | `filter_options`           | date_from, date_to, stores[], deptos[], secoes[], grupos[]                                                          | SELECT       |
+| 4   | `area_analysis`            | date_from, date_to, stores[], deptos[], secoes[], grupos[], subgrupos[], page, page_size, search, sort_by, sort_dir | SELECT       |
+| 5   | `area_filter_hierarchy`    | (nenhum)                                                                                                            | SELECT       |
+| 6   | `product_search`           | q                                                                                                                   | SELECT       |
+| 7   | `get_product_by_code`      | code                                                                                                                | SELECT       |
+| 8   | `product_analysis`         | prod_code, store_code, ref_date                                                                                     | SELECT       |
+| 9   | `upsert_products_bulk`     | rows[], sale_date                                                                                                   | INSERT       |
+| 10  | `finalize_import`          | batch_id, sale_date, row_count, imported_by                                                                         | INSERT/MULTI |
+| 11  | `imported_dates`           | (nenhum)                                                                                                            | SELECT       |
+| 12  | `purge_old_aggs`           | days                                                                                                                | DELETE       |
+| 13  | `db_health_check`          | (nenhum)                                                                                                            | SELECT       |
+| 14  | `refresh_filter_hierarchy` | (nenhum)                                                                                                            | INSERT       |
+| 15  | `has_role`                 | user_id, role                                                                                                       | SELECT       |
 
 > **Todas as stored procedures devem ser criadas com SQL compatível com MariaDB 11.4.** Diferenças principais do PostgreSQL: `JSON_TABLE` vs `jsonb_to_recordset`, `ARRAY[]` vs `JSON`, `REF CURSOR` vs `SELECT`, tipos de timestamp.
 
@@ -634,56 +636,57 @@ DELIMITER ;
 
 ### 10.1 `dashboard.functions.ts`
 
-| Função | Antes (Supabase RPC) | Depois (db.query) |
-|---|---|---|
-| `getFilterOptions` | `supabase.rpc("filter_options", {...})` | `db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [dateFrom, dateTo, JSON.stringify(stores), ...])` |
-| `getStores` | `supabase.from("stores").select(...)` | `db.query("SELECT store_code, store_name FROM stores ORDER BY store_code")` |
-| `getDashboard` | `callMetrics(supabase, data)` → RPC `dashboard_metrics` | `db.query("CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)", [...])` |
-| `getLatestSaleInfo` | `supabase.from("import_log").select(...).order().limit(1)` | `db.query("SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1")` |
-| `getDashboardRankings` | `supabase.rpc("dashboard_rankings", {...})` | `db.query("CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)", [...])` |
+| Função                 | Antes (Supabase RPC)                                       | Depois (db.query)                                                                                      |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `getFilterOptions`     | `supabase.rpc("filter_options", {...})`                    | `db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [dateFrom, dateTo, JSON.stringify(stores), ...])`   |
+| `getStores`            | `supabase.from("stores").select(...)`                      | `db.query("SELECT store_code, store_name FROM stores ORDER BY store_code")`                            |
+| `getDashboard`         | `callMetrics(supabase, data)` → RPC `dashboard_metrics`    | `db.query("CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)", [...])`                                       |
+| `getLatestSaleInfo`    | `supabase.from("import_log").select(...).order().limit(1)` | `db.query("SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1")` |
+| `getDashboardRankings` | `supabase.rpc("dashboard_rankings", {...})`                | `db.query("CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)", [...])`                                   |
 
 ### 10.2 `area.functions.ts`
 
-| Função | Antes | Depois |
-|---|---|---|
-| `getAreaAnalysis` | `supabase.rpc("area_analysis", {...})` | `db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [...])` |
+| Função                   | Antes                                   | Depois                                                                                          |
+| ------------------------ | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `getAreaAnalysis`        | `supabase.rpc("area_analysis", {...})`  | `db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [...])`                     |
 | `getAreaFilterHierarchy` | `supabase.rpc("area_filter_hierarchy")` | `db.query("SELECT * FROM filter_hierarchy ORDER BY store_code, depto, secao, grupo, subgrupo")` |
 
 ### 10.3 `product.functions.ts`
 
-| Função | Antes | Depois |
-|---|---|---|
-| `searchProducts` | `supabase.rpc("product_search", { p_q })` | `db.query("SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_name LIKE ? OR prod_code LIKE ? LIMIT 20", [`%${q}%`, `%${q}%`])` |
-| `getProductByCode` | `supabase.rpc("get_product_by_code", { p_code })` | `db.query("SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_code = ? LIMIT 1", [code])` |
-| `getProductAnalysis` | `supabase.rpc("product_analysis", {...})` | `db.query("CALL product_analysis(?, ?, ?)", [prodCode, storeCode, refDate])` |
+| Função               | Antes                                             | Depois                                                                                                                                     |
+| -------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `searchProducts`     | `supabase.rpc("product_search", { p_q })`         | `db.query("SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_name LIKE ? OR prod_code LIKE ? LIMIT 20", [`%${q}%`, `%${q}%`])` |
+| `getProductByCode`   | `supabase.rpc("get_product_by_code", { p_code })` | `db.query("SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_code = ? LIMIT 1", [code])`                                       |
+| `getProductAnalysis` | `supabase.rpc("product_analysis", {...})`         | `db.query("CALL product_analysis(?, ?, ?)", [prodCode, storeCode, refDate])`                                                               |
 
 ### 10.4 `upload.functions.ts`
 
-| Função | Antes | Depois |
-|---|---|---|
-| `beginImport` | 3 chamadas: delete staging + upsert stores + upsert products bulk | 1 transação: `DELETE staging_sales`, INSERT/UPDATE stores, INSERT/UPDATE products |
-| `insertSalesChunk` | `supabase.from("staging_sales").insert(rows)` | `INSERT INTO staging_sales ... VALUES` com placeholders |
-| `getImportedDates` | `supabase.rpc("imported_dates")` | `db.query("SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC")` |
-| `finalizeImport` | `supabase.rpc("finalize_import", {...})` | `db.query("CALL finalize_import(?, ?, ?, ?)", [batchId, saleDate, rowCount, userId])` |
+| Função             | Antes                                                             | Depois                                                                                         |
+| ------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `beginImport`      | 3 chamadas: delete staging + upsert stores + upsert products bulk | 1 transação: `DELETE staging_sales`, INSERT/UPDATE stores, INSERT/UPDATE products              |
+| `insertSalesChunk` | `supabase.from("staging_sales").insert(rows)`                     | `INSERT INTO staging_sales ... VALUES` com placeholders                                        |
+| `getImportedDates` | `supabase.rpc("imported_dates")`                                  | `db.query("SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC")` |
+| `finalizeImport`   | `supabase.rpc("finalize_import", {...})`                          | `db.query("CALL finalize_import(?, ?, ?, ?)", [batchId, saleDate, rowCount, userId])`          |
 
 ### 10.5 `admin.functions.ts`
 
-| Função | Antes | Depois |
-|---|---|---|
-| `listUsers` | `supabaseAdmin.from("users").select(...)` | `db.query("SELECT id, email, name, role, is_active, created_at FROM users ORDER BY created_at DESC")` |
-| `createUser` | `supabaseAdmin.auth.admin.createUser(...)` + `from("users").insert(...)` | `bcrypt.hash(password, 12)` + `db.query("INSERT INTO users ...")` |
-| `setUserRole` | `supabaseAdmin.from("users").update({ role }).eq("id", id)` | `db.query("UPDATE users SET role = ? WHERE id = ?", [role, id])` |
-| `setUserActive` | `supabaseAdmin.from("users").update({ is_active }).eq("id", id)` | `db.query("UPDATE users SET is_active = ? WHERE id = ?", [isActive, id])` |
-| `resetPassword` | `supabaseAdmin.auth.admin.updateUserById(id, { password })` | `bcrypt.hash(password, 12)` + `db.query("UPDATE users SET password = ? WHERE id = ?", [hash, id])` |
-| `countRows` | `sa.from(table).select("*", { count: "exact", head: false })` | `db.query("SELECT COUNT(*) as count FROM ??", [table])` |
-| `fetchDistinctDates` | `sa.from(table).select(column)` | `db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column])` |
-| `purgeOldAggs` | `supabaseAdmin.rpc("purge_old_aggs", { p_days: 28 })` | `db.query("CALL purge_old_aggs(?)", [28])` |
-| `dbHealthCheck` | `supabaseAdmin.rpc("db_health_check")` | `db.query("SELECT VERSION() as version, NOW() as time")` + queries de tamanho |
-| `diagnoseData` | Chama `countRows` e `fetchDistinctDates` | Mesmas funções adaptadas |
+| Função               | Antes                                                                    | Depois                                                                                                |
+| -------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `listUsers`          | `supabaseAdmin.from("users").select(...)`                                | `db.query("SELECT id, email, name, role, is_active, created_at FROM users ORDER BY created_at DESC")` |
+| `createUser`         | `supabaseAdmin.auth.admin.createUser(...)` + `from("users").insert(...)` | `bcrypt.hash(password, 12)` + `db.query("INSERT INTO users ...")`                                     |
+| `setUserRole`        | `supabaseAdmin.from("users").update({ role }).eq("id", id)`              | `db.query("UPDATE users SET role = ? WHERE id = ?", [role, id])`                                      |
+| `setUserActive`      | `supabaseAdmin.from("users").update({ is_active }).eq("id", id)`         | `db.query("UPDATE users SET is_active = ? WHERE id = ?", [isActive, id])`                             |
+| `resetPassword`      | `supabaseAdmin.auth.admin.updateUserById(id, { password })`              | `bcrypt.hash(password, 12)` + `db.query("UPDATE users SET password = ? WHERE id = ?", [hash, id])`    |
+| `countRows`          | `sa.from(table).select("*", { count: "exact", head: false })`            | `db.query("SELECT COUNT(*) as count FROM ??", [table])`                                               |
+| `fetchDistinctDates` | `sa.from(table).select(column)`                                          | `db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column])`                         |
+| `purgeOldAggs`       | `supabaseAdmin.rpc("purge_old_aggs", { p_days: 28 })`                    | `db.query("CALL purge_old_aggs(?)", [28])`                                                            |
+| `dbHealthCheck`      | `supabaseAdmin.rpc("db_health_check")`                                   | `db.query("SELECT VERSION() as version, NOW() as time")` + queries de tamanho                         |
+| `diagnoseData`       | Chama `countRows` e `fetchDistinctDates`                                 | Mesmas funções adaptadas                                                                              |
 
 ### 10.6 `admin-utils.ts`
 
 **`assertAdmin`**:
+
 ```ts
 // Antes
 const { data } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
@@ -699,24 +702,24 @@ if (!rows.length || rows[0].role !== "admin") {
 
 ## 11. Rotas — Antes/Depois
 
-| Rota | Antes | Depois |
-|---|---|---|
-| `__root.tsx:129` | `supabase.auth.onAuthStateChange(...)` | Remover listener |
-| `auth.tsx:17` | `supabase.auth.getUser()` | `getMe()` |
-| `auth.page.tsx:47` | `supabase.auth.signInWithPassword(...)` + `from("users").select("is_active")` | `login()` do auth-api |
-| `_authenticated/route.tsx:34` | `supabase.auth.getUser()` | `getMe()` |
-| `_authenticated/route.tsx:88` | `from("users").select("is_active, role")` | `user.role` já no contexto |
-| `_authenticated/route.tsx:103` | `supabase.auth.signOut()` | `document.cookie = "session=; Path=/; Max-Age=0"` |
-| `_authenticated/admin.tsx:9` | `supabase.rpc("has_role", ...)` | `context.user.role === "admin"` |
-| `_authenticated/upload.tsx:8` | `supabase.rpc("has_role", ...)` | `context.user.role === "admin"` |
-| `router.tsx:25` | `supabase.auth.signOut()` | `document.cookie = "session=; Path=/; Max-Age=0"` |
+| Rota                           | Antes                                                                         | Depois                                            |
+| ------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------- |
+| `__root.tsx:129`               | `supabase.auth.onAuthStateChange(...)`                                        | Remover listener                                  |
+| `auth.tsx:17`                  | `supabase.auth.getUser()`                                                     | `getMe()`                                         |
+| `auth.page.tsx:47`             | `supabase.auth.signInWithPassword(...)` + `from("users").select("is_active")` | `login()` do auth-api                             |
+| `_authenticated/route.tsx:34`  | `supabase.auth.getUser()`                                                     | `getMe()`                                         |
+| `_authenticated/route.tsx:88`  | `from("users").select("is_active, role")`                                     | `user.role` já no contexto                        |
+| `_authenticated/route.tsx:103` | `supabase.auth.signOut()`                                                     | `document.cookie = "session=; Path=/; Max-Age=0"` |
+| `_authenticated/admin.tsx:9`   | `supabase.rpc("has_role", ...)`                                               | `context.user.role === "admin"`                   |
+| `_authenticated/upload.tsx:8`  | `supabase.rpc("has_role", ...)`                                               | `context.user.role === "admin"`                   |
+| `router.tsx:25`                | `supabase.auth.signOut()`                                                     | `document.cookie = "session=; Path=/; Max-Age=0"` |
 
 ---
 
 ## 12. Componentes — Antes/Depois
 
-| Componente | Antes | Depois |
-|---|---|---|
+| Componente          | Antes                                         | Depois                              |
+| ------------------- | --------------------------------------------- | ----------------------------------- |
 | `admin-gate.tsx:19` | `supabase.auth.getUser()` + `rpc("has_role")` | `getMe()` + `user.role === "admin"` |
 
 ---
@@ -729,13 +732,13 @@ if (!rows.length || rows[0].role !== "admin") {
 // Antes
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],  // REMOVER
+  functionMiddleware: [attachSupabaseAuth], // REMOVER
   requestMiddleware: [errorMiddleware],
 }));
 
 // Depois
 export const startInstance = createStart(() => ({
-  functionMiddleware: [],  // vazio
+  functionMiddleware: [], // vazio
   requestMiddleware: [errorMiddleware],
 }));
 ```
@@ -767,11 +770,13 @@ src/integrations/supabase/
 ```
 
 Do `package.json`:
+
 ```json
 "@supabase/supabase-js": "^X.X.X"  // REMOVER
 ```
 
 Do `.env`:
+
 ```
 SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
 SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
@@ -830,26 +835,28 @@ pm2 startup
 
 ```js
 module.exports = {
-  apps: [{
-    name: "bench-gpa",
-    script: ".output/server/index.mjs",
-    instances: 1,
-    exec_mode: "fork",
-    env: {
-      NODE_ENV: "production",
-      PORT: 3000,
-      DB_HOST: "localhost",
-      DB_USER: "bench_gpa",
-      DB_PASS: "senha_segura",
-      DB_NAME: "bench_gpa",
-      JWT_SECRET: "segredo_aqui",
+  apps: [
+    {
+      name: "bench-gpa",
+      script: ".output/server/index.mjs",
+      instances: 1,
+      exec_mode: "fork",
+      env: {
+        NODE_ENV: "production",
+        PORT: 3000,
+        DB_HOST: "localhost",
+        DB_USER: "bench_gpa",
+        DB_PASS: "senha_segura",
+        DB_NAME: "bench_gpa",
+        JWT_SECRET: "segredo_aqui",
+      },
+      max_memory_restart: "512M",
+      error_file: "logs/pm2-error.log",
+      out_file: "logs/pm2-out.log",
+      merge_logs: true,
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
     },
-    max_memory_restart: "512M",
-    error_file: "logs/pm2-error.log",
-    out_file: "logs/pm2-out.log",
-    merge_logs: true,
-    log_date_format: "YYYY-MM-DD HH:mm:ss",
-  }],
+  ],
 };
 ```
 
@@ -932,18 +939,18 @@ VALUES ('$(uuidgen)', 'admin@gpabr.com', 'Administrador', '$HASH', 'admin', TRUE
 
 ### Fase 1: Build Config (1 commit)
 
-| Arquivo | Mudança |
-|---|---|
-| `vite.config.ts` | Add `preset: "node-server"` |
-| `ecosystem.config.js` | **Novo** |
-| `scripts/deploy.sh` | **Novo** |
-| `package.json` | Add `mysql2`, `bcrypt`, `jsonwebtoken`, `cookie` |
+| Arquivo               | Mudança                                          |
+| --------------------- | ------------------------------------------------ |
+| `vite.config.ts`      | Add `preset: "node-server"`                      |
+| `ecosystem.config.js` | **Novo**                                         |
+| `scripts/deploy.sh`   | **Novo**                                         |
+| `package.json`        | Add `mysql2`, `bcrypt`, `jsonwebtoken`, `cookie` |
 
 ### Fase 2: Conexão + Stored Procedures (1 commit)
 
-| Arquivo | Mudança |
-|---|---|
-| `src/lib/db.ts` | **Novo** (mysql2 pool) |
+| Arquivo                      | Mudança                           |
+| ---------------------------- | --------------------------------- |
+| `src/lib/db.ts`              | **Novo** (mysql2 pool)            |
 | `scripts/migrate-schema.sql` | **Novo** (schema + 15 procedures) |
 
 ### Fase 3: Server Functions — Leitura (1 commit)
@@ -962,7 +969,7 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 
 - Remover `src/integrations/supabase/`
 - Remover `@supabase/supabase-js` do `package.json`
-- Remover SUPABASE_* do `.env`
+- Remover SUPABASE\_\* do `.env`
 - Build + testar
 
 ### Fase 7: Deploy
@@ -977,6 +984,7 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 ## 19. Checklist Completão
 
 ### Fase 0 — Infraestrutura
+
 - [ ] Template `node-ssr.tpl` + `node-ssr.stpl` no servidor
 - [ ] Subdomínio `gpa.t00ls.dev` criado com template
 - [ ] SSL Let's Encrypt ativo
@@ -986,6 +994,7 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] Dados migrados do Supabase
 
 ### Fase 1 — Build Config
+
 - [ ] `vite.config.ts` com preset `node-server`
 - [ ] `ecosystem.config.js` criado
 - [ ] `scripts/deploy.sh` criado
@@ -993,29 +1002,35 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] `pm2 start` + site acessível via nginx
 
 ### Fase 2 — Conexão + Schema
+
 - [ ] `src/lib/db.ts` criado
 - [ ] `scripts/migrate-schema.sql` com schema + 15 procedures
 - [ ] Schema executado no MariaDB
 
 ### Fase 3 — Server Functions Leitura
+
 - [ ] Dashboard, Área, Produto funcionando com dados do MariaDB
 
 ### Fase 4 — Server Functions Escrita
+
 - [ ] Upload, Admin CRUD funcionando
 
 ### Fase 5 — Auth JWT
+
 - [ ] Login funcionando (JWT → cookie HttpOnly)
 - [ ] Logout funcionando
 - [ ] Rotas autenticadas protegidas
 - [ ] Admin routes verificando role
 
 ### Fase 6 — Cleanup
+
 - [ ] `src/integrations/supabase/` removido
 - [ ] `@supabase/supabase-js` removido
-- [ ] SUPABASE_* removido do `.env`
+- [ ] SUPABASE\_\* removido do `.env`
 - [ ] `bun run build` sem erros
 
 ### Fase 7 — Deploy Final
+
 - [ ] Repositório clonado em `/home/admin/web/gpa.t00ls.dev/public_html`
 - [ ] `.env` configurado
 - [ ] Build passou no VPS
