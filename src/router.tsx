@@ -23,8 +23,7 @@ export const getRouter = () => {
           msg.includes("forbidden")
         ) {
           toast.error("Sessão expirada. Faça login novamente.");
-          const { supabase } = await import("@/integrations/supabase/client");
-          await supabase.auth.signOut();
+          document.cookie = "session=; Path=/; Max-Age=0";
           window.location.href = "/auth";
         }
       },

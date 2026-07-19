@@ -1,6 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,14 +45,6 @@ function AuthPage() {
       router.navigate({ to: "/" });
     }
   };
-
-  useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") goNext();
-    });
-    return () => sub.subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, next]);
 
   useEffect(() => {
     if (TURNSTILE_BYPASS) return;
@@ -104,8 +95,8 @@ function AuthPage() {
     setLoading(true);
 
     try {
-      const { login } = await import("@/lib/auth.functions");
-      const session = await login({
+      const { login } = await import("@/lib/auth-api");
+      const result = await login({
         data: {
           email: email.trim().toLowerCase(),
           password,
@@ -113,10 +104,8 @@ function AuthPage() {
         },
       });
 
-      await supabase.auth.setSession({
-        access_token: session.accessToken,
-        refresh_token: session.refreshToken,
-      });
+      document.cookie = result.cookie;
+      goNext();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao fazer login.";
       toast.error(msg);
