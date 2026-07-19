@@ -4,20 +4,26 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+import db from "./db";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
 import docMeta from "@/generated/doc-meta.json";
+
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("users")
-      .select("id, email, name, role, is_active, created_at")
-      .order("created_at", { ascending: false });
-    if (error)
-      throw safeError("listUsers", error, "Ocorreu um erro interno. Tente novamente.", true);
-    return data ?? [];
+    const [rows] = await db.query(
+      "SELECT id, email, name, role, is_active, created_at FROM users ORDER BY created_at DESC",
+    );
+    return rows as {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      is_active: boolean;
+      created_at: string;
+    }[];
   });
 
 export const createUser = createServerFn({ method: "POST" })
@@ -34,29 +40,13 @@ export const createUser = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: created, error: authErr } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-    });
-    if (authErr || !created?.user)
-      throw safeError("createUser.auth", authErr, "Falha ao criar usuário.", true);
-
-    const { error: insErr } = await supabaseAdmin.from("users").insert({
-      id: created.user.id,
-      email: data.email,
-      name: data.name,
-      role: data.role,
-      is_active: true,
-    });
-    if (insErr) {
-      // rollback: apaga auth user órfão
-      await supabaseAdmin.auth.admin.deleteUser(created.user.id).catch(() => {});
-      throw safeError("createUser.insert", insErr, "Falha ao salvar usuário.", true);
-    }
-    return { ok: true, id: created.user.id };
+    const hash = await bcrypt.hash(data.password, 12);
+    const id = crypto.randomUUID();
+    await db.query(
+      "INSERT INTO users (id, email, name, password, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      [id, data.email, data.name, hash, data.role],
+    );
+    return { ok: true, id };
   });
 
 export const setUserRole = createServerFn({ method: "POST" })
@@ -67,13 +57,7 @@ export const setUserRole = createServerFn({ method: "POST" })
     if (context.userId === data.userId && data.role !== "admin") {
       throw new Error("Você não pode remover seu próprio acesso de administrador.");
     }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update({ role: data.role })
-      .eq("id", data.userId);
-    if (error)
-      throw safeError("setUserRole", error, "Ocorreu um erro interno. Tente novamente.", true);
+    await db.query("UPDATE users SET role = ? WHERE id = ?", [data.role, data.userId]);
     return { ok: true };
   });
 
@@ -87,13 +71,7 @@ export const setUserActive = createServerFn({ method: "POST" })
     if (context.userId === data.userId && !data.isActive) {
       throw new Error("Você não pode inativar sua própria conta.");
     }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update({ is_active: data.isActive })
-      .eq("id", data.userId);
-    if (error)
-      throw safeError("setUserActive", error, "Ocorreu um erro interno. Tente novamente.", true);
+    await db.query("UPDATE users SET is_active = ? WHERE id = ?", [data.isActive, data.userId]);
     return { ok: true };
   });
 
@@ -104,12 +82,8 @@ export const resetPassword = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
-      password: data.password,
-    });
-    if (error)
-      throw safeError("resetPassword", error, "Ocorreu um erro interno. Tente novamente.", true);
+    const hash = await bcrypt.hash(data.password, 12);
+    await db.query("UPDATE users SET password = ? WHERE id = ?", [hash, data.userId]);
     return { ok: true };
   });
 
@@ -121,25 +95,14 @@ type TableName =
   | "filter_hierarchy"
   | "import_log";
 
-async function countRows(
-  sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
-  table: TableName,
-) {
-  const { count, error } = await sa.from(table).select("*", { count: "exact", head: false });
-  if (error) throw safeError(`count.${table}`, error, undefined, true);
-  return count ?? 0;
+async function countRows(table: TableName) {
+  const [rows] = await db.query("SELECT COUNT(*) AS count FROM ??", [table]);
+  return Number((rows as any[])[0]?.count ?? 0);
 }
 
-async function fetchDistinctDates(
-  sa: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
-  table: TableName,
-  column: string,
-) {
-  const { data, error } = await sa.from(table).select(column);
-  if (error) throw safeError(`distinct.${table}.${column}`, error, undefined, true);
-  const vals = [
-    ...new Set((data ?? []).map((r) => String((r as unknown as Record<string, unknown>)[column]))),
-  ].sort();
+async function fetchDistinctDates(table: TableName, column: string) {
+  const [rows] = await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column]);
+  const vals = [...new Set((rows as any[]).map((r) => String(r[column])))].sort();
   return vals;
 }
 
@@ -147,7 +110,6 @@ export const diagnoseData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const tables: TableName[] = [
       "staging_sales",
       "sales_daily_agg",
@@ -158,9 +120,9 @@ export const diagnoseData = createServerFn({ method: "GET" })
     ];
     const counts: Record<string, number> = {};
     for (const t of tables) {
-      counts[t] = await countRows(supabaseAdmin, t);
+      counts[t] = await countRows(t);
     }
-    const datesInSales = await fetchDistinctDates(supabaseAdmin, "staging_sales", "sale_date");
+    const datesInSales = await fetchDistinctDates("staging_sales", "sale_date");
     return { ...counts, dates_in_sales: datesInSales };
   });
 
@@ -187,20 +149,34 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("purge_old_aggs");
-    if (error) throw safeError("purgeOldAggs", error, undefined, true);
-    return { deleted: data };
+    const [rows] = await db.query("CALL purge_old_aggs(?)", [28]);
+    return { deleted: Number((rows as any[])[0]?.deleted ?? 0) };
   });
 
 export const dbHealthCheck = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.rpc("db_health_check");
-    if (error) throw safeError("dbHealthCheck", error, undefined, true);
-    return data as unknown as DbHealthData;
+    const [versionRows, sizeRows, tableRows] = await db.query("CALL db_health_check()");
+    const version = String((versionRows as any[])[0]?.version ?? "");
+    const dbSizeMb = Number((sizeRows as any[])[0]?.db_size_mb ?? 0);
+    const tables = (tableRows as any[]).map((r: any) => ({
+      table: String(r.table_name),
+      schema: "public",
+      total_size: Math.round(Number(r.size_mb) * 1024 * 1024),
+      total_size_pretty: `${r.size_mb} MB`,
+      row_estimate: Number(r.row_estimate ?? 0),
+    }));
+    return {
+      db_size: Math.round(dbSizeMb * 1024 * 1024),
+      db_size_pretty: `${dbSizeMb.toFixed(1)} MB`,
+      free_limit: 500 * 1024 * 1024,
+      free_limit_pretty: "500 MB",
+      pct_used: Math.min(100, Math.round((dbSizeMb / 500) * 100)),
+      version,
+      active_connections: 0,
+      tables,
+    } satisfies DbHealthData;
   });
 
 interface DocEntry {
