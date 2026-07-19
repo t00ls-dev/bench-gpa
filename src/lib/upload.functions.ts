@@ -1,15 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
-import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import { str } from "./rpc-utils";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -47,7 +46,7 @@ export const beginImport = createServerFn({ method: "POST" })
   });
 
 export const insertSalesChunk = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z
       .object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRowSchema) })
@@ -100,7 +99,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   });
 
 export const getImportedDates = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .handler(async () => {
     const { cache } = await import("./cache");
     return cache.wrap(
@@ -114,7 +113,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
   });
 
 export const finalizeImport = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) =>
     z
       .object({

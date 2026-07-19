@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
-import { safeError } from "./safe-error";
 import db from "./db";
 import {
   StoreOption,
@@ -19,7 +18,7 @@ import {
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
     const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] =
@@ -46,7 +45,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   });
 
 export const getStores = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .handler(async (): Promise<StoreOption[]> => {
     const [rows] = await db.query(
       "SELECT store_code, store_name FROM stores ORDER BY store_code",
@@ -55,7 +54,7 @@ export const getStores = createServerFn({ method: "GET" })
   });
 
 export const getDashboard = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardSchema.parse(d))
   .handler(async ({ data }) => {
     const currentPromise = callMetrics(data);
@@ -69,7 +68,7 @@ export const getDashboard = createServerFn({ method: "POST" })
   });
 
 export const getLatestSaleInfo = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .handler(async () => {
     const [rows] = await db.query(
       "SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1",
@@ -82,7 +81,7 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
     const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = await db.query(

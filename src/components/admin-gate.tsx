@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ShieldOff, WifiOff } from "lucide-react";
 
 export function AdminGate({
@@ -17,13 +16,10 @@ export function AdminGate({
     if (knownAdmin) return;
     (async () => {
       try {
-        const { data: u } = await supabase.auth.getUser();
-        if (!u.user) return setState("deny");
-        const { data, error } = await supabase.rpc("has_role", {
-          _user_id: u.user.id,
-          _role: "admin",
-        });
-        setState(!error && data === true ? "allow" : "deny");
+        const { getMe } = await import("@/lib/auth-api");
+        const user = await getMe();
+        if (!user) return setState("deny");
+        setState(user.role === "admin" ? "allow" : "deny");
       } catch {
         setState("error");
       }

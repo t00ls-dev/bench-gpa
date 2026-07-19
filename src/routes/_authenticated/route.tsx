@@ -6,7 +6,6 @@ import {
   useRouter,
   useLocation,
 } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
 import {
@@ -40,17 +39,27 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
+    try {
+      const { getMe } = await import("@/lib/auth-api");
+      const user = await getMe();
+      if (!user) throw new Error("not authenticated");
+      return { user: user as UserProfile };
+    } catch {
       const next = location.pathname + location.searchStr;
       throw redirect({
         to: "/auth",
         search: next && next !== "/" ? { next } : { next: undefined },
       });
     }
-    return { user: data.user };
   },
   component: AuthedLayout,
 });
@@ -95,26 +104,9 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
 function AuthedLayout() {
   const router = useRouter();
   const { user } = Route.useRouteContext();
-  const [profile, setProfile] = useState<{ isActive: boolean; isAdmin: boolean } | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("users")
-        .select("is_active, role")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!data || !data.is_active) {
-        await supabase.auth.signOut();
-        router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
-        return;
-      }
-      setProfile({ isActive: true, isAdmin: data.role === "admin" });
-    })();
-  }, [user.id, router]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    document.cookie = "session=; Path=/; Max-Age=0";
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
 
@@ -126,16 +118,7 @@ function AuthedLayout() {
   useGotoHotkey("n", () => router.navigate({ to: "/admin" }));
   useGotoHotkey("h", () => router.navigate({ to: "/howto" }));
 
-  if (!profile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Skeleton className="size-10 rounded-full" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </div>
-    );
-  }
+  const isAdmin = user.role === "admin";
 
   const commonNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -170,7 +153,7 @@ function AuthedLayout() {
           </SidebarHeader>
           <SidebarContent>
             <NavContent nav={commonNav} />
-            {profile.isAdmin && (
+            {isAdmin && (
               <>
                 <Separator className="my-2" />
                 <NavContent nav={adminNav} />
@@ -228,7 +211,7 @@ function AuthedLayout() {
             <AppFooter />
           </main>
         </SidebarInset>
-        <MobileNav isAdmin={profile.isAdmin} userEmail={user.email} onSignOut={signOut} />
+        <MobileNav isAdmin={isAdmin} userEmail={user.email} onSignOut={signOut} />
       </SidebarProvider>
     </>
   );
