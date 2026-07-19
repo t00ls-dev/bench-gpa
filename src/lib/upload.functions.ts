@@ -4,7 +4,8 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import { safeError } from "./safe-error";
 import { assertAdmin } from "./admin-utils";
-import { DB } from "./rpc-utils";
+import db from "./db";
+import { str } from "./rpc-utils";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
@@ -23,33 +24,23 @@ export const beginImport = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context, "upload.assertAdmin");
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error: cleanErr } = await supabaseAdmin
-      .from("staging_sales")
-      .delete()
-      .eq("sale_date", data.sale_date);
-    if (cleanErr)
-      throw safeError(
-        "beginImport.cleanStaging",
-        cleanErr,
-        "Falha ao limpar staging anterior.",
-        true,
-      );
+
+    await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [data.sale_date]);
+
     if (data.stores.length) {
-      const { error } = await supabaseAdmin
-        .from("stores")
-        .upsert(data.stores, { onConflict: "store_code" });
-      if (error) throw safeError("beginImport.stores", error, "Falha ao cadastrar lojas.", true);
+      const placeholders = data.stores.map(() => "(?, ?)").join(", ");
+      const values = data.stores.flatMap((s) => [s.store_code, s.store_name]);
+      await db.query(
+        `INSERT INTO stores (store_code, store_name) VALUES ${placeholders} ON DUPLICATE KEY UPDATE store_name = VALUES(store_name)`,
+        values,
+      );
     }
+
     if (data.products.length) {
-      // Merge em massa via RPC: uma única chamada transacional, sem serializar
-      // milhares de códigos na URL (evita erro de URI too large no PostgREST).
-      const { error: upErr } = await supabaseAdmin.rpc("upsert_products_bulk", {
-        p_rows: data.products,
-        p_sale_date: data.sale_date,
-      });
-      if (upErr)
-        throw safeError("beginImport.products.upsert", upErr, "Falha ao cadastrar produtos.", true);
+      await db.query("CALL upsert_products_bulk(?, ?)", [
+        JSON.stringify(data.products),
+        data.sale_date,
+      ]);
     }
 
     return { ok: true, batch_id: data.batch_id };
@@ -64,28 +55,59 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context, "upload.assertAdmin");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const rows = data.rows.map((r) => ({
       ...r,
       batch_id: data.batch_id,
       sale_date: data.sale_date,
     }));
-    const { error } = await supabaseAdmin.from("staging_sales").insert(rows);
-    if (error) throw safeError("insertSalesChunk", error, "Falha ao inserir lote de vendas.", true);
+
+    const columns = [
+      "sale_date",
+      "batch_id",
+      "store_code",
+      "store_name",
+      "prod_code",
+      "prod_name",
+      "depto",
+      "secao",
+      "grupo",
+      "subgrupo",
+      "val_vda",
+      "qty_vda",
+      "val_cus",
+      "qty_cus",
+      "val_dev",
+      "qty_dev",
+      "val_vda_liq",
+      "qty_vda_liq",
+      "val_cus_liq",
+      "qty_cus_liq",
+      "val_sld",
+      "qty_sld",
+      "per_mrg",
+    ];
+
+    const placeholders = rows.map(() => `(${columns.map(() => "?").join(", ")})`).join(", ");
+    const values = rows.flatMap((r) => columns.map((c) => (r as any)[c] ?? null));
+
+    await db.query(
+      `INSERT INTO staging_sales (${columns.join(", ")}) VALUES ${placeholders}`,
+      values,
+    );
+
     return { inserted: rows.length };
   });
 
 export const getImportedDates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
-  .handler(async ({ context }) => {
+  .handler(async () => {
     const { cache } = await import("./cache");
-    const supabase = context.supabase as DB;
     return cache.wrap(
       "imported_dates",
       async () => {
-        const { data, error } = await supabase.rpc("imported_dates");
-        if (error) throw safeError("analytics", error);
-        return (data ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
+        const [rows] = await db.query("CALL imported_dates()");
+        return (rows ?? []) as { sale_date: string; row_count: number; imported_at: string }[];
       },
       60_000,
     );
@@ -104,17 +126,13 @@ export const finalizeImport = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context, "upload.assertAdmin");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Swap atômico via RPC (valida staging, deleta aggs antigas, popula aggs direto, limpa staging, registra log)
-    const { error: swapErr } = await supabaseAdmin.rpc("finalize_import", {
-      p_batch_id: data.batch_id,
-      p_sale_date: data.sale_date,
-      p_row_count: data.row_count,
-      p_imported_by: context.userId,
-    });
-    if (swapErr)
-      throw safeError("finalizeImport.swap", swapErr, "Falha ao finalizar importação.", true);
+    await db.query("CALL finalize_import(?, ?, ?, ?)", [
+      data.batch_id,
+      data.sale_date,
+      data.row_count,
+      context.userId,
+    ]);
 
     return { ok: true };
   });
