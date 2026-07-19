@@ -3,40 +3,31 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
 import { z } from "zod";
-import {
-  DB,
-  ProductAnalysisResult,
-  asRecord,
-  asArray,
-  str,
-  strOrNull,
-  num,
-  parseCodeNameVal,
-  parseDateVal,
-} from "./rpc-utils";
+import db from "./db";
+import { ProductAnalysisResult, str, strOrNull, num } from "./rpc-utils";
 import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
 
 export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => SingleQuerySchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const supabase = context.supabase as DB;
-    const { data: rows, error } = await supabase.rpc("product_search", { p_q: data.q.trim() });
-    if (error) throw safeError("analytics", error);
+  .handler(async ({ data }) => {
+    const q = `%${data.q.trim()}%`;
+    const [rows] = await db.query(
+      "SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_name LIKE ? OR prod_code LIKE ? LIMIT 20",
+      [q, q],
+    );
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
   });
 
 export const getProductByCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => SingleProdCodeSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const supabase = context.supabase as DB;
-    const { data: rows, error } = await supabase.rpc("get_product_by_code", {
-      p_code: data.prodCode.trim(),
-    });
-    if (error) throw safeError("analytics", error);
-    const row = (rows ?? [])[0] as { prod_code: string; prod_name: string } | undefined;
-    return row ?? null;
+  .handler(async ({ data }) => {
+    const [rows] = await db.query(
+      "SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_code = ? LIMIT 1",
+      [data.prodCode.trim()],
+    );
+    return ((rows as any[])[0] ?? null) as { prod_code: string; prod_name: string } | null;
   });
 
 export const getProductAnalysis = createServerFn({ method: "POST" })
@@ -50,36 +41,43 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<ProductAnalysisResult> => {
-    const supabase = context.supabase as DB;
-    const { data: res, error } = await supabase.rpc("product_analysis", {
-      p_prod_code: data.prodCode,
-      p_store_code: data.storeCode || undefined,
-      p_ref_date: data.referenceDate || undefined,
-    });
-    if (error) throw safeError("analytics", error);
-    const r = asRecord(res);
-    const product =
-      r.product == null
-        ? null
-        : (() => {
-            const p = asRecord(r.product);
-            return {
-              prod_code: str(p.prod_code),
-              prod_name: str(p.prod_name),
-              depto: strOrNull(p.depto),
-              secao: strOrNull(p.secao),
-              grupo: strOrNull(p.grupo),
-              subgrupo: strOrNull(p.subgrupo),
-            };
-          })();
+  .handler(async ({ data }): Promise<ProductAnalysisResult> => {
+    const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] =
+      await db.query("CALL product_analysis(?, ?, ?)", [
+        data.prodCode,
+        data.storeCode || null,
+        data.referenceDate || null,
+      ]);
+    const productRow = (productRows as any[])[0] ?? null;
     return {
-      product,
-      refDate: strOrNull(r.refDate),
-      refValue: num(r.refValue),
-      byStore: parseCodeNameVal(r.byStore),
-      evolution: parseDateVal(r.evolution),
-      lastFourSameWeekday: parseDateVal(r.lastFourSameWeekday),
-      lastFourAll: parseDateVal(r.lastFourAll),
+      product: productRow
+        ? {
+            prod_code: str(productRow.prod_code),
+            prod_name: str(productRow.prod_name),
+            depto: strOrNull(productRow.depto),
+            secao: strOrNull(productRow.secao),
+            grupo: strOrNull(productRow.grupo),
+            subgrupo: strOrNull(productRow.subgrupo),
+          }
+        : null,
+      refDate: strOrNull((refValueRows as any[])[0]?.ref_value != null ? "ref_value" : null),
+      refValue: num((refValueRows as any[])[0]?.ref_value ?? 0),
+      byStore: (byStore as any[]).map((r: any) => ({
+        code: r.code,
+        name: r.name,
+        val: Number(r.val),
+      })),
+      evolution: (evolution as any[]).map((d: any) => ({
+        date: str(d.date),
+        val: num(d.val),
+      })),
+      lastFourSameWeekday: (lastFourSameWeekday as any[]).map((d: any) => ({
+        date: str(d.date),
+        val: num(d.val),
+      })),
+      lastFourAll: (lastFourAll as any[]).map((d: any) => ({
+        date: str(d.date),
+        val: num(d.val),
+      })),
     };
   });
