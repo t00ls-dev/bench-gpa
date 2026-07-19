@@ -1,34 +1,35 @@
 # Análise Completa
 
-> Data: 19/07/2026 03:39
+> Data: 19/07/2026 03:54
 
-Snapshot automático do estado do código em 19/07/2026 às 03:39.
+Snapshot automático do estado do código em 19/07/2026 às 03:54.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
 
 ## 📊 Métricas Gerais
 
-| Métrica                        | Valor  |
-| ------------------------------ | ------ |
-| Arquivos .ts/.tsx              | 131    |
-| Total de arquivos no projeto   | 164    |
-| Linhas de código (src)         | 12.957 |
-| Linhas totais (projeto)        | 18.113 |
-| Arquivos grandes (>300 linhas) | 4      |
-| Erros de lint                  | 0      |
-| Avisos de lint                 | 0      |
-| Build                          | ✅ OK  |
-| TODOs/FIXMEs                   | 0      |
-| Scripts                        | 11     |
-| Migrações SQL                  | 67     |
-| RPCs distintas usadas          | 10     |
+| Métrica | Valor |
+|---|---|
+| Arquivos .ts/.tsx | 131 |
+| Total de arquivos no projeto | 164 |
+| Linhas de código (src) | 13.599 |
+| Linhas totais (projeto) | 18.942 |
+| Arquivos grandes (>300 linhas) | 8 |
+| Erros de lint | 0 |
+| Avisos de lint | 0 |
+| Build | ✅ OK |
+| TODOs/FIXMEs | 0 |
+| Scripts | 11 |
+| Migrações SQL | 67 |
+| RPCs distintas usadas | 10 |
 
 ---
 
 ## ⚙️ Lint
 
-## Nenhum problema encontrado.
+Nenhum problema encontrado.
+---
 
 ## 🔒 Segurança
 
@@ -47,8 +48,8 @@ _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX
 ### Riscos Identificados
 
 🔴 **CRÍTICO**: `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` estão no `.env` versionado.
-Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role bypassa RLS).
-**Ação**: `echo '.env' >> .gitignore && git rm --cached .env && rotacionar chaves no Supabase`
+   Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role bypassa RLS).
+   **Ação**: `echo '.env' >> .gitignore && git rm --cached .env && rotacionar chaves no Supabase`
 
 ✅ **Rate limiting ativo** — 5 server functions protegidas (lib/mw).
 
@@ -65,10 +66,9 @@ Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role b
 ### Problemas Conhecidos
 
 🔴 **DB ~600 MB acima do Free tier (500 MB)** — risco de suspensão.
-
-- `sales_prod_daily_agg`: ~523 MB (237 dados + 287 índices)
-- `sales_daily_agg`: ~95 MB
-- **Ação**: migrar para MariaDB no VPS (`docs/migracao-vps-autossuficiente.md`)
+   - `sales_prod_daily_agg`: ~523 MB (237 dados + 287 índices)
+   - `sales_daily_agg`: ~95 MB
+   - **Ação**: migrar para MariaDB no VPS (`docs/migracao-vps-autossuficiente.md`)
 
 🟡 **Sem seed data** — nenhum `seed.sql` para popular ambiente dev.
 
@@ -82,8 +82,12 @@ Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role b
 
 - `src/components/ui/sidebar.tsx` — 745 linhas
 - `src/integrations/supabase/types.ts` — 504 linhas
+- `src/routes/_authenticated/area.page.tsx` — 462 linhas
+- `src/routes/_authenticated/produto.page.tsx` — 369 linhas
+- `src/routes/_authenticated/upload.page.tsx` — 347 linhas
+- `src/routes/_authenticated/index.page.tsx` — 329 linhas
 - `src/components/ui/chart.tsx` — 321 linhas
-- `src/routes/_authenticated/upload.page.tsx` — 308 linhas
+- `src/components/area-table.tsx` — 309 linhas
 
 ### Oportunidades
 
@@ -91,10 +95,10 @@ Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role b
 
 🟢 **Chunks de servidor** — Nitro separa automaticamente libs grandes em chunks dedicados.
 🟡 **Sem virtualização em tabelas** — `area-table.tsx` renderiza todas as linhas no DOM.
-`@tanstack/react-virtual` pode reduzir nodes renderizados em 90%+.
+   `@tanstack/react-virtual` pode reduzir nodes renderizados em 90%+.
 
 🟢 **Código duplicado**: verificar padrões de `supabase.rpc(...)` com mesmos parâmetros.
-10 RPCs diferentes em uso — verificar se alguma é chamada redundantemente.
+   10 RPCs diferentes em uso — verificar se alguma é chamada redundantemente.
 
 ---
 
@@ -115,8 +119,8 @@ Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role b
 ## 🧪 Testes
 
 🔴 **Zero testes unitários** — só scripts Puppeteer E2E (sem assertions robustas).
-Qualquer refactor pode quebrar funcionalidades sem detecção.
-**Ação**: integrar Vitest + @testing-library/react + mocks Supabase.
+   Qualquer refactor pode quebrar funcionalidades sem detecção.
+   **Ação**: integrar Vitest + @testing-library/react + mocks Supabase.
 
 ✅ **Puppeteer movido para devDependencies** — puppeteer (~300 MB) não entra mais no build de produção.
 
@@ -124,15 +128,15 @@ Qualquer refactor pode quebrar funcionalidades sem detecção.
 
 ## 🤖 Inteligência Artificial — Oportunidades
 
-| Ideia                    | Descrição                                              | Complexidade |
-| ------------------------ | ------------------------------------------------------ | ------------ |
-| Predição de vendas       | ML model (Prophet/LightGBM) prevê próximos 7 dias      | Alta         |
-| Detecção de anomalias    | Alertar dias com vendas muito acima/abaixo do esperado | Média        |
-| Classificação automática | Inferir depto/seção de produtos pelo nome              | Média        |
-| Chat interno             | "Qual foi o produto mais vendido ontem?" via LLM       | Alta         |
-| Resumo automático        | "Vendas caíram 5% vs semana anterior, puxado por X"    | Média        |
-| OCR notas fiscais        | Extrair dados de PDF nota fiscal (além de XLSX)        | Alta         |
-| Sugestão inteligente     | "Quem viu este produto também viu" por correlação      | Baixa        |
+| Ideia | Descrição | Complexidade |
+|---|---|---|
+| Predição de vendas | ML model (Prophet/LightGBM) prevê próximos 7 dias | Alta |
+| Detecção de anomalias | Alertar dias com vendas muito acima/abaixo do esperado | Média |
+| Classificação automática | Inferir depto/seção de produtos pelo nome | Média |
+| Chat interno | "Qual foi o produto mais vendido ontem?" via LLM | Alta |
+| Resumo automático | "Vendas caíram 5% vs semana anterior, puxado por X" | Média |
+| OCR notas fiscais | Extrair dados de PDF nota fiscal (além de XLSX) | Alta |
+| Sugestão inteligente | "Quem viu este produto também viu" por correlação | Baixa |
 
 ---
 
@@ -149,16 +153,16 @@ Qualquer refactor pode quebrar funcionalidades sem detecção.
 
 ## ⚡ Quick Wins
 
-| #   | Ação                                                | Tempo    | Prioridade |
-| --- | --------------------------------------------------- | -------- | ---------- |
-| 1   | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min    | 🔴         |
-| 2   | Rotacionar chaves Supabase (service_role + anon)    | 5 min    | 🔴         |
-| 3   | Mover puppeteer/jspdf para devDependencies          | 2 min    | 🟡         |
-| 4   | Título `<title>` dinâmico por rota                  | 10 min   | 🟢         |
-| 5   | Aumentar staleTime de 5min para 10min               | 5 min    | 🟢         |
-| 6   | Adicionar `default-src 'self'` ao CSP               | 10 min   | 🟡         |
-| 7   | ✅ Skeleton loaders                                 | ✅ Feito | ✅         |
-| 8   | ✅ Atalho `/` + g+letra                             | ✅ Feito | ✅         |
+| # | Ação | Tempo | Prioridade |
+|---|---|---|---|
+| 1 | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min | 🔴 |
+| 2 | Rotacionar chaves Supabase (service_role + anon) | 5 min | 🔴 |
+| 3 | Mover puppeteer/jspdf para devDependencies | 2 min | 🟡 |
+| 4 | Título `<title>` dinâmico por rota | 10 min | 🟢 |
+| 5 | Aumentar staleTime de 5min para 10min | 5 min | 🟢 |
+| 6 | Adicionar `default-src 'self'` ao CSP | 10 min | 🟡 |
+| 7 | ✅ Skeleton loaders | ✅ Feito | ✅ |
+| 8 | ✅ Atalho `/` + g+letra | ✅ Feito | ✅ |
 
 ---
 
@@ -203,8 +207,8 @@ Qualquer refactor pode quebrar funcionalidades sem detecção.
 
 O DB está 20% acima do limite de 500 MB. Plano definido:
 
-| Rota                    | Prós                                                               | Contras                                               |
-| ----------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- |
+| Rota | Prós | Contras |
+|---|---|---|
 | **VPS Autossuficiente** | MariaDB local, JWT próprio, sem rate limit, zero custo extra de DB | Requer deploy manual (templates nginx, SSL, Bun, PM2) |
 
 **Recomendação**: seguir `docs/migracao-vps-autossuficiente.md` — deploy em `gpa.t00ls.dev`.
@@ -215,5 +219,5 @@ O DB está 20% acima do limite de 500 MB. Plano definido:
 
 Análise gerada automaticamente via framework AGENTS.md em 19/07/2026.
 
-- 🟡 4 arquivos com mais de 300 linhas — considerar refatoração.
+- 🟡 8 arquivos com mais de 300 linhas — considerar refatoração.
 - 🔴 .env com service_role key está versionado no git!
