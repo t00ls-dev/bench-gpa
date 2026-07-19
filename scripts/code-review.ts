@@ -86,10 +86,14 @@ function walkDir(dir: string, base: string): FileStats[] {
         try {
           const content = readFileSync(full, "utf-8");
           result.push({ path: full.replace(base + "/", ""), lines: content.split("\n").length });
-        } catch {}
+        } catch {
+          // ignore
+        }
       }
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
   return result;
 }
 
@@ -123,10 +127,14 @@ function walkDirAll(dir: string, base: string): FileStats[] {
         try {
           const content = readFileSync(full, "utf-8");
           result.push({ path: full.replace(base + "/", ""), lines: content.split("\n").length });
-        } catch {}
+        } catch {
+          // ignore
+        }
       }
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
   return result;
 }
 
@@ -143,7 +151,9 @@ function findTodos(base: string): { file: string; line: number; text: string }[]
           todos.push({ file: f.path, line: i + 1, text: lines[i].slice(idx).trim() });
         }
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
   return todos;
 }
@@ -177,7 +187,9 @@ function findCommandPatterns(base: string): Map<string, number> {
           patterns.set(match[1], (patterns.get(match[1]) ?? 0) + 1);
         }
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
   return patterns;
 }
@@ -262,7 +274,9 @@ async function main() {
       try {
         const c = readFileSync(join(projectRoot, f.path), "utf-8");
         if (c.includes("requireRateLimit")) rateLimitInUse++;
-      } catch {}
+      } catch {
+        // ignore
+      }
     }
   }
 
@@ -421,10 +435,7 @@ async function main() {
           "   Se alguma exceção vazar dados de vendas, fica no histórico para sempre.",
           "",
         ]
-      : [
-          "✅ **Logs fora do git** — `logs/` no .gitignore, nenhum arquivo rastreado.",
-          "",
-        ]),
+      : ["✅ **Logs fora do git** — `logs/` no .gitignore, nenhum arquivo rastreado.", ""]),
     "---",
     "",
     "## 🗄️ Banco de Dados",
@@ -490,20 +501,14 @@ async function main() {
           "",
         ]),
     ...(hasSkeletons
-      ? [
-          "✅ **Skeleton loaders** presentes nas páginas de rota.",
-          "",
-        ]
+      ? ["✅ **Skeleton loaders** presentes nas páginas de rota.", ""]
       : [
           "🟡 **Sem skeleton loaders** nas páginas de dashboard/área/produto.",
           "   Upload tem progress bar, mas demais páginas mostram blank durante carregamento.",
           "",
         ]),
     ...(hasCommandPalette
-      ? [
-          "✅ **Command Palette** ativa (Cmd+K) — busca entre rotas e produtos.",
-          "",
-        ]
+      ? ["✅ **Command Palette** ativa (Cmd+K) — busca entre rotas e produtos.", ""]
       : [
           "🟢 **Busca global** — `cmdk` já está nas deps, mas não há CommandPalette.",
           "   Poderia buscar produtos, lojas, documentação.",
@@ -532,10 +537,10 @@ async function main() {
     "| Predição de vendas | ML model (Prophet/LightGBM) prevê próximos 7 dias | Alta |",
     "| Detecção de anomalias | Alertar dias com vendas muito acima/abaixo do esperado | Média |",
     "| Classificação automática | Inferir depto/seção de produtos pelo nome | Média |",
-    "| Chat interno | \"Qual foi o produto mais vendido ontem?\" via LLM | Alta |",
-    "| Resumo automático | \"Vendas caíram 5% vs semana anterior, puxado por X\" | Média |",
+    '| Chat interno | "Qual foi o produto mais vendido ontem?" via LLM | Alta |',
+    '| Resumo automático | "Vendas caíram 5% vs semana anterior, puxado por X" | Média |',
     "| OCR notas fiscais | Extrair dados de PDF nota fiscal (além de XLSX) | Alta |",
-    "| Sugestão inteligente | \"Quem viu este produto também viu\" por correlação | Baixa |",
+    '| Sugestão inteligente | "Quem viu este produto também viu" por correlação | Baixa |',
     "",
     "---",
     "",

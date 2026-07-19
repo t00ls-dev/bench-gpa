@@ -1,6 +1,7 @@
 # Novas Análises Possíveis
 
 Baseado nos RPCs existentes no banco sem UI e nos dados disponíveis.
+
 > ⚠️ Independente da migração (Supabase → MariaDB) — todas as features abaixo são de frontend/UX e seguem válidas.
 
 ---
@@ -61,10 +62,10 @@ O RPC `product_analysis` já calcula dia da semana. Generalizar:
 
 ## Resumo
 
-| Prioridade | Análise | Esforço | Impacto | Observação |
-|---|---|---|---|---|---|
-| **Alta** | Performance por Loja | Médio | Alto | Dados disponíveis |
-| **Média** | Sazonalidade | Baixo | Alto | Lógica já existe em product_analysis |
-| **Média** | Previsão/Tendências | Médio | Médio | Média móvel simples |
-| **Média** | Sortimento/Gap | Médio | Alto | Expande area_analysis |
-| **Baixa** | Relatórios Programados | Alto | Médio | Requer infra de email |
+| Prioridade | Análise                | Esforço | Impacto | Observação                           |
+| ---------- | ---------------------- | ------- | ------- | ------------------------------------ |
+| **Alta**   | Performance por Loja   | Médio   | Alto    | Dados disponíveis                    |
+| **Média**  | Sazonalidade           | Baixo   | Alto    | Lógica já existe em product_analysis |
+| **Média**  | Previsão/Tendências    | Médio   | Médio   | Média móvel simples                  |
+| **Média**  | Sortimento/Gap         | Médio   | Alto    | Expande area_analysis                |
+| **Baixa**  | Relatórios Programados | Alto    | Médio   | Requer infra de email                |

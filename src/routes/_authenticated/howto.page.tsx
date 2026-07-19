@@ -17,10 +17,22 @@ const shortcutRows = [
 ];
 
 function Kbd({ children }: { children: string }) {
-  return <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">{children}</kbd>;
+  return (
+    <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+      {children}
+    </kbd>
+  );
 }
 
-function Section({ title, icon: Icon, children }: { title: string; icon: typeof HelpCircle; children: React.ReactNode }) {
+function Section({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: typeof HelpCircle;
+  children: React.ReactNode;
+}) {
   return (
     <section className="kpi-card mb-6">
       <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
@@ -36,7 +48,10 @@ function ShortcutTable({ rows }: { rows: { keys: string; desc: string }[] }) {
   return (
     <div className="divide-y divide-border/50">
       {rows.map((r) => (
-        <div key={r.keys} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0">
+        <div
+          key={r.keys}
+          className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
+        >
           <Kbd>{r.keys}</Kbd>
           <span className="text-sm text-muted-foreground">{r.desc}</span>
         </div>
@@ -59,11 +74,7 @@ export default function HowToPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
       setIsAdmin(data?.role === "admin");
       setLoading(false);
     })();
@@ -82,15 +93,15 @@ export default function HowToPage() {
 
       <Section title="Navegação" icon={Keyboard}>
         <p className="mb-3 text-sm text-muted-foreground">
-          No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas.
-          Em mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto,
-          Área, Como usar) e o botão <strong>"Mais"</strong> para funções administrativas.
-          Use também os atalhos de teclado:
+          No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas. Em
+          mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto,
+          Área, Como usar) e o botão <strong>"Mais"</strong> para funções administrativas. Use
+          também os atalhos de teclado:
         </p>
         <ShortcutTable rows={shortcutRows} />
         <p className="mt-3 text-sm text-muted-foreground">
-          A <strong>paleta de comandos</strong> (<Kbd>Cmd+K</Kbd>) permite buscar páginas e
-          produtos rapidamente. Digite o nome do produto para ir direto à análise.
+          A <strong>paleta de comandos</strong> (<Kbd>Cmd+K</Kbd>) permite buscar páginas e produtos
+          rapidamente. Digite o nome do produto para ir direto à análise.
         </p>
       </Section>
 
@@ -99,10 +110,20 @@ export default function HowToPage() {
           A página inicial exibe KPIs e gráficos do período selecionado.
         </p>
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
-          <li>Use o <strong>filtro de datas</strong> no topo para ajustar o período.</li>
-          <li>Os <strong>cards</strong> mostram receita, margem, volume e tickets.</li>
-          <li>Gráficos de <strong>evolução diária</strong> e <strong>comparação</strong> entre períodos.</li>
-          <li>Dados têm <strong>cache de 30s</strong> — alterações recentes podem levar até 30s para refletir.</li>
+          <li>
+            Use o <strong>filtro de datas</strong> no topo para ajustar o período.
+          </li>
+          <li>
+            Os <strong>cards</strong> mostram receita, margem, volume e tickets.
+          </li>
+          <li>
+            Gráficos de <strong>evolução diária</strong> e <strong>comparação</strong> entre
+            períodos.
+          </li>
+          <li>
+            Dados têm <strong>cache de 30s</strong> — alterações recentes podem levar até 30s para
+            refletir.
+          </li>
         </ul>
       </Section>
 
@@ -111,10 +132,19 @@ export default function HowToPage() {
           Busque produtos por nome ou código (mínimo 3 caracteres).
         </p>
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
-          <li>Selecione um produto para ver <strong>análise completa</strong>: receita, margem, evolução.</li>
-          <li>Escolha uma <strong>loja específica</strong> ou veja todas.</li>
-          <li>A <strong>hierarquia</strong> (departamento → seção → grupo) é exibida automaticamente.</li>
-          <li>Compare com <strong>semanas anteriores</strong> (mesmo dia da semana).</li>
+          <li>
+            Selecione um produto para ver <strong>análise completa</strong>: receita, margem,
+            evolução.
+          </li>
+          <li>
+            Escolha uma <strong>loja específica</strong> ou veja todas.
+          </li>
+          <li>
+            A <strong>hierarquia</strong> (departamento → seção → grupo) é exibida automaticamente.
+          </li>
+          <li>
+            Compare com <strong>semanas anteriores</strong> (mesmo dia da semana).
+          </li>
         </ul>
       </Section>
 
@@ -123,9 +153,15 @@ export default function HowToPage() {
           Explore dados agrupados por departamento, seção, grupo ou subgrupo.
         </p>
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
-          <li>Use os <strong>filtros hierárquicos</strong> para navegar entre níveis.</li>
-          <li><strong>Ranking</strong> de performance por área.</li>
-          <li><strong>Exportação</strong> em PDF dos produtos listados.</li>
+          <li>
+            Use os <strong>filtros hierárquicos</strong> para navegar entre níveis.
+          </li>
+          <li>
+            <strong>Ranking</strong> de performance por área.
+          </li>
+          <li>
+            <strong>Exportação</strong> em PDF dos produtos listados.
+          </li>
         </ul>
       </Section>
 
@@ -135,11 +171,21 @@ export default function HowToPage() {
             Faça upload de planilhas XLSX no formato GPA para importar dados de vendas.
           </p>
           <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground list-disc list-inside marker:text-primary">
-            <li>Formatos aceitos: <strong>.xlsx</strong> (exportação GPA).</li>
-            <li>Limite: <strong>200.000 linhas</strong> por arquivo.</li>
-            <li>A importação é feita em <strong>lotes de 1.000 linhas</strong> com barra de progresso.</li>
-            <li>Use o <strong>calendário</strong> para visualizar datas já importadas.</li>
-            <li>Ao confirmar, os dados do período são <strong>substituídos</strong> (não acumulados).</li>
+            <li>
+              Formatos aceitos: <strong>.xlsx</strong> (exportação GPA).
+            </li>
+            <li>
+              Limite: <strong>200.000 linhas</strong> por arquivo.
+            </li>
+            <li>
+              A importação é feita em <strong>lotes de 1.000 linhas</strong> com barra de progresso.
+            </li>
+            <li>
+              Use o <strong>calendário</strong> para visualizar datas já importadas.
+            </li>
+            <li>
+              Ao confirmar, os dados do período são <strong>substituídos</strong> (não acumulados).
+            </li>
           </ul>
         </Section>
       )}
@@ -151,27 +197,30 @@ export default function HowToPage() {
           </p>
           <div className="divide-y divide-border/50 text-sm">
             {cacheRows.map((r) => (
-              <div key={r.key} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0">
+              <div
+                key={r.key}
+                className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
+              >
                 <span className="font-mono text-xs">{r.key}</span>
                 <span className="text-muted-foreground">{r.ttl}</span>
               </div>
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            O cache é invalidado automaticamente após o TTL. Dados recentemente importados
-            podem levar até 30s para aparecer no dashboard.
+            O cache é invalidado automaticamente após o TTL. Dados recentemente importados podem
+            levar até 30s para aparecer no dashboard.
           </p>
         </Section>
       )}
 
       <Section title="Conta" icon={HelpCircle}>
         <p className="text-sm text-muted-foreground">
-          No desktop, seu email aparece no rodapé da sidebar.
-          Para sair, clique no ícone de saída ao lado do email.
+          No desktop, seu email aparece no rodapé da sidebar. Para sair, clique no ícone de saída ao
+          lado do email.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Em mobile, abra o botão <strong>"Mais"</strong> na barra inferior
-          e selecione <strong>Sair</strong>.
+          Em mobile, abra o botão <strong>"Mais"</strong> na barra inferior e selecione{" "}
+          <strong>Sair</strong>.
         </p>
       </Section>
 

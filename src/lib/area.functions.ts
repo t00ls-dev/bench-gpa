@@ -72,24 +72,28 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<AreaFilterHierarchyResult> => {
     const { cache } = await import("./cache");
     const supabase = context.supabase as DB;
-    return cache.wrap("area_filter_hierarchy", async () => {
-      const { data: res, error } = await supabase.rpc("area_filter_hierarchy");
-      if (error) throw safeError("analytics", error);
-      const r = asRecord(res);
-      return {
-        latestDate: strOrNull(r.latestDate),
-        hierarchy: asArray(r.hierarchy).map((x) => {
-          const o = asRecord(x);
-          return {
-            store_code: str(o.store_code),
-            store_name: str(o.store_name),
-            depto: strOrNull(o.depto),
-            secao: strOrNull(o.secao),
-            grupo: strOrNull(o.grupo),
-            subgrupo: strOrNull(o.subgrupo),
-          };
-        }),
-        availableDates: asArray(r.availableDates).map(str),
-      };
-    }, 300_000);
+    return cache.wrap(
+      "area_filter_hierarchy",
+      async () => {
+        const { data: res, error } = await supabase.rpc("area_filter_hierarchy");
+        if (error) throw safeError("analytics", error);
+        const r = asRecord(res);
+        return {
+          latestDate: strOrNull(r.latestDate),
+          hierarchy: asArray(r.hierarchy).map((x) => {
+            const o = asRecord(x);
+            return {
+              store_code: str(o.store_code),
+              store_name: str(o.store_name),
+              depto: strOrNull(o.depto),
+              secao: strOrNull(o.secao),
+              grupo: strOrNull(o.grupo),
+              subgrupo: strOrNull(o.subgrupo),
+            };
+          }),
+          availableDates: asArray(r.availableDates).map(str),
+        };
+      },
+      300_000,
+    );
   });

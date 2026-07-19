@@ -7,7 +7,12 @@ export function useHotkey(key: string, handler: () => void, enabled = true) {
     if (!enabled) return;
     const cb = (e: KeyboardEvent) => {
       if (e.key !== key) return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
       e.preventDefault();
       handler();
     };
@@ -24,7 +29,12 @@ export function useGotoHotkey(letter: string, handler: () => void, enabled = tru
     if (!enabled) return;
     const cb = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
       if (pendingG.current && key === letter) {
         pendingG.current = false;
         clearTimeout(gTimer.current);
@@ -35,7 +45,9 @@ export function useGotoHotkey(letter: string, handler: () => void, enabled = tru
       if (key === "g") {
         pendingG.current = true;
         clearTimeout(gTimer.current);
-        gTimer.current = setTimeout(() => { pendingG.current = false; }, 500);
+        gTimer.current = setTimeout(() => {
+          pendingG.current = false;
+        }, 500);
         e.preventDefault();
       }
     };

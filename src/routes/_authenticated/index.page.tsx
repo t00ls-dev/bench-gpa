@@ -77,47 +77,118 @@ function Dashboard() {
       const mX = 10;
       let y = 12;
 
-      doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(17, 17, 17);
-      doc.text("Dashboard", mX, y); y += 7;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(85, 85, 85);
-      doc.text("Período: " + fmtBRShort(filters.dateFrom) + " — " + fmtBRShort(filters.dateTo), mX, y); y += 4;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(17, 17, 17);
+      doc.text("Dashboard", mX, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(85, 85, 85);
+      doc.text(
+        "Período: " + fmtBRShort(filters.dateFrom) + " — " + fmtBRShort(filters.dateTo),
+        mX,
+        y,
+      );
+      y += 4;
       const parts: string[] = [];
-      if (filters.stores.length) parts.push(filters.stores.length === 1 ? filters.stores[0] : filters.stores.length + " lojas");
+      if (filters.stores.length)
+        parts.push(
+          filters.stores.length === 1 ? filters.stores[0] : filters.stores.length + " lojas",
+        );
       if (filters.deptos.length === 1) parts.push(filters.deptos[0]);
       if (filters.secoes.length === 1) parts.push(filters.secoes[0]);
       if (filters.grupos.length === 1) parts.push(filters.grupos[0]);
-      if (parts.length) doc.text("Filtros: " + parts.join(", "), mX, y); y += 6;
+      if (parts.length) doc.text("Filtros: " + parts.join(", "), mX, y);
+      y += 6;
 
       if (data?.current) {
-        doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(17, 17, 17);
-        doc.text("Venda total: " + fmtBRL(data.current.total), mX, y); y += 4.5;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(17, 17, 17);
+        doc.text("Venda total: " + fmtBRL(data.current.total), mX, y);
+        y += 4.5;
         if (data.previous) {
-          const d = data.current.total && data.previous.total ? (data.current.total - data.previous.total) / data.previous.total : null;
-          doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(85, 85, 85);
-          doc.text("Período anterior: " + fmtBRL(data.previous.total) + (d != null ? " (" + (d >= 0 ? "+" : "") + (d * 100).toFixed(1) + "%)" : ""), mX, y); y += 5;
+          const d =
+            data.current.total && data.previous.total
+              ? (data.current.total - data.previous.total) / data.previous.total
+              : null;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(85, 85, 85);
+          doc.text(
+            "Período anterior: " +
+              fmtBRL(data.previous.total) +
+              (d != null ? " (" + (d >= 0 ? "+" : "") + (d * 100).toFixed(1) + "%)" : ""),
+            mX,
+            y,
+          );
+          y += 5;
         }
         y += 2;
       }
 
       const rankSections: { title: string; rows: string[][] }[] = [];
-      if (!hideDepto && rankings?.byDepto?.length) rankSections.push({ title: "Top Departamentos", rows: rankings.byDepto.map((r) => [r.name ?? "", fmtBRL(r.val)]) });
-      if (!hideSecao && rankings?.bySecao?.length) rankSections.push({ title: "Top Seções", rows: rankings.bySecao.map((r) => [r.name ?? "", fmtBRL(r.val)]) });
-      if (!hideGrupo && rankings?.byGrupo?.length) rankSections.push({ title: "Top Grupos", rows: rankings.byGrupo.map((r) => [r.name ?? "", fmtBRL(r.val)]) });
-      if (!hideSubgrupo && rankings?.bySubgrupo?.length) rankSections.push({ title: "Top Subgrupos", rows: rankings.bySubgrupo.map((r) => [r.name ?? "", fmtBRL(r.val)]) });
-      if (rankings?.byProduto?.length) rankSections.push({ title: "Top Produtos", rows: rankings.byProduto.map((r) => [r.name ? r.code + " - " + r.name : r.code, fmtBRL(r.val)]) });
+      if (!hideDepto && rankings?.byDepto?.length)
+        rankSections.push({
+          title: "Top Departamentos",
+          rows: rankings.byDepto.map((r) => [r.name ?? "", fmtBRL(r.val)]),
+        });
+      if (!hideSecao && rankings?.bySecao?.length)
+        rankSections.push({
+          title: "Top Seções",
+          rows: rankings.bySecao.map((r) => [r.name ?? "", fmtBRL(r.val)]),
+        });
+      if (!hideGrupo && rankings?.byGrupo?.length)
+        rankSections.push({
+          title: "Top Grupos",
+          rows: rankings.byGrupo.map((r) => [r.name ?? "", fmtBRL(r.val)]),
+        });
+      if (!hideSubgrupo && rankings?.bySubgrupo?.length)
+        rankSections.push({
+          title: "Top Subgrupos",
+          rows: rankings.bySubgrupo.map((r) => [r.name ?? "", fmtBRL(r.val)]),
+        });
+      if (rankings?.byProduto?.length)
+        rankSections.push({
+          title: "Top Produtos",
+          rows: rankings.byProduto.map((r) => [
+            r.name ? r.code + " - " + r.name : r.code,
+            fmtBRL(r.val),
+          ]),
+        });
 
       for (const sec of rankSections) {
-        if (y > 260) { doc.addPage(); y = 20; }
+        if (y > 260) {
+          doc.addPage();
+          y = 20;
+        }
         autoTable(doc, {
-          startY: y, margin: { left: mX, right: mX },
+          startY: y,
+          margin: { left: mX, right: mX },
           head: [[sec.title, "Venda"]],
           body: sec.rows,
           theme: "grid",
-          styles: { font: "helvetica", fontSize: 8, cellPadding: 1.5, overflow: "hidden", valign: "middle", lineColor: [153, 153, 153], lineWidth: 0.1, textColor: [17, 17, 17] },
-          headStyles: { fillColor: [238, 238, 255], textColor: [17, 17, 17], fontStyle: "bold", fontSize: 8, halign: "center" },
+          styles: {
+            font: "helvetica",
+            fontSize: 8,
+            cellPadding: 1.5,
+            overflow: "hidden",
+            valign: "middle",
+            lineColor: [153, 153, 153],
+            lineWidth: 0.1,
+            textColor: [17, 17, 17],
+          },
+          headStyles: {
+            fillColor: [238, 238, 255],
+            textColor: [17, 17, 17],
+            fontStyle: "bold",
+            fontSize: 8,
+            halign: "center",
+          },
           columnStyles: { 0: { cellWidth: 150 }, 1: { cellWidth: 40, halign: "right" } },
         });
-        y = (doc as any).lastAutoTable.finalY + 6;
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
       }
 
       openPdfBlob(doc);
@@ -140,8 +211,18 @@ function Dashboard() {
         <div className="flex items-center gap-2">
           {isFetching && <span className="text-xs text-muted-foreground">Atualizando…</span>}
           {data && (
-            <Button variant="outline" size="sm" className="h-9" onClick={openDashboardPdf} disabled={pdfLoading}>
-              {pdfLoading ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <FileText className="mr-1.5 size-4" />}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={openDashboardPdf}
+              disabled={pdfLoading}
+            >
+              {pdfLoading ? (
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              ) : (
+                <FileText className="mr-1.5 size-4" />
+              )}
               PDF
             </Button>
           )}

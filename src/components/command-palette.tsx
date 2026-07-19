@@ -88,7 +88,11 @@ export function CommandPalette() {
       label="Paleta de comandos"
       className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
     >
-      <div className="fixed inset-0 bg-black/50" aria-hidden="true" onClick={() => setOpen(false)} />
+      <div
+        className="fixed inset-0 bg-black/50"
+        aria-hidden="true"
+        onClick={() => setOpen(false)}
+      />
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-border bg-popover shadow-elevated">
         <div className="flex items-center gap-2 border-b border-border px-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />

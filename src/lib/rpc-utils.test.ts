@@ -36,8 +36,14 @@ describe("shiftPeriod", () => {
 
 describe("parseNameVal", () => {
   it("parses valid array", () => {
-    const input = [{ name: "A", val: 100 }, { name: "B", val: 200 }];
-    expect(parseNameVal(input)).toEqual([{ name: "A", val: 100 }, { name: "B", val: 200 }]);
+    const input = [
+      { name: "A", val: 100 },
+      { name: "B", val: 200 },
+    ];
+    expect(parseNameVal(input)).toEqual([
+      { name: "A", val: 100 },
+      { name: "B", val: 200 },
+    ]);
   });
 
   it("handles empty array", () => {
