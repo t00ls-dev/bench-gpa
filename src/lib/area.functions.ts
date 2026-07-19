@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
-import { safeError } from "./safe-error";
 import db from "./db";
 import {
   AreaAnalysisResult,
@@ -14,7 +13,7 @@ import {
 import { AreaAnalysisSchema } from "./schemas";
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
     const [kpiRows, totalCountRows, byDate, products] = await db.query(
@@ -66,7 +65,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   });
 
 export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit])
   .handler(async (): Promise<AreaFilterHierarchyResult> => {
     const { cache } = await import("./cache");
     return cache.wrap(

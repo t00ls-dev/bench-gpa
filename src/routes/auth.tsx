@@ -1,6 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { lazy } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 function sanitizeNext(next: unknown): string {
   if (typeof next !== "string") return "/";
@@ -14,14 +13,19 @@ export const Route = createFileRoute("/auth")({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
   beforeLoad: async ({ search }) => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) {
-      const target = sanitizeNext(search.next);
-      if (target !== "/") {
-        const u = new URL(target, window.location.origin);
-        throw redirect({ to: u.pathname, search: Object.fromEntries(u.searchParams.entries()) });
+    try {
+      const { getMe } = await import("@/lib/auth-api");
+      const user = await getMe();
+      if (user) {
+        const target = sanitizeNext(search.next);
+        if (target !== "/") {
+          const u = new URL(target, window.location.origin);
+          throw redirect({ to: u.pathname, search: Object.fromEntries(u.searchParams.entries()) });
+        }
+        throw redirect({ to: "/" });
       }
-      throw redirect({ to: "/" });
+    } catch {
+      // not logged in, show auth page
     }
   },
   component: lazy(() => import("./auth.page")),
