@@ -1,10 +1,7 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { safeError } from "./safe-error";
-import type { Database } from "@/integrations/supabase/types";
 import { FilterSchema } from "./schemas";
 import type { Filters } from "./schemas";
-
-export type DB = SupabaseClient<Database>;
+import db from "./db";
 
 export interface NameVal {
   name: string;
@@ -164,26 +161,27 @@ function metricsCacheKey(f: Filters): string {
   return `metrics:${f.dateFrom ?? ""}:${f.dateTo ?? ""}:${(f.stores ?? []).join(",")}:${(f.deptos ?? []).join(",")}:${(f.secoes ?? []).join(",")}:${(f.grupos ?? []).join(",")}:${(f.subgrupos ?? []).join(",")}`;
 }
 
-export async function callMetrics(supabase: DB, f: Filters): Promise<DashboardMetricsResult> {
+export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
   const { cache } = await import("./cache");
   const key = metricsCacheKey(f);
   return cache.wrap(key, async () => {
-    const { data, error } = await supabase.rpc("dashboard_metrics", {
-      p_date_from: f.dateFrom || (null as unknown as string),
-      p_date_to: f.dateTo || (null as unknown as string),
-      p_stores: f.stores ?? [],
-      p_deptos: f.deptos ?? [],
-      p_secoes: f.secoes ?? [],
-      p_grupos: f.grupos ?? [],
-      p_subgrupos: f.subgrupos ?? [],
-    });
-    if (error) throw safeError("analytics", error);
-    const d = asRecord(data);
+    const [aggregate, byStore, byDepto, byDate] = await db.query(
+      "CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)",
+      [
+        f.dateFrom || null,
+        f.dateTo || null,
+        JSON.stringify(f.stores ?? []),
+        JSON.stringify(f.deptos ?? []),
+        JSON.stringify(f.secoes ?? []),
+        JSON.stringify(f.grupos ?? []),
+        JSON.stringify(f.subgrupos ?? []),
+      ],
+    );
     return {
-      total: num(d.total),
-      byStore: parseCodeNameVal(d.byStore),
-      byDepto: parseNameVal(d.byDepto),
-      byDate: parseDateVal(d.byDate),
+      total: Number((aggregate as any[])[0]?.total ?? 0),
+      byStore: (byStore as any[]).map((r) => ({ code: r.code, name: r.name, val: Number(r.val) })),
+      byDepto: (byDepto as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
+      byDate: (byDate as any[]).map((r) => ({ date: r.date, val: Number(r.val) })),
     };
   });
 }
