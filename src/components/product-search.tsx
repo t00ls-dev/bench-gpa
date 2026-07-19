@@ -24,7 +24,10 @@ export function ProductSearch({
   selected: { prod_code: string; prod_name: string } | null;
   suggestions: Suggestion[] | undefined;
   searchFetching: boolean;
-  product?: { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null } | null | undefined;
+  product?:
+    | { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null }
+    | null
+    | undefined;
   onQueryChange: (v: string) => void;
   onSelect: (s: Suggestion) => void;
   onClear: () => void;
@@ -44,7 +47,12 @@ export function ProductSearch({
           }}
         />
         {(query.length > 0 || selected) && (
-          <Button variant="ghost" size="sm" onClick={onClear} className="h-7 gap-1 text-xs text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="h-7 gap-1 text-xs text-muted-foreground"
+          >
             <X className="size-3" /> Limpar
           </Button>
         )}
@@ -61,9 +69,7 @@ export function ProductSearch({
             <span className="font-mono">{selected.prod_code}</span>
             <span className="truncate max-w-[40vw] sm:max-w-[260px]">{selected.prod_name}</span>
           </span>
-          {product && (
-            <ProductHierarchyTrail product={product} />
-          )}
+          {product && <ProductHierarchyTrail product={product} />}
         </div>
       )}
       {!selected &&

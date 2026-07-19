@@ -40,10 +40,13 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
       });
       toast.success("Usuário criado.");
       setOpen(false);
-      setEmailLocal(""); setName(""); setPassword(""); setRole("user");
+      setEmailLocal("");
+      setName("");
+      setPassword("");
+      setRole("user");
       onCreated();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao criar");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao criar");
     } finally {
       setCreating(false);
     }
@@ -52,16 +55,26 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><UserPlus className="mr-2 size-4" /> Novo usuário</Button>
+        <Button>
+          <UserPlus className="mr-2 size-4" /> Novo usuário
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Novo usuário</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Novo usuário</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label htmlFor="create-email">E-mail</Label>
             <div className="mt-1.5 flex">
-              <Input id="create-email" value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)}
-                placeholder="ex.: uilton.leite" className="rounded-r-none" autoComplete="off" />
+              <Input
+                id="create-email"
+                value={emailLocal}
+                onChange={(e) => setEmailLocal(e.target.value)}
+                placeholder="ex.: uilton.leite"
+                className="rounded-r-none"
+                autoComplete="off"
+              />
               <span className="inline-flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
                 @gpabr.com
               </span>
@@ -69,18 +82,31 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
           </div>
           <div>
             <Label htmlFor="create-name">Nome</Label>
-            <Input id="create-name" className="mt-1.5" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              id="create-name"
+              className="mt-1.5"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <div>
             <Label htmlFor="create-password">Senha</Label>
-            <Input id="create-password" className="mt-1.5" type="password" value={password}
-              onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres"
-              autoComplete="new-password" />
+            <Input
+              id="create-password"
+              className="mt-1.5"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              autoComplete="new-password"
+            />
           </div>
           <div>
             <Label htmlFor="create-role">Papel</Label>
             <Select value={role} onValueChange={(v) => setRole(v as "admin" | "user")}>
-              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Usuário</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
@@ -89,8 +115,13 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={creating}>Cancelar</Button>
-          <Button onClick={submit} disabled={creating || !emailLocal || !name || password.length < 8}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={creating}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={submit}
+            disabled={creating || !emailLocal || !name || password.length < 8}
+          >
             {creating ? <Loader2 className="size-4 animate-spin" /> : "Criar"}
           </Button>
         </DialogFooter>

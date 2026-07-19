@@ -36,8 +36,8 @@ export function ResetPasswordDialog({
       onClose();
       setNewPw("");
       onReset();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao redefinir");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao redefinir");
     } finally {
       setResetting(false);
     }
@@ -46,16 +46,26 @@ export function ResetPasswordDialog({
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Redefinir senha</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Redefinir senha</DialogTitle>
+        </DialogHeader>
         <p className="text-sm text-muted-foreground">{target?.email}</p>
         <div>
           <Label htmlFor="reset-password">Nova senha</Label>
-          <Input id="reset-password" className="mt-1.5" type="password" value={newPw}
-            onChange={(e) => setNewPw(e.target.value)} placeholder="Mínimo 8 caracteres"
-            autoComplete="new-password" />
+          <Input
+            id="reset-password"
+            className="mt-1.5"
+            type="password"
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+            placeholder="Mínimo 8 caracteres"
+            autoComplete="new-password"
+          />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={resetting}>Cancelar</Button>
+          <Button variant="outline" onClick={onClose} disabled={resetting}>
+            Cancelar
+          </Button>
           <Button onClick={submit} disabled={resetting || newPw.length < 8}>
             {resetting ? <Loader2 className="size-4 animate-spin" /> : "Redefinir"}
           </Button>

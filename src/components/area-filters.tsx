@@ -57,7 +57,8 @@ export function AreaFilters({
   }, [hierarchy]);
 
   const deptoBase = useMemo(
-    () => (fStores.length === 0 ? hierarchy : hierarchy.filter((r) => fStores.includes(r.store_code))),
+    () =>
+      fStores.length === 0 ? hierarchy : hierarchy.filter((r) => fStores.includes(r.store_code)),
     [hierarchy, fStores],
   );
   const deptosOpts = useMemo(
@@ -66,7 +67,10 @@ export function AreaFilters({
   );
 
   const secaoBase = useMemo(
-    () => (fDeptos.length === 0 ? deptoBase : deptoBase.filter((r) => r.depto && fDeptos.includes(r.depto))),
+    () =>
+      fDeptos.length === 0
+        ? deptoBase
+        : deptoBase.filter((r) => r.depto && fDeptos.includes(r.depto)),
     [deptoBase, fDeptos],
   );
   const secoesOpts = useMemo(
@@ -75,7 +79,10 @@ export function AreaFilters({
   );
 
   const grupoBase = useMemo(
-    () => (fSecoes.length === 0 ? secaoBase : secaoBase.filter((r) => r.secao && fSecoes.includes(r.secao))),
+    () =>
+      fSecoes.length === 0
+        ? secaoBase
+        : secaoBase.filter((r) => r.secao && fSecoes.includes(r.secao)),
     [secaoBase, fSecoes],
   );
   const gruposOpts = useMemo(
@@ -84,7 +91,10 @@ export function AreaFilters({
   );
 
   const subgrupoBase = useMemo(
-    () => (fGrupos.length === 0 ? grupoBase : grupoBase.filter((r) => r.grupo && fGrupos.includes(r.grupo))),
+    () =>
+      fGrupos.length === 0
+        ? grupoBase
+        : grupoBase.filter((r) => r.grupo && fGrupos.includes(r.grupo)),
     [grupoBase, fGrupos],
   );
   const subgruposOpts = useMemo(

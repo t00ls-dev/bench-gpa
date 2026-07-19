@@ -15,8 +15,24 @@ import { fmtBRShort } from "@/lib/utils";
 import { openPdfBlob } from "@/lib/export-pdf";
 import { Route } from "./produto";
 
-const WEEKDAYS_FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-const WEEKDAYS_PLURAL = ["Domingos", "Segundas-feiras", "Terças-feiras", "Quartas-feiras", "Quintas-feiras", "Sextas-feiras", "Sábados"];
+const WEEKDAYS_FULL = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
+const WEEKDAYS_PLURAL = [
+  "Domingos",
+  "Segundas-feiras",
+  "Terças-feiras",
+  "Quartas-feiras",
+  "Quintas-feiras",
+  "Sextas-feiras",
+  "Sábados",
+];
 const WEEKDAY_IS_MASC = [true, false, false, false, false, false, true];
 
 interface SeriesPoint {
@@ -70,16 +86,26 @@ function ProdutoPage() {
 
   const { data: analysisData, isFetching: analysisLoading } = useQuery({
     queryKey: ["product-analysis", selected?.prod_code, storeCode],
-    queryFn: () => analysis({ data: { prodCode: selected!.prod_code, storeCode: storeCode === "__all__" ? null : storeCode, referenceDate: null } }),
+    queryFn: () =>
+      analysis({
+        data: {
+          prodCode: selected!.prod_code,
+          storeCode: storeCode === "__all__" ? null : storeCode,
+          referenceDate: null,
+        },
+      }),
     enabled: !!selected,
     staleTime: 5 * 60_000,
     placeholderData: (prev) => prev,
   });
 
-  const refWeekdayIdx = analysisData?.refDate ? new Date(analysisData.refDate + "T00:00:00Z").getUTCDay() : null;
+  const refWeekdayIdx = analysisData?.refDate
+    ? new Date(analysisData.refDate + "T00:00:00Z").getUTCDay()
+    : null;
   const refWeekdayFull = refWeekdayIdx != null ? WEEKDAYS_FULL[refWeekdayIdx] : null;
   const refWeekdayPlural = refWeekdayIdx != null ? WEEKDAYS_PLURAL[refWeekdayIdx] : null;
-  const refArticle = refWeekdayIdx != null ? (WEEKDAY_IS_MASC[refWeekdayIdx] ? "Últimos" : "Últimas") : "Últimas";
+  const refArticle =
+    refWeekdayIdx != null ? (WEEKDAY_IS_MASC[refWeekdayIdx] ? "Últimos" : "Últimas") : "Últimas";
 
   const sameWeekdayAll = useMemo<SeriesPoint[]>(() => {
     if (!analysisData?.evolution || refWeekdayIdx == null) return [];
@@ -88,7 +114,9 @@ function ProdutoPage() {
       .sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [analysisData?.evolution, refWeekdayIdx]);
 
-  const avgSame = sameWeekdayAll.length ? sameWeekdayAll.reduce((a, b) => a + b.val, 0) / sameWeekdayAll.length : 0;
+  const avgSame = sameWeekdayAll.length
+    ? sameWeekdayAll.reduce((a, b) => a + b.val, 0) / sameWeekdayAll.length
+    : 0;
   const avgDaily = useMemo(() => {
     const ev = (analysisData?.evolution as SeriesPoint[] | undefined) ?? [];
     return ev.length ? ev.reduce((a, b) => a + b.val, 0) / ev.length : 0;
@@ -107,41 +135,91 @@ function ProdutoPage() {
 
       const pn = selected?.prod_name ?? "";
       const pc = selected?.prod_code ?? "";
-      const storeLabel = storeCode === "__all__" || storeCode == null ? "Todas as lojas" : stores.find((s) => s.store_code === storeCode)?.store_name ?? storeCode;
+      const storeLabel =
+        storeCode === "__all__" || storeCode == null
+          ? "Todas as lojas"
+          : (stores.find((s) => s.store_code === storeCode)?.store_name ?? storeCode);
 
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(17, 17, 17);
-      doc.text("Análise de Produto", mX, y); y += 7;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(85, 85, 85);
-      doc.text(pc + " — " + pn, mX, y); y += 4.5;
-      doc.text("Loja: " + storeLabel, mX, y); y += 4;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(17, 17, 17);
+      doc.text("Análise de Produto", mX, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(85, 85, 85);
+      doc.text(pc + " — " + pn, mX, y);
+      y += 4.5;
+      doc.text("Loja: " + storeLabel, mX, y);
+      y += 4;
       if (analysisData?.product) {
         const prod = analysisData.product;
         const hier: string[] = [];
-        if (prod.depto) hier.push(prod.depto); if (prod.secao) hier.push(prod.secao);
-        if (prod.grupo) hier.push(prod.grupo); if (prod.subgrupo) hier.push(prod.subgrupo);
-        if (hier.length) doc.text(hier.join(" › "), mX, y); y += 4;
+        if (prod.depto) hier.push(prod.depto);
+        if (prod.secao) hier.push(prod.secao);
+        if (prod.grupo) hier.push(prod.grupo);
+        if (prod.subgrupo) hier.push(prod.subgrupo);
+        if (hier.length) doc.text(hier.join(" › "), mX, y);
+        y += 4;
       }
-      if (analysisData?.refDate) doc.text("Data referência: " + fmtBRShort(analysisData.refDate), mX, y); y += 6;
+      if (analysisData?.refDate)
+        doc.text("Data referência: " + fmtBRShort(analysisData.refDate), mX, y);
+      y += 6;
 
       if (analysisData) {
-        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(17, 17, 17);
-        doc.text("Indicadores", mX, y); y += 5;
-        doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(85, 85, 85);
-        doc.text("Venda referência: " + fmtBRL(analysisData.refValue ?? 0), mX, y); y += 4;
-        doc.text("Média diária (28 dias): " + fmtBRL(avgDaily), mX, y); y += 4;
-        if (refWeekdayFull) doc.text("Média de " + (refWeekdayPlural?.toLowerCase() ?? "") + ": " + fmtBRL(avgSame), mX, y); y += 6;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(17, 17, 17);
+        doc.text("Indicadores", mX, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(85, 85, 85);
+        doc.text("Venda referência: " + fmtBRL(analysisData.refValue ?? 0), mX, y);
+        y += 4;
+        doc.text("Média diária (28 dias): " + fmtBRL(avgDaily), mX, y);
+        y += 4;
+        if (refWeekdayFull)
+          doc.text(
+            "Média de " + (refWeekdayPlural?.toLowerCase() ?? "") + ": " + fmtBRL(avgSame),
+            mX,
+            y,
+          );
+        y += 6;
       }
 
       if (analysisData?.evolution?.length) {
         const ev = analysisData.evolution as Array<{ date: string; val: number }>;
-        if (y > 250) { doc.addPage(); y = 20; }
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
         autoTable(doc, {
-          startY: y, margin: { left: mX, right: mX },
+          startY: y,
+          margin: { left: mX, right: mX },
           head: [["Data", "Venda"]],
-          body: ev.slice().reverse().map((e) => [fmtBRShort(e.date), fmtBRL(e.val)]),
+          body: ev
+            .slice()
+            .reverse()
+            .map((e) => [fmtBRShort(e.date), fmtBRL(e.val)]),
           theme: "grid",
-          styles: { font: "helvetica", fontSize: 8, cellPadding: 1.5, overflow: "hidden", valign: "middle", lineColor: [153, 153, 153], lineWidth: 0.1, textColor: [17, 17, 17] },
-          headStyles: { fillColor: [238, 238, 255], textColor: [17, 17, 17], fontStyle: "bold", fontSize: 8, halign: "center" },
+          styles: {
+            font: "helvetica",
+            fontSize: 8,
+            cellPadding: 1.5,
+            overflow: "hidden",
+            valign: "middle",
+            lineColor: [153, 153, 153],
+            lineWidth: 0.1,
+            textColor: [17, 17, 17],
+          },
+          headStyles: {
+            fillColor: [238, 238, 255],
+            textColor: [17, 17, 17],
+            fontStyle: "bold",
+            fontSize: 8,
+            halign: "center",
+          },
           columnStyles: { 0: { cellWidth: 60 }, 1: { cellWidth: 130, halign: "right" } },
         });
       }
@@ -152,8 +230,15 @@ function ProdutoPage() {
     }
   };
 
-  const handleClear = () => { setQuery(""); setSelected(null); setDebounced(""); };
-  const handleSelect = (s: { prod_code: string; prod_name: string }) => { setSelected(s); setQuery(""); };
+  const handleClear = () => {
+    setQuery("");
+    setSelected(null);
+    setDebounced("");
+  };
+  const handleSelect = (s: { prod_code: string; prod_name: string }) => {
+    setSelected(s);
+    setQuery("");
+  };
 
   return (
     <div>
@@ -167,8 +252,18 @@ function ProdutoPage() {
           </p>
         </div>
         {selected && analysisData && (
-          <Button variant="outline" size="sm" className="h-9" onClick={openProductPdf} disabled={pdfLoading}>
-            {pdfLoading ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <FileText className="mr-1.5 size-4" />}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9"
+            onClick={openProductPdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? (
+              <Loader2 className="mr-1.5 size-4 animate-spin" />
+            ) : (
+              <FileText className="mr-1.5 size-4" />
+            )}
             PDF
           </Button>
         )}
@@ -178,10 +273,14 @@ function ProdutoPage() {
         <div>
           <Label className="text-xs">Loja</Label>
           <MultiSelect
-            single label="Selecione"
+            single
+            label="Selecione"
             options={[
               { value: "__all__", label: "Todas as lojas" },
-              ...stores.map((s) => ({ value: s.store_code, label: `${s.store_code} - ${s.store_name}` })),
+              ...stores.map((s) => ({
+                value: s.store_code,
+                label: `${s.store_code} - ${s.store_name}`,
+              })),
             ]}
             value={[storeCode]}
             onChange={(v) => setStoreCode(v[0] ?? "__all__")}
@@ -190,9 +289,15 @@ function ProdutoPage() {
       </div>
 
       <ProductSearch
-        query={query} debounced={debounced} selected={selected}
-        suggestions={suggestions} searchFetching={searchFetching}
-        onQueryChange={(v) => { setQuery(v); setSelected(null); }}
+        query={query}
+        debounced={debounced}
+        selected={selected}
+        suggestions={suggestions}
+        searchFetching={searchFetching}
+        onQueryChange={(v) => {
+          setQuery(v);
+          setSelected(null);
+        }}
         onSelect={handleSelect}
         onClear={handleClear}
         product={analysisData?.product}
@@ -203,14 +308,18 @@ function ProdutoPage() {
           <section className="mt-6 grid gap-4 md:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="kpi-card">
-                <Skeleton className="h-3 w-24" /><Skeleton className="mt-2 h-8 w-28" /><Skeleton className="mt-2 h-3 w-20" />
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="mt-2 h-8 w-28" />
+                <Skeleton className="mt-2 h-3 w-20" />
               </div>
             ))}
           </section>
           <section className="mt-6 grid gap-4 lg:grid-cols-2">
             {Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className="kpi-card">
-                <Skeleton className="h-5 w-48" /><Skeleton className="mt-2 h-3 w-64" /><Skeleton className="mt-4 h-72 w-full rounded-lg" />
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="mt-2 h-3 w-64" />
+                <Skeleton className="mt-4 h-72 w-full rounded-lg" />
               </div>
             ))}
           </section>
@@ -232,9 +341,12 @@ function ProdutoPage() {
             refDate: analysisData.refDate ?? undefined,
             product: analysisData.product ?? undefined,
           }}
-          avgSame={avgSame} avgDaily={avgDaily}
-          refWeekdayFull={refWeekdayFull} refWeekdayPlural={refWeekdayPlural}
-          refArticle={refArticle} sameWeekdayAll={sameWeekdayAll}
+          avgSame={avgSame}
+          avgDaily={avgDaily}
+          refWeekdayFull={refWeekdayFull}
+          refWeekdayPlural={refWeekdayPlural}
+          refArticle={refArticle}
+          sameWeekdayAll={sameWeekdayAll}
           hideStoreComp={storeCode !== "__all__"}
         />
       )}

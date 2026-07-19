@@ -121,11 +121,7 @@ function DocViewer({ slug }: { slug: string }) {
   const navigate = Route.useNavigate();
   const getContent = useServerFn(getDocContent);
 
-  const {
-    data,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin-doc", slug],
     queryFn: () => getContent({ data: { slug } }),
   });
@@ -151,9 +147,7 @@ function DocViewer({ slug }: { slug: string }) {
       ) : (
         <>
           {lastModified && (
-            <p className="text-xs text-muted-foreground">
-              Atualizado {timeago(lastModified)}
-            </p>
+            <p className="text-xs text-muted-foreground">Atualizado {timeago(lastModified)}</p>
           )}
           <article className="markdown-content overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>

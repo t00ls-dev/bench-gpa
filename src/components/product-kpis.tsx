@@ -28,7 +28,12 @@ export function ProductKPIs({
     refValue?: number;
     refDate?: string;
     evolution?: SeriesPoint[];
-    product?: { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null };
+    product?: {
+      depto: string | null;
+      secao: string | null;
+      grupo: string | null;
+      subgrupo: string | null;
+    };
   } | null;
   avgSame: number;
   avgDaily: number;
@@ -46,7 +51,11 @@ export function ProductKPIs({
         <KpiCard
           label="Venda na data referência"
           value={fmtBRL(analysisData.refValue ?? 0)}
-          hint={analysisData.refDate ? `${refWeekdayFull} · ${fmtBRShort(analysisData.refDate)}` : undefined}
+          hint={
+            analysisData.refDate
+              ? `${refWeekdayFull} · ${fmtBRShort(analysisData.refDate)}`
+              : undefined
+          }
         />
         <KpiCard
           label={`Média de ${refWeekdayPlural?.toLowerCase() ?? "datas anteriores"}`}
@@ -65,8 +74,12 @@ export function ProductKPIs({
       <Suspense
         fallback={
           <section className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="kpi-card"><Skeleton className="h-72 w-full rounded-lg" /></div>
-            <div className="kpi-card"><Skeleton className="h-72 w-full rounded-lg" /></div>
+            <div className="kpi-card">
+              <Skeleton className="h-72 w-full rounded-lg" />
+            </div>
+            <div className="kpi-card">
+              <Skeleton className="h-72 w-full rounded-lg" />
+            </div>
           </section>
         }
       >
@@ -78,10 +91,7 @@ export function ProductKPIs({
         rows={sameWeekdayAll}
       />
 
-      <PaginatedHistory
-        title="Histórico completo"
-        rows={analysisData.evolution as SeriesPoint[]}
-      />
+      <PaginatedHistory title="Histórico completo" rows={analysisData.evolution as SeriesPoint[]} />
     </>
   );
 }

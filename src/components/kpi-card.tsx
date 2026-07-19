@@ -35,5 +35,3 @@ export function KpiCard({ label, value, delta, hint }: Props) {
     </div>
   );
 }
-
-
