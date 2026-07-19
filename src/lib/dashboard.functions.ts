@@ -2,79 +2,67 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { safeError } from "./safe-error";
+import db from "./db";
 import {
-  DB,
   StoreOption,
   FilterOptionsResult,
-  DashboardMetricsResult,
   DashboardRankingsResult,
   callMetrics,
   shiftPeriod,
-  asRecord,
   asArray,
   str,
   strOrNull,
   num,
+  asRecord,
   parseNameVal,
-  parseCodeNameVal,
 } from "./rpc-utils";
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
-  .handler(async ({ data, context }): Promise<FilterOptionsResult> => {
-    const supabase = context.supabase as DB;
-    const { data: res, error } = await supabase.rpc("filter_options", {
-      p_date_from: data.dateFrom || (null as unknown as string),
-      p_date_to: data.dateTo || (null as unknown as string),
-      p_stores: data.stores ?? [],
-      p_deptos: data.deptos ?? [],
-      p_secoes: data.secoes ?? [],
-      p_grupos: data.grupos ?? [],
-    });
-    if (error) throw safeError("analytics", error);
-    const r = asRecord(res);
+  .handler(async ({ data }): Promise<FilterOptionsResult> => {
+    const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] =
+      await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [
+        data.dateFrom || null,
+        data.dateTo || null,
+        JSON.stringify(data.stores ?? []),
+        JSON.stringify(data.deptos ?? []),
+        JSON.stringify(data.secoes ?? []),
+        JSON.stringify(data.grupos ?? []),
+      ]);
     return {
-      latestDate: strOrNull(r.latestDate),
-      stores: asArray(r.stores).map((x) => {
-        const o = asRecord(x);
-        return { store_code: str(o.store_code), store_name: str(o.store_name) };
-      }),
-      deptos: asArray(r.deptos).map(str),
-      secoes: asArray(r.secoes).map(str),
-      grupos: asArray(r.grupos).map(str),
-      subgrupos: asArray(r.subgrupos).map(str),
-      availableDates: asArray(r.availableDates).map(str),
+      latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
+      stores: (stores as any[]).map((r) => ({
+        store_code: str(r.store_code),
+        store_name: str(r.store_name),
+      })),
+      deptos: (deptos as any[]).map((r) => str(r.depto)),
+      secoes: (secoes as any[]).map((r) => str(r.secao)),
+      grupos: (grupos as any[]).map((r) => str(r.grupo)),
+      subgrupos: (subgrupos as any[]).map((r) => str(r.subgrupo)),
+      availableDates: (availableDates as any[]).map((r) => str(r.sale_date)),
     };
   });
 
 export const getStores = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
-  .handler(async ({ context }): Promise<StoreOption[]> => {
-    const supabase = context.supabase as DB;
-    const { data, error } = await supabase
-      .from("stores")
-      .select("store_code, store_name")
-      .order("store_code", { ascending: true });
-    if (error) throw safeError("analytics", error);
-    return (data ?? []) as StoreOption[];
+  .handler(async (): Promise<StoreOption[]> => {
+    const [rows] = await db.query(
+      "SELECT store_code, store_name FROM stores ORDER BY store_code",
+    );
+    return (rows ?? []) as StoreOption[];
   });
 
 export const getDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const supabase = context.supabase as DB;
-    const currentPromise = callMetrics(supabase, data);
-    let previousPromise: Promise<DashboardMetricsResult | null> = Promise.resolve(null);
+  .handler(async ({ data }) => {
+    const currentPromise = callMetrics(data);
+    let previousPromise: Promise<ReturnType<typeof callMetrics> | null> = Promise.resolve(null);
     if (data.compare !== "none" && data.dateFrom && data.dateTo) {
       const prev = shiftPeriod(data.dateFrom, data.dateTo, data.compare);
-      previousPromise = callMetrics(supabase, {
-        ...data,
-        dateFrom: prev.dateFrom,
-        dateTo: prev.dateTo,
-      });
+      previousPromise = callMetrics({ ...data, dateFrom: prev.dateFrom, dateTo: prev.dateTo });
     }
     const [current, previous] = await Promise.all([currentPromise, previousPromise]);
     return { current, previous };
@@ -82,43 +70,43 @@ export const getDashboard = createServerFn({ method: "POST" })
 
 export const getLatestSaleInfo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireRateLimit])
-  .handler(async ({ context }) => {
-    const supabase = context.supabase as DB;
-    const { data, error } = await supabase
-      .from("import_log")
-      .select("sale_date, row_count, imported_at")
-      .order("sale_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw safeError("analytics", error);
-    return data as { sale_date: string; row_count: number; imported_at: string } | null;
+  .handler(async () => {
+    const [rows] = await db.query(
+      "SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1",
+    );
+    return ((rows as any[])[0] ?? null) as {
+      sale_date: string;
+      row_count: number;
+      imported_at: string;
+    } | null;
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
-  .handler(async ({ data, context }): Promise<DashboardRankingsResult> => {
-    const supabase = context.supabase as DB;
-    const { data: res, error } = await supabase.rpc("dashboard_rankings", {
-      p_date_from: data.dateFrom || (null as unknown as string),
-      p_date_to: data.dateTo || (null as unknown as string),
-      p_stores: data.stores ?? [],
-      p_deptos: data.deptos ?? [],
-      p_secoes: data.secoes ?? [],
-      p_grupos: data.grupos ?? [],
-      p_subgrupos: data.subgrupos ?? [],
-      p_limit: data.limit,
-    });
-    if (error) throw safeError("analytics", error);
-    const r = asRecord(res);
+  .handler(async ({ data }): Promise<DashboardRankingsResult> => {
+    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = await db.query(
+      "CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        data.dateFrom || null,
+        data.dateTo || null,
+        JSON.stringify(data.stores ?? []),
+        JSON.stringify(data.deptos ?? []),
+        JSON.stringify(data.secoes ?? []),
+        JSON.stringify(data.grupos ?? []),
+        JSON.stringify(data.subgrupos ?? []),
+        data.limit ?? 10,
+      ],
+    );
     return {
-      byDepto: parseNameVal(r.byDepto),
-      bySecao: parseNameVal(r.bySecao),
-      byGrupo: parseNameVal(r.byGrupo),
-      bySubgrupo: parseNameVal(r.bySubgrupo),
-      byProduto: asArray(r.byProduto).map((x) => {
-        const o = asRecord(x);
-        return { code: str(o.code), name: str(o.name), val: num(o.val) };
-      }),
+      byDepto: (byDepto as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
+      bySecao: (bySecao as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
+      byGrupo: (byGrupo as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
+      bySubgrupo: (bySubgrupo as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
+      byProduto: (byProduto as any[]).map((r) => ({
+        code: r.code,
+        name: r.name,
+        val: Number(r.val),
+      })),
     };
   });
