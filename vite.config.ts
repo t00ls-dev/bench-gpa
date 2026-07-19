@@ -49,7 +49,7 @@ export default defineConfig({
       server: { entry: "server" },
       router: { routeFileIgnorePattern: "\\.page\\.tsx" },
     }),
-    nitro(),
+    nitro({ preset: "node-server" }),
     react(),
   ],
 });
