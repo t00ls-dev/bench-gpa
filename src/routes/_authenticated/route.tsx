@@ -9,7 +9,16 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { LayoutDashboard, Upload, Package, LogOut, Layers, Shield, BookText, HelpCircle } from "lucide-react";
+import {
+  LayoutDashboard,
+  Upload,
+  Package,
+  LogOut,
+  Layers,
+  Shield,
+  BookText,
+  HelpCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
@@ -36,7 +45,10 @@ export const Route = createFileRoute("/_authenticated")({
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) {
       const next = location.pathname + location.searchStr;
-      throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : { next: undefined } });
+      throw redirect({
+        to: "/auth",
+        search: next && next !== "/" ? { next } : { next: undefined },
+      });
     }
     return { user: data.user };
   },

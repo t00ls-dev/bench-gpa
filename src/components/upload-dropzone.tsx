@@ -16,7 +16,9 @@ interface FileEntry {
 
 function parseInWorker(buffer: ArrayBuffer): Promise<ParsedSalesFile> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("../lib/xlsx-worker.ts", import.meta.url), { type: "module" });
+    const worker = new Worker(new URL("../lib/xlsx-worker.ts", import.meta.url), {
+      type: "module",
+    });
     const id = crypto.randomUUID();
     const handler = (e: MessageEvent) => {
       if (e.data.id !== id) return;
@@ -25,7 +27,10 @@ function parseInWorker(buffer: ArrayBuffer): Promise<ParsedSalesFile> {
       else resolve(e.data.result);
     };
     worker.onmessage = handler;
-    worker.onerror = (err) => { worker.terminate(); reject(new Error(err.message)); };
+    worker.onerror = (err) => {
+      worker.terminate();
+      reject(new Error(err.message));
+    };
     worker.postMessage({ id, buffer });
   });
 }
@@ -67,7 +72,7 @@ export function UploadDropzone({
               const buf = await f.arrayBuffer();
               const p = await parseInWorker(buf);
               parsed.push({ file: f, saleDate: p.sale_date, status: "pending", parsed: p });
-            } catch (err: any) {
+            } catch (err: unknown) {
               parsed.push({
                 file: f,
                 saleDate: "",

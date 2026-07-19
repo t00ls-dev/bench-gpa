@@ -51,6 +51,7 @@ Ao iniciar, SEMPRE:
 ## Limites e Regras
 
 🚫 **NÃO FAÇA sem perguntar:**
+
 - Modificar variáveis de ambiente ou secrets
 - Deletar branches remotas
 - Alterar configuração de deploy/infra (Vercel, DNS, etc.)
@@ -59,6 +60,7 @@ Ao iniciar, SEMPRE:
 - Refatorar arquitetura core (mudar framework, DB, auth provider)
 
 ✅ **FAÇA sem perguntar:**
+
 - Correções de bugs com escopo claro
 - Refactoring local nos arquivos que está editando
 - Melhorias de performance (lazy loading, cache, índices, memo)
@@ -67,6 +69,7 @@ Ao iniciar, SEMPRE:
 - Testes para código novo ou alterado
 
 📋 **SEMPRE informe ao final de cada tarefa:**
+
 1. O que foi feito (resumo ≤3 linhas)
 2. O que falta ou blockers (se aplicável)
 3. Sugestão do próximo passo
@@ -75,28 +78,28 @@ Ao iniciar, SEMPRE:
 
 ## Analise sob vários pontos de vista
 
-| Papel | Foco |
-|---|---|
-| Usuário | Fluxos, cliques, clareza, tempo até完成任务 |
-| Gerente | KPIs, relatórios, valor de negócio, ROI |
-| Operador | Automações, importação, consistência de dados |
-| Administrador | Permissões, auditoria, logs, config |
-| Desenvolvedor | Qualidade de código, tipos, testes, DX |
-| Suporte técnico | Mensagens de erro claras, debug, logs |
-| Auditor | Rastreabilidade, versionamento, compliance |
-| UX | Consistência, feedback, acessibilidade, redução de atrito |
-| IA | Oportunidades de automação inteligente, predição, classificação |
+| Papel           | Foco                                                            |
+| --------------- | --------------------------------------------------------------- |
+| Usuário         | Fluxos, cliques, clareza, tempo até完成任务                     |
+| Gerente         | KPIs, relatórios, valor de negócio, ROI                         |
+| Operador        | Automações, importação, consistência de dados                   |
+| Administrador   | Permissões, auditoria, logs, config                             |
+| Desenvolvedor   | Qualidade de código, tipos, testes, DX                          |
+| Suporte técnico | Mensagens de erro claras, debug, logs                           |
+| Auditor         | Rastreabilidade, versionamento, compliance                      |
+| UX              | Consistência, feedback, acessibilidade, redução de atrito       |
+| IA              | Oportunidades de automação inteligente, predição, classificação |
 
 ---
 
 ## Classificação de Prioridade
 
-| Classe | Significado |
-|---|---|
-| 🔴 Crítica | Bloqueia deploy, quebra funcionalidade, expõe dados |
-| 🟠 Alta | Impacto significativo em performance, UX ou segurança |
-| 🟡 Média | Melhoria relevante, pode esperar 1-2 sprints |
-| 🟢 Baixa | Refactoring cosmético, débito técnico leve, nice-to-have |
+| Classe     | Significado                                              |
+| ---------- | -------------------------------------------------------- |
+| 🔴 Crítica | Bloqueia deploy, quebra funcionalidade, expõe dados      |
+| 🟠 Alta    | Impacto significativo em performance, UX ou segurança    |
+| 🟡 Média   | Melhoria relevante, pode esperar 1-2 sprints             |
+| 🟢 Baixa   | Refactoring cosmético, débito técnico leve, nice-to-have |
 
 ---
 
@@ -115,30 +118,34 @@ Ao iniciar, SEMPRE:
 ## Escopo de Análise
 
 ### Funcionalidades
+
 Campos úteis, filtros novos, gráficos, dashboards, indicadores, KPIs, automações, alertas inteligentes, notificações, relatórios, exportações, integrações.
 
 ### Navegação e UX
+
 Redução de cliques, atalhos de teclado, busca global, pesquisa inteligente, histórico, favoritos, templates, configurações, personalização, modo escuro.
 
 ### Dados e Infra
+
 Permissões, auditoria, versionamento, backup, recuperação de dados.
 
 ### IA e Inovação
+
 Classificação automática, previsões, resumos, explicações, detecção de padrões, agrupamentos, alertas, assistentes, chat interno, OCR, visão computacional, extração de dados, recomendações inteligentes.
 
 ---
 
 ## Performance
 
-| Item | O que procurar |
-|---|---|
-| Consultas lentas | Server functions >500ms, N+1 queries |
-| Renderização | Re-renders desnecessários, componentes pesados |
-| Bundle | Chunks >200 KB gzip, código duplicado |
-| Rede | Requisições repetidas, payloads grandes sem paginação |
-| Cache | Dados estáticos sem cache, falta de SWR/stale-while-revalidate |
-| Banco | Falta de índices, RPCs não utilizados, materialized views |
-| Build | >30s merece investigação |
+| Item             | O que procurar                                                 |
+| ---------------- | -------------------------------------------------------------- |
+| Consultas lentas | Server functions >500ms, N+1 queries                           |
+| Renderização     | Re-renders desnecessários, componentes pesados                 |
+| Bundle           | Chunks >200 KB gzip, código duplicado                          |
+| Rede             | Requisições repetidas, payloads grandes sem paginação          |
+| Cache            | Dados estáticos sem cache, falta de SWR/stale-while-revalidate |
+| Banco            | Falta de índices, RPCs não utilizados, materialized views      |
+| Build            | >30s merece investigação                                       |
 
 ---
 

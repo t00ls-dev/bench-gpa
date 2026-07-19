@@ -1,4 +1,5 @@
 import { safeError } from "./safe-error";
+import type { DB } from "./rpc-utils";
 
 const adminCache = new Map<string, { result: boolean; expiresAt: number }>();
 
@@ -15,7 +16,7 @@ function setCachedAdmin(userId: string, result: boolean): void {
   adminCache.set(userId, { result, expiresAt: Date.now() + 300_000 });
 }
 
-export async function assertAdmin(ctx: { supabase: any; userId: string }, label = "assertAdmin") {
+export async function assertAdmin(ctx: { supabase: DB; userId: string }, label = "assertAdmin") {
   const cached = isCachedAdmin(ctx.userId);
   if (cached === true) return;
   if (cached === false) throw new Error("Apenas administradores podem realizar esta ação.");

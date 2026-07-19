@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { FilterSchema, DashboardSchema, AreaAnalysisSchema, EmailSchema, PasswordSchema } from "./schemas";
+import {
+  FilterSchema,
+  DashboardSchema,
+  AreaAnalysisSchema,
+  EmailSchema,
+  PasswordSchema,
+} from "./schemas";
 
 describe("FilterSchema", () => {
   it("parses valid input with defaults", () => {

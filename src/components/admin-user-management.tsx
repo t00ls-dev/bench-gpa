@@ -51,14 +51,14 @@ export function AdminUserManagement({
     newValue: boolean;
   } | null>(null);
 
-  const action = async (fn: Promise<any>, msg: string, key: string) => {
+  const action = async (fn: Promise<unknown>, msg: string, key: string) => {
     setPending(key);
     try {
       await fn;
       toast.success(msg);
       qc.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro");
     } finally {
       setPending(null);
     }
@@ -137,13 +137,13 @@ export function AdminUserManagement({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
-                        <Button size="sm" variant="outline"
+                        <Button
+                          size="sm"
+                          variant="outline"
                           title={isAdmin ? "Remover administrador" : "Tornar administrador"}
                           aria-label={isAdmin ? "Remover administrador" : "Tornar administrador"}
                           disabled={pending === `role:${u.id}`}
-                          onClick={() =>
-                            setConfirm({ type: "role", user: u, newValue: !isAdmin })
-                          }
+                          onClick={() => setConfirm({ type: "role", user: u, newValue: !isAdmin })}
                         >
                           {pending === `role:${u.id}` ? (
                             <Loader2 className="size-3.5 animate-spin" />
@@ -153,9 +153,14 @@ export function AdminUserManagement({
                             <ShieldCheck className="size-3.5" />
                           )}
                         </Button>
-                        <Button size="sm" variant="outline"
-                          title="Redefinir senha" aria-label="Redefinir senha"
-                          onClick={() => { setResetTarget({ id: u.id, email: u.email }); }}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Redefinir senha"
+                          aria-label="Redefinir senha"
+                          onClick={() => {
+                            setResetTarget({ id: u.id, email: u.email });
+                          }}
                         >
                           <KeyRound className="size-3.5" />
                         </Button>
@@ -201,24 +206,26 @@ export function AdminUserManagement({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={async () => {
-                if (!confirm) return;
-                const c = confirm;
-                setConfirm(null);
-                if (c.type === "role") {
-                  await action(
-                    setRole({ data: { userId: c.user.id, role: c.newValue ? "admin" : "user" } }),
-                    c.newValue ? "Promovido a admin" : "Admin removido",
-                    `role:${c.user.id}`,
-                  );
-                } else {
-                  await action(
-                    setActive({ data: { userId: c.user.id, isActive: c.newValue } }),
-                    c.newValue ? "Usuário ativado" : "Usuário inativado",
-                    `active:${c.user.id}`,
-                  );
-                }
-              }}>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (!confirm) return;
+                  const c = confirm;
+                  setConfirm(null);
+                  if (c.type === "role") {
+                    await action(
+                      setRole({ data: { userId: c.user.id, role: c.newValue ? "admin" : "user" } }),
+                      c.newValue ? "Promovido a admin" : "Admin removido",
+                      `role:${c.user.id}`,
+                    );
+                  } else {
+                    await action(
+                      setActive({ data: { userId: c.user.id, isActive: c.newValue } }),
+                      c.newValue ? "Usuário ativado" : "Usuário inativado",
+                      `active:${c.user.id}`,
+                    );
+                  }
+                }}
+              >
                 Confirmar
               </AlertDialogAction>
             </AlertDialogFooter>

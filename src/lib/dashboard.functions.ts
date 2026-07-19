@@ -22,9 +22,7 @@ import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schema
 
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
-  .inputValidator((d: unknown) =>
-    FilterSchema.omit({ subgrupos: true }).parse(d ?? {}),
-  )
+  .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data, context }): Promise<FilterOptionsResult> => {
     const supabase = context.supabase as DB;
     const { data: res, error } = await supabase.rpc("filter_options", {

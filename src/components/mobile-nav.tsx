@@ -13,10 +13,7 @@ import {
   LogOut,
   Menu,
 } from "lucide-react";
-import {
-  Drawer,
-  DrawerContent,
-} from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 
 const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -56,9 +53,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
               to={tab.to}
               preload="intent"
               className={`flex flex-col items-center gap-0.5 px-3 py-1.5 text-[10px] font-medium transition-colors ${
-                isActive(tab.to)
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                isActive(tab.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon className="size-5" />
@@ -68,9 +63,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
           <button
             onClick={() => setDrawerOpen(true)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 text-[10px] font-medium transition-colors ${
-              drawerOpen
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
+              drawerOpen ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <Menu className="size-5" />
@@ -85,7 +78,9 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
             <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
               {userEmail[0].toUpperCase()}
             </div>
-            <span className="mt-2 text-sm text-muted-foreground truncate max-w-[80%]">{userEmail}</span>
+            <span className="mt-2 text-sm text-muted-foreground truncate max-w-[80%]">
+              {userEmail}
+            </span>
           </div>
           <div className="space-y-1 px-2 pb-4">
             {isAdmin && (

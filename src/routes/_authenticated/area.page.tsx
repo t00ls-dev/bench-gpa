@@ -43,17 +43,32 @@ function AreaPage() {
   const getArea = useServerFn(getAreaAnalysis);
 
   const [af, setAf] = usePersistentState<AF>("bench-gpa:filters:area", {
-    dateFrom: "", dateTo: "", stores: [], deptos: [], secoes: [], grupos: [], subgrupos: [],
+    dateFrom: "",
+    dateTo: "",
+    stores: [],
+    deptos: [],
+    secoes: [],
+    grupos: [],
+    subgrupos: [],
   });
   const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
-  const setStores = (v: string[]) => patch({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
+  const setStores = (v: string[]) =>
+    patch({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
   const setDeptos = (v: string[]) => patch({ deptos: v, secoes: [], grupos: [], subgrupos: [] });
   const setSecoes = (v: string[]) => patch({ secoes: v, grupos: [], subgrupos: [] });
   const setGrupos = (v: string[]) => patch({ grupos: v, subgrupos: [] });
   const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
   const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
 
-  const { dateFrom, dateTo, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos } = af;
+  const {
+    dateFrom,
+    dateTo,
+    stores: fStores,
+    deptos: fDeptos,
+    secoes: fSecoes,
+    grupos: fGrupos,
+    subgrupos: fSubgrupos,
+  } = af;
 
   const hierQ = useQuery({
     queryKey: ["area-filter-hierarchy"],
@@ -68,7 +83,10 @@ function AreaPage() {
   const baseDateIso = dateTo || opts?.latestDate || undefined;
   const daysSinceNum = (iso: string | null): number | null => {
     if (!iso || !baseDateIso) return null;
-    return Math.floor((new Date(baseDateIso + "T00:00:00").getTime() - new Date(iso + "T00:00:00").getTime()) / 86400000);
+    return Math.floor(
+      (new Date(baseDateIso + "T00:00:00").getTime() - new Date(iso + "T00:00:00").getTime()) /
+        86400000,
+    );
   };
   const daysSinceLabel = (iso: string | null): string => {
     const n = daysSinceNum(iso);
@@ -106,11 +124,55 @@ function AreaPage() {
   const [page, setPage] = useState(1);
   const sortDir = sortAsc ? "asc" : "desc";
 
-  useEffect(() => { setPage(1); }, [search, sortKey, sortAsc, pageSize, dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos]);
+  useEffect(() => {
+    setPage(1);
+  }, [
+    search,
+    sortKey,
+    sortAsc,
+    pageSize,
+    dateFrom,
+    dateTo,
+    fStores,
+    fDeptos,
+    fSecoes,
+    fGrupos,
+    fSubgrupos,
+  ]);
 
   const { data, isFetching, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["area-analysis", dateFrom, dateTo, fStores, fDeptos, fSecoes, fGrupos, fSubgrupos, page, pageSize, search, sortKey, sortDir],
-    queryFn: () => getArea({ data: { dateFrom, dateTo, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos, page, pageSize, search, sortBy: sortKey, sortDir } }),
+    queryKey: [
+      "area-analysis",
+      dateFrom,
+      dateTo,
+      fStores,
+      fDeptos,
+      fSecoes,
+      fGrupos,
+      fSubgrupos,
+      page,
+      pageSize,
+      search,
+      sortKey,
+      sortDir,
+    ],
+    queryFn: () =>
+      getArea({
+        data: {
+          dateFrom,
+          dateTo,
+          stores: fStores,
+          deptos: fDeptos,
+          secoes: fSecoes,
+          grupos: fGrupos,
+          subgrupos: fSubgrupos,
+          page,
+          pageSize,
+          search,
+          sortBy: sortKey,
+          sortDir,
+        },
+      }),
     enabled: ready,
     staleTime: 5 * 60_000,
     retry: 1,
@@ -125,12 +187,19 @@ function AreaPage() {
 
   const toggleSort = (k: SortKey) => {
     if (sortKey === k) setSortAsc(!sortAsc);
-    else { setSortKey(k); setSortAsc(k === "prod_code" || k === "prod_name"); }
+    else {
+      setSortKey(k);
+      setSortAsc(k === "prod_code" || k === "prod_name");
+    }
   };
 
   const stores = useMemo(() => {
     const seen = new Set<string>();
-    return hierarchy.filter((r) => { if (seen.has(r.store_code)) return false; seen.add(r.store_code); return true; });
+    return hierarchy.filter((r) => {
+      if (seen.has(r.store_code)) return false;
+      seen.add(r.store_code);
+      return true;
+    });
   }, [hierarchy]);
 
   const pathParts: string[] = [];
@@ -156,19 +225,42 @@ function AreaPage() {
     setPdfLoading(true);
     try {
       const area = pathParts.join(" › ");
-      const allData = await getArea({ data: { dateFrom, dateTo, stores: fStores, deptos: fDeptos, secoes: fSecoes, grupos: fGrupos, subgrupos: fSubgrupos, search: search.trim(), sortBy: sortKey, sortDir } });
+      const allData = await getArea({
+        data: {
+          dateFrom,
+          dateTo,
+          stores: fStores,
+          deptos: fDeptos,
+          secoes: fSecoes,
+          grupos: fGrupos,
+          subgrupos: fSubgrupos,
+          search: search.trim(),
+          sortBy: sortKey,
+          sortDir,
+        },
+      });
       const searchTerm = search.trim().toLowerCase();
       const filtered = [...(allData.products ?? [])]
-        .filter((p) => !searchTerm || p.prod_code.toLowerCase().includes(searchTerm) || p.prod_name.toLowerCase().includes(searchTerm))
+        .filter(
+          (p) =>
+            !searchTerm ||
+            p.prod_code.toLowerCase().includes(searchTerm) ||
+            p.prod_name.toLowerCase().includes(searchTerm),
+        )
         .sort((a, b) => {
           let cmp = 0;
           if (sortKey === "val") cmp = a.val - b.val;
           else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
           else if (sortKey === "prod_name") cmp = a.prod_name.localeCompare(b.prod_name);
           else if (sortKey === "daysSince") {
-            const aD = daysSinceNum(a.lastSaleDate), bD = daysSinceNum(b.lastSaleDate);
-            const aN = aD === null, bN = bD === null;
-            if (aN && bN) cmp = 0; else if (aN) cmp = 1; else if (bN) cmp = -1; else cmp = aD - bD;
+            const aD = daysSinceNum(a.lastSaleDate),
+              bD = daysSinceNum(b.lastSaleDate);
+            const aN = aD === null,
+              bN = bD === null;
+            if (aN && bN) cmp = 0;
+            else if (aN) cmp = 1;
+            else if (bN) cmp = -1;
+            else cmp = aD - bD;
           }
           if (cmp === 0) cmp = a.prod_code.localeCompare(b.prod_code);
           return sortDir === "desc" ? -cmp : cmp;
@@ -179,25 +271,66 @@ function AreaPage() {
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const mX = 10;
 
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(17, 17, 17);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(17, 17, 17);
       doc.text("Análise de Área", mX, 12);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(85, 85, 85);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(85, 85, 85);
       doc.text("Área: " + area, mX, 18);
       doc.text("Período: " + fmtBRShort(dateFrom) + " - " + fmtBRShort(dateTo), mX, 22.5);
       doc.text("Produtos listados: " + filtered.length, mX, 27);
 
       autoTable(doc, {
-        startY: 31, margin: { left: mX, right: mX },
+        startY: 31,
+        margin: { left: mX, right: mX },
         head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
-        body: filtered.length ? filtered.map((p) => [p.prod_code, p.prod_name, fmtBRL(p.val), daysSinceLabel(p.lastSaleDate), "", ""]) : [["", "Nenhum produto.", "", "", "", ""]],
+        body: filtered.length
+          ? filtered.map((p) => [
+              p.prod_code,
+              p.prod_name,
+              fmtBRL(p.val),
+              daysSinceLabel(p.lastSaleDate),
+              "",
+              "",
+            ])
+          : [["", "Nenhum produto.", "", "", "", ""]],
         theme: "grid",
-        styles: { font: "helvetica", fontSize: 8, cellPadding: 1.5, overflow: "hidden", valign: "middle", lineColor: [153, 153, 153], lineWidth: 0.1, textColor: [17, 17, 17] },
-        headStyles: { fillColor: [238, 238, 255], textColor: [17, 17, 17], fontStyle: "bold", fontSize: 8, halign: "center" },
-        columnStyles: { 0: { cellWidth: 16 }, 1: { cellWidth: 82, overflow: "hidden" }, 2: { cellWidth: 23, halign: "right" }, 3: { cellWidth: 24, halign: "right" }, 4: { cellWidth: 20 }, 5: { cellWidth: 25 } },
-        didParseCell: (h) => { if (h.section === "body" && (h.column.index === 4 || h.column.index === 5)) h.cell.text = []; },
+        styles: {
+          font: "helvetica",
+          fontSize: 8,
+          cellPadding: 1.5,
+          overflow: "hidden",
+          valign: "middle",
+          lineColor: [153, 153, 153],
+          lineWidth: 0.1,
+          textColor: [17, 17, 17],
+        },
+        headStyles: {
+          fillColor: [238, 238, 255],
+          textColor: [17, 17, 17],
+          fontStyle: "bold",
+          fontSize: 8,
+          halign: "center",
+        },
+        columnStyles: {
+          0: { cellWidth: 16 },
+          1: { cellWidth: 82, overflow: "hidden" },
+          2: { cellWidth: 23, halign: "right" },
+          3: { cellWidth: 24, halign: "right" },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 25 },
+        },
+        didParseCell: (h) => {
+          if (h.section === "body" && (h.column.index === 4 || h.column.index === 5))
+            h.cell.text = [];
+        },
         willDrawCell: (h) => {
           if (h.section === "body" && h.column.index === 1) {
-            const raw = Array.isArray(h.cell.text) ? h.cell.text.join(" ") : String(h.cell.text ?? "");
+            const raw = Array.isArray(h.cell.text)
+              ? h.cell.text.join(" ")
+              : String(h.cell.text ?? "");
             const maxW = h.cell.width - h.cell.padding("horizontal");
             let t = raw;
             if (h.doc.getTextWidth(t) > maxW) {
@@ -228,9 +361,13 @@ function AreaPage() {
 
       <AreaFilters
         hierarchy={hierarchy}
-        dateFrom={dateFrom} dateTo={dateTo}
-        fStores={fStores} fDeptos={fDeptos} fSecoes={fSecoes}
-        fGrupos={fGrupos} fSubgrupos={fSubgrupos}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        fStores={fStores}
+        fDeptos={fDeptos}
+        fSecoes={fSecoes}
+        fGrupos={fGrupos}
+        fSubgrupos={fSubgrupos}
         latestDate={opts?.latestDate ?? undefined}
         availableDates={opts?.availableDates ?? []}
         onRangeChange={setRange}
@@ -252,14 +389,17 @@ function AreaPage() {
           <p className="text-sm text-destructive mb-3">
             Não foi possível carregar a análise: {(error as Error)?.message ?? "erro desconhecido"}.
           </p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Tentar novamente
+          </Button>
         </div>
       ) : isLoading ? (
         <>
           <section className="mb-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="kpi-card">
-                <Skeleton className="h-3 w-20" /><Skeleton className="mt-2 h-8 w-28" />
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="mt-2 h-8 w-28" />
               </div>
             ))}
           </section>
@@ -267,24 +407,50 @@ function AreaPage() {
             <div className="mb-3 flex items-center gap-2">
               <Skeleton className="h-5 w-44" />
               <div className="ml-auto flex items-center gap-2">
-                <Skeleton className="h-9 w-40 rounded-md" /><Skeleton className="h-9 w-[110px] rounded-md" /><Skeleton className="h-9 w-16 rounded-md" />
+                <Skeleton className="h-9 w-40 rounded-md" />
+                <Skeleton className="h-9 w-[110px] rounded-md" />
+                <Skeleton className="h-9 w-16 rounded-md" />
               </div>
             </div>
-            <div className="space-y-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
           </div>
         </>
       ) : (
         <>
-          <AreaKpiCards total={total} plusTotal={data?.plusTotal ?? 0} plusWithSale={data?.plusWithSale ?? 0} noSale={noSale} avgPerPlu={data?.avgPerPlu ?? 0} />
+          <AreaKpiCards
+            total={total}
+            plusTotal={data?.plusTotal ?? 0}
+            plusWithSale={data?.plusWithSale ?? 0}
+            noSale={noSale}
+            avgPerPlu={data?.avgPerPlu ?? 0}
+          />
           <AreaTable
-            products={products} totalRows={totalRows} page={page} totalPages={totalPages} pageSize={pageSize}
-            search={search} isFetching={isFetching} baseDateIso={baseDateIso}
+            products={products}
+            totalRows={totalRows}
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            search={search}
+            isFetching={isFetching}
+            baseDateIso={baseDateIso}
             storeCode={fStores.length === 1 ? fStores[0] : null}
-            sortKey={sortKey} sortAsc={sortAsc} daysSinceLabel={daysSinceLabel}
-            onSearchChange={setSearch} onClearSearch={() => { setSearch(""); setPage(1); }}
+            sortKey={sortKey}
+            sortAsc={sortAsc}
+            daysSinceLabel={daysSinceLabel}
+            onSearchChange={setSearch}
+            onClearSearch={() => {
+              setSearch("");
+              setPage(1);
+            }}
             onPageSizeChange={(v) => setPageSize(v as 25 | 50 | 100 | 250)}
-            onPageChange={setPage} onSortToggle={toggleSort}
-            onExportPDF={openPdfInNewTab} pdfLoading={pdfLoading}
+            onPageChange={setPage}
+            onSortToggle={toggleSort}
+            onExportPDF={openPdfInNewTab}
+            pdfLoading={pdfLoading}
           />
         </>
       )}

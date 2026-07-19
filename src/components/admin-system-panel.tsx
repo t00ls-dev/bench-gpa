@@ -23,8 +23,8 @@ export function DataCountSection({
     try {
       const r = await diagnoseFn();
       setDiag(r as Record<string, unknown>);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao diagnosticar");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao diagnosticar");
     } finally {
       setLoading(false);
     }
@@ -87,8 +87,8 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
     try {
       const r = await healthFn();
       setData(r);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao verificar saúde do banco");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao verificar saúde do banco");
     } finally {
       setLoading(false);
     }

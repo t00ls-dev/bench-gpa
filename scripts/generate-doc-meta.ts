@@ -20,10 +20,10 @@ function walk(dir: string, base: string): string[] {
 
 function getGitTimestamp(filePath: string): number | null {
   try {
-    const output = execSync(
-      `git log -1 --format=%ct -- "${filePath}"`,
-      { encoding: "utf-8", timeout: 5000 },
-    ).trim();
+    const output = execSync(`git log -1 --format=%ct -- "${filePath}"`, {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
     return output ? Number(output) : null;
   } catch {
     return null;

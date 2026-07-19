@@ -61,9 +61,7 @@ export const createUser = createServerFn({ method: "POST" })
 
 export const setUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireRateLimit])
-  .inputValidator((data: unknown) =>
-    z.object({ userId: UserIdSchema, role: RoleEnum }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ userId: UserIdSchema, role: RoleEnum }).parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     if (context.userId === data.userId && data.role !== "admin") {
@@ -160,11 +158,7 @@ export const diagnoseData = createServerFn({ method: "GET" })
     ];
     const counts: Record<string, number> = {};
     for (const t of tables) {
-      try {
-        counts[t] = await countRows(supabaseAdmin, t);
-      } catch (e) {
-        throw e;
-      }
+      counts[t] = await countRows(supabaseAdmin, t);
     }
     const datesInSales = await fetchDistinctDates(supabaseAdmin, "staging_sales", "sale_date");
     return { ...counts, dates_in_sales: datesInSales };
@@ -269,5 +263,3 @@ function extractDocDate(content: string): string | null {
   if (mm) return mm[1].replace(/^(\w)/, (c) => c.toUpperCase());
   return null;
 }
-
-

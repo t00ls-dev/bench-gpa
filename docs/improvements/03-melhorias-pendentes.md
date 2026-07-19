@@ -7,6 +7,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 ## 🔴 Alta Prioridade
 
 ### 1. Dark Mode inativo (código pronto, mas não ativado)
+
 - `.dark` CSS existe em `styles.css`, mas usuário não pode alternar (tema travado em light)
 - **Afeta**: KpiCard, ImportCalendar, LastUpdateInfo ainda com cores hardcoded que podem quebrar em dark
 - **Onde**: Falta ativar toggle, ajustar hardcoded colors
@@ -14,6 +15,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Nota**: `.dark` block adicionado como preparação; reativar toggle é o passo restante
 
 ### 2. Dashboard: período anterior não exibido
+
 - `getDashboard` retorna `data.previous.byDate` mas o gráfico de evolução só mostra o período atual
 - **Onde**: `src/routes/_authenticated/index.tsx`
 - **Impacto**: Funcionalidade já implementada no backend, só falta frontend
@@ -21,11 +23,13 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 ### ~~4. `assertAdmin` duplicado~~ ✅ Já resolvido (ambos importam de `admin-utils.ts`)
 
 ### 4. Duplicação de lógica de rebuild de agregações
+
 - `repairAggregations` em `admin.functions.ts` e fallback em `upload.functions.ts:finalizeImport`
 - **Onde**: Extrair para função compartilhada
 - **Impacto**: Duas implementações que podem divergir
 
 ### 5. `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`
+
 - Chave com permissão total no banco exposta no repositório
 - **Resolvido na migração**: ao remover Supabase, a chave deixa de existir
 - **Temporário**: enquanto não migra, manter como está (decisão do usuário)
@@ -35,6 +39,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 ## 🟡 Média Prioridade
 
 ### Dashboard
+
 - **Unificar `getDashboard`**: hoje faz 2 chamadas RPC (atual + anterior). Poderia ser 1 RPC que retorna ambos
 - **`placeholderData: keepPreviousData`**: evitar flash ao trocar filtros
 - **Skeleton nos rankings**: pai não passa `isLoading=true` antes da 1ª query
@@ -43,6 +48,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Exportar XLSX**: PDF já implementado, falta XLSX (SheetJS já é dependência)
 
 ### Produto
+
 - **Multi-loja**: store selector permite apenas 1 loja ou "todas". Usar MultiSelect para comparar
 - **`placeholderData: keepPreviousData`**: evitar flash ao trocar loja
 - **Exportar tabela histórica**: XLSX (PDF já implementado)
@@ -50,12 +56,14 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Linha de tendência**: média móvel 7/30 dias no gráfico de evolução
 
 ### Área
+
 - **`filteredHierarchy` chamado 2x**: computação duplicada
 - **PDF com colunas vazias**: "QTD" e "VALIDADE" sempre vazias — ocupam espaço
 - **PDF com KPIs**: exportar também os cards de KPI, não só a tabela
 - **Nome de arquivo descritivo**: incluir loja, departamento, período
 
 ### Upload
+
 - **Web Worker para parse**: `parseAnyWorkbook` roda na main thread, congela UI em arquivos grandes
 - **Validação de schema antecipada**: verificar colunas esperadas antes de processar tudo
 - **Remover/reordenar arquivos**: permitir na fila antes de importar
@@ -64,6 +72,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Log detalhado**: mostrar linhas rejeitadas, warnings
 
 ### Admin
+
 - **Confirmação em ações destrutivas**: AlertDialog para desativar, mudar role, resetar senha
 - **Loading inline no Switch**: feedback visual enquanto requisição não completa
 - **Filtros na lista**: buscar por nome/email, filtrar por role/status
@@ -71,6 +80,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Audit log**: registrar quem criou/alterou/desativou cada usuário
 
 ### Auth (pós-migração)
+
 - **Esqueci minha senha**: sem fluxo de recuperação — implementar endpoint `PUT /api/auth/forgot-password`
 - **Rate limiting**: já implementado (tier Auth: 5/min IP, 20/min global), ajustar para JWT
 - **Sessão expirada**: redirecionar para `/auth?next=/rota-atual`
@@ -81,6 +91,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 ## 🟢 Baixa Prioridade
 
 ### Globais
+
 - **Error boundaries por widget**: hoje um erro derruba a página inteira
 - ~~**`safeError` preservar stack trace**~~: ✅ `{ cause: error }` adicionado
 - **Internacionalização**: algumas strings de erro do Supabase podem vir em inglês
@@ -94,6 +105,7 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Nenhum teste**: unitários para utils (shiftPeriod, computePreset, parsers), integração para server functions
 
 ### Migração
+
 - **Remover `@supabase/supabase-js`** do `package.json` após migração completa
 - **Remover `src/integrations/supabase/`** — diretório inteiro
 - **Remover `client.ts` + `client.server.ts`** — não serão mais necessários

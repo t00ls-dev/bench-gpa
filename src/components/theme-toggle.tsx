@@ -53,8 +53,7 @@ export function ThemeToggle() {
     window.dispatchEvent(new Event("storage"));
   }, []);
 
-  const icon =
-    theme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />;
+  const icon = theme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />;
 
   return (
     <DropdownMenu>
@@ -71,7 +70,8 @@ export function ThemeToggle() {
           <Moon className="mr-2 size-4" /> Escuro
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Sun className="mr-2 size-4" /><Moon className="mr-2 size-4 -ml-1" /> Sistema
+          <Sun className="mr-2 size-4" />
+          <Moon className="mr-2 size-4 -ml-1" /> Sistema
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
