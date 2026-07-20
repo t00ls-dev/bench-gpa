@@ -1,8 +1,8 @@
 # Análise Completa
 
-> Data: 19/07/2026 03:54
+> Data: 20/07/2026 12:35
 
-Snapshot automático do estado do código em 19/07/2026 às 03:54.
+Snapshot automático do estado do código em 20/07/2026 às 12:35.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
@@ -14,7 +14,7 @@ _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX
 | Arquivos .ts/.tsx | 131 |
 | Total de arquivos no projeto | 164 |
 | Linhas de código (src) | 13.599 |
-| Linhas totais (projeto) | 18.942 |
+| Linhas totais (projeto) | 18.946 |
 | Arquivos grandes (>300 linhas) | 8 |
 | Erros de lint | 0 |
 | Avisos de lint | 0 |
@@ -217,7 +217,7 @@ O DB está 20% acima do limite de 500 MB. Plano definido:
 
 ## Observações
 
-Análise gerada automaticamente via framework AGENTS.md em 19/07/2026.
+Análise gerada automaticamente via framework AGENTS.md em 20/07/2026.
 
 - 🟡 8 arquivos com mais de 300 linhas — considerar refatoração.
 - 🔴 .env com service_role key está versionado no git!
