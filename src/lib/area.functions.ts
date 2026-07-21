@@ -33,7 +33,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
          data.sortDir,
       ],
     );
-    const [kpiRows, totalCountRows, byDate, products] = rs;
+    const [kpiRows, totalCountRows, byDate, products] = rs as any[];
     const kpi = (kpiRows as any[])[0] ?? {};
     const totalProducts = Number((totalCountRows as any[])[0]?.total_products ?? 0);
     return {
@@ -75,7 +75,7 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
         const [rs2] = await db.query(
           "CALL area_filter_hierarchy()",
         );
-        const [latestDateRows, hierarchy, availableDates] = rs2;
+        const [latestDateRows, hierarchy, availableDates] = rs2 as any[];
         return {
           latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
           hierarchy: (hierarchy ?? []).map((r: any) => ({

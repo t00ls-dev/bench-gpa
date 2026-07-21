@@ -33,7 +33,7 @@ export function CommandPalette() {
   const navigate = useNavigate();
   const doSearch = useServerFn(searchProducts);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<number | null>(null);
 
   useEffect(() => {
     const cb = (e: KeyboardEvent) => {
@@ -59,8 +59,8 @@ export function CommandPalette() {
       return;
     }
     setLoading(true);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
+    window.clearTimeout(debounceRef.current ?? undefined);
+    debounceRef.current = window.setTimeout(async () => {
       try {
         const res = await doSearch({ data: { q: search } });
         setProducts(res.slice(0, 8));
@@ -70,7 +70,7 @@ export function CommandPalette() {
         setLoading(false);
       }
     }, 300);
-    return () => clearTimeout(debounceRef.current);
+    return () => window.clearTimeout(debounceRef.current ?? undefined);
   }, [search, doSearch]);
 
   const run = useCallback(

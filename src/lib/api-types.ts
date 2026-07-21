@@ -180,7 +180,7 @@ export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
         JSON.stringify(f.subgrupos ?? []),
       ],
     );
-    const [aggregate, byStore, byDepto, byDate] = rs;
+    const [aggregate, byStore, byDepto, byDate] = rs as any[];
     return {
       total: Number((aggregate as any[])[0]?.total ?? 0),
       byStore: (byStore ?? []).map((r: any) => ({ code: r.code, name: r.name, val: Number(r.val) })),
