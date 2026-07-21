@@ -12,3 +12,4 @@ jobs:
       - run: bun run build
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+# CI test trigger Tue Jul 21 21:51:01 UTC 2026
