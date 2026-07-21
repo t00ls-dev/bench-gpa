@@ -11,7 +11,7 @@ const pool = createPool({
 });
 
 const email = "test@gpabr.com";
-const name = "Admin de Teste";
+const name = "Teste";
 const password = "Gpa@Test1970";
 const hash = await bcrypt.hash(password, 12);
 const id = randomUUID();
