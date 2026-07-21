@@ -3,7 +3,7 @@ import { Upload } from "lucide-react";
 import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 interface FileEntry {
   file: File;
@@ -50,7 +50,7 @@ export function UploadDropzone({
       <Upload className="mb-3 size-8 text-muted-foreground" />
       <div className="font-medium">Arraste arquivos ou clique para selecionar</div>
       <div className="mt-1 text-xs text-muted-foreground">
-        .xlsx, .xls (múltiplos arquivos, máx. 50 MB cada)
+        .xlsx, .xls (múltiplos arquivos, máx. 10 MB cada)
       </div>
       <input
         id="files"
@@ -62,7 +62,7 @@ export function UploadDropzone({
           const selected = Array.from(e.target.files ?? []);
           const oversized = selected.filter((f) => f.size > MAX_FILE_SIZE);
           if (oversized.length > 0) {
-            toast.error(`${oversized.length} arquivo(s) excedem o limite de 50 MB.`);
+            toast.error(`${oversized.length} arquivo(s) excedem o limite de 10 MB.`);
           }
           const valid = selected.filter((f) => f.size <= MAX_FILE_SIZE);
           const parsed: FileEntry[] = [];
