@@ -585,7 +585,7 @@ BEGIN
   -- Result set 4: paginated products
   SET @sql = CONCAT(
      'SELECT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo,
-             SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty
+              SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty, MAX(a.sale_date) AS last_sale_date
       FROM sales_prod_daily_agg a
       WHERE (? IS NULL OR a.sale_date >= ?)
         AND (? IS NULL OR a.sale_date <= ?)
