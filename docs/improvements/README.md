@@ -11,4 +11,4 @@ Doc obsoletas removidas: `migracao-sqlite.md`, `pereciveis-plano.md`, `analise-p
 | [`novas-analises.md`](./novas-analises.md)               | Novas features possíveis (RPCs sem UI + dados disponíveis)  |
 | [`arquitetura.md`](./arquitetura.md)                     | Observações arquiteturais (duplicações, padrões, segurança) |
 | [`performance.md`](./performance.md)                     | Issues de performance identificadas                         |
-| [`analise-completa.md`](./analise-completa.md)           | Snapshot automático do code-review cron (06:00 diário)      |
+| [`analise-completa.md`](./analise-completa.md)           | Snapshot do estado do código (gerado manualmente)           |

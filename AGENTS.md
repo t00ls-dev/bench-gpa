@@ -15,7 +15,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Deploy:** Hestia VPS (`sv1.t00ls.dev`, domínio `gpa.t00ls.dev`), Nitro v3 preset `node-server`
 - **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 20 server functions
 - **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
-- **Crons:** `scripts/import-watch.ts` (horário), `scripts/code-review.ts` (06:00 diário, sobrescreve `docs/improvements/07-analise-completa.md`)
+- **Crons:** `scripts/import-watch.ts` (horário)
 - **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
 - **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
