@@ -145,7 +145,7 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const [rows] = await db.query("CALL purge_old_aggs(?)", [28]);
+    const [rows] = await db.query("CALL purge_old_aggs(?)", [180]);
     return { deleted: Number((rows as any[])[0]?.deleted ?? 0) };
   });
 

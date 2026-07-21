@@ -13,6 +13,7 @@
     "cli:import": "bun run scripts/import.ts",
     "cli:watch": "bun run scripts/import-watch.ts",
     "cli:review": "bun run scripts/code-review.ts",
+"cli:purge": "bun run scripts/purge-aggs.ts",
     "gendocmeta": "bun run scripts/generate-doc-meta.ts",
     "prebuild": "bun run gendocmeta",
     "typecheck": "tsc --noEmit",
