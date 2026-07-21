@@ -1,10 +1,9 @@
-import { useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Route } from "./auth";
+import { useSearch } from "@tanstack/react-router";
 import { LogIn, Loader2 } from "lucide-react";
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
@@ -27,8 +26,7 @@ function sanitizeNext(next: unknown): string {
 }
 
 function AuthPage() {
-  const router = useRouter();
-  const { next } = Route.useSearch();
+  const { next } = useSearch({ from: "/auth" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,12 +36,7 @@ function AuthPage() {
 
   const goNext = () => {
     const target = sanitizeNext(next);
-    if (target !== "/") {
-      const u = new URL(target, window.location.origin);
-      router.navigate({ to: u.pathname, search: Object.fromEntries(u.searchParams.entries()) });
-    } else {
-      router.navigate({ to: "/" });
-    }
+    window.location.href = target;
   };
 
   useEffect(() => {
@@ -96,7 +89,7 @@ function AuthPage() {
 
     try {
       const { login } = await import("@/lib/auth-api");
-      const result = await login({
+      const token = await login({
         data: {
           email: email.trim().toLowerCase(),
           password,
@@ -104,15 +97,15 @@ function AuthPage() {
         },
       });
 
-      document.cookie = result.cookie;
+      document.cookie = "session=" + token + "; Path=/; Max-Age=" + (7*24*60*60) + "; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
       goNext();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao fazer login.";
       toast.error(msg);
       setLoading(false);
-      setTurnstileToken("");
+      setTurnstileToken(TURNSTILE_BYPASS ? "bypass" : "");
       const ts = getTurnstile();
-      if (turnstileRef.current && ts) {
+      if (turnstileRef.current && ts && widgetIdRef.current) {
         ts.reset(widgetIdRef.current);
       }
     }

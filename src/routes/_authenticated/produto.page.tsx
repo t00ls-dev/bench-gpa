@@ -326,7 +326,7 @@ function ProdutoPage() {
         </>
       )}
 
-      {selected && !analysisLoading && !analysisData && (
+      {selected && !analysisLoading && analysisData && !analysisData.product && (
         <div className="kpi-card text-center py-10 mt-6">
           <p className="text-sm text-muted-foreground">
             Nenhum dado de venda encontrado para este produto no período disponível.
@@ -334,7 +334,7 @@ function ProdutoPage() {
         </div>
       )}
 
-      {selected && analysisData && (
+      {selected && analysisData && analysisData.product && (
         <ProductKPIs
           analysisData={{
             ...analysisData,

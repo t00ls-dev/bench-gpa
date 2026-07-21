@@ -112,10 +112,13 @@ export function num(v: unknown): number {
   return Number(v ?? 0);
 }
 export function str(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
   return String(v ?? "");
 }
 export function strOrNull(v: unknown): string | null {
-  return v == null ? null : String(v);
+  if (v == null) return null;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v);
 }
 export function numOrNull(v: unknown): number | null {
   return v == null ? null : Number(v);
@@ -165,7 +168,7 @@ export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
   const { cache } = await import("./cache");
   const key = metricsCacheKey(f);
   return cache.wrap(key, async () => {
-    const [aggregate, byStore, byDepto, byDate] = await db.query(
+    const [rs] = await db.query(
       "CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)",
       [
         f.dateFrom || null,
@@ -177,11 +180,12 @@ export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
         JSON.stringify(f.subgrupos ?? []),
       ],
     );
+    const [aggregate, byStore, byDepto, byDate] = rs;
     return {
       total: Number((aggregate as any[])[0]?.total ?? 0),
-      byStore: (byStore as any[]).map((r) => ({ code: r.code, name: r.name, val: Number(r.val) })),
-      byDepto: (byDepto as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
-      byDate: (byDate as any[]).map((r) => ({ date: r.date, val: Number(r.val) })),
+      byStore: (byStore ?? []).map((r: any) => ({ code: r.code, name: r.name, val: Number(r.val) })),
+      byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
+      byDate: (byDate ?? []).map((r: any) => ({ date: r.date, val: Number(r.val) })),
     };
   });
 }

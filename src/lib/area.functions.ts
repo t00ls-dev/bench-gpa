@@ -16,7 +16,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
-    const [kpiRows, totalCountRows, byDate, products] = await db.query(
+    const [rs] = await db.query(
       "CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         data.dateFrom,
@@ -29,10 +29,11 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
         data.page ?? null,
         data.pageSize,
         data.search,
-        data.sortBy,
-        data.sortDir,
+         data.sortBy === "daysSince" ? "val" : data.sortBy,
+         data.sortDir,
       ],
     );
+    const [kpiRows, totalCountRows, byDate, products] = rs;
     const kpi = (kpiRows as any[])[0] ?? {};
     const totalProducts = Number((totalCountRows as any[])[0]?.total_products ?? 0);
     return {
@@ -42,7 +43,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       plusWithoutSale: num(kpi.plus_without_sale),
       avgPerPlu:
         num(kpi.plus_with_sale) > 0 ? num(kpi.total) / num(kpi.plus_with_sale) : 0,
-      products: (products as any[]).map((p: any) => ({
+      products: (products ?? []).map((p: any) => ({
         prod_code: str(p.prod_code),
         prod_name: str(p.prod_name),
         depto: strOrNull(p.depto),
@@ -53,7 +54,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
         qty: num(p.qty),
         lastSaleDate: null,
       })),
-      byDate: (byDate as any[]).map((d: any) => ({
+      byDate: (byDate ?? []).map((d: any) => ({
         date: str(d.date),
         val: num(d.val),
       })),
@@ -71,12 +72,13 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
     return cache.wrap(
       "area_filter_hierarchy",
       async () => {
-        const [latestDateRows, hierarchy, availableDates] = await db.query(
+        const [rs2] = await db.query(
           "CALL area_filter_hierarchy()",
         );
+        const [latestDateRows, hierarchy, availableDates] = rs2;
         return {
           latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
-          hierarchy: (hierarchy as any[]).map((r: any) => ({
+          hierarchy: (hierarchy ?? []).map((r: any) => ({
             store_code: str(r.store_code),
             store_name: str(r.store_name),
             depto: strOrNull(r.depto),
@@ -84,7 +86,7 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
             grupo: strOrNull(r.grupo),
             subgrupo: strOrNull(r.subgrupo),
           })),
-          availableDates: (availableDates as any[]).map((r: any) => str(r.sale_date)),
+          availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
         };
       },
       300_000,

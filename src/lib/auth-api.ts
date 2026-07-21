@@ -72,33 +72,37 @@ export const login = createServerFn({ method: "POST" })
       JWT_SECRET,
       { expiresIn: "7d" },
     );
-    return {
-      ok: true,
-      token,
-      cookie: sessionCookie(token),
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
-    };
+    return token;
   });
 
 export const getMe = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
   const cookieHeader = request?.headers?.get("cookie") || "";
+  console.log("[getMe] cookie header:", cookieHeader.substring(0, 100));
   const parsed = parse(cookieHeader);
   const token = parsed["session"];
-  if (!token) return null;
+  if (!token) {
+    console.log("[getMe] no session cookie found, cookies:", Object.keys(parsed).join(", "));
+    return null;
+  }
   try {
     const payload = jwt.verify(token, JWT_SECRET) as {
       userId: string;
       role: string;
       email: string;
     };
+    console.log("[getMe] JWT valid for:", payload.email);
     const [rows] = await db.query<any[]>(
       "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
       [payload.userId],
     );
-    if (!rows.length || !rows[0].is_active) return null;
+    if (!rows.length || !rows[0].is_active) {
+      console.log("[getMe] user not found or inactive");
+      return null;
+    }
     return { id: rows[0].id, email: rows[0].email, name: rows[0].name, role: rows[0].role };
-  } catch {
+  } catch (err) {
+    console.log("[getMe] JWT verify error:", err);
     return null;
   }
 });
