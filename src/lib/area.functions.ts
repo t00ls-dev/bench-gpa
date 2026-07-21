@@ -9,7 +9,7 @@ import {
   strOrNull,
   num,
   numOrNull,
-} from "./rpc-utils";
+} from "./api-types";
 import { AreaAnalysisSchema } from "./schemas";
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })

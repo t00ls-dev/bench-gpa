@@ -3,7 +3,7 @@ import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import db from "./db";
-import { ProductAnalysisResult, str, strOrNull, num } from "./rpc-utils";
+import { ProductAnalysisResult, str, strOrNull, num } from "./api-types";
 import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
 
 export const searchProducts = createServerFn({ method: "POST" })

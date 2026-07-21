@@ -1,7 +1,6 @@
 # Issues de Performance
 
-> ⚠️ Todas as issues abaixo são **independentes da migração** — continuam válidas com MariaDB.
-> A migração de RPCs PostgreSQL para queries MariaDB pode alterar a latência (ver notas).
+> ⚠️ Todas as issues são independentes do backend — continuam válidas com MariaDB.
 
 ---
 
@@ -12,7 +11,7 @@
 - `getDashboard` (2 RPCs internas), `getDashboardRankings`, `getFilterOptions`
 - `getDashboard` já faz 2 chamadas RPC (`dashboard_metrics` para atual + anterior). Poderia ser 1 RPC que retorna ambos
 - **Ganha**: ~1 round-trip de rede (∼50-150ms) + 1 parse de resposta
-- **Migração**: ao converter para MariaDB, unificar em 1 stored procedure ou query
+- **Migração**: unificar em 1 query
 
 ### `LastUpdateInfo` busca dados demais
 
@@ -53,7 +52,7 @@
 
 - `getDashboard` chama `dashboard_metrics` para período atual e anterior (sequencial)
 - **Ganha**: Unificar em 1 RPC que aceita ambos os períodos
-- **Migração**: stored procedure MariaDB com ambos períodos em 1 chamada
+- **Migração**: 1 query com ambos períodos
 
 ---
 
@@ -83,12 +82,10 @@
 
 ---
 
-## Performance pós-migração (MariaDB)
+## Performance no MariaDB
 
-| Hoje (Supabase RPC)                    | Amanhã (MariaDB)                   | Impacto esperado                             |
-| -------------------------------------- | ---------------------------------- | -------------------------------------------- |
-| RPC POST via REST (~50-150ms)          | Query direta via mysql2/PDO        | ✅ **-10 a 50ms** (sem HTTP overhead)        |
-| Conexão TLS para nuvem                 | Localhost (se DB no mesmo VPS)     | ✅ **-5 a 20ms** (sem latência de rede)      |
-| PostgreSQL `jsonb_agg` + `ORDER BY`    | Montar array no PHP                | ⚠️ **+10 a 30ms** (serialização extra)       |
-| Índices GIN para busca textual         | `LOWER(col) LIKE LOWER('%termo%')` | ⚠️ **+20 a 100ms** (full scan em vez de GIN) |
-| Pool de conexões gerenciado (Supabase) | mysql2 pool (Bun) ou PDO (PHP)     | ✅ **mesma performance**                     |
+| Antes (Supabase RPC)                   | Agora (MariaDB)                    | Impacto                                   |
+| -------------------------------------- | ---------------------------------- | ----------------------------------------- |
+| RPC POST via REST (~50-150ms)          | Query direta mysql2 (Bun)          | ✅ **-10 a 50ms** (sem HTTP overhead)     |
+| Conexão TLS para nuvem                 | Localhost (DB no mesmo VPS)        | ✅ **-5 a 20ms** (sem latência de rede)   |
+| Pool gerenciado (Supabase)             | mysql2 pool (Bun)                  | ✅ **mesma performance**                  |

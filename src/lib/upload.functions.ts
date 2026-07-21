@@ -4,7 +4,7 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
-import { str } from "./rpc-utils";
+import { str } from "./api-types";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
