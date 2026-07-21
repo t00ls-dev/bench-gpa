@@ -2,6 +2,7 @@
 import { readdirSync, renameSync, existsSync, mkdirSync, appendFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { extractDate } from "./extract-date";
+import db from "../src/lib/db";
 
 const LOG_FILE = "logs/import.log";
 
@@ -136,12 +137,11 @@ async function main() {
     }
 
     // --- Check import_log (for all files) ---
-    const { supabaseAdmin } = await import("../src/integrations/supabase/client.server");
-    const { data: existing } = await supabaseAdmin
-      .from("import_log")
-      .select("sale_date")
-      .eq("sale_date", date)
-      .maybeSingle();
+    const [rows] = await db.query(
+      "SELECT sale_date FROM import_log WHERE sale_date = ?",
+      [date],
+    );
+    const existing = ((rows as any[]) ?? [])[0];
 
     if (existing) {
       log(`import_log: ${date} already imported — skip`);

@@ -4,7 +4,10 @@ import { CalendarCheck, GitCommitHorizontal } from "lucide-react";
 import { getLatestSaleInfo } from "@/lib/dashboard.functions";
 
 function fmtDate(iso: string) {
-  const [y, m, d] = iso.split("-");
+  if (typeof iso !== "string") return "—";
+  const parts = iso.split("-");
+  if (parts.length < 3) return iso;
+  const [y, m, d] = parts;
   return `${d}/${m}/${y}`;
 }
 

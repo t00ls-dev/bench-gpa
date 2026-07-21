@@ -10,6 +10,7 @@ const pool = createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: "utf8mb4",
+  collation: "utf8mb4_unicode_ci",
   timezone: "+00:00",
 });
 

@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Like useState but persists the value to localStorage under `key`.
  * Falls back to `initial` when nothing is stored or storage is unavailable.
+ * `sanitize` is called after restoring the value — useful to discard invalid persisted data.
  */
-export function usePersistentState<T>(key: string, initial: T) {
+export function usePersistentState<T>(key: string, initial: T, sanitize?: (v: T) => T) {
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return initial;
     try {
@@ -21,9 +22,11 @@ export function usePersistentState<T>(key: string, initial: T) {
         typeof initial === "object" &&
         !Array.isArray(initial)
       ) {
-        return { ...(initial as object), ...(parsed as object) } as T;
+        const merged = { ...(initial as object), ...(parsed as object) } as T;
+        return sanitize ? sanitize(merged) : merged;
       }
-      return parsed as T;
+      const result = parsed as T;
+      return sanitize ? sanitize(result) : result;
     } catch {
       return initial;
     }
