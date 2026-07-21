@@ -85,7 +85,7 @@ async function main() {
   }
 
   // ---- insertSalesChunk ----
-  const saleRows = parsed.sales.map((r: Record<string, unknown>) => ({
+  const saleRows = parsed.sales.map((r) => ({
     ...r,
     sale_date: parsed.sale_date,
     batch_id: batchId,

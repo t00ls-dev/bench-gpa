@@ -100,7 +100,7 @@ async function countRows(table: TableName) {
 }
 
 async function fetchDistinctDates(table: TableName, column: string) {
-  const [rows] = await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column]);
+  const [rows] = await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column]) as any[];
   const vals = [...new Set((rows ?? []).map((r: any) => String(r[column])))].sort();
   return vals;
 }
@@ -121,7 +121,7 @@ export const diagnoseData = createServerFn({ method: "GET" })
     for (const t of tables) {
       counts[t] = await countRows(t);
     }
-    const datesInSales = await fetchDistinctDates("staging_sales", "sale_date");
+    const datesInSales = await fetchDistinctDates("staging_sales", "sale_date") as string[];
     return { ...counts, dates_in_sales: datesInSales };
   });
 
@@ -154,7 +154,7 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rs] = await db.query("CALL db_health_check()");
-    const [versionRows, sizeRows, tableRows] = rs;
+    const [versionRows, sizeRows, tableRows] = rs as any[];
     const version = String((versionRows as any[])[0]?.version ?? "");
     const dbSizeMb = Number((sizeRows as any[])[0]?.db_size_mb ?? 0);
     const tables = (tableRows ?? []).map((r: any) => ({

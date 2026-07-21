@@ -111,7 +111,7 @@ function AuthedLayout() {
   };
 
   useGotoHotkey("d", () => router.navigate({ to: "/" }));
-  useGotoHotkey("p", () => router.navigate({ to: "/produto" }));
+  useGotoHotkey("p", () => router.navigate({ to: "/produto", search: { plu: undefined, store: undefined } }));
   useGotoHotkey("a", () => router.navigate({ to: "/area" }));
   useGotoHotkey("u", () => router.navigate({ to: "/upload" }));
   useGotoHotkey("o", () => router.navigate({ to: "/admin/docs" }));

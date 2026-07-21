@@ -5,6 +5,7 @@ import db from "./db";
 import {
   StoreOption,
   FilterOptionsResult,
+  DashboardMetricsResult,
   DashboardRankingsResult,
   callMetrics,
   shiftPeriod,
@@ -33,7 +34,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
           JSON.stringify(data.secoes ?? []),
           JSON.stringify(data.grupos ?? []),
         ]);
-      const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] = rs;
+      const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] = rs as any[];
       return {
         latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
         stores: (stores ?? []).map((r: any) => ({
@@ -63,7 +64,7 @@ export const getDashboard = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => DashboardSchema.parse(d))
   .handler(async ({ data }) => {
     const currentPromise = callMetrics(data);
-    let previousPromise: Promise<ReturnType<typeof callMetrics> | null> = Promise.resolve(null);
+    let previousPromise: Promise<DashboardMetricsResult | null> = Promise.resolve(null);
     if (data.compare !== "none" && data.dateFrom && data.dateTo) {
       const prev = shiftPeriod(data.dateFrom, data.dateTo, data.compare);
       previousPromise = callMetrics({ ...data, dateFrom: prev.dateFrom, dateTo: prev.dateTo });
@@ -104,7 +105,7 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
         data.limit ?? 10,
       ],
     );
-    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2;
+    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as any[];
     return {
       byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
       bySecao: (bySecao ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),

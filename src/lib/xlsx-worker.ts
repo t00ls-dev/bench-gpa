@@ -6,6 +6,6 @@ self.onmessage = (e: MessageEvent<{ id: string; buffer: ArrayBuffer }>) => {
     const result = parseAnyWorkbook(buffer);
     self.postMessage({ id, result });
   } catch (err: unknown) {
-    self.postMessage({ id, error: err?.message ?? "Parse error" });
+    self.postMessage({ id, error: (err as Error)?.message ?? "Parse error" });
   }
 };
