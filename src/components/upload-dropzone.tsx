@@ -77,7 +77,7 @@ export function UploadDropzone({
                 file: f,
                 saleDate: "",
                 status: "error",
-                errorMsg: err?.message ?? "Erro ao ler arquivo",
+                errorMsg: (err as Error)?.message ?? "Erro ao ler arquivo",
               });
               parseErrors++;
             }

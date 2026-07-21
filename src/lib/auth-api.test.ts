@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe("login", () => {
   it("returns JWT token with valid credentials", async () => {
-    const token = await login({ email: "test@gpabr.com", password: "correct" });
+    const token = await login({ email: "test@gpabr.com", password: "correct" } as never);
     expect(token).toBe("jwt-token");
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
     expect(jwt.sign).toHaveBeenCalledWith(
@@ -64,27 +64,27 @@ describe("login", () => {
 
   it("throws on wrong password", async () => {
     vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
-    await expect(login({ email: "test@gpabr.com", password: "wrong" })).rejects.toThrow("E-mail ou senha inválidos");
+    await expect(login({ email: "test@gpabr.com", password: "wrong" } as never)).rejects.toThrow("E-mail ou senha inválidos");
   });
 
   it("throws when user is inactive", async () => {
     vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Teste", password: "$2b$12$hash", role: "admin", is_active: false }]] as never);
-    await expect(login({ email: "test@gpabr.com", password: "correct" })).rejects.toThrow("Usuário inativo");
+    await expect(login({ email: "test@gpabr.com", password: "correct" } as never)).rejects.toThrow("Usuário inativo");
   });
 
   it("throws when email not found", async () => {
     vi.mocked(db.query).mockResolvedValue([[]] as never);
-    await expect(login({ email: "unknown@gpabr.com", password: "x" })).rejects.toThrow("E-mail ou senha inválidos");
+    await expect(login({ email: "unknown@gpabr.com", password: "x" } as never)).rejects.toThrow("E-mail ou senha inválidos");
   });
 
   it("throws when rate limit exceeded", async () => {
     vi.mocked(authLimiter.check).mockReturnValue({ allowed: false, remaining: 0, resetAt: Date.now() + 60000 });
-    await expect(login({ email: "test@gpabr.com", password: "x" })).rejects.toThrow("Muitas tentativas");
+    await expect(login({ email: "test@gpabr.com", password: "x" } as never)).rejects.toThrow("Muitas tentativas");
   });
 
   it("throws when Turnstile verification fails", async () => {
     vi.mocked(verifyTurnstile).mockResolvedValue(false);
-    await expect(login({ email: "test@gpabr.com", password: "x", turnstileToken: "bad-token" })).rejects.toThrow("Falha na verificação");
+    await expect(login({ email: "test@gpabr.com", password: "x", turnstileToken: "bad-token" } as never)).rejects.toThrow("Falha na verificação");
   });
 });
 

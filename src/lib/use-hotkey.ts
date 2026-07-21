@@ -23,7 +23,7 @@ export function useHotkey(key: string, handler: () => void, enabled = true) {
 
 export function useGotoHotkey(letter: string, handler: () => void, enabled = true) {
   const pendingG = useRef(false);
-  const gTimer = useRef<ReturnType<typeof setTimeout>>();
+  const gTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -37,15 +37,15 @@ export function useGotoHotkey(letter: string, handler: () => void, enabled = tru
         return;
       if (pendingG.current && key === letter) {
         pendingG.current = false;
-        clearTimeout(gTimer.current);
+        window.clearTimeout(gTimer.current ?? undefined);
         e.preventDefault();
         handler();
         return;
       }
       if (key === "g") {
         pendingG.current = true;
-        clearTimeout(gTimer.current);
-        gTimer.current = setTimeout(() => {
+        window.clearTimeout(gTimer.current ?? undefined);
+        gTimer.current = window.setTimeout(() => {
           pendingG.current = false;
         }, 500);
         e.preventDefault();
@@ -54,7 +54,7 @@ export function useGotoHotkey(letter: string, handler: () => void, enabled = tru
     document.addEventListener("keydown", cb);
     return () => {
       document.removeEventListener("keydown", cb);
-      clearTimeout(gTimer.current);
+      window.clearTimeout(gTimer.current ?? undefined);
     };
   }, [letter, handler, enabled]);
 }
