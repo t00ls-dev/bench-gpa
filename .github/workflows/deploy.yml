@@ -23,7 +23,7 @@ jobs:
           SOURCE: ".output/"
           REMOTE_HOST: ${{ secrets.VPS_HOST }}
           REMOTE_USER: ${{ secrets.VPS_USER }}
-          PORT: ${{ secrets.VPS_PORT }}
+          REMOTE_PORT: ${{ secrets.VPS_PORT }}
           TARGET: "/home/admin/web/gpa.t00ls.dev/public_html/.output/"
 
       - name: Restart PM2
