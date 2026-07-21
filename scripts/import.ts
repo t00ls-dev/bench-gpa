@@ -116,10 +116,6 @@ async function main() {
   ]);
   console.log("   ✓ Importação finalizada");
 
-  // ---- purgeOldAggs ----
-  console.log(`\n🧹 Limpando dados com mais de 180 dias...`);
-  await db.query("CALL purge_old_aggs(180)");
-
   console.log(`\n✅ Importação concluída com sucesso!`);
   process.exit(0);
 }
