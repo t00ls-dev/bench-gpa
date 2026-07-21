@@ -68,7 +68,7 @@ export default function AdminPage() {
             <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
               <Database className="size-5 text-primary" /> Dados e Agregações
             </h2>
-            <DataCountSection diagnoseFn={diag} />
+            <DataCountSection diagnoseFn={() => diag() as unknown as Promise<Record<string, unknown>>} />
           </div>
           <div>
             <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
