@@ -38,6 +38,15 @@ type AF = {
   subgrupos: string[];
 };
 
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+function sanitizeAF(f: AF): AF {
+  return {
+    ...f,
+    dateFrom: isoDate.test(f.dateFrom) ? f.dateFrom : "",
+    dateTo: isoDate.test(f.dateTo) ? f.dateTo : "",
+  };
+}
+
 function AreaPage() {
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
   const getArea = useServerFn(getAreaAnalysis);
@@ -50,7 +59,7 @@ function AreaPage() {
     secoes: [],
     grupos: [],
     subgrupos: [],
-  });
+  }, sanitizeAF);
   const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
   const setStores = (v: string[]) =>
     patch({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
@@ -169,7 +178,7 @@ function AreaPage() {
           page,
           pageSize,
           search,
-          sortBy: sortKey,
+          sortBy: sortKey === "daysSince" ? "val" : sortKey,
           sortDir,
         },
       }),
@@ -179,7 +188,22 @@ function AreaPage() {
     placeholderData: (prev) => prev,
   });
 
-  const products = (data?.products ?? []) as Product[];
+  const products = useMemo(() => {
+    const raw = (data?.products ?? []) as Product[];
+    if (sortKey !== "daysSince") return raw;
+    return [...raw].sort((a, b) => {
+      const aD = daysSinceNum(a.lastSaleDate);
+      const bD = daysSinceNum(b.lastSaleDate);
+      const aN = aD === null;
+      const bN = bD === null;
+      let cmp = 0;
+      if (aN && bN) cmp = 0;
+      else if (aN) cmp = 1;
+      else if (bN) cmp = -1;
+      else cmp = aD - bD;
+      return sortAsc ? cmp : -cmp;
+    });
+  }, [data, sortKey, sortAsc, baseDateIso]);
   const total = data?.total ?? 0;
   const noSale = data?.plusWithoutSale ?? 0;
   const totalRows = data?.totalProducts ?? 0;
@@ -235,7 +259,7 @@ function AreaPage() {
           grupos: fGrupos,
           subgrupos: fSubgrupos,
           search: search.trim(),
-          sortBy: sortKey,
+          sortBy: sortKey === "daysSince" ? "val" : sortKey,
           sortDir,
         },
       });

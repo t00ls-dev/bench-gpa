@@ -31,8 +31,17 @@ const initial: Filters = {
   compare: "prev_period",
 };
 
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+function sanitizeFilters(f: Filters): Filters {
+  return {
+    ...f,
+    dateFrom: isoDate.test(f.dateFrom) ? f.dateFrom : "",
+    dateTo: isoDate.test(f.dateTo) ? f.dateTo : "",
+  };
+}
+
 function Dashboard() {
-  const [filters, setFilters] = usePersistentState<Filters>("bench-gpa:filters:dashboard", initial);
+  const [filters, setFilters] = usePersistentState<Filters>("bench-gpa:filters:dashboard", initial, sanitizeFilters);
   const fn = useServerFn(getDashboard);
   const fnRank = useServerFn(getDashboardRankings);
   const enabled = !!filters.dateFrom && !!filters.dateTo;

@@ -94,18 +94,10 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
     }
   };
 
-  const pctColor = data
-    ? data.pct_used >= 85
-      ? "bg-destructive"
-      : data.pct_used >= 60
-        ? "bg-warning"
-        : "bg-success"
-    : "bg-muted";
-
   return (
     <div className="kpi-card space-y-3">
       <p className="text-sm text-muted-foreground">
-        Armazenamento total do banco versus o limite de 500 MB do plano free.
+        Tamanho total do banco, versão e tabelas.
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -121,33 +113,21 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
 
       {data && (
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium flex items-center gap-1.5">
-                <HardDrive className="size-4 text-muted-foreground" />
-                Uso do banco
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                {data.db_size_pretty} / {data.free_limit_pretty}
-              </span>
-            </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className={`h-full rounded-full transition-all ${pctColor}`}
-                style={{ width: `${Math.min(data.pct_used, 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{data.pct_used}% utilizado</span>
-              <span>{Math.max(0, 100 - data.pct_used).toFixed(1)}% livre</span>
-            </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium flex items-center gap-1.5">
+              <HardDrive className="size-4 text-muted-foreground" />
+              Tamanho do banco
+            </span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {data.db_size_pretty}
+            </span>
           </div>
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Activity className="size-3.5" /> {data.active_connections} conexões ativas
             </span>
-            <span>PG {data.version}</span>
+            <span>MariaDB {data.version}</span>
           </div>
 
           <div className="max-h-64 overflow-x-auto overflow-y-auto">
@@ -160,17 +140,15 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
                 </tr>
               </thead>
               <tbody>
-                {data.tables
-                  .filter((t) => t.schema === "public")
-                  .map((t) => (
-                    <tr key={t.table} className="border-b border-border/40">
-                      <td className="py-1.5 pr-4 font-mono text-foreground">{t.table}</td>
-                      <td className="py-1.5 pr-4 text-right font-mono">{fmtSize(t.total_size)}</td>
-                      <td className="py-1.5 text-right font-mono">
-                        {t.row_estimate.toLocaleString("pt-BR")}
-                      </td>
-                    </tr>
-                  ))}
+                {data.tables.map((t) => (
+                  <tr key={t.table} className="border-b border-border/40">
+                    <td className="py-1.5 pr-4 font-mono text-foreground">{t.table}</td>
+                    <td className="py-1.5 pr-4 text-right font-mono">{fmtSize(t.total_size)}</td>
+                    <td className="py-1.5 text-right font-mono">
+                      {t.row_estimate.toLocaleString("pt-BR")}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
