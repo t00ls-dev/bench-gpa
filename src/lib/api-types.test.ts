@@ -1,4 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("./db", () => ({ default: { query: vi.fn() } }));
+vi.mock("./cache", () => ({
+  cache: { wrap: vi.fn((_key: string, fn: () => Promise<unknown>) => fn()) },
+}));
+
 import {
   shiftPeriod,
   parseNameVal,
@@ -10,7 +16,11 @@ import {
   str,
   strOrNull,
   numOrNull,
+  callMetrics,
 } from "./api-types";
+import db from "./db";
+
+const mockQuery = db.query as ReturnType<typeof vi.fn>;
 
 describe("shiftPeriod", () => {
   it("shifts by exact period length", () => {
@@ -136,5 +146,48 @@ describe("numOrNull", () => {
   it("converts to number for values", () => {
     expect(numOrNull(42)).toBe(42);
     expect(numOrNull("42")).toBe(42);
+  });
+});
+
+describe("callMetrics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns aggregated metrics from db CALL", async () => {
+    mockQuery.mockResolvedValue([
+      [
+        [{ total: 1000 }],
+        [{ code: "S1", name: "Loja 1", val: 600 }, { code: "S2", name: "Loja 2", val: 400 }],
+        [{ name: "Depto A", val: 500 }, { name: "Depto B", val: 500 }],
+        [{ date: new Date("2024-01-01"), val: 300 }, { date: new Date("2024-01-02"), val: 700 }],
+      ],
+    ]);
+
+    const result = await callMetrics({
+      dateFrom: "2024-01-01",
+      dateTo: "2024-01-02",
+    } as never);
+
+    expect(result.total).toBe(1000);
+    expect(result.byStore).toHaveLength(2);
+    expect(result.byStore[0]).toEqual({ code: "S1", name: "Loja 1", val: 600 });
+    expect(result.byDepto).toHaveLength(2);
+    expect(result.byDate).toHaveLength(2);
+    expect(result.byDate[0].date).toBe("2024-01-01");
+  });
+
+  it("handles empty result sets", async () => {
+    mockQuery.mockResolvedValue([[ [], [], [], [] ]]);
+
+    const result = await callMetrics({
+      dateFrom: null,
+      dateTo: null,
+    } as never);
+
+    expect(result.total).toBe(0);
+    expect(result.byStore).toEqual([]);
+    expect(result.byDepto).toEqual([]);
+    expect(result.byDate).toEqual([]);
   });
 });
