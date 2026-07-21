@@ -1,8 +1,8 @@
 # Análise Completa
 
-> Data: 21/07/2026 18:20
+> Data: 21/07/2026 22:53
 
-Snapshot automático do estado do código em 21/07/2026 às 18:20.
+Snapshot automático do estado do código em 21/07/2026 às 22:53.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
@@ -11,18 +11,18 @@ _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX
 
 | Métrica | Valor |
 |---|---|
-| Arquivos .ts/.tsx | 131 |
-| Total de arquivos no projeto | 164 |
-| Linhas de código (src) | 13.599 |
-| Linhas totais (projeto) | 18.946 |
-| Arquivos grandes (>300 linhas) | 8 |
+| Arquivos .ts/.tsx | 140 |
+| Total de arquivos no projeto | 177 |
+| Linhas de código (src) | 13.879 |
+| Linhas totais (projeto) | 19.072 |
+| Arquivos grandes (>300 linhas) | 7 |
 | Erros de lint | 0 |
 | Avisos de lint | 0 |
 | Build | ✅ OK |
 | TODOs/FIXMEs | 0 |
-| Scripts | 11 |
-| Migrações SQL | 67 |
-| RPCs distintas usadas | 10 |
+| Scripts | 16 |
+| Migrações SQL | 0 |
+| Server functions | 16 |
 
 ---
 
@@ -35,9 +35,9 @@ Nenhum problema encontrado.
 
 ### Credenciais e Exposição
 
-- **.env versionado**: 🔴 SIM — service_role key exposta no repositório! (⚠️ .env não está no .gitignore)
-- **.env no gitignore**: 🔴 Não
-- **Arquivo .env existe localmente**: ⚠️ Sim
+- **.env versionado**: ✅ Não
+- **.env no gitignore**: ✅ Sim
+- **Arquivo .env existe localmente**: ✅ Não
 
 ### Content Security Policy
 
@@ -47,10 +47,6 @@ Nenhum problema encontrado.
 
 ### Riscos Identificados
 
-🔴 **CRÍTICO**: `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` estão no `.env` versionado.
-   Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role bypassa RLS).
-   **Ação**: `echo '.env' >> .gitignore && git rm --cached .env && rotacionar chaves no Supabase`
-
 ✅ **Rate limiting ativo** — 5 server functions protegidas (lib/mw).
 
 ✅ **Logs fora do git** — `logs/` no .gitignore, nenhum arquivo rastreado.
@@ -59,8 +55,8 @@ Nenhum problema encontrado.
 
 ## 🗄️ Banco de Dados
 
-- **Migrações**: 67 arquivos SQL
-- **RPCs em uso**: `has_role` (4x), `dashboard_metrics` (1x), `product_search` (1x), `get_product_by_code` (1x), `product_analysis` (1x), `area_analysis` (1x), `area_filter_hierarchy` (1x), `filter_options` (1x), `dashboard_rankings` (1x), `imported_dates` (1x)
+- **Migrações**: 0 arquivos SQL
+- **Auth**: JWT manual (bcrypt + jsonwebtoken)
 - **Import log**: Não encontrado
 
 ### Problemas Conhecidos
@@ -81,10 +77,10 @@ Nenhum problema encontrado.
 ### Arquivos Grandes (>300 linhas)
 
 - `src/components/ui/sidebar.tsx` — 745 linhas
-- `src/routes/_authenticated/area.page.tsx` — 462 linhas
+- `src/routes/_authenticated/area.page.tsx` — 488 linhas
 - `src/routes/_authenticated/produto.page.tsx` — 369 linhas
-- `src/routes/_authenticated/upload.page.tsx` — 347 linhas
-- `src/routes/_authenticated/index.page.tsx` — 329 linhas
+- `src/routes/_authenticated/upload.page.tsx` — 366 linhas
+- `src/routes/_authenticated/index.page.tsx` — 338 linhas
 - `src/components/ui/chart.tsx` — 321 linhas
 - `src/components/area-table.tsx` — 309 linhas
 
@@ -96,8 +92,7 @@ Nenhum problema encontrado.
 🟡 **Sem virtualização em tabelas** — `area-table.tsx` renderiza todas as linhas no DOM.
    `@tanstack/react-virtual` pode reduzir nodes renderizados em 90%+.
 
-🟢 **Código duplicado**: verificar padrões de `supabase.rpc(...)` com mesmos parâmetros.
-   10 RPCs diferentes em uso — verificar se alguma é chamada redundantemente.
+🟢 **Código duplicado**: verificar padrões de server functions com mesmos parâmetros.
 
 ---
 
@@ -119,7 +114,7 @@ Nenhum problema encontrado.
 
 🔴 **Zero testes unitários** — só scripts Puppeteer E2E (sem assertions robustas).
    Qualquer refactor pode quebrar funcionalidades sem detecção.
-   **Ação**: integrar Vitest + @testing-library/react + mocks Supabase.
+   **Ação**: integrar Vitest + @testing-library/react.
 
 ✅ **Puppeteer movido para devDependencies** — puppeteer (~300 MB) não entra mais no build de produção.
 
@@ -155,7 +150,7 @@ Nenhum problema encontrado.
 | # | Ação | Tempo | Prioridade |
 |---|---|---|---|
 | 1 | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min | 🔴 |
-| 2 | Rotacionar chaves Supabase (service_role + anon) | 5 min | 🔴 |
+| 2 | Verificar rotação de secrets JWT e Turnstile | 5 min | 🔴 |
 | 3 | Mover puppeteer/jspdf para devDependencies | 2 min | 🟡 |
 | 4 | Título `<title>` dinâmico por rota | 10 min | 🟢 |
 | 5 | Aumentar staleTime de 5min para 10min | 5 min | 🟢 |
@@ -202,15 +197,14 @@ Nenhum problema encontrado.
 
 ## 🚀 Próxima Funcionalidade Recomendada
 
-**🔴 MIGRAÇÃO VPS AUTOSSUFICIENTE — sair do Supabase**
-
-O DB está 20% acima do limite de 500 MB. Plano definido:
-
-| Rota | Prós | Contras |
-|---|---|---|
-| **VPS Autossuficiente** | MariaDB local, JWT próprio, sem rate limit, zero custo extra de DB | Requer deploy manual (templates nginx, SSL, Bun, PM2) |
-
-**Recomendação**: seguir `docs/migracao-vps-autossuficiente.md` — deploy em `gpa.t00ls.dev`.
+**🔴 MANUTENÇÃO CONTÍNUA — servidor Hestia VPS**
+Deploy ativo em `gpa.t00ls.dev` (sv1.t00ls.dev). Manter:
+| Item | Frequência |
+|---|---|
+| Verificar logs de erro | Diário |
+| Backup do MariaDB | Semanal |
+| Atualizar dependências Bun | Mensal |
+**Próximo passo**: monitoramento com alertas e health check endpoint.
 
 ---
 
@@ -218,5 +212,4 @@ O DB está 20% acima do limite de 500 MB. Plano definido:
 
 Análise gerada automaticamente via framework AGENTS.md em 21/07/2026.
 
-- 🟡 8 arquivos com mais de 300 linhas — considerar refatoração.
-- 🔴 .env com service_role key está versionado no git!
+- 🟡 7 arquivos com mais de 300 linhas — considerar refatoração.
