@@ -15,7 +15,7 @@ jobs:
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
 
-      - name: Sync .output to VPS
+      - name: Sync .output to VPS (staging dir)
         uses: easingthemes/ssh-deploy@main
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -23,13 +23,14 @@ jobs:
           SOURCE: ".output/"
           REMOTE_HOST: ${{ secrets.VPS_HOST }}
           REMOTE_USER: ${{ secrets.VPS_USER }}
-          TARGET: "/root/bench-gpa/.output/"
+          TARGET: "/home/admin/bench-gpa-output/"
 
-      - name: Restart service
+      - name: Copy to target dir + restart service
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            systemctl restart gpa-dev
+            sudo rsync -a --delete /home/admin/bench-gpa-output/ /root/bench-gpa/.output/
+            sudo systemctl restart gpa-dev
