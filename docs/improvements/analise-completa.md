@@ -81,7 +81,6 @@ Nenhum problema encontrado.
 ### Arquivos Grandes (>300 linhas)
 
 - `src/components/ui/sidebar.tsx` — 745 linhas
-- `src/integrations/supabase/types.ts` — 504 linhas
 - `src/routes/_authenticated/area.page.tsx` — 462 linhas
 - `src/routes/_authenticated/produto.page.tsx` — 369 linhas
 - `src/routes/_authenticated/upload.page.tsx` — 347 linhas
