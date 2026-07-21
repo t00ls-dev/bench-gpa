@@ -398,6 +398,8 @@ CREATE PROCEDURE filter_options(
   p_grupos JSON
 )
 BEGIN
+  DECLARE v_has_store, v_has_depto, v_has_secao, v_has_grupo INT DEFAULT 0;
+
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
   CREATE TEMPORARY TABLE tmp_filters (
     store_code VARCHAR(20),
@@ -423,64 +425,69 @@ BEGIN
     SELECT DISTINCT value FROM JSON_TABLE(p_grupos, '$[*]' COLUMNS (value VARCHAR(100) PATH '$')) AS j;
   END IF;
 
-  -- latestDate
+  SELECT
+    MAX(store_code IS NOT NULL),
+    MAX(depto IS NOT NULL),
+    MAX(secao IS NOT NULL),
+    MAX(grupo IS NOT NULL)
+  INTO v_has_store, v_has_depto, v_has_secao, v_has_grupo
+  FROM tmp_filters;
+
+  -- latestDate (always fast)
   SELECT MAX(sale_date) AS latest_date FROM import_log;
 
-  -- stores
-  SELECT DISTINCT a.store_code, COALESCE(s.store_name, a.store_code) AS store_name
-  FROM sales_prod_daily_agg a
-  LEFT JOIN stores s ON s.store_code = a.store_code
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-  ORDER BY a.store_code;
+  -- Build date-filtered queries without IS NULL OR pattern for better range scan
+  IF p_date_from IS NULL AND p_date_to IS NULL THEN
+    -- No date filters: use all data (no WHERE on sale_date)
+    IF v_has_store = 0 AND v_has_depto = 0 AND v_has_secao = 0 AND v_has_grupo = 0 THEN
+      SELECT DISTINCT a.store_code, COALESCE(s.store_name, a.store_code) AS store_name
+      FROM sales_prod_daily_agg a LEFT JOIN stores s ON s.store_code = a.store_code
+      ORDER BY a.store_code;
+      SELECT DISTINCT depto FROM sales_prod_daily_agg WHERE depto IS NOT NULL ORDER BY depto;
+      SELECT DISTINCT secao FROM sales_prod_daily_agg WHERE secao IS NOT NULL ORDER BY secao;
+      SELECT DISTINCT grupo FROM sales_prod_daily_agg WHERE grupo IS NOT NULL ORDER BY grupo;
+      SELECT DISTINCT subgrupo FROM sales_prod_daily_agg WHERE subgrupo IS NOT NULL ORDER BY subgrupo;
+    ELSE
+      SELECT DISTINCT a.store_code, COALESCE(s.store_name, a.store_code) AS store_name
+      FROM sales_prod_daily_agg a LEFT JOIN stores s ON s.store_code = a.store_code
+      WHERE (v_has_store = 0 OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+        AND (v_has_depto = 0 OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+        AND (v_has_secao = 0 OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+        AND (v_has_grupo = 0 OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+      ORDER BY a.store_code;
+      SELECT DISTINCT depto FROM sales_prod_daily_agg WHERE (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND (v_has_depto = 0 OR depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL)) AND (v_has_secao = 0 OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL)) AND (v_has_grupo = 0 OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL)) AND depto IS NOT NULL ORDER BY depto;
+      SELECT DISTINCT secao FROM sales_prod_daily_agg WHERE (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND (v_has_depto = 0 OR depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL)) AND (v_has_secao = 0 OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL)) AND secao IS NOT NULL ORDER BY secao;
+      SELECT DISTINCT grupo FROM sales_prod_daily_agg WHERE (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND (v_has_depto = 0 OR depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL)) AND grupo IS NOT NULL ORDER BY grupo;
+      SELECT DISTINCT subgrupo FROM sales_prod_daily_agg WHERE (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND subgrupo IS NOT NULL ORDER BY subgrupo;
+    END IF;
+  ELSE
+    -- Date filters active: use direct sale_date comparisons for range scan
+    IF v_has_store = 0 AND v_has_depto = 0 AND v_has_secao = 0 AND v_has_grupo = 0 THEN
+      SELECT DISTINCT a.store_code, COALESCE(s.store_name, a.store_code) AS store_name
+      FROM sales_prod_daily_agg a LEFT JOIN stores s ON s.store_code = a.store_code
+      WHERE a.sale_date >= p_date_from AND a.sale_date <= p_date_to
+      ORDER BY a.store_code;
+      SELECT DISTINCT depto FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND depto IS NOT NULL ORDER BY depto;
+      SELECT DISTINCT secao FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND secao IS NOT NULL ORDER BY secao;
+      SELECT DISTINCT grupo FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND grupo IS NOT NULL ORDER BY grupo;
+      SELECT DISTINCT subgrupo FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND subgrupo IS NOT NULL ORDER BY subgrupo;
+    ELSE
+      SELECT DISTINCT a.store_code, COALESCE(s.store_name, a.store_code) AS store_name
+      FROM sales_prod_daily_agg a LEFT JOIN stores s ON s.store_code = a.store_code
+      WHERE a.sale_date >= p_date_from AND a.sale_date <= p_date_to
+        AND (v_has_store = 0 OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+        AND (v_has_depto = 0 OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+        AND (v_has_secao = 0 OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+        AND (v_has_grupo = 0 OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+      ORDER BY a.store_code;
+      SELECT DISTINCT depto FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND (v_has_depto = 0 OR depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL)) AND (v_has_secao = 0 OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL)) AND (v_has_grupo = 0 OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL)) AND depto IS NOT NULL ORDER BY depto;
+      SELECT DISTINCT secao FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND (v_has_depto = 0 OR depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL)) AND (v_has_secao = 0 OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL)) AND secao IS NOT NULL ORDER BY secao;
+      SELECT DISTINCT grupo FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND (v_has_depto = 0 OR depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL)) AND grupo IS NOT NULL ORDER BY grupo;
+      SELECT DISTINCT subgrupo FROM sales_prod_daily_agg WHERE sale_date >= p_date_from AND sale_date <= p_date_to AND (v_has_store = 0 OR store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL)) AND subgrupo IS NOT NULL ORDER BY subgrupo;
+    END IF;
+  END IF;
 
-  -- deptos
-  SELECT DISTINCT a.depto
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND a.depto IS NOT NULL
-  ORDER BY a.depto;
-
-  -- secoes
-  SELECT DISTINCT a.secao
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND a.secao IS NOT NULL
-  ORDER BY a.secao;
-
-  -- grupos
-  SELECT DISTINCT a.grupo
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND a.grupo IS NOT NULL
-  ORDER BY a.grupo;
-
-  -- subgrupos
-  SELECT DISTINCT a.subgrupo
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND a.subgrupo IS NOT NULL
-  ORDER BY a.subgrupo;
-
-  -- availableDates
+  -- availableDates (always fast)
   SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date ASC;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
