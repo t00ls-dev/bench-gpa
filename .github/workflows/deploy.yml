@@ -20,10 +20,10 @@ jobs:
 
       - name: Deploy via HTTP
         run: |
-          curl -sf -X POST \
+          STATUS=$(curl -s -o /tmp/deploy-resp.txt -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${{ secrets.DEPLOY_SECRET }}" \
             --data-binary @output.tar.gz \
-            https://gpa.t00ls.dev/deploy || {
-            echo "Deploy failed"
-            exit 1
-          }
+            https://gpa.t00ls.dev/deploy)
+          echo "HTTP $STATUS"
+          cat /tmp/deploy-resp.txt
+          [ "$STATUS" = "200" ] || exit 1
