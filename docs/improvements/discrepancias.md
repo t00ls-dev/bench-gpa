@@ -22,22 +22,9 @@ Atualizado pós-migração Supabase → MariaDB.
 
 ## Docs de Migração vs Realidade
 
-### `docs/api-php-mariadb.md` (plano vigente)
-
-- **Plano completo** para Vercel + PHP API + MariaDB
-- Auth JWT próprio, zero Supabase
-- **Ainda não executado** — app ainda roda com Supabase
-
 ### `docs/migracao-vps-autossuficiente.md`
 
-- Alternativa Node.js + MariaDB puro, sem PHP
-- **Compatível** com deploy Hestia VPS (`sv1.t00ls.dev`)
-
-### `docs/deploy-hestia-vps.md` (novo)
-
-- Plano específico para deploy em `sv1.t00ls.dev` com Hestia CP
-- Template nginx `node-ssr` para proxy reverso
-- **Ainda não executado** — aguardando autorização
+- Plano executado — deploy ativo em `gpa.t00ls.dev` com MariaDB + JWT próprio
 
 ---
 
@@ -53,7 +40,7 @@ Atualizado pós-migração Supabase → MariaDB.
 | ~~`getServerConfig`~~                                                 | ~~Função removida~~                                                | ✅ Resolvido |
 | `FilterBar` re-clampa datas                                           | Efeito colateral silencioso, sem notificação ao usuário            |
 | ~~`LastUpdateInfo`~~                                                  | ~~Componente removido~~                                            | ✅ Resolvido |
-| `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`                     | 🔴 Crítico — será resolvido na migração (remoção do Supabase)      |
+| `.env` com `SUPABASE_SERVICE_ROLE_KEY` (histórico)                   | ✅ Resolvido — removido na migração                                |
 
 ---
 
@@ -65,7 +52,7 @@ Atualizado pós-migração Supabase → MariaDB.
 | Multi-drop upload                          | ✅ Corrigido (pendingQueue, confirm dialog)                                 |
 | `noUncheckedSideEffectImports` no tsconfig | ✅ Removido                                                                 |
 | 5 componentes UI não usados                | ✅ Removidos (carousel, resizable, input-otp, command, drawer)              |
-| Code-review cron                           | ✅ Agora sobrescreve `07-analise-completa.md`                               |
+| Code-review cron                           | ✅ Agora sobrescreve `analise-completa.md`                               |
 | Doc obsoletas removidas                    | ✅ SQLite, Perecíveis — eliminadas                                          |
 | CSP incompleto                             | ✅ Completo com nonce (script-src, style-src, default-src, frame-ancestors) |
 | Rate limiting ausente                      | ✅ Sliding window por IP + global (4 tiers: SSR, API, Upload, Auth)         |

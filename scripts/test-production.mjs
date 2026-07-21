@@ -1,8 +1,8 @@
 import puppeteer from "puppeteer";
 
-const EMAIL = "admin@gpabr.com";
-const PASS = "Gpa@Manca123";
-const URL = "https://bench-gpa.vercel.app";
+const EMAIL = process.env.TEST_ADMIN_EMAIL || "admin@gpabr.com";
+const PASS = process.env.TEST_ADMIN_PASSWORD || "Gpa@Manca123";
+const URL = process.env.TEST_APP_URL || "http://localhost:3000";
 
 const browser = await puppeteer.launch({
   executablePath: "/usr/bin/chromium",

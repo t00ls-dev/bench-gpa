@@ -1,11 +1,8 @@
 # Estado Atual do Código
 
-Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado para refletir a migração **Supabase → MariaDB + JWT próprio**.
+Diagnóstico baseado na leitura completa dos fontes (julho/2026). Migração **Supabase → MariaDB + JWT próprio** concluída ✅.
 
-> **Contexto**: app em transição. Hoje usa Supabase Auth + PostgreSQL (RPCs). Destino: MariaDB + JWT bcrypt, deploy no VPS Hestia (`sv1.t00ls.dev`).
-> Server functions ainda chamam Supabase RPCs — serão convertidas para queries MariaDB diretas.
->
-> **Já implementado na esteira da migração**: CSP nonce, rate limiting sliding window (4 tiers), Turnstile CAPTCHA, cache layer (SimpleCache), command palette (cmdk), atalhos de teclado (g+letra), navegação mobile (bottom tab bar + vaul Drawer), View Transitions API, exportação PDF (Dashboard + Produto + Área).
+> **Implementado na migração**: CSP nonce, rate limiting sliding window (4 tiers), Turnstile CAPTCHA, cache layer (SimpleCache), command palette (cmdk), atalhos de teclado (g+letra), navegação mobile (bottom tab bar + vaul Drawer), View Transitions API, exportação PDF (Dashboard + Produto + Área).
 
 ---
 
@@ -13,14 +10,12 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 
 ### `/auth` — Login (`src/routes/auth.page.tsx`)
 
-- Login email/senha com Supabase Auth
+- Login email/senha com JWT próprio (bcrypt + jsonwebtoken)
 - Verifica se usuário está ativo (`is_active`) após login bem-sucedido
 - **Cloudflare Turnstile** integrado (non-interactive, fail-closed, 2 retries, bypass env)
 - **Rate limiting**: tier Auth (5/min IP, 20/min global)
 - Redireciona para `?next=` ou `/` via `sanitizeNext()` (proteção contra open redirect)
-- `ssr: false` — intencional (depende de Supabase client-side)
 - **Sem** "Esqueci minha senha", "Lembrar email", 2FA
-- **Migração**: converter para `POST /api/auth/login` → JWT + cookie HttpOnly
 
 ### `/` — Dashboard (`src/routes/_authenticated/index.page.tsx`, 234 linhas)
 
@@ -70,7 +65,6 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 - Seção Diagnose/Repair (contagem de registros, rebuild de agregações)
 - Double-gated: `beforeLoad` + `<AdminGate>` + `assertAdmin` server-side
 - **Sem** confirmação em ações destrutivas, loading inline no Switch, busca/filtro na lista, paginação, auditoria
-- **Migração**: converter `supabaseAdmin.auth.admin.*` para fetch → PHP API (ou queries MariaDB diretas)
 
 ---
 
@@ -78,8 +72,7 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 
 ### `analytics.functions.ts` (10 funções)
 
-- Fazem chamadas `supabase.rpc()` — serão substituídas por `fetch()` para PHP API ou queries MariaDB
-- `getDashboard` faz **2 chamadas RPC** (período atual + anterior) — poderia ser 1
+- `getDashboard` faz **2 chamadas** ao banco (período atual + anterior) — poderia ser 1
 - `getAreaAnalysis` com paginação/sorting/search server-side
 - `getAreaFilterHierarchy` substitui 5 queries individuais
 - Parsing defensivo via `asRecord`/`asArray`/`num()`/`str()` — belt-and-suspenders
@@ -87,16 +80,12 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 ### `admin.functions.ts` (7 funções)
 
 - `assertAdmin` implementado inline (duplicado em `upload.functions.ts`)
-- `createUser` com rollback manual (apaga auth user se insert na tabela falhar)
 - `repairAggregations`: itera datas individualmente — lento para muitos dias
-- **Migração**: substituir chamadas Supabase Admin API por queries MariaDB + JWT validation
 
 ### `upload.functions.ts` (3 funções)
 
-- Pipeline trifásico com atomic swap via RPC `finalize_import`
-- `upsert_products_bulk` RPC evita "URI too large" do PostgREST
+- Pipeline trifásico com atomic swap via stored procedure `finalize_import`
 - **`assertAdmin` idêntico ao de `admin.functions.ts`** — duplicado
-- **Migração**: converter stored procedures para queries MariaDB ou PHP API
 
 ---
 
@@ -117,26 +106,18 @@ Diagnóstico baseado na leitura completa dos fontes (julho/2026). Atualizado par
 
 ## Infraestrutura
 
-- **Auth middleware**: `auth-middleware.ts` valida Bearer token via Supabase. **Migrar** para validação JWT local com `jsonwebtoken`
-- **Auth attacher**: `auth-attacher.ts` anexa token às serverFn. **Migrar** para ler token do cookie/localStorage
-- **Cliente Supabase dual**: `client.ts` + `client.server.ts` — **remover** após migração
+- **Auth middleware**: `auth-middleware.ts` valida JWT local com `jsonwebtoken`
 - **Segurança**: CSP completo (script-src nonce+strict-dynamic, style-src, frame-ancestors 'none'), X-Frame-Options, Turnstile CAPTCHA, rate limiting sliding window (4 tiers)
 - **Error handling**: `safeError()` + `error-capture.ts` + `normalizeCatastrophicSsrResponse()`
 - **CSS**: Tailwind v4 com OKLCH, `@theme inline`, `@utility kpi-card`. `.dark` block existe (completo) mas tema travado em light — toggle removido
-- **Vite**: config com TanStack Start + Nitro. Preset `vercel` para deploy atual. Trocar para `node-server` para VPS
-- **Migration**: docs em `docs/api-php-mariadb.md` e `docs/migracao-vps-autossuficiente.md`
+- **Vite**: config com TanStack Start + Nitro. Preset `node-server` para VPS
 
 ---
 
 ## Banco de Dados
 
-### Hoje (Supabase PostgreSQL)
+### MariaDB
 
-- **Tabelas** (8): `sales`, `products`, `stores`, `users`, `import_log`, `filter_hierarchy`, `sales_daily_agg`, `staging_sales`
-- **RPCs** (15): `dashboard_metrics`, `dashboard_rankings`, `filter_options`, `area_analysis`, `area_filter_hierarchy`, `product_analysis`, `product_search`, `imported_dates`, `has_role`, `finalize_import`, `upsert_products_bulk`, `refresh_filter_hierarchy`, `refresh_sales_daily_agg`, `show_limit`, `show_trgm`
-
-### Amanhã (MariaDB)
-
-- Mesmas tabelas + `users` com auth próprio (bcrypt)
-- RPCs viram stored procedures ou queries diretas via PHP/mysql2
-- Auth sai do Supabase: JWT próprio, cookie HttpOnly
+- **Tabelas**: `products`, `stores`, `users`, `import_log`, `filter_hierarchy`, `sales_daily_agg`, `staging_sales`
+- Queries diretas com mysql2 (sem stored procedures)
+- Auth: JWT próprio com bcrypt + jsonwebtoken, cookie

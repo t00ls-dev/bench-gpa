@@ -10,7 +10,7 @@ import {
   str,
   strOrNull,
   numOrNull,
-} from "./rpc-utils";
+} from "./api-types";
 
 describe("shiftPeriod", () => {
   it("shifts by exact period length", () => {
