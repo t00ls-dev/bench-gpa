@@ -27,7 +27,7 @@ jobs:
           TARGET: "/home/admin/web/gpa.t00ls.dev/public_html/.output/"
 
       - name: Restart PM2
-        uses: appleboy/ssh-action@v1.2.5
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
