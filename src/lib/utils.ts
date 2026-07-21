@@ -34,8 +34,10 @@ export function fmtBRShort(input: string | Date | null | undefined): string {
   if (!input) return "(sem)";
   let y: number, m: number, d: number;
   if (typeof input === "string") {
-    const [Y, M, D] = input.slice(0, 10).split("-");
-    if (!Y || !M || !D) return "(sem)";
+    const parts = input.slice(0, 10).split("-");
+    if (parts.length !== 3) return "(sem)";
+    const [Y, M, D] = parts;
+    if (!Y || !M || !D || !/^\d+$/.test(Y) || !/^\d+$/.test(M) || !/^\d+$/.test(D)) return "(sem)";
     y = Number(Y);
     m = Number(M);
     d = Number(D);
