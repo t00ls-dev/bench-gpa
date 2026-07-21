@@ -15,7 +15,7 @@ CRONS=(
 )
 
 # Remove linhas antigas do bench-gpa e reinstala
-crontab -l 2>/dev/null | grep -v "$BENCH_DIR" || true > /tmp/crontab-new
+(crontab -l 2>/dev/null | grep -v "$BENCH_DIR" || true) > /tmp/crontab-new
 for cron in "${CRONS[@]}"; do
   echo "$cron"
 done >> /tmp/crontab-new
