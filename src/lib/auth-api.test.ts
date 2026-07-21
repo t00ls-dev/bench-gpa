@@ -47,7 +47,7 @@ beforeEach(() => {
   vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
   vi.mocked(jwt.sign).mockReturnValue("jwt-token" as never);
   vi.mocked(jwt.verify).mockReturnValue({ userId: "u1", role: "admin", email: "test@gpabr.com" } as never);
-  vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Test", password: "$2b$12$hash", role: "admin", is_active: true }]] as never);
+  vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Teste", password: "$2b$12$hash", role: "admin", is_active: true }]] as never);
 });
 
 describe("login", () => {
@@ -68,7 +68,7 @@ describe("login", () => {
   });
 
   it("throws when user is inactive", async () => {
-    vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Test", password: "$2b$12$hash", role: "admin", is_active: false }]] as never);
+    vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Teste", password: "$2b$12$hash", role: "admin", is_active: false }]] as never);
     await expect(login({ email: "test@gpabr.com", password: "correct" })).rejects.toThrow("Usuário inativo");
   });
 
@@ -91,11 +91,11 @@ describe("login", () => {
 describe("getMe", () => {
   it("returns user when session cookie is valid", async () => {
     const user = await getMe();
-    expect(user).toEqual({ id: "u1", email: "test@gpabr.com", name: "Test", role: "admin" });
+    expect(user).toEqual({ id: "u1", email: "test@gpabr.com", name: "Teste", role: "admin" });
   });
 
   it("returns null when user is inactive", async () => {
-    vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Test", role: "admin", is_active: false }]] as never);
+    vi.mocked(db.query).mockResolvedValue([[{ id: "u1", email: "test@gpabr.com", name: "Teste", role: "admin", is_active: false }]] as never);
     const user = await getMe();
     expect(user).toBeNull();
   });
