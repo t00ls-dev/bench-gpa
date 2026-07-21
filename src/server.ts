@@ -5,6 +5,10 @@ import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
 import { ssrLimiter, getClientIp } from "./lib/rate-limit";
 import { ServerResponse } from "node:http";
+import { execSync } from "node:child_process";
+import { writeFileSync, mkdirSync, existsSync, rmSync, renameSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const origWriteHead = ServerResponse.prototype.writeHead;
 ServerResponse.prototype.writeHead = function (...args: unknown[]) {
@@ -62,8 +66,82 @@ function applySecurityHeaders(body: string, status: number, nonce: string, extra
   return new Response(body, { status, headers });
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}
+
+const DEPLOY_DIR = "/home/admin/web/gpa.t00ls.dev/public_html";
+
+async function handleDeploy(request: Request): Promise<Response | null> {
+  if (request.method !== "POST") return null;
+  const url = new URL(request.url);
+  if (url.pathname !== "/deploy") return null;
+
+  const secret = process.env.DEPLOY_SECRET;
+  if (!secret) {
+    return new Response("Deploy secret not configured", { status: 500 });
+  }
+
+  const auth = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+  if (!timingSafeEqual(auth, secret)) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const tmpFile = join(tmpdir(), `deploy-${Date.now()}.tar.gz`);
+  const tmpDir = join(DEPLOY_DIR, ".output.new");
+
+  try {
+    const reader = request.body?.getReader();
+    if (!reader) return new Response("No body", { status: 400 });
+
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+    const buf = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buf.set(chunk, offset);
+      offset += chunk.length;
+    }
+    writeFileSync(tmpFile, buf);
+
+    if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true });
+    mkdirSync(tmpDir, { recursive: true });
+    execSync(`tar xzf "${tmpFile}" --no-same-owner -C "${tmpDir}"`, { stdio: "pipe" });
+
+    const oldDir = join(DEPLOY_DIR, ".output.old");
+    const curDir = join(DEPLOY_DIR, ".output");
+    if (existsSync(oldDir)) rmSync(oldDir, { recursive: true });
+    if (existsSync(curDir)) renameSync(curDir, oldDir);
+    renameSync(tmpDir, curDir);
+
+    execSync("pm2 reload bench-gpa", { stdio: "pipe" });
+    execSync("pm2 save", { stdio: "pipe" });
+
+    if (existsSync(oldDir)) rmSync(oldDir, { recursive: true });
+
+    return new Response("OK", { status: 200 });
+  } catch (err) {
+    console.error("Deploy failed:", err);
+    if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true });
+    return new Response("Deploy failed: " + (err as Error).message, { status: 500 });
+  } finally {
+    try { rmSync(tmpFile); } catch { /* ignore */ }
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const deployResp = await handleDeploy(request);
+    if (deployResp) return deployResp;
+
     const ip = getClientIp(request);
     const rl = ssrLimiter.check(ip);
     if (!rl.allowed) {
