@@ -87,6 +87,7 @@ export default function UploadPage() {
 
   const handleFiles = (files: FileEntry[]) => {
     const valid: typeof pendingQueue = [];
+    const newEntries: FileEntry[] = [];
     for (const entry of files) {
       if (entry.status === "error") {
         toast.error(`Erro ao ler ${entry.file.name}: ${entry.errorMsg ?? "erro desconhecido"}`);
@@ -102,29 +103,38 @@ export default function UploadPage() {
         continue;
       }
       valid.push({ file: entry.file, date: entry.saleDate, parsed });
+      newEntries.push({
+        file: entry.file,
+        saleDate: entry.saleDate,
+        status: "pending",
+        totalLines,
+      });
     }
-    if (valid.length > 0) setPendingQueue(valid);
+    if (valid.length > 0) {
+      setPendingQueue(valid);
+      setEntries((prev) => [...newEntries, ...prev]);
+    }
   };
 
   const processOne = async (item: (typeof pendingQueue)[number]): Promise<void> => {
     const { date, parsed } = item;
-    const entry: FileEntry = {
-      file: item.file,
-      saleDate: date,
-      status: "pending",
-      totalLines: parsed.sales.length,
-    };
-    setEntries((prev) => [entry, ...prev]);
 
     const update = (patch: Partial<FileEntry>) =>
       setEntries((prev) =>
         prev.map((e) =>
-          e.saleDate === entry.saleDate && e.file.name === entry.file.name ? { ...e, ...patch } : e,
+          e.saleDate === date && e.file.name === item.file.name ? { ...e, ...patch } : e,
         ),
       );
 
+    setProcessing({
+      busy: true,
+      progressPct: 0,
+      speed: 0,
+      eta: 0,
+      processed: 0,
+      currentDate: date,
+    });
     update({ status: "processing" });
-    setProcessing((p) => ({ ...p, currentDate: date }));
 
     const batchId = crypto.randomUUID();
     const stores = [
@@ -164,7 +174,6 @@ export default function UploadPage() {
       const chunk = parsed.sales.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
       await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
       const processed = Math.min((i + 1) * CHUNK_SIZE, parsed.sales.length);
-      update({ totalLines: processed });
       processedTotalRef.current += chunk.length;
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
       const speed = Math.round(processedTotalRef.current / elapsed);
