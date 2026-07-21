@@ -23,6 +23,7 @@ jobs:
           SOURCE: ".output/"
           REMOTE_HOST: ${{ secrets.VPS_HOST }}
           REMOTE_USER: ${{ secrets.VPS_USER }}
+          PORT: ${{ secrets.VPS_PORT }}
           TARGET: "/home/admin/web/gpa.t00ls.dev/public_html/.output/"
 
       - name: Restart PM2
@@ -30,10 +31,8 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: VITE_TURNSTILE_SITE_KEY
           script: |
-            export PATH="/usr/bin:/usr/local/bin:/home/debian/.npm-global/bin:$PATH"
-            cd /home/admin/web/gpa.t00ls.dev/public_html
-            pm2 reload bench-gpa 2>&1
-            pm2 save 2>&1
+            sudo -u admin pm2 reload bench-gpa 2>&1
+            sudo -u admin pm2 save 2>&1
