@@ -22,7 +22,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
     const { cache } = await import("./cache");
-    const key = `filter_options:${data.dateFrom ?? ""}:${data.dateTo ?? ""}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
+    const key = `filter_options:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
     return cache.wrap(key, async () => {
       const [rs] =
         await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [

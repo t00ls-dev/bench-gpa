@@ -121,6 +121,7 @@ async function main() {
   await db.query("CALL purge_old_aggs(180)");
 
   console.log(`\n✅ Importação concluída com sucesso!`);
+  process.exit(0);
 }
 
 main().catch((err) => {
