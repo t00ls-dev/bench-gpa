@@ -261,6 +261,8 @@ function AreaPage() {
           search: search.trim(),
           sortBy: sortKey === "daysSince" ? "val" : sortKey,
           sortDir,
+          page: 1,
+          pageSize: 999999,
         },
       });
       const searchTerm = search.trim().toLowerCase();

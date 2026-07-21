@@ -52,7 +52,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
         subgrupo: strOrNull(p.subgrupo),
         val: num(p.val),
         qty: num(p.qty),
-        lastSaleDate: null,
+        lastSaleDate: strOrNull(p.last_sale_date),
       })),
       byDate: (byDate ?? []).map((d: any) => ({
         date: str(d.date),
