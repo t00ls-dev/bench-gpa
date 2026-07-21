@@ -17,15 +17,14 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 | Virtualização      | @tanstack/react-virtual                                                      |
 | Drawer (mobile)    | vaul                                                                         |
 | Paleta de comandos | cmdk                                                                         |
-| Auth/DB            | Supabase (Auth, PostgreSQL, RPCs, RLS) — migrando para MariaDB + JWT próprio |
+| Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                               |
 | CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
 | Segurança          | CSP nonce, rate limiting sliding window (4 tiers)                            |
 
 ## Pré-requisitos
 
 - [Bun](https://bun.sh) >= 1.2
-- Projeto Supabase com as migrations em `supabase/migrations/`
-- Arquivo `.env` (copie `.env.example` e preencha) com credenciais Supabase + Turnstile
+- Arquivo `.env` (copie `.env.example` e preencha) com credenciais MariaDB + Turnstile + JWT
 
 ## Instalação
 
@@ -83,7 +82,7 @@ Escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da jan
 
 ## Arquitetura
 
-- **Auth**: Supabase Auth + Turnstile CAPTCHA (fail-closed). Rate limiting: 5/min IP (tier Auth).
+- **Auth**: JWT próprio (bcrypt + jsonwebtoken) + Turnstile CAPTCHA (fail-closed). Rate limiting: 5/min IP (tier Auth).
 - **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers: SSR (120/min), API (120/min), Upload (30/min), Auth (5/min).
 - **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard (30s), hierarquia área (5min), datas importadas (1min), role (5min/user).
 - **Segurança**: CSP nonce (script-src nonce+strict-dynamic), Turnstile, rate limit em todas as 20 server functions (`requireRateLimit`).
@@ -91,7 +90,7 @@ Escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da jan
 - **Retenção**: 28 dias corridos, exatamente 4 ocorrências por dia da semana. Purga automática pós-import.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
 - **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área).
-- **Migração planejada**: Deploy no VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) com MariaDB + JWT próprio. Docs em `docs/`.
+- **Deploy**: Hestia VPS (`sv1.t00ls.dev`, `gpa.t00ls.dev`). Docs em `docs/`.
 
 ## Estrutura
 
@@ -99,11 +98,10 @@ Escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da jan
 ├── src/
 │   ├── components/   → Componentes React
 │   ├── hooks/        → Hooks customizados
-│   ├── integrations/ → Clientes Supabase + auth middleware (a remover na migração)
+│   ├── integrations/ → Auth middleware, Turnstile, CSP
 │   ├── lib/          → Server functions, schemas Zod, cache, CSP, rate limit, Turnstile, PDF export
 │   └── routes/       → Rotas TanStack Router (lazy loaded)
 ├── scripts/          → CLI de import (manual e automático)
-├── supabase/         → Config + migrations SQL
 ├── data/             → Planilhas XLSX organizadas por mês
 └── docs/             → Documentação técnica e planos de migração
 ```

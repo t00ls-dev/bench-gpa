@@ -174,24 +174,8 @@ function countRecords(filePath: string): number {
   }
 }
 
-function findCommandPatterns(base: string): Map<string, number> {
-  const patterns = new Map<string, number>();
-  const files = walkDir(base, base).filter((f) => f.path.startsWith("src/"));
-  for (const f of files) {
-    try {
-      const content = readFileSync(join(base, f.path), "utf-8");
-      const lines = content.split("\n");
-      for (const line of lines) {
-        const match = line.match(/supabase\.rpc\s*\(\s*['"]([^'"]+)['"]/);
-        if (match) {
-          patterns.set(match[1], (patterns.get(match[1]) ?? 0) + 1);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return patterns;
+function findCommandPatterns(_base: string): Map<string, number> {
+  return new Map();
 }
 
 const NOW = new Date();
@@ -287,11 +271,7 @@ async function main() {
   const trackedLogs = exec(["git", "ls-files", "logs/"]).stdout.length > 0;
   const logsAreTracked = trackedLogs && !logsInGitignore;
 
-  // 10. RPC usage
-  log("RPC analysis...");
-  const rpcPatterns = findCommandPatterns(projectRoot);
-
-  // 11. UX features check
+  // 10. UX features check
   log("UX check: lazy routes, skeletons, hotkeys, command palette...");
   const routeFiles = walkDir(join(projectRoot, "src", "routes"), projectRoot);
   const hasLazyRoutes = routeFiles.filter((f) => f.path.endsWith(".page.tsx")).length > 0;
@@ -326,7 +306,7 @@ async function main() {
 
   // --- BUILD THE DOC ---
 
-  const fileName = `07-analise-completa.md`;
+  const fileName = `analise-completa.md`;
   const filePath = join(IMPROV_DIR, fileName);
 
   const snapshotContent = [
@@ -354,7 +334,7 @@ async function main() {
     `| TODOs/FIXMEs | ${todos.length} |`,
     `| Scripts | ${scripts.length} |`,
     `| Migrações SQL | ${migrations.length} |`,
-    `| RPCs distintas usadas | ${rpcPatterns.size} |`,
+    `| Server functions | ${scripts.length} |`,
     "",
     "---",
 
@@ -405,9 +385,8 @@ async function main() {
     "",
     ...(gitTrackedEnv
       ? [
-          "🔴 **CRÍTICO**: `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` estão no `.env` versionado.",
-          "   Qualquer pessoa com acesso ao git pode ler/escrever todo o banco (service_role bypassa RLS).",
-          "   **Ação**: `echo '.env' >> .gitignore && git rm --cached .env && rotacionar chaves no Supabase`",
+          "🔴 **CRÍTICO**: `.env` versionado no git contém credenciais de banco e JWT.",
+          "   **Ação**: `git rm --cached .env && adicionar ao .gitignore`",
           "",
         ]
       : []),
@@ -425,7 +404,7 @@ async function main() {
           "",
         ]
       : [
-          "🔴 **Sem rate limiting server-side** — Supabase Free tier tem 60 req/min, mas o servidor não controla.",
+          "🔴 **Sem rate limiting server-side** — servidor não controla requisições.",
           "   Cliente pode disparar N requisições simultâneas.",
           "",
         ]),
@@ -441,7 +420,7 @@ async function main() {
     "## 🗄️ Banco de Dados",
     "",
     `- **Migrações**: ${migrations.length} arquivos SQL`,
-    `- **RPCs em uso**: ${[...rpcPatterns.entries()].map(([k, v]) => `\`${k}\` (${v}x)`).join(", ")}`,
+    `- **Auth**: JWT manual (bcrypt + jsonwebtoken)`,
     `- **Import log**: ${importLogExists ? `${importLogLines} linhas` : "Não encontrado"}`,
     "",
     "### Problemas Conhecidos",
@@ -483,8 +462,7 @@ async function main() {
     "🟡 **Sem virtualização em tabelas** — `area-table.tsx` renderiza todas as linhas no DOM.",
     "   `@tanstack/react-virtual` pode reduzir nodes renderizados em 90%+.",
     "",
-    "🟢 **Código duplicado**: verificar padrões de `supabase.rpc(...)` com mesmos parâmetros.",
-    `   ${rpcPatterns.size} RPCs diferentes em uso — verificar se alguma é chamada redundantemente.`,
+    "🟢 **Código duplicado**: verificar padrões de server functions com mesmos parâmetros.",
     "",
     "---",
     "",
@@ -524,7 +502,7 @@ async function main() {
     "",
     "🔴 **Zero testes unitários** — só scripts Puppeteer E2E (sem assertions robustas).",
     "   Qualquer refactor pode quebrar funcionalidades sem detecção.",
-    "   **Ação**: integrar Vitest + @testing-library/react + mocks Supabase.",
+    "   **Ação**: integrar Vitest + @testing-library/react.",
     "",
     "✅ **Puppeteer movido para devDependencies** — puppeteer (~300 MB) não entra mais no build de produção.",
     "",
@@ -560,7 +538,7 @@ async function main() {
     "| # | Ação | Tempo | Prioridade |",
     "|---|---|---|---|",
     "| 1 | `echo '.env' >> .gitignore && git rm --cached .env` | 2 min | 🔴 |",
-    "| 2 | Rotacionar chaves Supabase (service_role + anon) | 5 min | 🔴 |",
+    "| 2 | Verificar rotação de secrets JWT e Turnstile | 5 min | 🔴 |",
     "| 3 | Mover puppeteer/jspdf para devDependencies | 2 min | 🟡 |",
     "| 4 | Título `<title>` dinâmico por rota | 10 min | 🟢 |",
     "| 5 | Aumentar staleTime de 5min para 10min | 5 min | 🟢 |",
@@ -607,15 +585,17 @@ async function main() {
     "",
     "## 🚀 Próxima Funcionalidade Recomendada",
     "",
-    "**🔴 MIGRAÇÃO VPS AUTOSSUFICIENTE — sair do Supabase**",
-    "",
-    "O DB está 20% acima do limite de 500 MB. Plano definido:",
-    "",
-    "| Rota | Prós | Contras |",
-    "|---|---|---|",
-    "| **VPS Autossuficiente** | MariaDB local, JWT próprio, sem rate limit, zero custo extra de DB | Requer deploy manual (templates nginx, SSL, Bun, PM2) |",
-    "",
-    "**Recomendação**: seguir `docs/migracao-vps-autossuficiente.md` — deploy em `gpa.t00ls.dev`.",
+"**🔴 MANUTENÇÃO CONTÍNUA — servidor Hestia VPS**",
+
+"Deploy ativo em `gpa.t00ls.dev` (sv1.t00ls.dev). Manter:",
+
+"| Item | Frequência |",
+"|---|---|",
+"| Verificar logs de erro | Diário |",
+"| Backup do MariaDB | Semanal |",
+"| Atualizar dependências Bun | Mensal |",
+
+"**Próximo passo**: monitoramento com alertas e health check endpoint.",
     "",
     "---",
     "",

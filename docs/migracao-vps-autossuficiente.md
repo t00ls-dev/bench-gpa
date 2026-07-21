@@ -1,5 +1,7 @@
 # Plano de Migração: VPS Autossuficiente
 
+> ✅ **Migração concluída** — deploy ativo em `gpa.t00ls.dev` (Hestia CP 1.9.6). Documento mantido como referência histórica.
+
 > Domínio: `gpa.t00ls.dev` — servidor `sv1.t00ls.dev` (Hestia CP 1.9.6)
 
 ---

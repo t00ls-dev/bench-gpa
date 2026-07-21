@@ -28,11 +28,8 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Onde**: Extrair para função compartilhada
 - **Impacto**: Duas implementações que podem divergir
 
-### 5. `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`
-
-- Chave com permissão total no banco exposta no repositório
-- **Resolvido na migração**: ao remover Supabase, a chave deixa de existir
-- **Temporário**: enquanto não migra, manter como está (decisão do usuário)
+### ~~5. `.env` versionado com `SUPABASE_SERVICE_ROLE_KEY`~~
+- ✅ Resolvido na migração — chave removida
 
 ---
 
@@ -79,12 +76,10 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Paginação**: quando houver muitos usuários
 - **Audit log**: registrar quem criou/alterou/desativou cada usuário
 
-### Auth (pós-migração)
+### Auth
 
 - **Esqueci minha senha**: sem fluxo de recuperação — implementar endpoint `PUT /api/auth/forgot-password`
-- **Rate limiting**: já implementado (tier Auth: 5/min IP, 20/min global), ajustar para JWT
 - **Sessão expirada**: redirecionar para `/auth?next=/rota-atual`
-- **Cookie HttpOnly**: garantir que JWT seja armazenado com `Secure; SameSite=Lax`
 
 ---
 
@@ -105,10 +100,4 @@ Consolidadas por criticidade e área. Atualizado pós-migração Supabase → Ma
 - **Nenhum teste**: unitários para utils (shiftPeriod, computePreset, parsers), integração para server functions
 
 ### Migração
-
-- **Remover `@supabase/supabase-js`** do `package.json` após migração completa
-- **Remover `src/integrations/supabase/`** — diretório inteiro
-- **Remover `client.ts` + `client.server.ts`** — não serão mais necessários
-- **Atualizar `auth-middleware.ts`** para validar JWT local com `jsonwebtoken`
-- **Atualizar `auth-attacher.ts`** para ler token do cookie/localStorage
-- **Configurar Nginx** no VPS com template `node-ssr`
+- ✅ Tudo concluído — aplicar próximas melhorias de segurança/monitoramento
