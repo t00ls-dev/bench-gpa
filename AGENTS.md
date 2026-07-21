@@ -20,7 +20,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
 - **UX implementado:** atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard/Produto/Área), HOWTO page
-- **Migração não iniciada:** postergada, docs prontas
+- **Migração concluída:** self-hosted ativo — MariaDB 11.4, JWT bcrypt, Turnstile CAPTCHA, PM2 + nginx no VPS Hestia
 
 ---
 
