@@ -1,8 +1,8 @@
 # Análise Completa
 
-> Data: 20/07/2026 12:35
+> Data: 21/07/2026 00:34
 
-Snapshot automático do estado do código em 20/07/2026 às 12:35.
+Snapshot automático do estado do código em 21/07/2026 às 00:34.
 _Análise abrangente seguindo o framework AGENTS.md (segurança, performance, UX, BD, IA, dívida técnica)._
 
 ---
@@ -217,7 +217,7 @@ O DB está 20% acima do limite de 500 MB. Plano definido:
 
 ## Observações
 
-Análise gerada automaticamente via framework AGENTS.md em 20/07/2026.
+Análise gerada automaticamente via framework AGENTS.md em 21/07/2026.
 
 - 🟡 8 arquivos com mais de 300 linhas — considerar refatoração.
 - 🔴 .env com service_role key está versionado no git!
