@@ -217,6 +217,9 @@ export default function UploadPage() {
 
   const [tab, setTab] = useState<"upload" | "calendario">("upload");
   const totalPendingLines = pendingQueue.reduce((acc, p) => acc + p.parsed.sales.length, 0);
+  const hasExistingData = pendingQueue.some(p =>
+    imported.data?.some(d => d.sale_date === p.date)
+  );
 
   return (
     <div>
@@ -313,10 +316,17 @@ export default function UploadPage() {
             <AlertDialogTitle>Confirmar importação</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingQueue.length === 1 ? (
-                <>
-                  Deseja importar <strong>{pendingQueue[0].date}</strong> com{" "}
-                  {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?
-                </>
+                hasExistingData ? (
+                  <>
+                    Substituir dados de <strong>{pendingQueue[0].date}</strong> com{" "}
+                    {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?
+                  </>
+                ) : (
+                  <>
+                    Importar <strong>{pendingQueue[0].date}</strong> com{" "}
+                    {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?
+                  </>
+                )
               ) : (
                 <>
                   Deseja importar <strong>{pendingQueue.length} arquivos</strong> totalizando{" "}
@@ -337,7 +347,7 @@ export default function UploadPage() {
           )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImport}>Substituir</AlertDialogAction>
+            <AlertDialogAction onClick={confirmImport}>{hasExistingData ? "Substituir" : "Importar"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

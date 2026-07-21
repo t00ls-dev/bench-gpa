@@ -75,7 +75,7 @@ export function getClientIp(request?: Request): string {
   );
 }
 
-export const apiLimiter = new RateLimiter(60_000, 120, 300, "api");
-export const authLimiter = new RateLimiter(60_000, 5, 20, "auth");
-export const uploadLimiter = new RateLimiter(60_000, 30, 60, "upload");
-export const ssrLimiter = new RateLimiter(60_000, 120, 600, "ssr");
+export const apiLimiter = new RateLimiter(60_000, 300, 1000, "api");
+export const authLimiter = new RateLimiter(60_000, 10, 40, "auth");
+export const uploadLimiter = new RateLimiter(60_000, 200, 500, "upload");
+export const ssrLimiter = new RateLimiter(60_000, 300, 1500, "ssr");

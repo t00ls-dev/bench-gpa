@@ -2,9 +2,10 @@ const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/sit
 
 export async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
   if (process.env.TURNSTILE_BYPASS === "true") {
-    console.warn("[Turnstile] Bypass ativado via TURNSTILE_BYPASS=true");
+    console.warn("[Turnstile] Bypass ativado via env");
     return true;
   }
+
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
     console.error("[Turnstile] TURNSTILE_SECRET_KEY não configurada");

@@ -22,7 +22,7 @@ export async function assertAdmin(ctx: { userId: string }, label = "assertAdmin"
   if (cached === false) throw new Error("Apenas administradores podem realizar esta ação.");
 
   const [rows] = await db.query("CALL has_role(?, ?)", [ctx.userId, "admin"]);
-  const data = (rows as any[])[0]?.has_role ?? false;
+  const data = (rows as any[])[0]?.[0]?.has_role ?? false;
   setCachedAdmin(ctx.userId, !!data);
   if (!data) throw new Error("Apenas administradores podem realizar esta ação.");
 }

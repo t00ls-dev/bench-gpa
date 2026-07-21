@@ -21,7 +21,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
-    const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] =
+    const [rs] =
       await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [
         data.dateFrom || null,
         data.dateTo || null,
@@ -30,17 +30,18 @@ export const getFilterOptions = createServerFn({ method: "POST" })
         JSON.stringify(data.secoes ?? []),
         JSON.stringify(data.grupos ?? []),
       ]);
+    const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] = rs;
     return {
       latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
-      stores: (stores as any[]).map((r) => ({
+      stores: (stores ?? []).map((r: any) => ({
         store_code: str(r.store_code),
         store_name: str(r.store_name),
       })),
-      deptos: (deptos as any[]).map((r) => str(r.depto)),
-      secoes: (secoes as any[]).map((r) => str(r.secao)),
-      grupos: (grupos as any[]).map((r) => str(r.grupo)),
-      subgrupos: (subgrupos as any[]).map((r) => str(r.subgrupo)),
-      availableDates: (availableDates as any[]).map((r) => str(r.sale_date)),
+      deptos: (deptos ?? []).map((r: any) => str(r.depto)),
+      secoes: (secoes ?? []).map((r: any) => str(r.secao)),
+      grupos: (grupos ?? []).map((r: any) => str(r.grupo)),
+      subgrupos: (subgrupos ?? []).map((r: any) => str(r.subgrupo)),
+      availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
     };
   });
 
@@ -73,18 +74,22 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
     const [rows] = await db.query(
       "SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1",
     );
-    return ((rows as any[])[0] ?? null) as {
-      sale_date: string;
-      row_count: number;
-      imported_at: string;
-    } | null;
+    const row = (rows as any[])[0] ?? null;
+    if (!row) return null;
+    return {
+      sale_date: row.sale_date instanceof Date
+        ? row.sale_date.toISOString().split("T")[0]
+        : String(row.sale_date).slice(0, 10),
+      row_count: Number(row.row_count),
+      imported_at: String(row.imported_at),
+    };
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
-    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = await db.query(
+    const [rs2] = await db.query(
       "CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)",
       [
         data.dateFrom || null,
@@ -97,12 +102,13 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
         data.limit ?? 10,
       ],
     );
+    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2;
     return {
-      byDepto: (byDepto as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
-      bySecao: (bySecao as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
-      byGrupo: (byGrupo as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
-      bySubgrupo: (bySubgrupo as any[]).map((r) => ({ name: r.name, val: Number(r.val) })),
-      byProduto: (byProduto as any[]).map((r) => ({
+      byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
+      bySecao: (bySecao ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
+      byGrupo: (byGrupo ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
+      bySubgrupo: (bySubgrupo ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
+      byProduto: (byProduto ?? []).map((r: any) => ({
         code: r.code,
         name: r.name,
         val: Number(r.val),

@@ -101,7 +101,7 @@ async function countRows(table: TableName) {
 
 async function fetchDistinctDates(table: TableName, column: string) {
   const [rows] = await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column]);
-  const vals = [...new Set((rows as any[]).map((r) => String(r[column])))].sort();
+  const vals = [...new Set((rows ?? []).map((r: any) => String(r[column])))].sort();
   return vals;
 }
 
@@ -136,9 +136,6 @@ interface DbHealthTable {
 export interface DbHealthData {
   db_size: number;
   db_size_pretty: string;
-  free_limit: number;
-  free_limit_pretty: string;
-  pct_used: number;
   version: string;
   active_connections: number;
   tables: DbHealthTable[];
@@ -156,24 +153,26 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const [versionRows, sizeRows, tableRows] = await db.query("CALL db_health_check()");
+    const [rs] = await db.query("CALL db_health_check()");
+    const [versionRows, sizeRows, tableRows] = rs;
     const version = String((versionRows as any[])[0]?.version ?? "");
     const dbSizeMb = Number((sizeRows as any[])[0]?.db_size_mb ?? 0);
-    const tables = (tableRows as any[]).map((r: any) => ({
+    const tables = (tableRows ?? []).map((r: any) => ({
       table: String(r.table_name),
       schema: "public",
       total_size: Math.round(Number(r.size_mb) * 1024 * 1024),
       total_size_pretty: `${r.size_mb} MB`,
       row_estimate: Number(r.row_estimate ?? 0),
     }));
+    const [connRows] = await db.query(
+      "SELECT COUNT(*) AS cnt FROM information_schema.PROCESSLIST",
+    );
+    const activeConnections = Number((connRows as any[])[0]?.cnt ?? 0);
     return {
       db_size: Math.round(dbSizeMb * 1024 * 1024),
       db_size_pretty: `${dbSizeMb.toFixed(1)} MB`,
-      free_limit: 500 * 1024 * 1024,
-      free_limit_pretty: "500 MB",
-      pct_used: Math.min(100, Math.round((dbSizeMb / 500) * 100)),
       version,
-      active_connections: 0,
+      active_connections: activeConnections,
       tables,
     } satisfies DbHealthData;
   });

@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS staging_sales (
   grupo        VARCHAR(100),
   subgrupo     VARCHAR(100),
   val_vda      DECIMAL(15,2) NOT NULL DEFAULT 0,
-  qty_vda      DECIMAL(15,4) NOT NULL DEFAULT 0,
+  qty_vda      DECIMAL(15,4) DEFAULT 0,
   val_cus      DECIMAL(15,2) DEFAULT 0,
   qty_cus      DECIMAL(15,4) DEFAULT 0,
   val_dev      DECIMAL(15,2) DEFAULT 0,
@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
   prod_code   VARCHAR(20) NOT NULL,
+  prod_name   VARCHAR(255),
   depto       VARCHAR(100),
   secao       VARCHAR(100),
   grupo       VARCHAR(100),
@@ -194,7 +195,8 @@ BEGIN
     COUNT(DISTINCT CASE WHEN val_vda > 0 THEN prod_code END) AS plus_with_sale,
     COUNT(DISTINCT CASE WHEN val_vda = 0 THEN prod_code END) AS plus_without_sale
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
       OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
@@ -210,7 +212,8 @@ BEGIN
   SELECT a.store_code AS code, s.store_name AS name, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
   LEFT JOIN stores s ON s.store_code = a.store_code
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
       OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
@@ -227,7 +230,8 @@ BEGIN
   -- Result set 3: byDepto
   SELECT a.depto AS name, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
       OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
@@ -245,7 +249,8 @@ BEGIN
   -- Result set 4: byDate
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
       OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
@@ -309,7 +314,8 @@ BEGIN
   -- byDepto
   PREPARE stmt FROM 'SELECT depto AS name, SUM(val_vda) AS val
     FROM sales_prod_daily_agg a
-    WHERE a.sale_date BETWEEN ? AND ?
+    WHERE (? IS NULL OR a.sale_date >= ?)
+      AND (? IS NULL OR a.sale_date <= ?)
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -317,13 +323,14 @@ BEGIN
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
       AND a.depto IS NOT NULL
     GROUP BY a.depto ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_to, @limit_val;
+  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- bySecao
   PREPARE stmt FROM 'SELECT a.secao AS name, SUM(a.val_vda) AS val
     FROM sales_prod_daily_agg a
-    WHERE a.sale_date BETWEEN ? AND ?
+    WHERE (? IS NULL OR a.sale_date >= ?)
+      AND (? IS NULL OR a.sale_date <= ?)
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -331,13 +338,14 @@ BEGIN
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
       AND a.secao IS NOT NULL
     GROUP BY a.secao ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_to, @limit_val;
+  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- byGrupo
   PREPARE stmt FROM 'SELECT a.grupo AS name, SUM(a.val_vda) AS val
     FROM sales_prod_daily_agg a
-    WHERE a.sale_date BETWEEN ? AND ?
+    WHERE (? IS NULL OR a.sale_date >= ?)
+      AND (? IS NULL OR a.sale_date <= ?)
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -345,13 +353,14 @@ BEGIN
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
       AND a.grupo IS NOT NULL
     GROUP BY a.grupo ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_to, @limit_val;
+  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- bySubgrupo
   PREPARE stmt FROM 'SELECT a.subgrupo AS name, SUM(a.val_vda) AS val
     FROM sales_prod_daily_agg a
-    WHERE a.sale_date BETWEEN ? AND ?
+    WHERE (? IS NULL OR a.sale_date >= ?)
+      AND (? IS NULL OR a.sale_date <= ?)
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -359,20 +368,21 @@ BEGIN
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
       AND a.subgrupo IS NOT NULL
     GROUP BY a.subgrupo ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_to, @limit_val;
+  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- byProduto
   PREPARE stmt FROM 'SELECT a.prod_code AS code, a.prod_name AS name, SUM(a.val_vda) AS val
     FROM sales_prod_daily_agg a
-    WHERE a.sale_date BETWEEN ? AND ?
+    WHERE (? IS NULL OR a.sale_date >= ?)
+      AND (? IS NULL OR a.sale_date <= ?)
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
     GROUP BY a.prod_code, a.prod_name ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_to, @limit_val;
+  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
   DEALLOCATE PREPARE stmt;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
@@ -420,7 +430,8 @@ BEGIN
   SELECT DISTINCT a.store_code, COALESCE(s.store_name, a.store_code) AS store_name
   FROM sales_prod_daily_agg a
   LEFT JOIN stores s ON s.store_code = a.store_code
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -430,7 +441,8 @@ BEGIN
   -- deptos
   SELECT DISTINCT a.depto
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -441,7 +453,8 @@ BEGIN
   -- secoes
   SELECT DISTINCT a.secao
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -451,7 +464,8 @@ BEGIN
   -- grupos
   SELECT DISTINCT a.grupo
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND a.grupo IS NOT NULL
@@ -460,7 +474,8 @@ BEGIN
   -- subgrupos
   SELECT DISTINCT a.subgrupo
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND a.subgrupo IS NOT NULL
   ORDER BY a.subgrupo;
@@ -527,7 +542,8 @@ BEGIN
     COUNT(DISTINCT CASE WHEN val_vda > 0 THEN prod_code END) AS plus_with_sale,
     COUNT(DISTINCT CASE WHEN val_vda = 0 THEN prod_code END) AS plus_without_sale
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -538,7 +554,8 @@ BEGIN
   SELECT COUNT(*) AS total_products FROM (
     SELECT DISTINCT a.prod_code
     FROM sales_prod_daily_agg a
-    WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+    WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+      AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -549,7 +566,8 @@ BEGIN
   -- Result set 3: byDate evolution
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
-  WHERE a.sale_date BETWEEN p_date_from AND p_date_to
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
@@ -559,15 +577,16 @@ BEGIN
 
   -- Result set 4: paginated products
   SET @sql = CONCAT(
-    'SELECT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo,
-            SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty
-     FROM sales_prod_daily_agg a
-     WHERE a.sale_date BETWEEN ? AND ?
-       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-       AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))',
+     'SELECT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo,
+             SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty
+      FROM sales_prod_daily_agg a
+      WHERE (? IS NULL OR a.sale_date >= ?)
+        AND (? IS NULL OR a.sale_date <= ?)
+        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))',
     IF(p_search IS NOT NULL AND p_search != '',
       ' AND (a.prod_name LIKE ? OR a.prod_code LIKE ?)', ''),
     ' GROUP BY a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo',
@@ -581,11 +600,11 @@ BEGIN
   IF p_search IS NOT NULL AND p_search != '' THEN
     SET @search_param = CONCAT('%', p_search, '%');
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING p_date_from, p_date_to, @search_param, @search_param;
+    EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @search_param, @search_param;
     DEALLOCATE PREPARE stmt;
   ELSE
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING p_date_from, p_date_to;
+    EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to;
     DEALLOCATE PREPARE stmt;
   END IF;
 
@@ -634,14 +653,21 @@ BEGIN
 
   SET v_ref_date = COALESCE(p_ref_date, (SELECT MAX(sale_date) FROM sales_prod_daily_agg WHERE prod_code = p_prod_code));
 
-  -- Result set 1: product metadata
-  SELECT DISTINCT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo
-  FROM sales_prod_daily_agg a
-  WHERE a.prod_code = p_prod_code
+  -- Result set 1: product metadata (always returns row from products even without sales)
+  SELECT p.prod_code, p.prod_name, h.depto, h.secao, h.grupo, h.subgrupo
+  FROM products p
+  LEFT JOIN (
+    SELECT prod_code, depto, secao, grupo, subgrupo
+    FROM sales_prod_daily_agg
+    WHERE prod_code = p_prod_code
+    ORDER BY sale_date DESC
+    LIMIT 1
+  ) h ON true
+  WHERE p.prod_code = p_prod_code
   LIMIT 1;
 
-  -- Result set 2: refValue
-  SELECT COALESCE(SUM(val_vda), 0) AS ref_value
+  -- Result set 2: refValue + refDate
+  SELECT v_ref_date AS ref_date, COALESCE(SUM(val_vda), 0) AS ref_value
   FROM sales_prod_daily_agg
   WHERE prod_code = p_prod_code
     AND sale_date = v_ref_date
@@ -753,18 +779,19 @@ BEGIN
     COALESCE(SUM(s.val_cus), 0),
     COALESCE(SUM(s.val_dev), 0),
     COALESCE(SUM(s.val_sld), 0),
-    CASE WHEN COALESCE(SUM(s.val_vda), 0) > 0
+    CASE WHEN COALESCE(SUM(s.val_vda_liq), 0) > 0
       THEN ROUND((COALESCE(SUM(s.val_vda_liq), 0) - COALESCE(SUM(s.val_cus_liq), 0)) / COALESCE(SUM(s.val_vda_liq), 0) * 100, 2)
       ELSE 0 END
   FROM staging_sales s
   WHERE s.batch_id = p_batch_id AND s.sale_date = p_sale_date
   GROUP BY s.store_code;
 
-  INSERT INTO sales_prod_daily_agg (sale_date, store_code, prod_code, depto, secao, grupo, subgrupo, val_vda, qty_vda, val_cus, val_dev, val_sld, per_mrg)
+  INSERT INTO sales_prod_daily_agg (sale_date, store_code, prod_code, prod_name, depto, secao, grupo, subgrupo, val_vda, qty_vda, val_cus, val_dev, val_sld, per_mrg)
   SELECT
     p_sale_date,
     s.store_code,
     s.prod_code,
+    MAX(s.prod_name),
     s.depto,
     s.secao,
     s.grupo,
@@ -808,12 +835,15 @@ END//
 CREATE PROCEDURE purge_old_aggs(p_days INT)
 BEGIN
   DECLARE v_deleted INT DEFAULT 0;
-  SET @cutoff = DATE_SUB(CURRENT_DATE, INTERVAL COALESCE(p_days, 28) DAY);
+  SET @cutoff = DATE_SUB(CURRENT_DATE, INTERVAL COALESCE(p_days, 180) DAY);
 
   DELETE FROM sales_daily_agg WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 
   DELETE FROM sales_prod_daily_agg WHERE sale_date < @cutoff;
+  SET v_deleted = v_deleted + ROW_COUNT();
+
+  DELETE FROM import_log WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 
   SELECT v_deleted AS deleted;

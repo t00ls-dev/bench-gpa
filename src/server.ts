@@ -4,6 +4,18 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
 import { ssrLimiter, getClientIp } from "./lib/rate-limit";
+import { ServerResponse } from "node:http";
+
+const origWriteHead = ServerResponse.prototype.writeHead;
+ServerResponse.prototype.writeHead = function (...args: unknown[]) {
+  if (!this.headersSent) {
+    const ct = this.getHeader("content-type");
+    if (typeof ct === "string" && ct.includes("text/html") && !this.getHeader("cache-control")) {
+      this.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    }
+  }
+  return origWriteHead.apply(this, args as never);
+};
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -20,8 +32,8 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-function applySecurityHeaders(response: Response, nonce: string): Response {
-  const headers = new Headers(response.headers);
+function applySecurityHeaders(body: string, status: number, nonce: string, extraHeaders?: [string, string][]): Response {
+  setCspNonce(undefined);
 
   const csp = [
     "default-src 'self'",
@@ -34,39 +46,24 @@ function applySecurityHeaders(response: Response, nonce: string): Response {
     "frame-ancestors 'none'",
   ].join("; ");
 
-  headers.set("Content-Security-Policy", csp);
-  headers.set("X-Frame-Options", "DENY");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
+  const headers: [string, string][] = [
+    ["content-type", "text/html; charset=utf-8"],
+    ["content-security-policy", csp],
+    ["x-frame-options", "DENY"],
+    ["x-content-type-options", "nosniff"],
+    ["referrer-policy", "strict-origin-when-cross-origin"],
+    ["cache-control", "no-cache, no-store, must-revalidate"],
+  ];
 
-async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
-  if (response.status < 500) return response;
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) return response;
-
-  const body = await response.clone().text();
-  if (!body.includes('"unhandled":true') || !body.includes('"message":"HTTPError"')) {
-    return response;
+  if (extraHeaders) {
+    headers.push(...extraHeaders);
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return new Response(renderErrorPage(), {
-    status: 500,
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return new Response(body, { status, headers });
 }
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    const nonce = crypto.randomUUID();
-    setCspNonce(nonce);
-
     const ip = getClientIp(request);
     const rl = ssrLimiter.check(ip);
     if (!rl.allowed) {
@@ -80,19 +77,48 @@ export default {
     }
 
     try {
+      const url = new URL(request.url);
+      const isServerFn = url.pathname.startsWith("/_serverFn/");
+      if (isServerFn) {
+        const handler = await getServerEntry();
+        return await handler.fetch(request, env, ctx);
+      }
+
+      const nonce = crypto.randomUUID();
+      setCspNonce(nonce);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      const normalized = await normalizeCatastrophicSsrResponse(response);
-      return applySecurityHeaders(normalized, nonce);
+
+      if (response.status < 500) {
+        const body = await response.text();
+        const location = response.headers.get("location");
+        const extraHeaders: [string, string][] = [];
+        if (location) {
+          extraHeaders.push(["location", location]);
+        }
+        return applySecurityHeaders(body, response.status, nonce, extraHeaders);
+      }
+
+      const jsonBody = await response.clone().text();
+      const handled =
+        jsonBody.includes('"unhandled":true') &&
+        jsonBody.includes('"message":"HTTPError"');
+
+      if (!handled) {
+        const body = await response.text();
+        return applySecurityHeaders(body, response.status, nonce);
+      }
+
+      console.error(
+        consumeLastCapturedError() ??
+          new Error(`h3 swallowed SSR error: ${jsonBody}`),
+      );
+      const errNonce = crypto.randomUUID();
+      return applySecurityHeaders(renderErrorPage(), 500, errNonce);
     } catch (error) {
       console.error(error);
-      return applySecurityHeaders(
-        new Response(renderErrorPage(), {
-          status: 500,
-          headers: { "content-type": "text/html; charset=utf-8" },
-        }),
-        nonce,
-      );
+      const errNonce = crypto.randomUUID();
+      return applySecurityHeaders(renderErrorPage(), 500, errNonce);
     }
   },
 };

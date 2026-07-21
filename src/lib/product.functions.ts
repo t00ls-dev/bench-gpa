@@ -41,12 +41,13 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }): Promise<ProductAnalysisResult> => {
-    const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] =
+    const [rs] =
       await db.query("CALL product_analysis(?, ?, ?)", [
         data.prodCode,
         data.storeCode || null,
         data.referenceDate || null,
       ]);
+    const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] = rs;
     const productRow = (productRows as any[])[0] ?? null;
     return {
       product: productRow
@@ -59,22 +60,22 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
             subgrupo: strOrNull(productRow.subgrupo),
           }
         : null,
-      refDate: strOrNull((refValueRows as any[])[0]?.ref_value != null ? "ref_value" : null),
+      refDate: strOrNull((refValueRows as any[])[0]?.ref_date ?? null),
       refValue: num((refValueRows as any[])[0]?.ref_value ?? 0),
-      byStore: (byStore as any[]).map((r: any) => ({
+      byStore: (byStore ?? []).map((r: any) => ({
         code: r.code,
         name: r.name,
         val: Number(r.val),
       })),
-      evolution: (evolution as any[]).map((d: any) => ({
+      evolution: (evolution ?? []).map((d: any) => ({
         date: str(d.date),
         val: num(d.val),
       })),
-      lastFourSameWeekday: (lastFourSameWeekday as any[]).map((d: any) => ({
+      lastFourSameWeekday: (lastFourSameWeekday ?? []).map((d: any) => ({
         date: str(d.date),
         val: num(d.val),
       })),
-      lastFourAll: (lastFourAll as any[]).map((d: any) => ({
+      lastFourAll: (lastFourAll ?? []).map((d: any) => ({
         date: str(d.date),
         val: num(d.val),
       })),
