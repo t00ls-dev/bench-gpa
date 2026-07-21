@@ -30,7 +30,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState(TURNSTILE_BYPASS ? "bypass" : "");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
 
@@ -81,7 +81,7 @@ function AuthPage() {
     if (!email || !password || loading) return;
 
     if (!TURNSTILE_BYPASS && !turnstileToken) {
-      toast.error("Aguardando verificação de segurança. Tente novamente.");
+      toast.error("Resolva o desafio de segurança e tente novamente.");
       return;
     }
 
@@ -89,13 +89,12 @@ function AuthPage() {
 
     try {
       const { login } = await import("@/lib/auth-api");
-      const token = await login({
-        data: {
-          email: email.trim().toLowerCase(),
-          password,
-          turnstileToken,
-        },
-      });
+      const payload: { email: string; password: string; turnstileToken?: string } = {
+        email: email.trim().toLowerCase(),
+        password,
+      };
+      if (!TURNSTILE_BYPASS) payload.turnstileToken = turnstileToken;
+      const token = await login({ data: payload });
 
       document.cookie = "session=" + token + "; Path=/; Max-Age=" + (7*24*60*60) + "; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
       goNext();
@@ -103,7 +102,9 @@ function AuthPage() {
       const msg = err instanceof Error ? err.message : "Erro ao fazer login.";
       toast.error(msg);
       setLoading(false);
-      setTurnstileToken(TURNSTILE_BYPASS ? "bypass" : "");
+      if (!TURNSTILE_BYPASS) {
+        setTurnstileToken("");
+      }
       const ts = getTurnstile();
       if (turnstileRef.current && ts && widgetIdRef.current) {
         ts.reset(widgetIdRef.current);
@@ -149,7 +150,7 @@ function AuthPage() {
               />
             </div>
 
-            <div className="flex justify-center" ref={turnstileRef} />
+            {!TURNSTILE_BYPASS && <div className="flex justify-center" ref={turnstileRef} />}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (

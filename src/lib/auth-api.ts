@@ -34,7 +34,7 @@ export const login = createServerFn({ method: "POST" })
       .object({
         email: z.string().email().transform((e) => e.toLowerCase().trim()),
         password: z.string().min(1),
-        turnstileToken: z.string().min(1, "Verificação de segurança obrigatória"),
+        turnstileToken: z.string().optional(),
       })
       .parse(d),
   )
@@ -47,9 +47,11 @@ export const login = createServerFn({ method: "POST" })
       throw new Error("Muitas tentativas de login. Aguarde um minuto.");
     }
 
-    const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
-    if (!turnstileOk) {
-      throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+    if (data.turnstileToken) {
+      const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
+      if (!turnstileOk) {
+        throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+      }
     }
 
     const [rows] = await db.query<any[]>(
