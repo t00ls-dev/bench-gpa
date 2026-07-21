@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { fmtBRShort, fmtInt } from "@/lib/utils";
-import { FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Gauge, Clock } from "lucide-react";
+import { Play, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Gauge, Clock } from "lucide-react";
 
 interface FileEntry {
   file: File;
@@ -32,22 +32,20 @@ export function ImportProgress({
   onCancel?: () => void;
 }) {
   return (
-    <div className="mt-4 kpi-card">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-medium">{entries.length} arquivo(s) selecionado(s)</div>
-        <div className="flex gap-2">
+    <div className="mt-4 kpi-card overflow-hidden">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="truncate min-w-0 text-sm font-medium">{entries.length} arquivo(s)</span>
+        <div className="flex gap-2 shrink-0">
           {busy && onCancel && (
             <Button variant="outline" onClick={onCancel}>
               Cancelar
             </Button>
           )}
-          <Button onClick={onProcess} disabled={busy}>
+          <Button size="icon" onClick={onProcess} disabled={busy} aria-label={busy ? "Importando…" : "Importar"}>
             {busy ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" /> Importando…
-              </>
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              "Iniciar importação"
+              <Play className="size-4" />
             )}
           </Button>
         </div>
