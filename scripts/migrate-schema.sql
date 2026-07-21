@@ -620,7 +620,7 @@ BEGIN
   FROM filter_hierarchy
   ORDER BY store_code, depto, secao, grupo, subgrupo;
 
-  SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date DESC;
+  SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date ASC;
 END//
 
 -- 6/15: product_search
