@@ -185,7 +185,7 @@ export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
       total: Number((aggregate as any[])[0]?.total ?? 0),
       byStore: (byStore ?? []).map((r: any) => ({ code: r.code, name: r.name, val: Number(r.val) })),
       byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
-      byDate: (byDate ?? []).map((r: any) => ({ date: r.date, val: Number(r.val) })),
+      byDate: (byDate ?? []).map((r: any) => ({ date: str(r.date), val: Number(r.val) })),
     };
   });
 }
