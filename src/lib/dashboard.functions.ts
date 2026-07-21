@@ -14,7 +14,7 @@ import {
   num,
   asRecord,
   parseNameVal,
-} from "./rpc-utils";
+} from "./api-types";
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
 export const getFilterOptions = createServerFn({ method: "POST" })

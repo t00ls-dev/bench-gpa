@@ -11,8 +11,6 @@ import { useCallback, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 import { CommandPalette } from "@/components/command-palette";
 import { HelpOverlay } from "@/components/help-overlay";
 import { useHotkey } from "@/lib/use-hotkey";
@@ -116,8 +114,6 @@ function RootComponent() {
       <Toaster richColors position="top-right" />
       <CommandPalette />
       <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <Analytics />
-      <SpeedInsights />
     </QueryClientProvider>
   );
 }

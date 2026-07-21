@@ -1,7 +1,6 @@
 # Observações Arquiteturais
 
-> Contexto: app migrando de Supabase (Auth + PostgreSQL) para MariaDB + JWT próprio.
-> Observações abaixo são agnósticas de backend — salvo indicação contrária.
+> Observações agnósticas de backend — salvo indicação contrária.
 
 ---
 
@@ -36,7 +35,7 @@
 - **Componentes muito grandes**: `area.tsx` (773 linhas), `produto.tsx` (349), `upload.tsx` (380), `admin.tsx` (432) — todos poderiam ser decompostos
 - **Estados de loading inconsistentes**: mistura `isLoading` e `isFetching` sem padrão claro entre páginas
 - **`gcTime` e `staleTime` variados**: `30 * 60_000` em alguns lugares, `5 * 60_000` em outros, default em outros. Sem política global
-- **Dynamic import de `supabaseAdmin`**: será removido na migração — não será mais necessário
+- ~~**Dynamic import de `supabaseAdmin`**~~: ✅ removido na migração
 
 ---
 
