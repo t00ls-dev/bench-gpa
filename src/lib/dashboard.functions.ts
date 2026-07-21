@@ -21,28 +21,32 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
-    const [rs] =
-      await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [
-        data.dateFrom || null,
-        data.dateTo || null,
-        JSON.stringify(data.stores ?? []),
-        JSON.stringify(data.deptos ?? []),
-        JSON.stringify(data.secoes ?? []),
-        JSON.stringify(data.grupos ?? []),
-      ]);
-    const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] = rs;
-    return {
-      latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
-      stores: (stores ?? []).map((r: any) => ({
-        store_code: str(r.store_code),
-        store_name: str(r.store_name),
-      })),
-      deptos: (deptos ?? []).map((r: any) => str(r.depto)),
-      secoes: (secoes ?? []).map((r: any) => str(r.secao)),
-      grupos: (grupos ?? []).map((r: any) => str(r.grupo)),
-      subgrupos: (subgrupos ?? []).map((r: any) => str(r.subgrupo)),
-      availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
-    };
+    const { cache } = await import("./cache");
+    const key = `filter_options:${data.dateFrom ?? ""}:${data.dateTo ?? ""}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
+    return cache.wrap(key, async () => {
+      const [rs] =
+        await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [
+          data.dateFrom || null,
+          data.dateTo || null,
+          JSON.stringify(data.stores ?? []),
+          JSON.stringify(data.deptos ?? []),
+          JSON.stringify(data.secoes ?? []),
+          JSON.stringify(data.grupos ?? []),
+        ]);
+      const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] = rs;
+      return {
+        latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
+        stores: (stores ?? []).map((r: any) => ({
+          store_code: str(r.store_code),
+          store_name: str(r.store_name),
+        })),
+        deptos: (deptos ?? []).map((r: any) => str(r.depto)),
+        secoes: (secoes ?? []).map((r: any) => str(r.secao)),
+        grupos: (grupos ?? []).map((r: any) => str(r.grupo)),
+        subgrupos: (subgrupos ?? []).map((r: any) => str(r.subgrupo)),
+        availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
+      };
+    }, 300_000);
   });
 
 export const getStores = createServerFn({ method: "GET" })
