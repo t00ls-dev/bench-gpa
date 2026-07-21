@@ -481,7 +481,7 @@ BEGIN
   ORDER BY a.subgrupo;
 
   -- availableDates
-  SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date DESC;
+  SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date ASC;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
