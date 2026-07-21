@@ -81,11 +81,9 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
     const row = (rows as any[])[0] ?? null;
     if (!row) return null;
     return {
-      sale_date: row.sale_date instanceof Date
-        ? row.sale_date.toISOString().split("T")[0]
-        : String(row.sale_date).slice(0, 10),
+      sale_date: str(row.sale_date),
       row_count: Number(row.row_count),
-      imported_at: String(row.imported_at),
+      imported_at: str(row.imported_at),
     };
   });
 

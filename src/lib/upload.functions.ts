@@ -108,11 +108,9 @@ export const getImportedDates = createServerFn({ method: "GET" })
         const [rows] = await db.query("CALL imported_dates()");
         const data = (rows as any[])[0] ?? [];
         return data.map((r: any) => ({
-          sale_date: r.sale_date instanceof Date
-            ? r.sale_date.toISOString().split("T")[0]
-            : String(r.sale_date).slice(0, 10),
+          sale_date: str(r.sale_date),
           row_count: Number(r.row_count),
-          imported_at: String(r.imported_at),
+          imported_at: str(r.imported_at),
         })) as { sale_date: string; row_count: number; imported_at: string }[];
       },
       60_000,
