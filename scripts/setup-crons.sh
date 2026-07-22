@@ -9,8 +9,10 @@ BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bu
 
 CRONS=(
 	"0 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:purge >> logs/purge.log 2>&1"
-  "0 7 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:watch >> logs/cron.log 2>&1"
-  "0 19 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:watch >> logs/cron.log 2>&1"
+  # Import: arquivo fica disponível ~9h e é enviado manualmente em horário
+  # variável — checa a cada 3h (10h–22h). O import-watch é idempotente (pula
+  # dias já importados), então rodar várias vezes é seguro e no-op sem novidade.
+  "0 10-22/3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:watch >> logs/cron.log 2>&1"
 )
 
 # Remove linhas antigas do bench-gpa e reinstala
