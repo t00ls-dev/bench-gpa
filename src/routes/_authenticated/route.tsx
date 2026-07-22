@@ -106,12 +106,15 @@ function AuthedLayout() {
   const { user } = Route.useRouteContext();
 
   const signOut = async () => {
-    document.cookie = "session=; Path=/; Max-Age=0";
+    const { logout } = await import("@/lib/auth-api");
+    await logout().catch(() => {});
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
 
   useGotoHotkey("d", () => router.navigate({ to: "/" }));
-  useGotoHotkey("p", () => router.navigate({ to: "/produto", search: { plu: undefined, store: undefined } }));
+  useGotoHotkey("p", () =>
+    router.navigate({ to: "/produto", search: { plu: undefined, store: undefined } }),
+  );
   useGotoHotkey("a", () => router.navigate({ to: "/area" }));
   useGotoHotkey("u", () => router.navigate({ to: "/upload" }));
   useGotoHotkey("o", () => router.navigate({ to: "/admin/docs" }));
