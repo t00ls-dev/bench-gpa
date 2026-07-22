@@ -43,7 +43,7 @@ function sanitizeFilters(f: Filters): Filters {
 
 function Dashboard() {
   const [filters, setFilters] = usePersistentState<Filters>(
-    "bench-gpa:filters:dashboard",
+    "bench-gpa:filters:dashboard:v2",
     initial,
     sanitizeFilters,
   );
