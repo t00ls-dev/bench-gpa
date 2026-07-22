@@ -21,9 +21,11 @@ describe("error-capture", () => {
 
     // Simulate that an error was captured by triggering via error event
     // if the runtime supports it
-    if (typeof globalThis.dispatchEvent === "function") {
+    type ErrorEventCtor = new (type: string, init?: { error?: unknown }) => Event;
+    const ErrorEventClass = (globalThis as unknown as { ErrorEvent?: ErrorEventCtor }).ErrorEvent;
+    if (typeof globalThis.dispatchEvent === "function" && ErrorEventClass) {
       const err = new Error("stale");
-      globalThis.dispatchEvent(new (globalThis as any).ErrorEvent("error", { error: err }));
+      globalThis.dispatchEvent(new ErrorEventClass("error", { error: err }));
       vi.advanceTimersByTime(6000);
       expect(consumeLastCapturedError()).toBeUndefined();
     }

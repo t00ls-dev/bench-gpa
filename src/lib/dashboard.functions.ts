@@ -15,6 +15,7 @@ import {
   num,
   asRecord,
   parseNameVal,
+  parseCodeNameVal,
 } from "./api-types";
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
@@ -36,18 +37,18 @@ export const getFilterOptions = createServerFn({ method: "POST" })
           JSON.stringify(data.grupos ?? []),
         ]);
         const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] =
-          rs as any[];
+          rs as unknown[];
         return {
-          latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
-          stores: (stores ?? []).map((r: any) => ({
-            store_code: str(r.store_code),
-            store_name: str(r.store_name),
-          })),
-          deptos: (deptos ?? []).map((r: any) => str(r.depto)),
-          secoes: (secoes ?? []).map((r: any) => str(r.secao)),
-          grupos: (grupos ?? []).map((r: any) => str(r.grupo)),
-          subgrupos: (subgrupos ?? []).map((r: any) => str(r.subgrupo)),
-          availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
+          latestDate: strOrNull(asRecord(asArray(latestDateRows)[0]).latest_date ?? null),
+          stores: asArray(stores).map((r) => {
+            const rec = asRecord(r);
+            return { store_code: str(rec.store_code), store_name: str(rec.store_name) };
+          }),
+          deptos: asArray(deptos).map((r) => str(asRecord(r).depto)),
+          secoes: asArray(secoes).map((r) => str(asRecord(r).secao)),
+          grupos: asArray(grupos).map((r) => str(asRecord(r).grupo)),
+          subgrupos: asArray(subgrupos).map((r) => str(asRecord(r).subgrupo)),
+          availableDates: asArray(availableDates).map((r) => str(asRecord(r).sale_date)),
         };
       },
       300_000,
@@ -81,11 +82,12 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
     const [rows] = await db.query(
       "SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1",
     );
-    const row = (rows as any[])[0] ?? null;
-    if (!row) return null;
+    const rowRaw = asArray(rows)[0];
+    if (!rowRaw) return null;
+    const row = asRecord(rowRaw);
     return {
       sale_date: str(row.sale_date),
-      row_count: Number(row.row_count),
+      row_count: num(row.row_count),
       imported_at: str(row.imported_at),
     };
   });
@@ -104,16 +106,12 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
       JSON.stringify(data.subgrupos ?? []),
       data.limit ?? 10,
     ]);
-    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as any[];
+    const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as unknown[];
     return {
-      byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
-      bySecao: (bySecao ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
-      byGrupo: (byGrupo ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
-      bySubgrupo: (bySubgrupo ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
-      byProduto: (byProduto ?? []).map((r: any) => ({
-        code: r.code,
-        name: r.name,
-        val: Number(r.val),
-      })),
+      byDepto: parseNameVal(byDepto),
+      bySecao: parseNameVal(bySecao),
+      byGrupo: parseNameVal(byGrupo),
+      bySubgrupo: parseNameVal(bySubgrupo),
+      byProduto: parseCodeNameVal(byProduto),
     };
   });
