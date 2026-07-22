@@ -40,11 +40,12 @@ type AF = {
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 function sanitizeAF(f: AF): AF {
-  return {
-    ...f,
-    dateFrom: isoDate.test(f.dateFrom) ? f.dateFrom : "",
-    dateTo: isoDate.test(f.dateTo) ? f.dateTo : "",
-  };
+  let dateFrom = isoDate.test(f.dateFrom) ? f.dateFrom : "";
+  let dateTo = isoDate.test(f.dateTo) ? f.dateTo : "";
+  // Guard against a reversed range (e.g. persisted from an old session) —
+  // it makes queries return no data and crashes the calendar picker.
+  if (dateFrom && dateTo && dateFrom > dateTo) [dateFrom, dateTo] = [dateTo, dateFrom];
+  return { ...f, dateFrom, dateTo };
 }
 
 function AreaPage() {
