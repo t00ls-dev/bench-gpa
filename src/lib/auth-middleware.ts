@@ -27,10 +27,9 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
       email: string;
     };
 
-    const [rows] = await db.query<any[]>(
-      "SELECT id, role, is_active FROM users WHERE id = ?",
-      [payload.userId],
-    );
+    const [rows] = await db.query<any[]>("SELECT id, role, is_active FROM users WHERE id = ?", [
+      payload.userId,
+    ]);
     if (!rows.length || !rows[0].is_active) {
       throw new Error("Unauthorized: user inactive or not found");
     }

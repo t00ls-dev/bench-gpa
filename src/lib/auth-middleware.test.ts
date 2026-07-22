@@ -26,13 +26,19 @@ import jwt from "jsonwebtoken";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(jwt.verify).mockReturnValue({ userId: "u1", role: "admin", email: "test@gpabr.com" } as never);
+  vi.mocked(jwt.verify).mockReturnValue({
+    userId: "u1",
+    role: "admin",
+    email: "test@gpabr.com",
+  } as never);
   vi.mocked(db.query).mockResolvedValue([[{ id: "u1", role: "admin", is_active: true }]] as never);
 });
 
 describe("requireAuth", () => {
   it("passes context with valid token and active user", async () => {
-    const result = await (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({ next: (ctx: unknown) => ctx });
+    const result = await (
+      requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>
+    )({ next: (ctx: unknown) => ctx });
     expect(result).toMatchObject({
       context: { userId: "u1", userRole: "admin", userEmail: "test@gpabr.com" },
     });
@@ -40,22 +46,44 @@ describe("requireAuth", () => {
   });
 
   it("throws when user is inactive", async () => {
-    vi.mocked(db.query).mockResolvedValue([[{ id: "u1", role: "admin", is_active: false }]] as never);
-    await expect((requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({ next: (ctx: unknown) => ctx })).rejects.toThrow("Unauthorized");
+    vi.mocked(db.query).mockResolvedValue([
+      [{ id: "u1", role: "admin", is_active: false }],
+    ] as never);
+    await expect(
+      (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({
+        next: (ctx: unknown) => ctx,
+      }),
+    ).rejects.toThrow("Unauthorized");
   });
 
   it("throws when JWT is expired", async () => {
-    vi.mocked(jwt.verify).mockImplementation(() => { throw new Error("jwt expired"); });
-    await expect((requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({ next: (ctx: unknown) => ctx })).rejects.toThrow("Unauthorized: invalid token");
+    vi.mocked(jwt.verify).mockImplementation(() => {
+      throw new Error("jwt expired");
+    });
+    await expect(
+      (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({
+        next: (ctx: unknown) => ctx,
+      }),
+    ).rejects.toThrow("Unauthorized: invalid token");
   });
 
   it("throws when JWT signature is invalid", async () => {
-    vi.mocked(jwt.verify).mockImplementation(() => { throw new Error("invalid signature"); });
-    await expect((requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({ next: (ctx: unknown) => ctx })).rejects.toThrow("Unauthorized: invalid token");
+    vi.mocked(jwt.verify).mockImplementation(() => {
+      throw new Error("invalid signature");
+    });
+    await expect(
+      (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({
+        next: (ctx: unknown) => ctx,
+      }),
+    ).rejects.toThrow("Unauthorized: invalid token");
   });
 
   it("throws when user not found in DB", async () => {
     vi.mocked(db.query).mockResolvedValue([[]] as never);
-    await expect((requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({ next: (ctx: unknown) => ctx })).rejects.toThrow("Unauthorized");
+    await expect(
+      (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)({
+        next: (ctx: unknown) => ctx,
+      }),
+    ).rejects.toThrow("Unauthorized");
   });
 });

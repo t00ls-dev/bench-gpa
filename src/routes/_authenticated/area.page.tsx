@@ -51,15 +51,19 @@ function AreaPage() {
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
   const getArea = useServerFn(getAreaAnalysis);
 
-  const [af, setAf] = usePersistentState<AF>("bench-gpa:filters:area", {
-    dateFrom: "",
-    dateTo: "",
-    stores: [],
-    deptos: [],
-    secoes: [],
-    grupos: [],
-    subgrupos: [],
-  }, sanitizeAF);
+  const [af, setAf] = usePersistentState<AF>(
+    "bench-gpa:filters:area",
+    {
+      dateFrom: "",
+      dateTo: "",
+      stores: [],
+      deptos: [],
+      secoes: [],
+      grupos: [],
+      subgrupos: [],
+    },
+    sanitizeAF,
+  );
   const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
   const setStores = (v: string[]) =>
     patch({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });

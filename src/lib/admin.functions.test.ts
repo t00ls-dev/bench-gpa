@@ -37,7 +37,11 @@ vi.mock("@tanstack/react-start", () => {
 });
 
 vi.mock("./auth-middleware", () => ({
-  requireAuth: vi.fn(({ next, context }: any) => next({ context: { ...context, userId: "admin-u1", userRole: "admin", userEmail: "admin@gpabr.com" } })),
+  requireAuth: vi.fn(({ next, context }: any) =>
+    next({
+      context: { ...context, userId: "admin-u1", userRole: "admin", userEmail: "admin@gpabr.com" },
+    }),
+  ),
 }));
 
 vi.mock("./rate-limit.middleware", () => ({
@@ -63,7 +67,14 @@ beforeEach(() => {
 
 describe("createUser", () => {
   it("inserts user with bcrypt hash and returns id", async () => {
-    const result = await (createUser as (d: { email: string; name: string; password: string; role: string }) => Promise<{ ok: boolean; id: string }>)({ email: "newuser@gpabr.com", name: "New User", password: "Str0ng!Pass", role: "analyst" });
+    const result = await (
+      createUser as (d: {
+        email: string;
+        name: string;
+        password: string;
+        role: string;
+      }) => Promise<{ ok: boolean; id: string }>
+    )({ email: "newuser@gpabr.com", name: "New User", password: "Str0ng!Pass", role: "analyst" });
     expect(result.ok).toBe(true);
     expect(result.id).toBeDefined();
     expect(bcrypt.hash).toHaveBeenCalledWith("Str0ng!Pass", 12);
@@ -76,9 +87,14 @@ describe("createUser", () => {
 
 describe("resetPassword", () => {
   it("updates user password with bcrypt hash", async () => {
-    const result = await (resetPassword as (d: { userId: string; password: string }) => Promise<{ ok: boolean }>)({ userId: "u1", password: "N3w!Str0ng" });
+    const result = await (
+      resetPassword as (d: { userId: string; password: string }) => Promise<{ ok: boolean }>
+    )({ userId: "u1", password: "N3w!Str0ng" });
     expect(result.ok).toBe(true);
     expect(bcrypt.hash).toHaveBeenCalledWith("N3w!Str0ng", 12);
-    expect(db.query).toHaveBeenCalledWith("UPDATE users SET password = ? WHERE id = ?", ["$2b$12$mockedhash", "u1"]);
+    expect(db.query).toHaveBeenCalledWith("UPDATE users SET password = ? WHERE id = ?", [
+      "$2b$12$mockedhash",
+      "u1",
+    ]);
   });
 });
