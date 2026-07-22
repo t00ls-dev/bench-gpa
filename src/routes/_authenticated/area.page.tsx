@@ -53,7 +53,7 @@ function AreaPage() {
   const getArea = useServerFn(getAreaAnalysis);
 
   const [af, setAf] = usePersistentState<AF>(
-    "bench-gpa:filters:area",
+    "bench-gpa:filters:area:v2",
     {
       dateFrom: "",
       dateTo: "",
