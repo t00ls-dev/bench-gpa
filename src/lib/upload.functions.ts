@@ -4,7 +4,7 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
-import { asArray, asRecord, str, num } from "./api-types";
+import { asArray, asRecord, str, num, dateTimeStr } from "./api-types";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
@@ -114,7 +114,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
           return {
             sale_date: str(rec.sale_date),
             row_count: num(rec.row_count),
-            imported_at: str(rec.imported_at),
+            imported_at: dateTimeStr(rec.imported_at),
           };
         });
       },
