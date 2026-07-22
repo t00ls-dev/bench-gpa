@@ -122,10 +122,20 @@ async function handleDeploy(request: Request): Promise<Response | null> {
     if (existsSync(curDir)) renameSync(curDir, oldDir);
     renameSync(tmpDir, curDir);
 
-    execSync("pm2 reload bench-gpa", { stdio: "pipe" });
-    execSync("pm2 save", { stdio: "pipe" });
-
     if (existsSync(oldDir)) rmSync(oldDir, { recursive: true });
+
+    // PM2 reload — execSync may get SIGINT during graceful shutdown
+    for (const cmd of ["pm2 reload bench-gpa", "pm2 save"]) {
+      try {
+        execSync(cmd, { stdio: "pipe", timeout: 10_000 });
+      } catch (reloadErr) {
+        const sig = (reloadErr as { signal?: string }).signal;
+        if (sig !== "SIGINT") {
+          console.error(`${cmd} failed:`, reloadErr);
+          throw reloadErr;
+        }
+      }
+    }
 
     return new Response("OK", { status: 200 });
   } catch (err) {
