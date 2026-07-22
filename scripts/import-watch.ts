@@ -146,13 +146,8 @@ async function main() {
       continue;
     }
 
-    // --- 28-day window check ---
-    const daysAgo = (Date.now() - new Date(date + "T12:00:00").getTime()) / 86400000;
-    if (daysAgo > 28) {
-      log(`Date: ${date} is ${Math.round(daysAgo)}d old — outside 28d window, skip`);
-      renamed.push(`${file} → ${newName} (outside 28d window)`);
-      continue;
-    }
+    // Sem limite de idade: importa qualquer dia ainda não importado da pasta
+    // do mês corrente (a antiga janela de 28 dias era resíduo do Supabase).
 
     // --- Import ---
     fileOps = true;
