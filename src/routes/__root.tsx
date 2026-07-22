@@ -13,6 +13,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { CommandPalette } from "@/components/command-palette";
 import { HelpOverlay } from "@/components/help-overlay";
+import { RouteProgress } from "@/components/route-progress";
 import { useHotkey } from "@/lib/use-hotkey";
 
 function NotFoundComponent() {
@@ -110,6 +111,7 @@ function RootComponent() {
   useHotkey("?", openHelp, !helpOpen);
   return (
     <QueryClientProvider client={queryClient}>
+      <RouteProgress />
       <Outlet />
       <Toaster richColors position="top-right" />
       <CommandPalette />
