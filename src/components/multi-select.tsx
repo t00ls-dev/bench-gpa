@@ -5,10 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function truncate(s: string, max = 20) {
-  return s.length > max ? s.slice(0, max) + "…" : s;
-}
-
 export interface MSOption {
   value: string;
   label: string;
@@ -189,16 +185,20 @@ export function MultiSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           className="h-9 w-full max-w-full justify-between text-left font-normal"
+          title={
+            value.length
+              ? value.map((v) => options.find((o) => o.value === v)?.label ?? v).join(", ")
+              : undefined
+          }
         >
           <span className="truncate min-w-0">
             {value.length === 0
               ? label
-              : truncate(options.find((o) => o.value === value[0])?.label ?? value[0])}
-            {value.length > 1 && (
-              <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                +{value.length - 1}
-              </span>
-            )}
+              : single
+                ? (options.find((o) => o.value === value[0])?.label ?? value[0])
+                : allSelected
+                  ? label
+                  : `${value.length} ${label.trim().endsWith("as") ? "selecionadas" : "selecionados"}`}
           </span>
           <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
