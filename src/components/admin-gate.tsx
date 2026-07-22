@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, ShieldOff, WifiOff } from "lucide-react";
 
 export function AdminGate({
@@ -8,23 +8,29 @@ export function AdminGate({
   children: React.ReactNode;
   isAdmin?: boolean;
 }) {
-  const [state, setState] = useState<"loading" | "allow" | "deny" | "error">(
-    knownAdmin ? "allow" : "loading",
-  );
+  // Reusa o mesmo cache ["me"] populado pelo beforeLoad do layout autenticado,
+  // evitando uma segunda ida ao servidor só para checar a role.
+  const {
+    data: user,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await import("@/lib/auth-api")).getMe(),
+    staleTime: 60_000,
+    enabled: !knownAdmin,
+    retry: false,
+  });
 
-  useEffect(() => {
-    if (knownAdmin) return;
-    (async () => {
-      try {
-        const { getMe } = await import("@/lib/auth-api");
-        const user = await getMe();
-        if (!user) return setState("deny");
-        setState(user.role === "admin" ? "allow" : "deny");
-      } catch {
-        setState("error");
-      }
-    })();
-  }, [knownAdmin]);
+  const state: "loading" | "allow" | "deny" | "error" = knownAdmin
+    ? "allow"
+    : isLoading
+      ? "loading"
+      : isError
+        ? "error"
+        : user?.role === "admin"
+          ? "allow"
+          : "deny";
 
   if (state === "loading") {
     return (
