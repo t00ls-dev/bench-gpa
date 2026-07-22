@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGotoHotkey } from "@/lib/use-hotkey";
+import { useVersionCheck } from "@/hooks/use-version-check";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -111,6 +112,8 @@ function AuthedLayout() {
     await logout().catch(() => {});
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
+
+  useVersionCheck();
 
   useGotoHotkey("d", () => router.navigate({ to: "/" }));
   useGotoHotkey("p", () =>
