@@ -193,15 +193,6 @@ function AuthedLayout() {
               <div className="ml-auto flex items-center gap-3">
                 <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
                 <ThemeToggle />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={signOut}
-                  aria-label="Sair"
-                  className="hidden md:inline-flex size-7"
-                >
-                  <LogOut className="size-4" />
-                </Button>
                 <SidebarTrigger className="hidden md:flex" />
               </div>
             </div>
