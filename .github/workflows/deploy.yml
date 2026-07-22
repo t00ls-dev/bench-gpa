@@ -17,11 +17,11 @@ jobs:
 
       - name: Upload .output via rsync
         shell: bash
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
-          cat > ~/.ssh/deploy_key << 'KEYEOF'
-${{ secrets.SSH_PRIVATE_KEY }}
-KEYEOF
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             .output/ \
