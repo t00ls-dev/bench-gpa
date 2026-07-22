@@ -16,7 +16,7 @@ import {
 import { AreaAnalysisSchema } from "./schemas";
 
 export const getAreaAnalysis = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
     const [rs] = await db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
@@ -65,7 +65,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   });
 
 export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async (): Promise<AreaFilterHierarchyResult> => {
     const { cache } = await import("./cache");
     return cache.wrap(

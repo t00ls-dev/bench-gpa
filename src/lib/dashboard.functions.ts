@@ -20,7 +20,7 @@ import {
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
     const { cache } = await import("./cache");
@@ -56,14 +56,14 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   });
 
 export const getStores = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async (): Promise<StoreOption[]> => {
     const [rows] = await db.query("SELECT store_code, store_name FROM stores ORDER BY store_code");
     return (rows ?? []) as StoreOption[];
   });
 
 export const getDashboard = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => DashboardSchema.parse(d))
   .handler(async ({ data }) => {
     const currentPromise = callMetrics(data);
@@ -77,7 +77,7 @@ export const getDashboard = createServerFn({ method: "POST" })
   });
 
 export const getLatestSaleInfo = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async () => {
     const [rows] = await db.query(
       "SELECT sale_date, row_count, imported_at FROM import_log ORDER BY sale_date DESC LIMIT 1",
@@ -93,7 +93,7 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
   });
 
 export const getDashboardRankings = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
     const [rs2] = await db.query("CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)", [

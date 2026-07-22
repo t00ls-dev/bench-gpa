@@ -68,7 +68,11 @@ vi.mock("./auth-middleware", () => ({
 }));
 
 vi.mock("./rate-limit.middleware", () => ({
-  requireRateLimit: vi.fn(({ next }: { next: (ctx: unknown) => unknown }) => next({})),
+  requireRateLimit: vi.fn(
+    () =>
+      ({ next }: { next: (ctx: unknown) => unknown }) =>
+        next({}),
+  ),
 }));
 
 vi.mock("./admin-utils", () => ({
