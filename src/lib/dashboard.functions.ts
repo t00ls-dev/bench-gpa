@@ -49,7 +49,17 @@ export const getFilterOptions = createServerFn({ method: "POST" })
           secoes: asArray(secoes).map((r) => str(asRecord(r).secao)),
           grupos: asArray(grupos).map((r) => str(asRecord(r).grupo)),
           subgrupos: asArray(subgrupos).map((r) => str(asRecord(r).subgrupo)),
-          availableDates: asArray(availableDates).map((r) => str(asRecord(r).sale_date)),
+          // Sort ascending at the boundary: every consumer (default range seed,
+          // clamp effects, DateRangePicker.clampRange/min-maxIso) assumes
+          // availableDates[0] is the earliest date. The stored procedure's
+          // ORDER BY is not guaranteed to survive a schema drift (a prod DB
+          // running an older proc revision returned them descending, producing
+          // an inverted from>to range that loaded no data). ISO YYYY-MM-DD
+          // strings sort chronologically, so this enforces the invariant
+          // regardless of what the DB returns.
+          availableDates: asArray(availableDates)
+            .map((r) => str(asRecord(r).sale_date))
+            .sort(),
         };
       },
       300_000,
