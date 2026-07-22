@@ -43,12 +43,15 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
+      # Checkout dá acesso a scripts/ (migrate-schema.sql + migrations/) —
+      # o artifact só contém .output/.
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
           name: build-output
           path: .output/
 
-      - name: Upload .output via rsync
+      - name: Upload .output + arquivos de migração via rsync
         shell: bash
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -56,9 +59,31 @@ jobs:
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10" \
-            .output/ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html/.output.new/
+          SSH_CMD="ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
+          REMOTE=${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html
+          rsync -az --delete -e "$SSH_CMD" .output/ "$REMOTE/.output.new/"
+          # Runner + baseline + migrations versionadas → $APPDIR/_migrations/
+          rsync -az -e "$SSH_CMD" \
+            scripts/run-migrations.sh scripts/migrate-schema.sql scripts/migrations \
+            "$REMOTE/_migrations/"
+
+      # Migrations ANTES do swap: o baseline é idempotente e backward-compatible
+      # (re-sincroniza procedures sem quebrar o código antigo ainda em execução).
+      # Se falhar, o job para aqui — nenhum código novo é ativado e o app atual
+      # segue rodando no schema anterior.
+      - name: Aplicar migrations de banco
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 30s
+          command_timeout: 3m
+          script: |
+            set -euo pipefail
+            APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
+            bash "$APPDIR/_migrations/run-migrations.sh" "$APPDIR/.env"
 
       - name: Atomic swap + Restart PM2 (com rollback automático)
         uses: appleboy/ssh-action@v1
