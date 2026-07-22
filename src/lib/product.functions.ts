@@ -16,7 +16,7 @@ import {
 import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
 
 export const searchProducts = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => SingleQuerySchema.parse(d))
   .handler(async ({ data }) => {
     const q = `%${data.q.trim()}%`;
@@ -28,7 +28,7 @@ export const searchProducts = createServerFn({ method: "POST" })
   });
 
 export const getProductByCode = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => SingleProdCodeSchema.parse(d))
   .handler(async ({ data }) => {
     const [rows] = await db.query(
@@ -39,7 +39,7 @@ export const getProductByCode = createServerFn({ method: "POST" })
   });
 
 export const getProductAnalysis = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) =>
     z
       .object({

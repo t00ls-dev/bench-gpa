@@ -8,7 +8,7 @@ import { asArray, asRecord, str, num } from "./api-types";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit("upload")])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -46,7 +46,7 @@ export const beginImport = createServerFn({ method: "POST" })
   });
 
 export const insertSalesChunk = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit("upload")])
   .inputValidator((d: unknown) =>
     z
       .object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRowSchema) })
@@ -101,7 +101,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   });
 
 export const getImportedDates = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async () => {
     const { cache } = await import("./cache");
     return cache.wrap(
@@ -123,7 +123,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
   });
 
 export const finalizeImport = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit("upload")])
   .inputValidator((d: unknown) =>
     z
       .object({
