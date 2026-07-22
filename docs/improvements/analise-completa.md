@@ -62,7 +62,6 @@ Coexiste com `ecosystem.config.cjs` (o real, que carrega `.env`). O `.js` tem `e
 - **`JWT_EXPIRY` do `.env` nunca é lido** — `auth-api.ts:75` hardcoda `expiresIn: "7d"`. Mudar a env var no `.env` não tem efeito nenhum — configuração morta e enganosa.
 - **Sem revogação de sessão**: JWT de 7 dias sem refresh nem blacklist — logout só limpa o cookie local; um token copiado continua válido até expirar.
 - **Correções de permissão do VPS existem só como commits vazios** (`b1e58f3`, `7c03965` — mensagens documentando ações manuais tipo `usermod`/`chmod` feitas direto no servidor). Não estão em `docs/migracao-vps-autossuficiente.md` nem em script idempotente — se o VPS for reconstruído, essa configuração se perde silenciosamente.
-- **Dois scripts de crontab contraditórios**: `setup-crons.sh` (purge 03h, review 05h, watch 07h+19h) vs `setup-crontab.sh` (watch a cada hora, review 06h). `README.md` bate com `setup-crontab.sh`, mas não fica claro qual é o autoritativo hoje.
 
 ### ✅ Bem implementado (confirmado por leitura direta)
 
@@ -133,7 +132,6 @@ Coexiste com `ecosystem.config.cjs` (o real, que carrega `.env`). O `.js` tem `e
 | 7 | Adicionar `<ThemeToggle />` no header — dark mode já está pronto | 10 min | 🟢 |
 | 8 | Corrigir README/AGENTS.md: retenção é 180 dias, não 28 (28 é a janela do import automático) | 5 min | 🟡 |
 | 9 | Remover colunas "QTD"/"VALIDADE" do PDF de Área (sempre vazias) | 10 min | 🟢 |
-| 10 | Consolidar `setup-crons.sh`/`setup-crontab.sh` em um só script | 15 min | 🟡 |
 
 ---
 
