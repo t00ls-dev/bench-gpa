@@ -18,9 +18,10 @@ jobs:
       - name: Upload .output via rsync
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          printf '%s' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          ssh-keygen -lf ~/.ssh/deploy_key
+          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -v" \
             .output/ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html/.output.new/
 
