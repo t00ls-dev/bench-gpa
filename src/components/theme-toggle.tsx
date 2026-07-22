@@ -1,16 +1,11 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type Theme = "light" | "dark" | "system";
+type EffectiveTheme = "light" | "dark";
 
 function getStored(): Theme {
   if (typeof window === "undefined") return "system";
@@ -19,15 +14,12 @@ function getStored(): Theme {
   return "system";
 }
 
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-  if (theme === "dark") {
-    root.classList.add("dark");
-  } else if (theme === "light") {
-    root.classList.remove("dark");
-  } else {
-    root.classList.toggle("dark", window.matchMedia("(prefers-color-scheme: dark)").matches);
-  }
+function prefersDark(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function resolveTheme(theme: Theme): EffectiveTheme {
+  return theme === "system" ? (prefersDark() ? "dark" : "light") : theme;
 }
 
 function subscribe(cb: () => void) {
@@ -40,44 +32,39 @@ function subscribe(cb: () => void) {
   };
 }
 
-function getSnapshot(): Theme {
-  return getStored();
+function getSnapshot(): EffectiveTheme {
+  return resolveTheme(getStored());
 }
 
-function getServerSnapshot(): Theme {
-  return "system";
+function getServerSnapshot(): EffectiveTheme {
+  return "light";
 }
 
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const effective = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  const setTheme = useCallback((t: Theme) => {
-    localStorage.setItem("theme", t);
-    applyTheme(t);
+  // Keep the `dark` class on <html> in sync with the resolved theme — on
+  // every mount (fixes the class not being re-applied after a reload) and
+  // whenever the stored preference or system preference changes.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", effective === "dark");
+  }, [effective]);
+
+  const toggle = useCallback(() => {
+    const next: Theme = effective === "dark" ? "light" : "dark";
+    localStorage.setItem("theme", next);
     window.dispatchEvent(new Event("storage"));
-  }, []);
-
-  const icon = theme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />;
+  }, [effective]);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-7" aria-label="Tema">
-          {icon}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="right">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="mr-2 size-4" /> Claro
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="mr-2 size-4" /> Escuro
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Sun className="mr-2 size-4" />
-          <Moon className="mr-2 size-4 -ml-1" /> Sistema
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-7"
+      aria-label={effective === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
+      onClick={toggle}
+    >
+      {effective === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+    </Button>
   );
 }
