@@ -16,6 +16,7 @@ import {
   asRecord,
   parseNameVal,
   parseCodeNameVal,
+  dateTimeStr,
 } from "./api-types";
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
 
@@ -88,7 +89,7 @@ export const getLatestSaleInfo = createServerFn({ method: "GET" })
     return {
       sale_date: str(row.sale_date),
       row_count: num(row.row_count),
-      imported_at: str(row.imported_at),
+      imported_at: dateTimeStr(row.imported_at),
     };
   });
 

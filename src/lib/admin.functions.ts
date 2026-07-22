@@ -6,7 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import db from "./db";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
-import { asArray, asRecord, num } from "./api-types";
+import { asArray, asRecord, num, dateTimeStr } from "./api-types";
 import docMeta from "@/generated/doc-meta.json";
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -16,14 +16,17 @@ export const listUsers = createServerFn({ method: "GET" })
     const [rows] = await db.query(
       "SELECT id, email, name, role, is_active, created_at FROM users ORDER BY created_at DESC",
     );
-    return rows as {
-      id: string;
-      email: string;
-      name: string;
-      role: string;
-      is_active: boolean;
-      created_at: string;
-    }[];
+    return asArray(rows).map((r) => {
+      const rec = asRecord(r);
+      return {
+        id: String(rec.id ?? ""),
+        email: String(rec.email ?? ""),
+        name: String(rec.name ?? ""),
+        role: String(rec.role ?? ""),
+        is_active: Boolean(rec.is_active),
+        created_at: dateTimeStr(rec.created_at),
+      };
+    });
   });
 
 export const createUser = createServerFn({ method: "POST" })
