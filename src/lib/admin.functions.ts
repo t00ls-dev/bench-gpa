@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import db from "./db";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
 import { asArray, asRecord, num, dateTimeStr } from "./api-types";
+import { fmtBytes } from "./utils";
 import docMeta from "@/generated/doc-meta.json";
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -163,11 +164,12 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
     const dbSizeMb = num(asRecord(asArray(sizeRows)[0]).db_size_mb);
     const tables = asArray(tableRows).map((r) => {
       const rec = asRecord(r);
+      const totalBytes = Math.round(num(rec.size_mb) * 1024 * 1024);
       return {
         table: String(rec.table_name),
         schema: "public",
-        total_size: Math.round(num(rec.size_mb) * 1024 * 1024),
-        total_size_pretty: `${String(rec.size_mb)} MB`,
+        total_size: totalBytes,
+        total_size_pretty: fmtBytes(totalBytes),
         row_estimate: num(rec.row_estimate),
       };
     });
@@ -175,7 +177,7 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
     const activeConnections = num(asRecord(asArray(connRows)[0]).cnt);
     return {
       db_size: Math.round(dbSizeMb * 1024 * 1024),
-      db_size_pretty: `${dbSizeMb.toFixed(1)} MB`,
+      db_size_pretty: fmtBytes(Math.round(dbSizeMb * 1024 * 1024)),
       version,
       active_connections: activeConnections,
       tables,
