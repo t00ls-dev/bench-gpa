@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useSearch } from "@tanstack/react-router";
 import { LogIn, Loader2 } from "lucide-react";
+import { useEffectiveTheme } from "@/hooks/use-theme";
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 const TURNSTILE_BYPASS = import.meta.env.VITE_TURNSTILE_BYPASS === "true";
@@ -27,6 +28,7 @@ function sanitizeNext(next: unknown): string {
 
 function AuthPage() {
   const { next } = useSearch({ from: "/auth" });
+  const effectiveTheme = useEffectiveTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,10 +41,9 @@ function AuthPage() {
     window.location.href = target;
   };
 
+  // Injeta o script do Turnstile uma única vez.
   useEffect(() => {
-    if (TURNSTILE_BYPASS) return;
-    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
-    if (widgetIdRef.current) return;
+    if (TURNSTILE_BYPASS || !TURNSTILE_SITE_KEY) return;
 
     const script = document.createElement("script");
     script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
@@ -50,14 +51,30 @@ function AuthPage() {
     script.defer = true;
     document.head.appendChild(script);
 
+    return () => {
+      script.remove();
+    };
+  }, []);
+
+  // (Re)renderiza o widget honrando o tema efetivo atual. O Turnstile não
+  // permite trocar o tema de um widget já montado, então em mudança de
+  // preferência removemos o anterior e renderizamos de novo.
+  useEffect(() => {
+    if (TURNSTILE_BYPASS) return;
+    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
+
     let attempts = 0;
     const poll = setInterval(() => {
       const ts = getTurnstile();
       if (ts && turnstileRef.current) {
         clearInterval(poll);
+        if (widgetIdRef.current) {
+          ts.remove(widgetIdRef.current);
+          setTurnstileToken("");
+        }
         widgetIdRef.current = ts.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
-          theme: "light",
+          theme: effectiveTheme,
           callback: (token: string) => setTurnstileToken(token),
           "expired-callback": () => setTurnstileToken(""),
           "error-callback": () => setTurnstileToken(""),
@@ -71,10 +88,10 @@ function AuthPage() {
       const ts = getTurnstile();
       if (widgetIdRef.current && ts) {
         ts.remove(widgetIdRef.current);
+        widgetIdRef.current = undefined;
       }
-      script.remove();
     };
-  }, []);
+  }, [effectiveTheme]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
