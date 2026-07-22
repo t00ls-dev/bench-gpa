@@ -42,6 +42,8 @@ Itens que estavam listados como problema em versões anteriores desta análise e
 | 🟢 Dois scripts de crontab contraditórios | `scripts/setup-crontab.sh` (obsoleto, órfão) apagado; `scripts/setup-crons.sh` é o único e reflete o crontab real |
 | 🟢 Cron de `cli:review` (05h/06h) | Script nunca existiu (`cli:review` ausente de `package.json`) — cron falhava todo dia silenciosamente. Removido de `setup-crons.sh` e do crontab ativo |
 | 🟢 Dark mode pronto mas não plugado | `<ThemeToggle />` adicionado ao header (`route.tsx`). **Bônus**: achou e corrigiu um bug real no processo — `useSyncExternalStore` sem `getServerSnapshot` quebrava a renderização SSR assim que o componente era usado de verdade (nunca tinha sido testado em produção) |
+| 🟠 Toggle de tema não persistia entre reloads | A classe `dark` só era aplicada dentro do handler de clique, nunca no mount — `useEffect` agora sincroniza a classe com o tema resolvido a cada mudança (incluindo no carregamento da página) |
+| 🟠 Data de "Atualizado" sempre igual no histórico de importações | `str()` (helper genérico) trunca `Date` para `YYYY-MM-DD` — correto para `sale_date` (coluna `DATE`), errado para `imported_at`/`created_at` (colunas `TIMESTAMP`, têm hora). Como o mysql2 retorna `TIMESTAMP` como objeto `Date`, a hora era descartada antes de chegar no frontend. Afetava 3 lugares: `getImportedDates` (upload.functions.ts), `getLatestSaleInfo` (dashboard.functions.ts), e `listUsers` (admin.functions.ts, via cast `as {...}` que também mentia sobre `is_active` ser `boolean` quando na real é `0`/`1`). Corrigido com um novo helper `dateTimeStr()` (preserva o ISO completo) usado nos três; `sale_date` continua com `str()`, que é o comportamento certo pra ele. Auditoria completa: nenhum outro campo `DATE`/`TIMESTAMP`/`DECIMAL` do schema tem o mesmo problema (verificado contra dados reais do banco). |
 
 ---
 
@@ -114,6 +116,7 @@ Nenhum item aberto no momento.
 4. 🟢 `docs/improvements/*.md` (exceto este arquivo) desatualizados desde a migração Supabase→MariaDB.
 5. 🟢 Sem revogação de sessão (JWT sem blacklist/refresh).
 6. 🟢 Correções de permissão do VPS não documentadas de forma idempotente.
+7. 🟢 Casts `as {...}` sem passar por `asRecord`/conversão em `product.functions.ts:27,38` e `auth-api.ts:70,104` — campos são só `VARCHAR`/booleanos checados por truthy (`!user.is_active`), então não quebram em runtime, mas é o mesmo padrão frágil que causou o bug do `imported_at`. Vale padronizar por consistência, não por bug ativo.
 
 ---
 
