@@ -94,9 +94,7 @@ function AuthPage() {
         password,
       };
       if (!TURNSTILE_BYPASS) payload.turnstileToken = turnstileToken;
-      const token = await login({ data: payload });
-
-      document.cookie = "session=" + token + "; Path=/; Max-Age=" + (7*24*60*60) + "; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
+      await login({ data: payload });
       goNext();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao fazer login.";

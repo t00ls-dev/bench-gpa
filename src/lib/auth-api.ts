@@ -1,38 +1,38 @@
 import { createServerFn } from "@tanstack/react-start";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { serialize, parse } from "cookie";
-import { getRequest } from "@tanstack/react-start/server";
+import { getRequest, getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
 import db from "./db";
 import { z } from "zod";
 import { verifyTurnstile } from "./turnstile";
 import { authLimiter, getClientIp } from "./rate-limit";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
+const SESSION_COOKIE = "session";
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 
-function sessionCookie(token: string): string {
-  return serialize("session", token, {
+function setSessionCookie(token: string): void {
+  setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
     path: "/",
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: SESSION_MAX_AGE,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
 }
 
-function clearSession(): string {
-  return serialize("session", "", {
-    httpOnly: true,
-    path: "/",
-    maxAge: 0,
-  });
+function clearSessionCookie(): void {
+  deleteCookie(SESSION_COOKIE, { path: "/" });
 }
 
 export const login = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        email: z.string().email().transform((e) => e.toLowerCase().trim()),
+        email: z
+          .string()
+          .email()
+          .transform((e) => e.toLowerCase().trim()),
         password: z.string().min(1),
         turnstileToken: z.string().optional(),
       })
@@ -69,22 +69,16 @@ export const login = createServerFn({ method: "POST" })
     if (!valid) {
       throw new Error("E-mail ou senha inválidos.");
     }
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "7d" },
-    );
-    return token;
+    const token = jwt.sign({ userId: user.id, role: user.role, email: user.email }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    setSessionCookie(token);
+    return { ok: true } as const;
   });
 
 export const getMe = createServerFn({ method: "GET" }).handler(async () => {
-  const request = getRequest();
-  const cookieHeader = request?.headers?.get("cookie") || "";
-  console.log("[getMe] cookie header:", cookieHeader.substring(0, 100));
-  const parsed = parse(cookieHeader);
-  const token = parsed["session"];
+  const token = getCookie(SESSION_COOKIE);
   if (!token) {
-    console.log("[getMe] no session cookie found, cookies:", Object.keys(parsed).join(", "));
     return null;
   }
   try {
@@ -93,22 +87,20 @@ export const getMe = createServerFn({ method: "GET" }).handler(async () => {
       role: string;
       email: string;
     };
-    console.log("[getMe] JWT valid for:", payload.email);
     const [rows] = await db.query<any[]>(
       "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
       [payload.userId],
     );
     if (!rows.length || !rows[0].is_active) {
-      console.log("[getMe] user not found or inactive");
       return null;
     }
     return { id: rows[0].id, email: rows[0].email, name: rows[0].name, role: rows[0].role };
-  } catch (err) {
-    console.log("[getMe] JWT verify error:", err);
+  } catch {
     return null;
   }
 });
 
 export const logout = createServerFn({ method: "POST" }).handler(async () => {
-  return { ok: true, cookie: clearSession() };
+  clearSessionCookie();
+  return { ok: true } as const;
 });

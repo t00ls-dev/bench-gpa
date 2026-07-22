@@ -23,7 +23,8 @@ export const getRouter = () => {
           msg.includes("forbidden")
         ) {
           toast.error("Sessão expirada. Faça login novamente.");
-          document.cookie = "session=; Path=/; Max-Age=0";
+          const { logout } = await import("./lib/auth-api");
+          await logout().catch(() => {});
           window.location.href = "/auth";
         }
       },
