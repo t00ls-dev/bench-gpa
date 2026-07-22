@@ -74,8 +74,11 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
     availableDates && availableDates.length ? availableDates[availableDates.length - 1] : undefined;
 
   const clampRange = (r: { from: string; to: string }): { from: string; to: string } | null => {
-    if (!hasAvailable) return r;
-    const within = (availableDates ?? []).filter((d) => d >= r.from && d <= r.to);
+    // Never let an inverted range (from > to) reach state or the Calendar —
+    // it makes "no data found" downstream and crashes the range picker.
+    const ordered = r.from <= r.to ? r : { from: r.to, to: r.from };
+    if (!hasAvailable) return ordered;
+    const within = (availableDates ?? []).filter((d) => d >= ordered.from && d <= ordered.to);
     if (within.length === 0) return null;
     return { from: within[0], to: within[within.length - 1] };
   };
@@ -104,13 +107,15 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
     return !availableSet.has(iso(d));
   };
 
-  const selectedRange = useMemo(
-    () => ({
-      from: from ? new Date(from + "T00:00:00") : undefined,
-      to: to ? new Date(to + "T00:00:00") : undefined,
-    }),
-    [from, to],
-  );
+  // Defensive: never pass an inverted range to <Calendar> — it expects
+  // from <= to and breaks otherwise, regardless of what upstream state sends.
+  const selectedRange = useMemo(() => {
+    const [orderedFrom, orderedTo] = from && to && from > to ? [to, from] : [from, to];
+    return {
+      from: orderedFrom ? new Date(orderedFrom + "T00:00:00") : undefined,
+      to: orderedTo ? new Date(orderedTo + "T00:00:00") : undefined,
+    };
+  }, [from, to]);
 
   const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
     if (!range || !range.from) {
