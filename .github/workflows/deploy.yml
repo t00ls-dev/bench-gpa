@@ -15,17 +15,17 @@ jobs:
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
 
-      - name: Upload .output via rsync
-        shell: bash
-        env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            .output/ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html/.output.new/
+      - name: Upload .output via scp
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: .output/
+          target: /home/admin/web/gpa.t00ls.dev/public_html/.output.new/
+          strip_components: 1
+          rm: true
 
       - name: Atomic swap + Restart PM2
         uses: appleboy/ssh-action@v1
