@@ -51,10 +51,16 @@ interface UserProfile {
 }
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async ({ context, location }) => {
     try {
       const { getMe } = await import("@/lib/auth-api");
-      const user = await getMe();
+      // Cacheia a identidade por 60s para não bater no servidor (round-trip +
+      // SELECT em users) a cada navegação. O admin-gate lê o mesmo cache.
+      const user = await context.queryClient.ensureQueryData({
+        queryKey: ["me"],
+        queryFn: () => getMe(),
+        staleTime: 60_000,
+      });
       if (!user) throw new Error("not authenticated");
       return { user: user as UserProfile };
     } catch {
@@ -109,11 +115,13 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
 
 function AuthedLayout() {
   const router = useRouter();
-  const { user } = Route.useRouteContext();
+  const { user, queryClient } = Route.useRouteContext();
 
   const signOut = async () => {
     const { logout } = await import("@/lib/auth-api");
     await logout().catch(() => {});
+    // Invalida a identidade em cache p/ o guard revalidar no próximo acesso.
+    queryClient.removeQueries({ queryKey: ["me"] });
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
 
