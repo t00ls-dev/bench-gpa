@@ -190,10 +190,9 @@ function AuthedLayout() {
               >
                 <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
               </Link>
+              <SidebarTrigger className="hidden md:flex" />
               <div className="ml-auto flex items-center gap-3">
-                <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
                 <ThemeToggle />
-                <SidebarTrigger className="hidden md:flex" />
               </div>
             </div>
           </header>
