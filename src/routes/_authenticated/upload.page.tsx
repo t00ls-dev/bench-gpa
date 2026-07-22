@@ -19,11 +19,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Upload, CalendarCheck, AlertCircle } from "lucide-react";
+import { Upload, CalendarCheck, CalendarRange, AlertCircle } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
 import { UploadDropzone } from "@/components/upload-dropzone";
 import { ImportProgress } from "@/components/import-progress";
 import { ImportHistory } from "@/components/import-history";
+import { DataCoverage } from "@/components/admin-data-coverage";
 import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 
@@ -311,7 +312,15 @@ export default function UploadPage() {
             <span>Erro ao carregar dados: {imported.error.message}</span>
           </div>
         ) : (
-          <ImportCalendar records={imported.data ?? []} />
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
+                <CalendarRange className="size-5 text-primary" /> Cobertura de dados
+              </h2>
+              <DataCoverage dates={imported.data} />
+            </div>
+            <ImportCalendar records={imported.data ?? []} />
+          </div>
         ))}
 
       <AlertDialog
