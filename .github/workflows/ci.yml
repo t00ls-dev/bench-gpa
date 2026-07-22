@@ -20,9 +20,7 @@ jobs:
         with:
           bun-version: "1.3.14"
       - run: bun install --frozen-lockfile
-      - name: Lint (não bloqueia — ~75 `any` pré-existentes ainda pendentes)
-        run: bun run lint
-        continue-on-error: true
+      - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build
