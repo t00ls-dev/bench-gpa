@@ -86,7 +86,14 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
               subgrupo: strOrNull(r.subgrupo),
             };
           }),
-          availableDates: asArray(availableDates).map((r) => str(asRecord(r).sale_date)),
+          // Sort ascending at the boundary — see the matching note in
+          // dashboard.functions.ts. Consumers assume availableDates[0] is the
+          // earliest date; a prod proc that returned them descending produced
+          // an inverted from>to range that loaded no data. ISO strings sort
+          // chronologically, so this holds the invariant regardless of the DB.
+          availableDates: asArray(availableDates)
+            .map((r) => str(asRecord(r).sale_date))
+            .sort(),
         };
       },
       300_000,
