@@ -44,8 +44,12 @@ function getSnapshot(): Theme {
   return getStored();
 }
 
+function getServerSnapshot(): Theme {
+  return "system";
+}
+
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, getSnapshot);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const setTheme = useCallback((t: Theme) => {
     localStorage.setItem("theme", t);
