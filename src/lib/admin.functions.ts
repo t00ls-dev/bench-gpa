@@ -100,7 +100,11 @@ async function countRows(table: TableName) {
 }
 
 async function fetchDistinctDates(table: TableName, column: string) {
-  const [rows] = await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column]) as any[];
+  const [rows] = (await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [
+    column,
+    table,
+    column,
+  ])) as any[];
   const vals = [...new Set((rows ?? []).map((r: any) => String(r[column])))].sort();
   return vals;
 }
@@ -121,7 +125,7 @@ export const diagnoseData = createServerFn({ method: "GET" })
     for (const t of tables) {
       counts[t] = await countRows(t);
     }
-    const datesInSales = await fetchDistinctDates("staging_sales", "sale_date") as string[];
+    const datesInSales = (await fetchDistinctDates("staging_sales", "sale_date")) as string[];
     return { ...counts, dates_in_sales: datesInSales };
   });
 
@@ -164,9 +168,7 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
       total_size_pretty: `${r.size_mb} MB`,
       row_estimate: Number(r.row_estimate ?? 0),
     }));
-    const [connRows] = await db.query(
-      "SELECT COUNT(*) AS cnt FROM information_schema.PROCESSLIST",
-    );
+    const [connRows] = await db.query("SELECT COUNT(*) AS cnt FROM information_schema.PROCESSLIST");
     const activeConnections = Number((connRows as any[])[0]?.cnt ?? 0);
     return {
       db_size: Math.round(dbSizeMb * 1024 * 1024),

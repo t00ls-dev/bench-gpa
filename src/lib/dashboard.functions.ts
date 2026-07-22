@@ -24,9 +24,10 @@ export const getFilterOptions = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
     const { cache } = await import("./cache");
     const key = `filter_options:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
-    return cache.wrap(key, async () => {
-      const [rs] =
-        await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [
+    return cache.wrap(
+      key,
+      async () => {
+        const [rs] = await db.query("CALL filter_options(?, ?, ?, ?, ?, ?)", [
           data.dateFrom || null,
           data.dateTo || null,
           JSON.stringify(data.stores ?? []),
@@ -34,28 +35,29 @@ export const getFilterOptions = createServerFn({ method: "POST" })
           JSON.stringify(data.secoes ?? []),
           JSON.stringify(data.grupos ?? []),
         ]);
-      const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] = rs as any[];
-      return {
-        latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
-        stores: (stores ?? []).map((r: any) => ({
-          store_code: str(r.store_code),
-          store_name: str(r.store_name),
-        })),
-        deptos: (deptos ?? []).map((r: any) => str(r.depto)),
-        secoes: (secoes ?? []).map((r: any) => str(r.secao)),
-        grupos: (grupos ?? []).map((r: any) => str(r.grupo)),
-        subgrupos: (subgrupos ?? []).map((r: any) => str(r.subgrupo)),
-        availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
-      };
-    }, 300_000);
+        const [latestDateRows, stores, deptos, secoes, grupos, subgrupos, availableDates] =
+          rs as any[];
+        return {
+          latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
+          stores: (stores ?? []).map((r: any) => ({
+            store_code: str(r.store_code),
+            store_name: str(r.store_name),
+          })),
+          deptos: (deptos ?? []).map((r: any) => str(r.depto)),
+          secoes: (secoes ?? []).map((r: any) => str(r.secao)),
+          grupos: (grupos ?? []).map((r: any) => str(r.grupo)),
+          subgrupos: (subgrupos ?? []).map((r: any) => str(r.subgrupo)),
+          availableDates: (availableDates ?? []).map((r: any) => str(r.sale_date)),
+        };
+      },
+      300_000,
+    );
   });
 
 export const getStores = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit])
   .handler(async (): Promise<StoreOption[]> => {
-    const [rows] = await db.query(
-      "SELECT store_code, store_name FROM stores ORDER BY store_code",
-    );
+    const [rows] = await db.query("SELECT store_code, store_name FROM stores ORDER BY store_code");
     return (rows ?? []) as StoreOption[];
   });
 
@@ -92,19 +94,16 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
-    const [rs2] = await db.query(
-      "CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)",
-      [
-        data.dateFrom || null,
-        data.dateTo || null,
-        JSON.stringify(data.stores ?? []),
-        JSON.stringify(data.deptos ?? []),
-        JSON.stringify(data.secoes ?? []),
-        JSON.stringify(data.grupos ?? []),
-        JSON.stringify(data.subgrupos ?? []),
-        data.limit ?? 10,
-      ],
-    );
+    const [rs2] = await db.query("CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)", [
+      data.dateFrom || null,
+      data.dateTo || null,
+      JSON.stringify(data.stores ?? []),
+      JSON.stringify(data.deptos ?? []),
+      JSON.stringify(data.secoes ?? []),
+      JSON.stringify(data.grupos ?? []),
+      JSON.stringify(data.subgrupos ?? []),
+      data.limit ?? 10,
+    ]);
     const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as any[];
     return {
       byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),

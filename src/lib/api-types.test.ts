@@ -158,9 +158,18 @@ describe("callMetrics", () => {
     mockQuery.mockResolvedValue([
       [
         [{ total: 1000 }],
-        [{ code: "S1", name: "Loja 1", val: 600 }, { code: "S2", name: "Loja 2", val: 400 }],
-        [{ name: "Depto A", val: 500 }, { name: "Depto B", val: 500 }],
-        [{ date: new Date("2024-01-01"), val: 300 }, { date: new Date("2024-01-02"), val: 700 }],
+        [
+          { code: "S1", name: "Loja 1", val: 600 },
+          { code: "S2", name: "Loja 2", val: 400 },
+        ],
+        [
+          { name: "Depto A", val: 500 },
+          { name: "Depto B", val: 500 },
+        ],
+        [
+          { date: new Date("2024-01-01"), val: 300 },
+          { date: new Date("2024-01-02"), val: 700 },
+        ],
       ],
     ]);
 
@@ -178,7 +187,7 @@ describe("callMetrics", () => {
   });
 
   it("handles empty result sets", async () => {
-    mockQuery.mockResolvedValue([[ [], [], [], [] ]]);
+    mockQuery.mockResolvedValue([[[], [], [], []]]);
 
     const result = await callMetrics({
       dateFrom: null,

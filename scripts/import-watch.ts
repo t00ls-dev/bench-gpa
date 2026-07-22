@@ -137,10 +137,7 @@ async function main() {
     }
 
     // --- Check import_log (for all files) ---
-    const [rows] = await db.query(
-      "SELECT sale_date FROM import_log WHERE sale_date = ?",
-      [date],
-    );
+    const [rows] = await db.query("SELECT sale_date FROM import_log WHERE sale_date = ?", [date]);
     const existing = ((rows as any[]) ?? [])[0];
 
     if (existing) {

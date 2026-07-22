@@ -96,9 +96,7 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
 
   return (
     <div className="kpi-card space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Tamanho total do banco, versão e tabelas.
-      </p>
+      <p className="text-sm text-muted-foreground">Tamanho total do banco, versão e tabelas.</p>
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={runCheck} disabled={loading}>
@@ -118,9 +116,7 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
               <HardDrive className="size-4 text-muted-foreground" />
               Tamanho do banco
             </span>
-            <span className="font-mono text-xs text-muted-foreground">
-              {data.db_size_pretty}
-            </span>
+            <span className="font-mono text-xs text-muted-foreground">{data.db_size_pretty}</span>
           </div>
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">

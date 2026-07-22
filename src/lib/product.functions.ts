@@ -41,12 +41,11 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }): Promise<ProductAnalysisResult> => {
-    const [rs] =
-      await db.query("CALL product_analysis(?, ?, ?)", [
-        data.prodCode,
-        data.storeCode || null,
-        data.referenceDate || null,
-      ]) as any[];
+    const [rs] = (await db.query("CALL product_analysis(?, ?, ?)", [
+      data.prodCode,
+      data.storeCode || null,
+      data.referenceDate || null,
+    ])) as any[];
     const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] = rs;
     const productRow = (productRows as any[])[0] ?? null;
     return {

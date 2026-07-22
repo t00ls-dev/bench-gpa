@@ -47,7 +47,8 @@ describe("verifyTurnstile", () => {
   it("retries on fetch failure then returns false", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn()
+      vi
+        .fn()
         .mockRejectedValueOnce(new Error("network error"))
         .mockRejectedValueOnce(new Error("still down")),
     );
@@ -55,7 +56,8 @@ describe("verifyTurnstile", () => {
   });
 
   it("recovers after first attempt failure", async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockRejectedValueOnce(new Error("timeout"))
       .mockResolvedValueOnce({
         ok: true,

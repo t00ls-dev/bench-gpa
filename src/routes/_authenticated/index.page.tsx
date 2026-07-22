@@ -41,7 +41,11 @@ function sanitizeFilters(f: Filters): Filters {
 }
 
 function Dashboard() {
-  const [filters, setFilters] = usePersistentState<Filters>("bench-gpa:filters:dashboard", initial, sanitizeFilters);
+  const [filters, setFilters] = usePersistentState<Filters>(
+    "bench-gpa:filters:dashboard",
+    initial,
+    sanitizeFilters,
+  );
   const fn = useServerFn(getDashboard);
   const fnRank = useServerFn(getDashboardRankings);
   const enabled = !!filters.dateFrom && !!filters.dateTo;

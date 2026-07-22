@@ -168,22 +168,23 @@ export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
   const { cache } = await import("./cache");
   const key = metricsCacheKey(f);
   return cache.wrap(key, async () => {
-    const [rs] = await db.query(
-      "CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)",
-      [
-        f.dateFrom || null,
-        f.dateTo || null,
-        JSON.stringify(f.stores ?? []),
-        JSON.stringify(f.deptos ?? []),
-        JSON.stringify(f.secoes ?? []),
-        JSON.stringify(f.grupos ?? []),
-        JSON.stringify(f.subgrupos ?? []),
-      ],
-    );
+    const [rs] = await db.query("CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)", [
+      f.dateFrom || null,
+      f.dateTo || null,
+      JSON.stringify(f.stores ?? []),
+      JSON.stringify(f.deptos ?? []),
+      JSON.stringify(f.secoes ?? []),
+      JSON.stringify(f.grupos ?? []),
+      JSON.stringify(f.subgrupos ?? []),
+    ]);
     const [aggregate, byStore, byDepto, byDate] = rs as any[];
     return {
       total: Number((aggregate as any[])[0]?.total ?? 0),
-      byStore: (byStore ?? []).map((r: any) => ({ code: r.code, name: r.name, val: Number(r.val) })),
+      byStore: (byStore ?? []).map((r: any) => ({
+        code: r.code,
+        name: r.name,
+        val: Number(r.val),
+      })),
       byDepto: (byDepto ?? []).map((r: any) => ({ name: r.name, val: Number(r.val) })),
       byDate: (byDate ?? []).map((r: any) => ({ date: str(r.date), val: Number(r.val) })),
     };

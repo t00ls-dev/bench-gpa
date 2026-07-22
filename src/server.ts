@@ -32,7 +32,12 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-function applySecurityHeaders(body: string, status: number, nonce: string, extraHeaders?: [string, string][]): Response {
+function applySecurityHeaders(
+  body: string,
+  status: number,
+  nonce: string,
+  extraHeaders?: [string, string][],
+): Response {
   setCspNonce(undefined);
 
   const csp = [
@@ -101,18 +106,14 @@ export default {
 
       const jsonBody = await response.clone().text();
       const handled =
-        jsonBody.includes('"unhandled":true') &&
-        jsonBody.includes('"message":"HTTPError"');
+        jsonBody.includes('"unhandled":true') && jsonBody.includes('"message":"HTTPError"');
 
       if (!handled) {
         const body = await response.text();
         return applySecurityHeaders(body, response.status, nonce);
       }
 
-      console.error(
-        consumeLastCapturedError() ??
-          new Error(`h3 swallowed SSR error: ${jsonBody}`),
-      );
+      console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${jsonBody}`));
       const errNonce = crypto.randomUUID();
       return applySecurityHeaders(renderErrorPage(), 500, errNonce);
     } catch (error) {
