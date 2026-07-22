@@ -683,11 +683,11 @@ BEGIN
   GROUP BY a.store_code, s.store_name
   ORDER BY val DESC;
 
-  -- Result set 4: evolution (last 60 days)
+  -- Result set 4: evolution (last 28 days)
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
   WHERE a.prod_code = p_prod_code
-    AND a.sale_date >= DATE_SUB(v_ref_date, INTERVAL 60 DAY)
+    AND a.sale_date >= DATE_SUB(v_ref_date, INTERVAL 28 DAY)
     AND a.sale_date <= v_ref_date
     AND (p_store_code IS NULL OR a.store_code = p_store_code)
   GROUP BY a.sale_date

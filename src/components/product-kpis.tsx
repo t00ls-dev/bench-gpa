@@ -21,7 +21,7 @@ export function ProductKPIs({
   refWeekdayFull,
   refWeekdayPlural,
   refArticle,
-  sameWeekdayAll,
+  sameWeekdayDates,
   hideStoreComp,
 }: {
   analysisData: {
@@ -40,7 +40,7 @@ export function ProductKPIs({
   refWeekdayFull: string | null;
   refWeekdayPlural: string | null;
   refArticle: string;
-  sameWeekdayAll: SeriesPoint[];
+  sameWeekdayDates: SeriesPoint[];
   hideStoreComp: boolean;
 }) {
   if (!analysisData) return null;
@@ -88,10 +88,13 @@ export function ProductKPIs({
 
       <PaginatedHistory
         title={`${refArticle} ${refWeekdayPlural?.toLowerCase() ?? "datas"}`}
-        rows={sameWeekdayAll}
+        rows={sameWeekdayDates}
       />
 
-      <PaginatedHistory title="Histórico completo" rows={analysisData.evolution as SeriesPoint[]} />
+      <PaginatedHistory
+        title="Histórico diário (últimos 28 dias)"
+        rows={analysisData.evolution as SeriesPoint[]}
+      />
     </>
   );
 }
