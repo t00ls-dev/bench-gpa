@@ -15,24 +15,19 @@ jobs:
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
 
-      - name: Debug - check SSH key
+      - name: Debug - SSH auth
         shell: bash
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          set -x
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY" | tee ~/.ssh/deploy_key > /dev/null
           chmod 600 ~/.ssh/deploy_key
-          echo "=== KEY SIZE ==="
-          wc -c ~/.ssh/deploy_key
-          echo "=== FIRST LINE ==="
-          head -1 ~/.ssh/deploy_key
-          echo "=== LAST LINE ==="
-          tail -1 ~/.ssh/deploy_key
-          echo "=== FINGERPRINT ==="
           ssh-keygen -lf ~/.ssh/deploy_key
-          echo "=== TEST SSH ==="
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo SSH_OK" 2>&1 || true
+          host ${{ secrets.VPS_HOST }} 2>&1 || nslookup ${{ secrets.VPS_HOST }} 2>&1 || true
+          # full verbose, don't mask exit
+          ssh -vvv -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo SSH_OK" 2>&1; echo "EXIT_CODE=$?"
 
       - name: Upload .output via scp
         uses: appleboy/scp-action@v0.1.7
