@@ -6,6 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import db from "./db";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema, SingleSlugSchema } from "./schemas";
+import { asArray, asRecord, num } from "./api-types";
 import docMeta from "@/generated/doc-meta.json";
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -96,16 +97,12 @@ type TableName =
 
 async function countRows(table: TableName) {
   const [rows] = await db.query("SELECT COUNT(*) AS count FROM ??", [table]);
-  return Number((rows as any[])[0]?.count ?? 0);
+  return num(asRecord(asArray(rows)[0]).count);
 }
 
 async function fetchDistinctDates(table: TableName, column: string) {
-  const [rows] = (await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [
-    column,
-    table,
-    column,
-  ])) as any[];
-  const vals = [...new Set((rows ?? []).map((r: any) => String(r[column])))].sort();
+  const [rows] = await db.query("SELECT DISTINCT ?? FROM ?? ORDER BY ??", [column, table, column]);
+  const vals = [...new Set(asArray(rows).map((r) => String(asRecord(r)[column])))].sort();
   return vals;
 }
 
@@ -150,7 +147,7 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rows] = await db.query("CALL purge_old_aggs(?)", [180]);
-    return { deleted: Number((rows as any[])[0]?.deleted ?? 0) };
+    return { deleted: num(asRecord(asArray(rows)[0]).deleted) };
   });
 
 export const dbHealthCheck = createServerFn({ method: "GET" })
@@ -158,18 +155,21 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rs] = await db.query("CALL db_health_check()");
-    const [versionRows, sizeRows, tableRows] = rs as any[];
-    const version = String((versionRows as any[])[0]?.version ?? "");
-    const dbSizeMb = Number((sizeRows as any[])[0]?.db_size_mb ?? 0);
-    const tables = (tableRows ?? []).map((r: any) => ({
-      table: String(r.table_name),
-      schema: "public",
-      total_size: Math.round(Number(r.size_mb) * 1024 * 1024),
-      total_size_pretty: `${r.size_mb} MB`,
-      row_estimate: Number(r.row_estimate ?? 0),
-    }));
+    const [versionRows, sizeRows, tableRows] = rs as unknown[];
+    const version = String(asRecord(asArray(versionRows)[0]).version ?? "");
+    const dbSizeMb = num(asRecord(asArray(sizeRows)[0]).db_size_mb);
+    const tables = asArray(tableRows).map((r) => {
+      const rec = asRecord(r);
+      return {
+        table: String(rec.table_name),
+        schema: "public",
+        total_size: Math.round(num(rec.size_mb) * 1024 * 1024),
+        total_size_pretty: `${String(rec.size_mb)} MB`,
+        row_estimate: num(rec.row_estimate),
+      };
+    });
     const [connRows] = await db.query("SELECT COUNT(*) AS cnt FROM information_schema.PROCESSLIST");
-    const activeConnections = Number((connRows as any[])[0]?.cnt ?? 0);
+    const activeConnections = num(asRecord(asArray(connRows)[0]).cnt);
     return {
       db_size: Math.round(dbSizeMb * 1024 * 1024),
       db_size_pretty: `${dbSizeMb.toFixed(1)} MB`,
