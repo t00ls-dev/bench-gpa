@@ -13,6 +13,25 @@ export function fmtInt(n: number): string {
   return n.toLocaleString("pt-BR");
 }
 
+/**
+ * Humaniza um tamanho em bytes com unidades binárias (1024), escalando até a
+ * maior unidade em que o valor fica >= 1 — logo 1024 MB = 1 GB (GiB, rotulado
+ * "GB" pela convenção de ferramentas de banco). Casas decimais crescem com a
+ * unidade: 0 para B/kB, 1 para MB, 2 para GB/TB.
+ */
+export function fmtBytes(bytes: number): string {
+  if (!bytes || bytes < 0) return "0 kB";
+  const units = ["B", "kB", "MB", "GB", "TB"];
+  let v = bytes;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  const decimals = i <= 1 ? 0 : i === 2 ? 1 : 2;
+  return `${v.toFixed(decimals)} ${units[i]}`;
+}
+
 export function fmtDT(iso: string | Date | null | undefined): string {
   if (!iso) return "(sem)";
   const d = new Date(iso);

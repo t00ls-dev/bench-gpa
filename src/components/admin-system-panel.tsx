@@ -3,12 +3,7 @@ import type { DbHealthData } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Database, HardDrive, Server, Activity, Loader2 } from "lucide-react";
-
-function fmtSize(bytes: number): string {
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(0)} kB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
-}
+import { fmtBytes } from "@/lib/utils";
 
 export function DataCountSection({
   diagnoseFn,
@@ -139,7 +134,7 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
                 {data.tables.map((t) => (
                   <tr key={t.table} className="border-b border-border/40">
                     <td className="py-1.5 pr-4 font-mono text-foreground">{t.table}</td>
-                    <td className="py-1.5 pr-4 text-right font-mono">{fmtSize(t.total_size)}</td>
+                    <td className="py-1.5 pr-4 text-right font-mono">{fmtBytes(t.total_size)}</td>
                     <td className="py-1.5 text-right font-mono">
                       {t.row_estimate.toLocaleString("pt-BR")}
                     </td>
