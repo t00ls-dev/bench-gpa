@@ -72,13 +72,15 @@ bun run cli:import data/2026-07/2026-07-13.xlsx
 
 ### Automática (cron)
 
-Job executa a cada 1h via crontab:
+Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
 
 ```
-0 * * * * /root/.bun/bin/bun run cli:watch >> logs/cron.log 2>&1
+0 3 * * * bun run cli:purge  >> logs/purge.log 2>&1   # limpa agregados antigos
+0 7 * * * bun run cli:watch  >> logs/cron.log 2>&1     # importa planilhas novas
+0 19 * * * bun run cli:watch >> logs/cron.log 2>&1     # importa planilhas novas
 ```
 
-Escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da janela de 28 dias, e commita automaticamente.
+`cli:watch` escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da janela de 28 dias, e commita automaticamente.
 
 ## Arquitetura
 
