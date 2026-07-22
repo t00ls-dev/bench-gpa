@@ -114,6 +114,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Loja</Label>
           <MultiSelect
             label="Todas"
+            noun={{ one: "loja", other: "lojas" }}
             options={stores.map((s) => ({
               value: s.store_code,
               label: `${s.store_code} - ${s.store_name}`,
@@ -126,6 +127,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Departamento</Label>
           <MultiSelect
             label="Todos"
+            noun={{ one: "departamento", other: "departamentos" }}
             options={strList(opts?.deptos).map((s) => ({ value: s, label: s }))}
             value={value.deptos}
             onChange={setDeptos}
@@ -135,6 +137,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Seção</Label>
           <MultiSelect
             label="Todas"
+            noun={{ one: "seção", other: "seções" }}
             options={strList(opts?.secoes).map((s) => ({ value: s, label: s }))}
             value={value.secoes}
             onChange={setSecoes}
@@ -144,6 +147,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Grupo</Label>
           <MultiSelect
             label="Todos"
+            noun={{ one: "grupo", other: "grupos" }}
             options={strList(opts?.grupos).map((s) => ({ value: s, label: s }))}
             value={value.grupos}
             onChange={setGrupos}
@@ -153,6 +157,7 @@ export function FilterBar({ value, onChange }: Props) {
           <Label className="text-xs">Subgrupo</Label>
           <MultiSelect
             label="Todos"
+            noun={{ one: "subgrupo", other: "subgrupos" }}
             options={strList(opts?.subgrupos).map((s) => ({ value: s, label: s }))}
             value={value.subgrupos}
             onChange={(v) => setF({ subgrupos: v })}
