@@ -61,7 +61,7 @@ function toStagingRow(r: Record<string, unknown>, batchId: string, saleDate: str
   return STAGING_COLS.map((c) => {
     if (c === "sale_date") return saleDate;
     if (c === "batch_id") return batchId;
-    return (r as any)[c] ?? 0;
+    return r[c] ?? 0;
   });
 }
 

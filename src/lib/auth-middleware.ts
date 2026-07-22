@@ -10,6 +10,12 @@ export interface AuthContext {
   userEmail: string;
 }
 
+interface AuthUserRow {
+  id: string;
+  role: string;
+  is_active: boolean;
+}
+
 export const requireAuth = createMiddleware({ type: "function" }).server(async ({ next }) => {
   const JWT_SECRET = process.env.JWT_SECRET;
   if (!JWT_SECRET) throw new Error("JWT_SECRET not configured");
@@ -27,9 +33,10 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
       email: string;
     };
 
-    const [rows] = await db.query<any[]>("SELECT id, role, is_active FROM users WHERE id = ?", [
+    const [rowsRaw] = await db.query("SELECT id, role, is_active FROM users WHERE id = ?", [
       payload.userId,
     ]);
+    const rows = rowsRaw as unknown as AuthUserRow[];
     if (!rows.length || !rows[0].is_active) {
       throw new Error("Unauthorized: user inactive or not found");
     }

@@ -1,25 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+type Middleware = (opts: {
+  next: (ctx: unknown) => unknown;
+  context: unknown;
+  data: unknown;
+}) => unknown;
+type Handler = (opts: { data?: unknown; context: unknown }) => unknown;
+
 vi.mock("@tanstack/react-start", () => {
   const buildChain = () => {
-    const chain: any = { middlewares: [] };
-    chain.middleware = (mw: Function[]) => {
+    const chain: {
+      middlewares: Middleware[];
+      middleware?: unknown;
+      inputValidator?: unknown;
+      handler?: unknown;
+    } = {
+      middlewares: [],
+    };
+    chain.middleware = (mw: Middleware[]) => {
       chain.middlewares = mw;
       return {
         inputValidator: () => ({
-          handler: (fn: Function) => async (input: unknown) => {
+          handler: (fn: Handler) => async (input: unknown) => {
             let ctx = {};
             for (const m of chain.middlewares) {
-              const r = await m({ next: (c: unknown) => c, context: ctx, data: input });
+              const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
+                | { context?: unknown }
+                | undefined;
               if (r?.context) ctx = r.context;
             }
             return fn({ data: input, context: ctx });
           },
         }),
-        handler: (fn: Function) => async (input: unknown) => {
+        handler: (fn: Handler) => async (input: unknown) => {
           let ctx = {};
           for (const m of chain.middlewares) {
-            const r = await m({ next: (c: unknown) => c, context: ctx, data: input });
+            const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
+              | { context?: unknown }
+              | undefined;
             if (r?.context) ctx = r.context;
           }
           return fn({ data: input, context: ctx });
@@ -27,7 +45,7 @@ vi.mock("@tanstack/react-start", () => {
       };
     };
     chain.inputValidator = () => chain;
-    chain.handler = (fn: Function) => (input?: unknown) => {
+    chain.handler = (fn: Handler) => (input?: unknown) => {
       if (input !== undefined) return fn({ data: input, context: {} });
       return fn({ context: {} });
     };
@@ -37,15 +55,20 @@ vi.mock("@tanstack/react-start", () => {
 });
 
 vi.mock("./auth-middleware", () => ({
-  requireAuth: vi.fn(({ next, context }: any) =>
+  requireAuth: vi.fn(({ next, context }: { next: (ctx: unknown) => unknown; context: unknown }) =>
     next({
-      context: { ...context, userId: "admin-u1", userRole: "admin", userEmail: "admin@gpabr.com" },
+      context: {
+        ...(context as object),
+        userId: "admin-u1",
+        userRole: "admin",
+        userEmail: "admin@gpabr.com",
+      },
     }),
   ),
 }));
 
 vi.mock("./rate-limit.middleware", () => ({
-  requireRateLimit: vi.fn(({ next }: any) => next({})),
+  requireRateLimit: vi.fn(({ next }: { next: (ctx: unknown) => unknown }) => next({})),
 }));
 
 vi.mock("./admin-utils", () => ({

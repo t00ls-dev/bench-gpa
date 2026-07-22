@@ -4,11 +4,13 @@ vi.hoisted(() => {
   process.env.JWT_SECRET = "test-secret";
 });
 
+type Handler = (opts: { data?: unknown; context: unknown }) => unknown;
+
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
-    const chain: any = {};
+    const chain: { inputValidator?: unknown; handler?: unknown } = {};
     chain.inputValidator = () => chain;
-    chain.handler = (fn: Function) => (input?: unknown) => {
+    chain.handler = (fn: Handler) => (input?: unknown) => {
       if (input !== undefined) return fn({ data: input, context: {} });
       return fn({ context: {} });
     };
