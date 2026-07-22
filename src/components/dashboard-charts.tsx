@@ -93,8 +93,8 @@ export function DashboardCharts({
         cx={cx}
         cy={cy}
         r={4}
-        fill={isMax ? "#16a34a" : "#dc2626"}
-        stroke="white"
+        fill={isMax ? "var(--success)" : "var(--destructive)"}
+        stroke="var(--card)"
         strokeWidth={2}
       />
     );
