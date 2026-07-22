@@ -15,7 +15,7 @@ jobs:
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
 
-      - name: Debug - check SSH key fingerprint
+      - name: Debug - check SSH key
         shell: bash
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -23,8 +23,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          echo "=== KEY SIZE ==="
+          wc -c ~/.ssh/deploy_key
+          echo "=== FIRST LINE ==="
+          head -1 ~/.ssh/deploy_key
+          echo "=== LAST LINE ==="
+          tail -1 ~/.ssh/deploy_key
+          echo "=== FINGERPRINT ==="
           ssh-keygen -lf ~/.ssh/deploy_key
-          echo "---"
+          echo "=== TEST SSH ==="
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT }} -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo SSH_OK" 2>&1 || true
 
       - name: Upload .output via scp
