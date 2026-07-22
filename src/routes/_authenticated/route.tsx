@@ -24,6 +24,7 @@ import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGotoHotkey } from "@/lib/use-hotkey";
 import { MobileNav } from "@/components/mobile-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   SidebarProvider,
   Sidebar,
@@ -191,6 +192,7 @@ function AuthedLayout() {
               </Link>
               <div className="ml-auto flex items-center gap-3">
                 <span className="hidden md:block text-xs text-muted-foreground">{user.email}</span>
+                <ThemeToggle />
                 <Button
                   variant="ghost"
                   size="icon"
