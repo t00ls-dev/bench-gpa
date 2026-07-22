@@ -16,12 +16,14 @@ jobs:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
 
       - name: Upload .output via rsync
+        shell: bash
         run: |
           mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          cat > ~/.ssh/deploy_key << 'KEYEOF'
+${{ secrets.SSH_PRIVATE_KEY }}
+KEYEOF
           chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -lf ~/.ssh/deploy_key
-          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -v" \
+          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             .output/ \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html/.output.new/
 
