@@ -10,7 +10,7 @@ import { asArray, asRecord, num } from "./api-types";
 import docMeta from "@/generated/doc-meta.json";
 
 export const listUsers = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rows] = await db.query(
@@ -27,7 +27,7 @@ export const listUsers = createServerFn({ method: "GET" })
   });
 
 export const createUser = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) =>
     z
       .object({
@@ -50,7 +50,7 @@ export const createUser = createServerFn({ method: "POST" })
   });
 
 export const setUserRole = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) => z.object({ userId: UserIdSchema, role: RoleEnum }).parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -62,7 +62,7 @@ export const setUserRole = createServerFn({ method: "POST" })
   });
 
 export const setUserActive = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) =>
     z.object({ userId: UserIdSchema, isActive: z.boolean() }).parse(data),
   )
@@ -76,7 +76,7 @@ export const setUserActive = createServerFn({ method: "POST" })
   });
 
 export const resetPassword = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) =>
     z.object({ userId: UserIdSchema, password: PasswordSchema }).parse(data),
   )
@@ -107,7 +107,7 @@ async function fetchDistinctDates(table: TableName, column: string) {
 }
 
 export const diagnoseData = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const tables: TableName[] = [
@@ -143,7 +143,7 @@ export interface DbHealthData {
 }
 
 export const purgeOldAggs = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rows] = await db.query("CALL purge_old_aggs(?)", [180]);
@@ -151,7 +151,7 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   });
 
 export const dbHealthCheck = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rs] = await db.query("CALL db_health_check()");
@@ -194,7 +194,7 @@ const docModules = import.meta.glob("/docs/**/*.md", {
 }) as Record<string, string>;
 
 export const listDocs = createServerFn({ method: "GET" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const entries: DocEntry[] = [];
@@ -216,7 +216,7 @@ export const listDocs = createServerFn({ method: "GET" })
   });
 
 export const getDocContent = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit])
+  .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) => SingleSlugSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
