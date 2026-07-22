@@ -32,11 +32,29 @@ function extractArg(args: string[], flag: string): string | undefined {
 }
 
 const STAGING_COLS = [
-  "sale_date", "batch_id", "store_code", "store_name",
-  "prod_code", "prod_name", "depto", "secao", "grupo", "subgrupo",
-  "val_vda", "qty_vda", "val_cus", "qty_cus",
-  "val_dev", "qty_dev", "val_vda_liq", "qty_vda_liq",
-  "val_cus_liq", "qty_cus_liq", "val_sld", "qty_sld", "per_mrg",
+  "sale_date",
+  "batch_id",
+  "store_code",
+  "store_name",
+  "prod_code",
+  "prod_name",
+  "depto",
+  "secao",
+  "grupo",
+  "subgrupo",
+  "val_vda",
+  "qty_vda",
+  "val_cus",
+  "qty_cus",
+  "val_dev",
+  "qty_dev",
+  "val_vda_liq",
+  "qty_vda_liq",
+  "val_cus_liq",
+  "qty_cus_liq",
+  "val_sld",
+  "qty_sld",
+  "per_mrg",
 ];
 
 function toStagingRow(r: Record<string, unknown>, batchId: string, saleDate: string) {
