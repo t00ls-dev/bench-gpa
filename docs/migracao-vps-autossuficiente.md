@@ -1042,4 +1042,4 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] Login com Turnstile funcional
 - [ ] Dashboard com dados
 - [ ] CSP nonce funcionando (verificar console)
-- [ ] Cron jobs configurados (import horário + code review 6h)
+- [ ] Cron jobs configurados (purge 03h, import 07h e 19h)
