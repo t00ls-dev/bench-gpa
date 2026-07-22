@@ -151,7 +151,7 @@ export function ProductCharts({
                       entry.avg === 0
                         ? "var(--muted-foreground)"
                         : entry.avg === maxAvg
-                          ? "#16a34a"
+                          ? "var(--success)"
                           : "var(--chart-2)"
                     }
                   />
