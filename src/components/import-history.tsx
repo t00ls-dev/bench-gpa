@@ -1,14 +1,21 @@
 import { fmtBRShort, fmtInt, fmtDT } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-interface ImportRecord {
+export interface ImportRecord {
   sale_date: string;
   row_count: number;
   imported_at: string;
 }
 
-export function ImportHistory({ dates }: { dates: ImportRecord[] | undefined }) {
+export function ImportHistory({
+  dates,
+  className = "mt-6",
+}: {
+  dates: ImportRecord[] | undefined;
+  className?: string;
+}) {
   return (
-    <div className="mt-6 kpi-card">
+    <div className={cn("kpi-card", className)}>
       <h2 className="font-display text-base font-semibold mb-3">Histórico de importações</h2>
       <div className="max-h-96 overflow-y-auto">
         <table className="w-full text-sm">
