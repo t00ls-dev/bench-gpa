@@ -85,11 +85,11 @@ Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
 ## Arquitetura
 
 - **Auth**: JWT próprio (bcrypt + jsonwebtoken) + Turnstile CAPTCHA (fail-closed). Rate limiting: 5/min IP (tier Auth).
-- **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers: SSR (120/min), API (120/min), Upload (30/min), Auth (5/min).
+- **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min).
 - **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard (30s), hierarquia área (5min), datas importadas (1min), role (5min/user).
-- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), Turnstile, rate limit em todas as 20 server functions (`requireRateLimit`).
-- **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas).
-- **Retenção**: 28 dias corridos, exatamente 4 ocorrências por dia da semana. Purga automática pós-import.
+- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), Turnstile, rate limit em todas as 24 server functions (`requireRateLimit`).
+- **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Janela de import automático: 28 dias.
+- **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h) — não confundir com a janela de 28 dias do import automático.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
 - **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área).
 - **Deploy**: Hestia VPS (`sv1.t00ls.dev`, `gpa.t00ls.dev`). Docs em `docs/`.
