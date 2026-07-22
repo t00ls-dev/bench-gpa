@@ -39,11 +39,7 @@ const PRESETS: { key: PresetKey; label: string }[] = [
   { key: "custom", label: "Personalizado" },
 ];
 
-function computePreset(
-  key: PresetKey,
-  refIso?: string,
-  availableDates?: string[],
-): { from: string; to: string } | null {
+function computePreset(key: PresetKey, refIso?: string): { from: string; to: string } | null {
   const ref = refIso ? new Date(refIso + "T00:00:00") : new Date();
   switch (key) {
     case "yesterday": {
@@ -54,10 +50,8 @@ function computePreset(
       return { from: iso(shift(ref, -6)), to: iso(ref) };
     case "last14":
       return { from: iso(shift(ref, -13)), to: iso(ref) };
-    case "last28": {
-      if (!availableDates?.length) return null;
-      return { from: availableDates[0], to: availableDates[availableDates.length - 1] };
-    }
+    case "last28":
+      return { from: iso(shift(ref, -27)), to: iso(ref) };
     default:
       return null;
   }
@@ -90,7 +84,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
   }, [from, to]);
 
   const apply = (key: PresetKey) => {
-    const r = computePreset(key, reference, availableDates);
+    const r = computePreset(key, reference);
     if (r) {
       const clamped = clampRange(r);
       if (clamped) {
