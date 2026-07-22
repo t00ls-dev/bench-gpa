@@ -13,9 +13,9 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **DB:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md`)
 - **Auth:** JWT manual com bcrypt + jsonwebtoken (com Turnstile CAPTCHA)
 - **Deploy:** Hestia VPS (`sv1.t00ls.dev`, domínio `gpa.t00ls.dev`), Nitro v3 preset `node-server`
-- **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 20 server functions
+- **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 24 server functions
 - **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
-- **Crons:** `scripts/import-watch.ts` (horário)
+- **Crons:** `cli:purge` (03h), `cli:watch` (07h e 19h) — ver `scripts/setup-crons.sh`
 - **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
 - **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
@@ -52,7 +52,7 @@ Ao iniciar, SEMPRE:
 
 - Modificar variáveis de ambiente ou secrets
 - Deletar branches remotas
-- Alterar configuração de deploy/infra (Vercel, DNS, etc.)
+- Alterar configuração de deploy/infra (workflow do GitHub Actions, VPS Hestia, DNS, nginx, PM2, etc.)
 - Modificar dados de produção (DB, storage)
 - Commitar sem autorização explícita
 - Refatorar arquitetura core (mudar framework, DB, auth provider)
@@ -187,6 +187,8 @@ Normalização, desnormalização quando útil, índices, constraints, triggers,
 - Teste fluxos de autenticação (login, logout, sessão expirada)
 - Teste de build: `bun run build` antes de finalizar qualquer sessão
 - **Bun obrigatório:** todas as scripts usam `bun run`, não `node` ou `npm run`
+- Cobertura: `bun run coverage:summary` gera `docs/coverage-summary.md` (thresholds em `vitest.config.ts`)
+- Para rodar a aplicação de verdade (dev server + MariaDB + login real, com screenshot) ver `.claude/skills/run/SKILL.md`
 
 ---
 
@@ -194,7 +196,8 @@ Normalização, desnormalização quando útil, índices, constraints, triggers,
 
 - Commits que alteram DB schema ou auth exigem migração documentada
 - Prefira múltiplos commits pequenos e atômicos a um grande
-- Se uma mudança quebrar build, o deploy anterior da Vercel continua no ar
+- CI/CD (`.github/workflows/ci.yml`) roda lint → typecheck → test → build antes de liberar o deploy — o gate é a própria CI, não um job separado
+- Deploy é atômico: o `.output` novo troca de lugar com o anterior (`.output.old`) via SSH no VPS; se o health-check pós-restart do PM2 falhar, o workflow reverte sozinho para o build anterior
 - Para mudanças arriscadas, sugira branch + PR
 
 ---
