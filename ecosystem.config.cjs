@@ -13,7 +13,10 @@ function loadEnv() {
       if (sep === -1) continue;
       const key = trimmed.slice(0, sep).trim();
       let val = trimmed.slice(sep + 1).trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
         val = val.slice(1, -1);
       }
       if (key) env[key] = val;

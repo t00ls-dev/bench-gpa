@@ -226,8 +226,8 @@ export default function UploadPage() {
 
   const [tab, setTab] = useState<"upload" | "calendario">("upload");
   const totalPendingLines = pendingQueue.reduce((acc, p) => acc + p.parsed.sales.length, 0);
-  const hasExistingData = pendingQueue.some(p =>
-    imported.data?.some(d => d.sale_date === p.date)
+  const hasExistingData = pendingQueue.some((p) =>
+    imported.data?.some((d) => d.sale_date === p.date),
   );
 
   return (
@@ -356,7 +356,9 @@ export default function UploadPage() {
           )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImport}>{hasExistingData ? "Substituir" : "Importar"}</AlertDialogAction>
+            <AlertDialogAction onClick={confirmImport}>
+              {hasExistingData ? "Substituir" : "Importar"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

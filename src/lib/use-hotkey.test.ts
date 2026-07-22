@@ -65,10 +65,9 @@ describe("useHotkey", () => {
 
   it("calls handler when enabled toggles back on", () => {
     const { handler } = setup();
-    const { rerender } = renderHook(
-      ({ enabled }) => useHotkey("Escape", handler, enabled),
-      { initialProps: { enabled: false } },
-    );
+    const { rerender } = renderHook(({ enabled }) => useHotkey("Escape", handler, enabled), {
+      initialProps: { enabled: false },
+    });
     keydown("Escape");
     expect(handler).not.toHaveBeenCalled();
 

@@ -16,23 +16,20 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
-    const [rs] = await db.query(
-      "CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [
-        data.dateFrom,
-        data.dateTo,
-        JSON.stringify(data.stores ?? []),
-        JSON.stringify(data.deptos ?? []),
-        JSON.stringify(data.secoes ?? []),
-        JSON.stringify(data.grupos ?? []),
-        JSON.stringify(data.subgrupos ?? []),
-        data.page ?? null,
-        data.pageSize,
-        data.search,
-         data.sortBy === "daysSince" ? "val" : data.sortBy,
-         data.sortDir,
-      ],
-    );
+    const [rs] = await db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+      data.dateFrom,
+      data.dateTo,
+      JSON.stringify(data.stores ?? []),
+      JSON.stringify(data.deptos ?? []),
+      JSON.stringify(data.secoes ?? []),
+      JSON.stringify(data.grupos ?? []),
+      JSON.stringify(data.subgrupos ?? []),
+      data.page ?? null,
+      data.pageSize,
+      data.search,
+      data.sortBy === "daysSince" ? "val" : data.sortBy,
+      data.sortDir,
+    ]);
     const [kpiRows, totalCountRows, byDate, products] = rs as any[];
     const kpi = (kpiRows as any[])[0] ?? {};
     const totalProducts = Number((totalCountRows as any[])[0]?.total_products ?? 0);
@@ -41,8 +38,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       plusTotal: num(kpi.plus_total),
       plusWithSale: num(kpi.plus_with_sale),
       plusWithoutSale: num(kpi.plus_without_sale),
-      avgPerPlu:
-        num(kpi.plus_with_sale) > 0 ? num(kpi.total) / num(kpi.plus_with_sale) : 0,
+      avgPerPlu: num(kpi.plus_with_sale) > 0 ? num(kpi.total) / num(kpi.plus_with_sale) : 0,
       products: (products ?? []).map((p: any) => ({
         prod_code: str(p.prod_code),
         prod_name: str(p.prod_name),
@@ -72,9 +68,7 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
     return cache.wrap(
       "area_filter_hierarchy",
       async () => {
-        const [rs2] = await db.query(
-          "CALL area_filter_hierarchy()",
-        );
+        const [rs2] = await db.query("CALL area_filter_hierarchy()");
         const [latestDateRows, hierarchy, availableDates] = rs2 as any[];
         return {
           latestDate: strOrNull((latestDateRows as any[])[0]?.latest_date ?? null),
