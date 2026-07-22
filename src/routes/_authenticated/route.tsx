@@ -184,7 +184,7 @@ function AuthedLayout() {
             </div>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="overflow-hidden">
+        <SidebarInset>
           <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
             <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-8">
               <Link
@@ -201,9 +201,9 @@ function AuthedLayout() {
           </header>
           <main
             id="main-content"
-            className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-6 md:px-8 md:py-10 pb-20 md:pb-10 overflow-y-auto"
+            className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-10 pb-20 md:pb-10"
           >
-            <div className="transition-opacity duration-150 flex-1">
+            <div className="transition-opacity duration-150">
               <Outlet />
             </div>
             <AppFooter />
