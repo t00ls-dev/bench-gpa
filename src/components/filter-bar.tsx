@@ -56,11 +56,16 @@ export function FilterBar({ value, onChange }: Props) {
     gcTime: 30 * 60_000,
   });
 
-  // Seed default date range to the full available window once
+  // Seed default date range to the last 7 available dates, not the full
+  // history. Aggregating the entire detail table (~3M rows once all dates are
+  // imported) on every dashboard load took ~20s; the last-7 window keeps it
+  // under 1s. The picker still allows selecting any range. Matches the default
+  // window already used by area.page.
   useEffect(() => {
     const avail = opts?.availableDates ?? [];
     if (avail.length > 0 && !value.dateFrom && !value.dateTo) {
-      onChange({ ...value, dateFrom: avail[0], dateTo: avail[avail.length - 1] });
+      const win = avail.slice(-7);
+      onChange({ ...value, dateFrom: win[0], dateTo: avail[avail.length - 1] });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.availableDates]);
