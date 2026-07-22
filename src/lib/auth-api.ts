@@ -9,7 +9,7 @@ import { authLimiter, getClientIp } from "./rate-limit";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const SESSION_COOKIE = "session";
-const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
+const JWT_EXPIRY_SECONDS = Number(process.env.JWT_EXPIRY) || 7 * 24 * 60 * 60;
 
 interface UserRow {
   id: string;
@@ -24,7 +24,7 @@ function setSessionCookie(token: string): void {
   setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
     path: "/",
-    maxAge: SESSION_MAX_AGE,
+    maxAge: JWT_EXPIRY_SECONDS,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
@@ -80,7 +80,7 @@ export const login = createServerFn({ method: "POST" })
       throw new Error("E-mail ou senha inválidos.");
     }
     const token = jwt.sign({ userId: user.id, role: user.role, email: user.email }, JWT_SECRET, {
-      expiresIn: "7d",
+      expiresIn: JWT_EXPIRY_SECONDS,
     });
     setSessionCookie(token);
     return { ok: true } as const;
