@@ -107,15 +107,12 @@ function ProdutoPage() {
   const refArticle =
     refWeekdayIdx != null ? (WEEKDAY_IS_MASC[refWeekdayIdx] ? "Últimos" : "Últimas") : "Últimas";
 
-  const sameWeekdayAll = useMemo<SeriesPoint[]>(() => {
-    if (!analysisData?.evolution || refWeekdayIdx == null) return [];
-    return (analysisData.evolution as SeriesPoint[])
-      .filter((d) => new Date(d.date + "T00:00:00Z").getUTCDay() === refWeekdayIdx)
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [analysisData?.evolution, refWeekdayIdx]);
+  // As últimas 4 datas do mesmo dia da semana anteriores à referência — vêm da
+  // proc (result set lastFourSameWeekday), já excluindo a data de referência.
+  const sameWeekdayDates = (analysisData?.lastFourSameWeekday ?? []) as SeriesPoint[];
 
-  const avgSame = sameWeekdayAll.length
-    ? sameWeekdayAll.reduce((a, b) => a + b.val, 0) / sameWeekdayAll.length
+  const avgSame = sameWeekdayDates.length
+    ? sameWeekdayDates.reduce((a, b) => a + b.val, 0) / sameWeekdayDates.length
     : 0;
   const avgDaily = useMemo(() => {
     const ev = (analysisData?.evolution as SeriesPoint[] | undefined) ?? [];
@@ -346,7 +343,7 @@ function ProdutoPage() {
           refWeekdayFull={refWeekdayFull}
           refWeekdayPlural={refWeekdayPlural}
           refArticle={refArticle}
-          sameWeekdayAll={sameWeekdayAll}
+          sameWeekdayDates={sameWeekdayDates}
           hideStoreComp={storeCode !== "__all__"}
         />
       )}
