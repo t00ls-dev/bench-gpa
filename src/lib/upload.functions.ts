@@ -4,7 +4,7 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
-import { str } from "./api-types";
+import { asArray, asRecord, str, num } from "./api-types";
 import { SaleRowSchema } from "./schemas";
 
 export const beginImport = createServerFn({ method: "POST" })
@@ -88,7 +88,9 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     ];
 
     const placeholders = rows.map(() => `(${columns.map(() => "?").join(", ")})`).join(", ");
-    const values = rows.flatMap((r) => columns.map((c) => (r as any)[c] ?? null));
+    const values = rows.flatMap((r) =>
+      columns.map((c) => (r as Record<string, unknown>)[c] ?? null),
+    );
 
     await db.query(
       `INSERT INTO staging_sales (${columns.join(", ")}) VALUES ${placeholders}`,
@@ -106,12 +108,15 @@ export const getImportedDates = createServerFn({ method: "GET" })
       "imported_dates",
       async () => {
         const [rows] = await db.query("CALL imported_dates()");
-        const data = (rows as any[])[0] ?? [];
-        return data.map((r: any) => ({
-          sale_date: str(r.sale_date),
-          row_count: Number(r.row_count),
-          imported_at: str(r.imported_at),
-        })) as { sale_date: string; row_count: number; imported_at: string }[];
+        const data = asArray(asArray(rows)[0]);
+        return data.map((r) => {
+          const rec = asRecord(r);
+          return {
+            sale_date: str(rec.sale_date),
+            row_count: num(rec.row_count),
+            imported_at: str(rec.imported_at),
+          };
+        });
       },
       60_000,
     );

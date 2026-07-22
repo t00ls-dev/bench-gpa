@@ -11,6 +11,15 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 
+interface UserRow {
+  id: string;
+  email: string;
+  name: string;
+  password: string;
+  role: string;
+  is_active: boolean;
+}
+
 function setSessionCookie(token: string): void {
   setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -54,10 +63,11 @@ export const login = createServerFn({ method: "POST" })
       }
     }
 
-    const [rows] = await db.query<any[]>(
+    const [rowsRaw] = await db.query(
       "SELECT id, email, name, password, role, is_active FROM users WHERE email = ?",
       [data.email],
     );
+    const rows = rowsRaw as unknown as UserRow[];
     if (!rows.length) {
       throw new Error("E-mail ou senha inválidos.");
     }
@@ -87,10 +97,11 @@ export const getMe = createServerFn({ method: "GET" }).handler(async () => {
       role: string;
       email: string;
     };
-    const [rows] = await db.query<any[]>(
+    const [rowsRaw] = await db.query(
       "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
       [payload.userId],
     );
+    const rows = rowsRaw as unknown as UserRow[];
     if (!rows.length || !rows[0].is_active) {
       return null;
     }

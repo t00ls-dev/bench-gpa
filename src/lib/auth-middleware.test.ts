@@ -4,7 +4,7 @@ process.env.JWT_SECRET = "test-secret";
 
 vi.mock("@tanstack/react-start", () => ({
   createMiddleware: () => ({
-    server: (fn: Function) => fn,
+    server: (fn: (opts: { next: (ctx: unknown) => unknown }) => unknown) => fn,
   }),
 }));
 

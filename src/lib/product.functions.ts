@@ -3,7 +3,16 @@ import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { z } from "zod";
 import db from "./db";
-import { ProductAnalysisResult, str, strOrNull, num } from "./api-types";
+import {
+  ProductAnalysisResult,
+  asArray,
+  asRecord,
+  str,
+  strOrNull,
+  num,
+  parseCodeNameVal,
+  parseDateVal,
+} from "./api-types";
 import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
 
 export const searchProducts = createServerFn({ method: "POST" })
@@ -26,7 +35,7 @@ export const getProductByCode = createServerFn({ method: "POST" })
       "SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_code = ? LIMIT 1",
       [data.prodCode.trim()],
     );
-    return ((rows as any[])[0] ?? null) as { prod_code: string; prod_name: string } | null;
+    return (asArray(rows)[0] ?? null) as { prod_code: string; prod_name: string } | null;
   });
 
 export const getProductAnalysis = createServerFn({ method: "POST" })
@@ -41,13 +50,15 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }): Promise<ProductAnalysisResult> => {
-    const [rs] = (await db.query("CALL product_analysis(?, ?, ?)", [
+    const [rs] = await db.query("CALL product_analysis(?, ?, ?)", [
       data.prodCode,
       data.storeCode || null,
       data.referenceDate || null,
-    ])) as any[];
-    const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] = rs;
-    const productRow = (productRows as any[])[0] ?? null;
+    ]);
+    const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] =
+      rs as unknown[];
+    const productRowRaw = asArray(productRows)[0];
+    const productRow = productRowRaw ? asRecord(productRowRaw) : null;
     return {
       product: productRow
         ? {
@@ -59,24 +70,11 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
             subgrupo: strOrNull(productRow.subgrupo),
           }
         : null,
-      refDate: strOrNull((refValueRows as any[])[0]?.ref_date ?? null),
-      refValue: num((refValueRows as any[])[0]?.ref_value ?? 0),
-      byStore: (byStore ?? []).map((r: any) => ({
-        code: r.code,
-        name: r.name,
-        val: Number(r.val),
-      })),
-      evolution: (evolution ?? []).map((d: any) => ({
-        date: str(d.date),
-        val: num(d.val),
-      })),
-      lastFourSameWeekday: (lastFourSameWeekday ?? []).map((d: any) => ({
-        date: str(d.date),
-        val: num(d.val),
-      })),
-      lastFourAll: (lastFourAll ?? []).map((d: any) => ({
-        date: str(d.date),
-        val: num(d.val),
-      })),
+      refDate: strOrNull(asRecord(asArray(refValueRows)[0]).ref_date ?? null),
+      refValue: num(asRecord(asArray(refValueRows)[0]).ref_value),
+      byStore: parseCodeNameVal(byStore),
+      evolution: parseDateVal(evolution),
+      lastFourSameWeekday: parseDateVal(lastFourSameWeekday),
+      lastFourAll: parseDateVal(lastFourAll),
     };
   });
