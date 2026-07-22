@@ -80,7 +80,7 @@ describe("login", () => {
     expect(jwt.sign).toHaveBeenCalledWith(
       { userId: "u1", role: "admin", email: "test@gpabr.com" },
       expect.any(String),
-      { expiresIn: "7d" },
+      { expiresIn: 604800 },
     );
     expect(setCookie).toHaveBeenCalledWith(
       "session",
