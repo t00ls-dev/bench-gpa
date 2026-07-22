@@ -12,8 +12,10 @@ import {
   BookText,
   LogOut,
   Menu,
+  Loader2,
 } from "lucide-react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 
 const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +37,7 @@ interface Props {
 
 export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
   const loc = useLocation();
+  const pendingPath = useNavPendingPath();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const isActive = (to: string) => {
@@ -56,7 +59,11 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
                 isActive(tab.to) ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <tab.icon className="size-5" />
+              {isNavPendingTo(pendingPath, tab.to) ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                <tab.icon className="size-5" />
+              )}
               <span>{tab.label}</span>
             </Link>
           ))}
@@ -100,7 +107,11 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
                         : "text-foreground hover:bg-muted"
                     }`}
                   >
-                    <item.icon className="size-5 shrink-0" />
+                    {isNavPendingTo(pendingPath, item.to) ? (
+                      <Loader2 className="size-5 shrink-0 animate-spin" />
+                    ) : (
+                      <item.icon className="size-5 shrink-0" />
+                    )}
                     {item.label}
                   </Link>
                 ))}

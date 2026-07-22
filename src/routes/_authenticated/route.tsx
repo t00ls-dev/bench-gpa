@@ -17,7 +17,9 @@ import {
   Shield,
   BookText,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
+import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
@@ -76,6 +78,7 @@ interface NavItem {
 function NavContent({ nav }: { nav: readonly NavItem[] }) {
   const { setOpenMobile } = useSidebar();
   const loc = useLocation();
+  const pendingPath = useNavPendingPath();
 
   return (
     <SidebarGroup>
@@ -87,11 +90,12 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
               : n.exact
                 ? loc.pathname === n.to || loc.pathname === n.to + "/"
                 : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
+          const isNavigating = isNavPendingTo(pendingPath, n.to);
           return (
             <SidebarMenuItem key={n.to}>
               <SidebarMenuButton asChild isActive={isActive}>
                 <Link to={n.to} preload="intent" onClick={() => setOpenMobile(false)}>
-                  <n.icon />
+                  {isNavigating ? <Loader2 className="animate-spin" /> : <n.icon />}
                   <span>{n.label}</span>
                 </Link>
               </SidebarMenuButton>
