@@ -65,4 +65,6 @@ const lines = [
 
 const outPath = join(root, "docs/coverage-summary.md");
 writeFileSync(outPath, lines.join("\n"));
-console.error(`✅ docs/coverage-summary.md generated (${fileRows.length} files, total lines: ${total.lines.pct.toFixed(1)}%)`);
+console.error(
+  `✅ docs/coverage-summary.md generated (${fileRows.length} files, total lines: ${total.lines.pct.toFixed(1)}%)`,
+);
