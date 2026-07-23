@@ -1,16 +1,25 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listUsers, diagnoseData, dbHealthCheck } from "@/lib/admin.functions";
+import {
+  listUsers,
+  diagnoseData,
+  dbHealthCheck,
+  getHeartbeats,
+  getAuditLog,
+} from "@/lib/admin.functions";
 import { AdminUserManagement } from "@/components/admin-user-management";
 import { DataCountSection, DbHealthSection } from "@/components/admin-system-panel";
-import { Users, Server, Shield, Database, HardDrive } from "lucide-react";
+import { HeartbeatSection, AuditLogSection } from "@/components/admin-audit-panel";
+import { Users, Server, Shield, Database, HardDrive, ScrollText, HeartPulse } from "lucide-react";
 import { Route } from "./admin.index";
 
 export default function AdminPage() {
   const list = useServerFn(listUsers);
   const diag = useServerFn(diagnoseData);
   const health = useServerFn(dbHealthCheck);
+  const heartbeats = useServerFn(getHeartbeats);
+  const audit = useServerFn(getAuditLog);
   const [err, setErr] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -23,7 +32,7 @@ export default function AdminPage() {
     if (error) setErr((error as Error).message);
   }, [error]);
 
-  const [tab, setTab] = useState<"usuarios" | "sistema">("usuarios");
+  const [tab, setTab] = useState<"usuarios" | "sistema" | "auditoria">("usuarios");
 
   return (
     <div>
@@ -58,6 +67,16 @@ export default function AdminPage() {
         >
           <Server className="size-4" /> Sistema
         </button>
+        <button
+          onClick={() => setTab("auditoria")}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            tab === "auditoria"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <ScrollText className="size-4" /> Auditoria
+        </button>
       </div>
 
       {tab === "usuarios" && <AdminUserManagement data={data} isLoading={isLoading} />}
@@ -77,6 +96,23 @@ export default function AdminPage() {
               <HardDrive className="size-5 text-primary" /> Saúde do Banco
             </h2>
             <DbHealthSection healthFn={health} />
+          </div>
+        </div>
+      )}
+
+      {tab === "auditoria" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
+              <HeartPulse className="size-5 text-primary" /> Heartbeat das crons
+            </h2>
+            <HeartbeatSection heartbeatsFn={() => heartbeats()} />
+          </div>
+          <div>
+            <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
+              <ScrollText className="size-5 text-primary" /> Trilha de auditoria
+            </h2>
+            <AuditLogSection auditFn={(p) => audit({ data: p })} />
           </div>
         </div>
       )}

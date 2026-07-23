@@ -6,6 +6,7 @@ import db from "./db";
 import { z } from "zod";
 import { verifyTurnstile } from "./turnstile";
 import { authLimiter, getClientIp } from "./rate-limit";
+import { recordAudit } from "./audit";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const SESSION_COOKIE = "session";
@@ -51,14 +52,26 @@ export const login = createServerFn({ method: "POST" })
     const request = getRequest();
     const ip = getClientIp(request);
 
+    const auditFail = (reason: string, actorId?: string) =>
+      recordAudit({
+        action: "auth.login_failed",
+        actorId: actorId ?? null,
+        actorEmail: data.email,
+        targetType: "session",
+        detail: `motivo: ${reason}`,
+        ip,
+      });
+
     const rl = authLimiter.check(ip);
     if (!rl.allowed) {
+      await auditFail("rate_limit");
       throw new Error("Muitas tentativas de login. Aguarde um minuto.");
     }
 
     if (data.turnstileToken) {
       const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
       if (!turnstileOk) {
+        await auditFail("turnstile");
         throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
       }
     }
@@ -69,20 +82,30 @@ export const login = createServerFn({ method: "POST" })
     );
     const rows = rowsRaw as unknown as UserRow[];
     if (!rows.length) {
+      await auditFail("sem_usuario");
       throw new Error("E-mail ou senha inválidos.");
     }
     const user = rows[0];
     if (!user.is_active) {
+      await auditFail("inativo", user.id);
       throw new Error("Usuário inativo. Procure o administrador.");
     }
     const valid = await bcrypt.compare(data.password, user.password);
     if (!valid) {
+      await auditFail("senha_errada", user.id);
       throw new Error("E-mail ou senha inválidos.");
     }
     const token = jwt.sign({ userId: user.id, role: user.role, email: user.email }, JWT_SECRET, {
       expiresIn: JWT_EXPIRY_SECONDS,
     });
     setSessionCookie(token);
+    await recordAudit({
+      action: "auth.login",
+      actorId: user.id,
+      actorEmail: user.email,
+      targetType: "session",
+      ip,
+    });
     return { ok: true } as const;
   });
 
@@ -112,6 +135,20 @@ export const getMe = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const logout = createServerFn({ method: "POST" }).handler(async () => {
+  const token = getCookie(SESSION_COOKIE);
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+      await recordAudit({
+        action: "auth.logout",
+        actorId: payload.userId,
+        actorEmail: payload.email,
+        targetType: "session",
+      });
+    } catch {
+      // Token inválido/expirado — nada a auditar.
+    }
+  }
   clearSessionCookie();
   return { ok: true } as const;
 });

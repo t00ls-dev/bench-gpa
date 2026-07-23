@@ -141,6 +141,35 @@ CREATE TABLE IF NOT EXISTS filter_hierarchy (
   INDEX idx_filter_subgrupo (subgrupo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Trilha de auditoria: ações sensíveis de auth e admin.
+-- actor_email é desnormalizado de propósito — o registro precisa sobreviver
+-- mesmo se o usuário for removido depois.
+CREATE TABLE IF NOT EXISTS audit_log (
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actor_id    VARCHAR(36),
+  actor_email VARCHAR(255),
+  action      VARCHAR(60) NOT NULL,
+  target_type VARCHAR(40),
+  target_id   VARCHAR(255),
+  detail      VARCHAR(500),
+  ip          VARCHAR(45),
+  INDEX idx_audit_created (created_at),
+  INDEX idx_audit_actor (actor_id),
+  INDEX idx_audit_action (action)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Heartbeat das crons: cada job faz upsert do seu último run para o
+-- painel admin mostrar se está rodando no prazo.
+CREATE TABLE IF NOT EXISTS cron_heartbeat (
+  job              VARCHAR(40) PRIMARY KEY,
+  last_run_at      TIMESTAMP NULL DEFAULT NULL,
+  last_status      ENUM('ok','fail'),
+  last_detail      VARCHAR(500),
+  last_duration_ms INT,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =============================================
 -- STORED PROCEDURES
 -- =============================================
