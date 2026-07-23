@@ -80,6 +80,21 @@ CREATE TABLE IF NOT EXISTS staging_sales (
   INDEX idx_staging_sale_date (sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ATENÇÃO às colunas de quantidade/custo/devolução/margem daqui e das demais
+-- tabelas de venda: elas são SEMPRE ZERO, e isso não é bug.
+--
+-- Verificado em 2026-07-23 nas 68 planilhas de data/ (maio a julho/2026): o
+-- export do GPA tem 24 colunas e uma única medida. O cabeçalho é sempre
+--
+--   NOM_DEPTO | NOM_SECAO | NOM_GRUPO | NOM_SUBGRUPO | NOM_PROD | VAL_VDA ×N lojas | Total
+--
+-- Não há QTD, custo, devolução nem margem em nenhum arquivo. Logo qty_vda,
+-- val_cus, val_dev, val_sld e per_mrg nunca recebem valor — o `ELSE 0` do
+-- per_mrg em finalize_import, por exemplo, é o único ramo alcançável.
+--
+-- Mantidas de propósito: são baratas (DEFAULT 0, sem índice) e o dia em que o
+-- export passar a trazer as medidas elas já estão no lugar. Antes de "corrigir"
+-- algo aqui, confirme primeiro que o export mudou.
 CREATE TABLE IF NOT EXISTS sales_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
