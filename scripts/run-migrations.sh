@@ -40,9 +40,12 @@ set +a
 : "${DB_USER:?DB_USER ausente no .env}"
 : "${DB_PASS:?DB_PASS ausente no .env}"
 
-# MYSQL_PWD evita expor a senha na lista de processos e o warning do client.
+# MYSQL_PWD mantém a senha fora da lista de processos (ps).
 export MYSQL_PWD="$DB_PASS"
-MYSQL=(mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" --user="$DB_USER" "$DB_NAME")
+# Cliente `mariadb` — `mysql` é um alias deprecado no MariaDB 11.4. `--skip-ssl`
+# porque a conexão é local (localhost/socket Unix), onde TLS não agrega; sem essa
+# flag o client polui o log de deploy com "insecure passwordless login".
+MYSQL=(mariadb --skip-ssl --host="$DB_HOST" --port="${DB_PORT:-3306}" --user="$DB_USER" "$DB_NAME")
 
 echo "==> [1/3] Baseline idempotente (tabelas + procedures)"
 "${MYSQL[@]}" < "$DIR/migrate-schema.sql"
