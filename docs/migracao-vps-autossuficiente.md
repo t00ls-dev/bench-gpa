@@ -348,12 +348,18 @@ export default pool;
 
 ### .env
 
+> **Banco de produção: `admin_gpa`** — gerenciado pelo Hestia (usuário `admin`),
+> por isso entra no dump diário para o Backblaze. Um banco `bench_gpa` criado
+> manualmente existiu no início, mas ficava **fora** dos backups do Hestia; os
+> dados foram migrados para `admin_gpa` e o `bench_gpa` removido. Use sempre
+> `admin_gpa` no `.env` e no `ecosystem.config.cjs`.
+
 ```env
 # Banco
 DB_HOST="localhost"
 DB_PORT="3306"
-DB_NAME="bench_gpa"
-DB_USER="bench_gpa"
+DB_NAME="admin_gpa"
+DB_USER="admin_gpa"
 DB_PASS="<senha>"
 
 # JWT
@@ -822,8 +828,8 @@ bun install
 cat > .env << 'ENVEOF'
 DB_HOST="localhost"
 DB_PORT="3306"
-DB_NAME="bench_gpa"
-DB_USER="bench_gpa"
+DB_NAME="admin_gpa"
+DB_USER="admin_gpa"
 DB_PASS="<senha_segura>"
 JWT_SECRET="<base64_random_64_chars>"
 JWT_EXPIRY="604800"
@@ -855,9 +861,9 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3000,
         DB_HOST: "localhost",
-        DB_USER: "bench_gpa",
+        DB_USER: "admin_gpa",
         DB_PASS: "senha_segura",
-        DB_NAME: "bench_gpa",
+        DB_NAME: "admin_gpa",
         JWT_SECRET: "segredo_aqui",
       },
       max_memory_restart: "512M",
@@ -917,8 +923,8 @@ sed \
 ### 17.3 Importar
 
 ```bash
-mysql -u bench_gpa -p bench_gpa < scripts/migrate-schema.sql
-mysql -u bench_gpa -p bench_gpa < mariadb_ready.sql
+mysql -u admin_gpa -p admin_gpa < scripts/migrate-schema.sql
+mysql -u admin_gpa -p admin_gpa < mariadb_ready.sql
 ```
 
 ### 17.4 Criar admin inicial
@@ -927,7 +933,7 @@ Criar senha bcrypt localmente e inserir:
 
 ```bash
 HASH=$(node -e "const b=require('bcrypt');b.hash('senha123',12).then(console.log)")
-mysql -u bench_gpa -p bench_gpa -e "
+mysql -u admin_gpa -p admin_gpa -e "
 INSERT INTO users (id, email, name, password, role, is_active)
 VALUES ('$(uuidgen)', 'admin@gpabr.com', 'Administrador', '$HASH', 'admin', TRUE);
 "
@@ -944,7 +950,7 @@ VALUES ('$(uuidgen)', 'admin@gpabr.com', 'Administrador', '$HASH', 'admin', TRUE
 - [ ] SSL Let's Encrypt ativo
 - [ ] Bun instalado
 - [ ] PM2 instalado
-- [ ] MariaDB: banco `bench_gpa` criado
+- [ ] MariaDB: banco `admin_gpa` (gerenciado pelo Hestia) criado
 - [ ] Schema SQL executado
 
 ### Fase 1: Build Config (1 commit)
