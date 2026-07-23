@@ -2,13 +2,17 @@
 // (scripts/import.ts). O default de cada coluna ausente na linha de origem é
 // crítico para a integridade dos dados:
 //
-//   - colunas numéricas (val_*, qty_*, per_mrg)  -> 0
-//   - colunas de texto  (nomes/categorias)       -> NULL
+//   - coluna numérica (val_vda)            -> 0
+//   - colunas de texto (nomes/categorias)  -> NULL
 //
 // Um depto/secao/grupo/subgrupo nulo TEM de permanecer NULL. Se cair num
 // default `0`, o MariaDB coage o número para a string "0" no VARCHAR e esse
 // "0" vaza para a filter_hierarchy e para os rankings (bySubgrupo etc.) como
 // se fosse uma categoria real.
+//
+// val_vda é a única medida: o export do GPA não traz quantidade, custo,
+// devolução nem margem (verificado nas 68 planilhas de data/). As colunas
+// correspondentes foram removidas na migration 0002.
 
 export const STAGING_COLS = [
   "sale_date",
@@ -22,36 +26,10 @@ export const STAGING_COLS = [
   "grupo",
   "subgrupo",
   "val_vda",
-  "qty_vda",
-  "val_cus",
-  "qty_cus",
-  "val_dev",
-  "qty_dev",
-  "val_vda_liq",
-  "qty_vda_liq",
-  "val_cus_liq",
-  "qty_cus_liq",
-  "val_sld",
-  "qty_sld",
-  "per_mrg",
 ] as const;
 
 // Colunas numéricas: default 0 quando ausentes. Todo o resto é texto (default NULL).
-const NUMERIC_COLS = new Set<string>([
-  "val_vda",
-  "qty_vda",
-  "val_cus",
-  "qty_cus",
-  "val_dev",
-  "qty_dev",
-  "val_vda_liq",
-  "qty_vda_liq",
-  "val_cus_liq",
-  "qty_cus_liq",
-  "val_sld",
-  "qty_sld",
-  "per_mrg",
-]);
+const NUMERIC_COLS = new Set<string>(["val_vda"]);
 
 /** Valor default de uma coluna do staging quando ela está ausente/nula na origem. */
 export function stagingCellDefault(col: string): 0 | null {
