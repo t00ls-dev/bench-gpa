@@ -12,7 +12,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Stack:** TanStack Start (SSR) + React 19 + Vite 7 + TypeScript 5
 - **DB:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md`)
 - **Auth:** JWT manual com bcrypt + jsonwebtoken (com Turnstile CAPTCHA)
-- **Deploy:** Hestia VPS (`sv1.t00ls.dev`, domínio `gpa.t00ls.dev`), Nitro v3 preset `node-server`
+- **Deploy:** CI GitHub Actions (`.github/workflows/ci.yml`) → rsync `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), Nitro v3 preset `node-server`, swap atômico + PM2 com rollback. Não há PaaS — o Vercel foi removido em 2026-07-23 (aba Deployments do GitHub não é mais usada)
 - **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 24 server functions
 - **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
 - **Crons:** `cli:purge` (03h), `cli:watch` (07h e 19h) — ver `scripts/setup-crons.sh`
@@ -198,6 +198,7 @@ Normalização, desnormalização quando útil, índices, constraints, triggers,
 - Prefira múltiplos commits pequenos e atômicos a um grande
 - CI/CD (`.github/workflows/ci.yml`) roda lint → typecheck → test → build antes de liberar o deploy — o gate é a própria CI, não um job separado
 - Deploy é atômico: o `.output` novo troca de lugar com o anterior (`.output.old`) via SSH no VPS; se o health-check pós-restart do PM2 falhar, o workflow reverte sozinho para o build anterior
+- Deploy real = CI Actions → VPS; não há PaaS. O Vercel foi desconectado em 2026-07-23 e os environments `Production`/`Preview` do GitHub apagados — a aba Deployments não é mais usada
 - Para mudanças arriscadas, sugira branch + PR
 
 ---
