@@ -668,26 +668,21 @@ BEGIN
 
   -- Result set 4: paginated products
   SET @sql = CONCAT(
-     -- last_sale_date: MAX dentro do período quando existe, senão a última
-     -- venda registrada na product_universe.
+     -- last_sale_date fica em MAX(a.sale_date), limitado ao período — e isso
+     -- está CERTO enquanto a listagem só trouxer PLU que vendeu no período,
+     -- porque para esses o MAX é exatamente a última venda.
      --
-     -- O MAX sozinho é limitado ao recorte e não consegue apontar para antes do
-     -- início do período. Hoje isso não aparece, porque a listagem só traz PLU
-     -- que vendeu no período — e para esses o MAX já é a resposta certa. O
-     -- COALESCE existe para o PLU SEM venda no período: aí o MAX é NULL e a
-     -- resposta correta ("vendeu pela última vez antes do recorte") só está no
-     -- universo. Mantido nesta ordem de propósito: preserva o comportamento
-     -- atual e não passa a exibir data posterior ao fim do período.
-     -- A subquery respeita o filtro de loja para não trazer a última venda de
-     -- uma loja que o usuário tirou do recorte.
+     -- Já tentei complementar com a product_universe via COALESCE, para cobrir
+     -- o PLU sem venda no recorte. Medido em prod: a subquery correlacionada
+     -- custou 5,4s (8,19s contra 2,81s), porque o MariaDB a avalia nos 13.595
+     -- grupos ANTES do LIMIT 20 — pagando caro por um ramo que nunca dispara,
+     -- já que aqui o MAX nunca é NULL.
+     --
+     -- Quando os PLUs sem venda entrarem nesta listagem, o jeito certo é
+     -- envelopar o resultado já paginado (SELECT ... FROM (<query>) p) e
+     -- resolver a última venda nas 20 linhas da página, não nos grupos todos.
      'SELECT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo,
-              SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty,
-              COALESCE(MAX(a.sale_date),
-                (SELECT MAX(u.last_sale_date) FROM product_universe u
-                  WHERE u.prod_code = a.prod_code
-                    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
-                      OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-                )) AS last_sale_date
+              SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty, MAX(a.sale_date) AS last_sale_date
       FROM sales_prod_daily_agg a
       WHERE (? IS NULL OR a.sale_date >= ?)
         AND (? IS NULL OR a.sale_date <= ?)
