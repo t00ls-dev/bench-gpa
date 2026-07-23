@@ -1,0 +1,11 @@
+-- Popula a product_universe pela primeira vez.
+--
+-- A tabela nasce vazia com o baseline (CREATE TABLE IF NOT EXISTS) e passa a
+-- ser mantida por refresh_product_universe(), chamada ao fim de finalize_import
+-- e depois do purge. Sem esta carga inicial, o universo só existiria após o
+-- próximo import — até lá o KPI "PLUs sem venda" ficaria zerado e a coluna
+-- "dias sem vender" viria NULL.
+--
+-- O baseline roda ANTES das migrations versionadas, então a procedure já
+-- existe aqui. Idempotente por construção: a procedure faz TRUNCATE + INSERT.
+CALL refresh_product_universe();
