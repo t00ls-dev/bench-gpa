@@ -3,6 +3,7 @@ import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { assertAdmin } from "./admin-utils";
 import { recordAudit } from "./audit";
+import { RETENTION_DAYS } from "./retention";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import db from "./db";
@@ -183,14 +184,14 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const [rows] = await db.query("CALL purge_old_aggs(?)", [180]);
+    const [rows] = await db.query("CALL purge_old_aggs(?)", [RETENTION_DAYS]);
     const deleted = num(asRecord(asArray(rows)[0]).deleted);
     await recordAudit({
       action: "data.purge",
       actorId: context.userId,
       actorEmail: context.userEmail,
       targetType: "data",
-      detail: `purge manual (180 dias) — ${deleted} registros removidos`,
+      detail: `purge manual (${RETENTION_DAYS} dias) — ${deleted} registros removidos`,
     });
     return { deleted };
   });

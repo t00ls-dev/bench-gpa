@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { extractDate } from "./extract-date";
 import db from "../src/lib/db";
 import { recordHeartbeat } from "../src/lib/heartbeat";
+import { RETENTION_DAYS } from "../src/lib/retention";
 
 const HB_JOB = "import-watch";
 
@@ -83,6 +84,7 @@ async function main() {
   const renamed: string[] = [];
   const deduped: string[] = [];
   const imported: string[] = [];
+  const skippedOld: string[] = [];
   const failed: string[] = [];
   let fileOps = false;
 
@@ -151,8 +153,15 @@ async function main() {
       continue;
     }
 
-    // Sem limite de idade: importa qualquer dia ainda não importado da pasta
-    // do mês corrente (a antiga janela de 28 dias era resíduo do Supabase).
+    // Cap atrelado ao purge (RETENTION_DAYS): ignora arquivos além do horizonte
+    // de retenção — o purge das 3h os apagaria da import_log e a rodada seguinte
+    // os reimportaria, num loop diário. Dentro de 180 dias, importa normalmente.
+    const daysAgo = Math.floor((Date.now() - new Date(date + "T00:00:00Z").getTime()) / 86_400_000);
+    if (daysAgo > RETENTION_DAYS) {
+      log(`Skip: ${date} além da retenção (${daysAgo}d > ${RETENTION_DAYS}d) — seria purgado`);
+      skippedOld.push(`${file} → ${newName} (${daysAgo}d, além da retenção)`);
+      continue;
+    }
 
     // --- Import ---
     fileOps = true;
@@ -173,6 +182,7 @@ async function main() {
     ...renamed.map((s) => `REN: ${s}`),
     ...deduped.map((s) => `DUP: ${s}`),
     ...imported.map((s) => `IMP: ${s}`),
+    ...skippedOld.map((s) => `OLD: ${s}`),
     ...failed.map((s) => `FAIL: ${s}`),
   ];
   for (const p of all) log(p);
@@ -188,6 +198,7 @@ async function main() {
       renamed.length && `${renamed.length} renamed`,
       deduped.length && `${deduped.length} deduped`,
       imported.length && `${imported.length} imported`,
+      skippedOld.length && `${skippedOld.length} skipped-old`,
       failed.length && `${failed.length} failed`,
     ]
       .filter(Boolean)
@@ -208,6 +219,7 @@ async function main() {
       imported.length && `${imported.length} importados`,
       renamed.length && `${renamed.length} renomeados`,
       deduped.length && `${deduped.length} deduplicados`,
+      skippedOld.length && `${skippedOld.length} além da retenção`,
       failed.length && `${failed.length} falhas`,
     ]
       .filter(Boolean)
