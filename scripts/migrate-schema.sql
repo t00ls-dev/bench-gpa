@@ -64,46 +64,26 @@ CREATE TABLE IF NOT EXISTS staging_sales (
   grupo        VARCHAR(100),
   subgrupo     VARCHAR(100),
   val_vda      DECIMAL(15,2) NOT NULL DEFAULT 0,
-  qty_vda      DECIMAL(15,4) DEFAULT 0,
-  val_cus      DECIMAL(15,2) DEFAULT 0,
-  qty_cus      DECIMAL(15,4) DEFAULT 0,
-  val_dev      DECIMAL(15,2) DEFAULT 0,
-  qty_dev      DECIMAL(15,4) DEFAULT 0,
-  val_vda_liq  DECIMAL(15,2) DEFAULT 0,
-  qty_vda_liq  DECIMAL(15,4) DEFAULT 0,
-  val_cus_liq  DECIMAL(15,2) DEFAULT 0,
-  qty_cus_liq  DECIMAL(15,4) DEFAULT 0,
-  val_sld      DECIMAL(15,2) DEFAULT 0,
-  qty_sld      DECIMAL(15,4) DEFAULT 0,
-  per_mrg      DECIMAL(7,2) DEFAULT 0,
   INDEX idx_staging_batch (batch_id),
   INDEX idx_staging_sale_date (sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ATENÇÃO às colunas de quantidade/custo/devolução/margem daqui e das demais
--- tabelas de venda: elas são SEMPRE ZERO, e isso não é bug.
+-- VAL_VDA é a ÚNICA medida que existe. Não procure quantidade, custo,
+-- devolução ou margem — o export do GPA não traz nada disso.
 --
--- Verificado em 2026-07-23 nas 68 planilhas de data/ (maio a julho/2026): o
--- export do GPA tem 24 colunas e uma única medida. O cabeçalho é sempre
+-- Verificado em 2026-07-23 nas 68 planilhas de data/ (maio a julho/2026), todas
+-- com 24 colunas e o mesmo cabeçalho:
 --
 --   NOM_DEPTO | NOM_SECAO | NOM_GRUPO | NOM_SUBGRUPO | NOM_PROD | VAL_VDA ×N lojas | Total
 --
--- Não há QTD, custo, devolução nem margem em nenhum arquivo. Logo qty_vda,
--- val_cus, val_dev, val_sld e per_mrg nunca recebem valor — o `ELSE 0` do
--- per_mrg em finalize_import, por exemplo, é o único ramo alcançável.
---
--- Mantidas de propósito: são baratas (DEFAULT 0, sem índice) e o dia em que o
--- export passar a trazer as medidas elas já estão no lugar. Antes de "corrigir"
--- algo aqui, confirme primeiro que o export mudou.
+-- Estas tabelas carregavam qty_vda, val_cus, val_dev, val_sld e per_mrg (e mais
+-- sete variantes no staging), todas estruturalmente zero por falta de fonte.
+-- Removidas na migration 0002. Se um dia o export passar a trazer as medidas,
+-- reintroduza as colunas junto com o parser que as preenche — e não antes.
 CREATE TABLE IF NOT EXISTS sales_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
   val_vda     DECIMAL(15,2) NOT NULL DEFAULT 0,
-  qty_vda     DECIMAL(15,4) NOT NULL DEFAULT 0,
-  val_cus     DECIMAL(15,2) DEFAULT 0,
-  val_dev     DECIMAL(15,2) DEFAULT 0,
-  val_sld     DECIMAL(15,2) DEFAULT 0,
-  per_mrg     DECIMAL(7,2) DEFAULT 0,
   PRIMARY KEY (sale_date, store_code),
   INDEX idx_daily_sale_date (sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -118,11 +98,6 @@ CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   grupo       VARCHAR(100),
   subgrupo    VARCHAR(100),
   val_vda     DECIMAL(15,2) NOT NULL DEFAULT 0,
-  qty_vda     DECIMAL(15,4) NOT NULL DEFAULT 0,
-  val_cus     DECIMAL(15,2) DEFAULT 0,
-  val_dev     DECIMAL(15,2) DEFAULT 0,
-  val_sld     DECIMAL(15,2) DEFAULT 0,
-  per_mrg     DECIMAL(7,2) DEFAULT 0,
   PRIMARY KEY (sale_date, store_code, prod_code),
   INDEX idx_prod_daily_sale_date (sale_date),
   INDEX idx_prod_daily_prod_code (prod_code),
@@ -701,7 +676,7 @@ BEGIN
   -- classificação é uma só, a da última venda.
   SET @sql = CONCAT(
      'SELECT u.prod_code, u.prod_name, u.depto, u.secao, u.grupo, u.subgrupo,
-             COALESCE(s.val, 0) AS val, COALESCE(s.qty, 0) AS qty,
+             COALESCE(s.val, 0) AS val,
              COALESCE(s.last_in_period, u.last_sale_date) AS last_sale_date
       FROM (
         SELECT uu.prod_code,
@@ -719,7 +694,7 @@ BEGIN
     '   GROUP BY uu.prod_code
       ) u
       LEFT JOIN (
-        SELECT a.prod_code, SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty,
+        SELECT a.prod_code, SUM(a.val_vda) AS val,
                MAX(a.sale_date) AS last_in_period
         FROM sales_prod_daily_agg a
         WHERE (? IS NULL OR a.sale_date >= ?)
@@ -914,23 +889,16 @@ BEGIN
   DELETE FROM sales_daily_agg WHERE sale_date = p_sale_date;
   DELETE FROM sales_prod_daily_agg WHERE sale_date = p_sale_date;
 
-  INSERT INTO sales_daily_agg (sale_date, store_code, val_vda, qty_vda, val_cus, val_dev, val_sld, per_mrg)
+  INSERT INTO sales_daily_agg (sale_date, store_code, val_vda)
   SELECT
     p_sale_date,
     s.store_code,
-    COALESCE(SUM(s.val_vda), 0),
-    COALESCE(SUM(s.qty_vda), 0),
-    COALESCE(SUM(s.val_cus), 0),
-    COALESCE(SUM(s.val_dev), 0),
-    COALESCE(SUM(s.val_sld), 0),
-    CASE WHEN COALESCE(SUM(s.val_vda_liq), 0) > 0
-      THEN ROUND((COALESCE(SUM(s.val_vda_liq), 0) - COALESCE(SUM(s.val_cus_liq), 0)) / COALESCE(SUM(s.val_vda_liq), 0) * 100, 2)
-      ELSE 0 END
+    COALESCE(SUM(s.val_vda), 0)
   FROM staging_sales s
   WHERE s.batch_id = p_batch_id AND s.sale_date = p_sale_date
   GROUP BY s.store_code;
 
-  INSERT INTO sales_prod_daily_agg (sale_date, store_code, prod_code, prod_name, depto, secao, grupo, subgrupo, val_vda, qty_vda, val_cus, val_dev, val_sld, per_mrg)
+  INSERT INTO sales_prod_daily_agg (sale_date, store_code, prod_code, prod_name, depto, secao, grupo, subgrupo, val_vda)
   SELECT
     p_sale_date,
     s.store_code,
@@ -940,14 +908,7 @@ BEGIN
     s.secao,
     s.grupo,
     s.subgrupo,
-    COALESCE(SUM(s.val_vda), 0),
-    COALESCE(SUM(s.qty_vda), 0),
-    COALESCE(SUM(s.val_cus), 0),
-    COALESCE(SUM(s.val_dev), 0),
-    COALESCE(SUM(s.val_sld), 0),
-    CASE WHEN COALESCE(SUM(s.val_vda_liq), 0) > 0
-      THEN ROUND((COALESCE(SUM(s.val_vda_liq), 0) - COALESCE(SUM(s.val_cus_liq), 0)) / COALESCE(SUM(s.val_vda_liq), 0) * 100, 2)
-      ELSE 0 END
+    COALESCE(SUM(s.val_vda), 0)
   FROM staging_sales s
   WHERE s.batch_id = p_batch_id AND s.sale_date = p_sale_date
   GROUP BY s.store_code, s.prod_code, s.depto, s.secao, s.grupo, s.subgrupo;
