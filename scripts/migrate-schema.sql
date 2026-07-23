@@ -642,17 +642,19 @@ BEGIN
     GREATEST(v_universe - v_with_sale, 0)    AS plus_without_sale;
 
   -- Result set 2: total count for pagination
-  SELECT COUNT(*) AS total_products FROM (
-    SELECT DISTINCT a.prod_code
-    FROM sales_prod_daily_agg a
-    WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-      AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-  ) sub;
+  -- Conta o mesmo conjunto que a listagem (result set 4) devolve: o universo
+  -- sob os filtros, não só quem vendeu no período. Se contasse o período, a
+  -- paginação prometeria menos páginas do que a lista realmente tem.
+  -- (Como antes, não considera p_search — a busca reduz a lista mas não este
+  -- total. Limitação pré-existente, mantida para não mudar duas coisas de uma
+  -- vez.)
+  SELECT COUNT(DISTINCT u.prod_code) AS total_products
+  FROM product_universe u
+  WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
 
   -- Result set 3: byDate evolution
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
@@ -667,33 +669,53 @@ BEGIN
   GROUP BY a.sale_date ORDER BY a.sale_date;
 
   -- Result set 4: paginated products
+  --
+  -- A listagem parte do UNIVERSO (product_universe) e traz as vendas do período
+  -- por LEFT JOIN — então o PLU sem venda no recorte aparece, com val = 0. É o
+  -- que a UI sempre esperou: area-table.tsx pinta de amarelo a linha com
+  -- `p.val === 0` e a legenda promete "produtos sem venda no período". Enquanto
+  -- a lista saía direto do sales_prod_daily_agg, essa linha era impossível —
+  -- o parser descarta valor zero, então só entrava quem vendeu.
+  --
+  -- De quebra sai mais barato: agregar sobre a product_universe (~176k linhas)
+  -- e juntar o período já agregado mede 0,8s contra 2,8s da versão anterior.
+  --
+  -- E corrige uma duplicação silenciosa: o GROUP BY antigo incluía nome e
+  -- categoria vindos do agg, então PLU reclassificado no meio do período virava
+  -- duas linhas (13.608 grupos para 13.595 PLUs distintos em prod). Aqui a
+  -- classificação é uma só, a da última venda.
   SET @sql = CONCAT(
-     -- last_sale_date fica em MAX(a.sale_date), limitado ao período — e isso
-     -- está CERTO enquanto a listagem só trouxer PLU que vendeu no período,
-     -- porque para esses o MAX é exatamente a última venda.
-     --
-     -- Já tentei complementar com a product_universe via COALESCE, para cobrir
-     -- o PLU sem venda no recorte. Medido em prod: a subquery correlacionada
-     -- custou 5,4s (8,19s contra 2,81s), porque o MariaDB a avalia nos 13.595
-     -- grupos ANTES do LIMIT 20 — pagando caro por um ramo que nunca dispara,
-     -- já que aqui o MAX nunca é NULL.
-     --
-     -- Quando os PLUs sem venda entrarem nesta listagem, o jeito certo é
-     -- envelopar o resultado já paginado (SELECT ... FROM (<query>) p) e
-     -- resolver a última venda nas 20 linhas da página, não nos grupos todos.
-     'SELECT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo,
-              SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty, MAX(a.sale_date) AS last_sale_date
-      FROM sales_prod_daily_agg a
-      WHERE (? IS NULL OR a.sale_date >= ?)
-        AND (? IS NULL OR a.sale_date <= ?)
-        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-        AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))',
+     'SELECT u.prod_code, u.prod_name, u.depto, u.secao, u.grupo, u.subgrupo,
+             COALESCE(s.val, 0) AS val, COALESCE(s.qty, 0) AS qty,
+             COALESCE(s.last_in_period, u.last_sale_date) AS last_sale_date
+      FROM (
+        SELECT uu.prod_code,
+               MAX(uu.prod_name) AS prod_name, MAX(uu.depto) AS depto,
+               MAX(uu.secao) AS secao, MAX(uu.grupo) AS grupo,
+               MAX(uu.subgrupo) AS subgrupo, MAX(uu.last_sale_date) AS last_sale_date
+        FROM product_universe uu
+        WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR uu.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR uu.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR uu.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR uu.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR uu.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))',
     IF(p_search IS NOT NULL AND p_search != '',
-      ' AND (a.prod_name LIKE ? OR a.prod_code LIKE ?)', ''),
-    ' GROUP BY a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo',
+      ' AND (uu.prod_name LIKE ? OR uu.prod_code LIKE ?)', ''),
+    '   GROUP BY uu.prod_code
+      ) u
+      LEFT JOIN (
+        SELECT a.prod_code, SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty,
+               MAX(a.sale_date) AS last_in_period
+        FROM sales_prod_daily_agg a
+        WHERE (? IS NULL OR a.sale_date >= ?)
+          AND (? IS NULL OR a.sale_date <= ?)
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+        GROUP BY a.prod_code
+      ) s ON s.prod_code = u.prod_code',
     IF(p_sort_by IS NOT NULL AND p_sort_by != '',
       CONCAT(' ORDER BY ', p_sort_by, ' ', IF(p_sort_dir = 'asc' OR p_sort_dir = 'ASC', 'ASC', 'DESC')),
       ' ORDER BY val DESC'),
@@ -701,10 +723,13 @@ BEGIN
     IF(v_offset > 0, CONCAT(' OFFSET ', v_offset), '')
   );
 
+  -- Ordem dos placeholders: o filtro de busca agora vive na subquery do
+  -- universo, que vem ANTES da subquery do período — por isso @search_param
+  -- precede as datas aqui.
   IF p_search IS NOT NULL AND p_search != '' THEN
     SET @search_param = CONCAT('%', p_search, '%');
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @search_param, @search_param;
+    EXECUTE stmt USING @search_param, @search_param, p_date_from, p_date_from, p_date_to, p_date_to;
     DEALLOCATE PREPARE stmt;
   ELSE
     PREPARE stmt FROM @sql;
