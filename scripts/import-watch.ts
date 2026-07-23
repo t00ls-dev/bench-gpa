@@ -229,9 +229,20 @@ async function main() {
   log("====== import-watch end ======");
 }
 
-main().catch(async (err) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  log(`FATAL: ${msg}`);
-  await recordHeartbeat(HB_JOB, "fail", `FATAL: ${msg}`);
-  process.exit(1);
-});
+// process.exit(0) explícito no sucesso: o pool do mysql2 (src/lib/db.ts, puxado
+// via recordHeartbeat) mantém sockets e timers abertos, então o event loop nunca
+// esvazia e o processo fica pendurado em epoll_wait DEPOIS de terminar o
+// trabalho. Sem isto, cada rodada do cron (a cada 3h) deixava para trás um bun
+// de ~55 MB: foram encontrados 6 vivos ao mesmo tempo, ~350 MB de RAM numa
+// máquina de 1,9 GB — que é o que empurrava a caixa para o swap.
+//
+// O import.ts e o purge-aggs.ts já faziam isso; só este caminho tinha exit
+// apenas nos ramos de erro.
+main()
+  .then(() => process.exit(0))
+  .catch(async (err) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    log(`FATAL: ${msg}`);
+    await recordHeartbeat(HB_JOB, "fail", `FATAL: ${msg}`);
+    process.exit(1);
+  });
