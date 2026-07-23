@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { assertAdmin } from "./admin-utils";
+import { recordAudit } from "./audit";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import db from "./db";
@@ -50,6 +51,14 @@ export const createUser = createServerFn({ method: "POST" })
       "INSERT INTO users (id, email, name, password, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
       [id, data.email, data.name, hash, data.role],
     );
+    await recordAudit({
+      action: "user.create",
+      actorId: context.userId,
+      actorEmail: context.userEmail,
+      targetType: "user",
+      targetId: id,
+      detail: `criou ${data.email} (${data.role})`,
+    });
     return { ok: true, id };
   });
 
@@ -62,6 +71,14 @@ export const setUserRole = createServerFn({ method: "POST" })
       throw new Error("Você não pode remover seu próprio acesso de administrador.");
     }
     await db.query("UPDATE users SET role = ? WHERE id = ?", [data.role, data.userId]);
+    await recordAudit({
+      action: "user.role_change",
+      actorId: context.userId,
+      actorEmail: context.userEmail,
+      targetType: "user",
+      targetId: data.userId,
+      detail: `novo papel: ${data.role}`,
+    });
     return { ok: true };
   });
 
@@ -76,6 +93,14 @@ export const setUserActive = createServerFn({ method: "POST" })
       throw new Error("Você não pode inativar sua própria conta.");
     }
     await db.query("UPDATE users SET is_active = ? WHERE id = ?", [data.isActive, data.userId]);
+    await recordAudit({
+      action: data.isActive ? "user.activate" : "user.deactivate",
+      actorId: context.userId,
+      actorEmail: context.userEmail,
+      targetType: "user",
+      targetId: data.userId,
+      detail: data.isActive ? "reativou a conta" : "inativou a conta",
+    });
     return { ok: true };
   });
 
@@ -88,6 +113,14 @@ export const resetPassword = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const hash = await bcrypt.hash(data.password, 12);
     await db.query("UPDATE users SET password = ? WHERE id = ?", [hash, data.userId]);
+    await recordAudit({
+      action: "user.password_reset",
+      actorId: context.userId,
+      actorEmail: context.userEmail,
+      targetType: "user",
+      targetId: data.userId,
+      detail: "redefiniu a senha",
+    });
     return { ok: true };
   });
 
@@ -151,7 +184,15 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rows] = await db.query("CALL purge_old_aggs(?)", [180]);
-    return { deleted: num(asRecord(asArray(rows)[0]).deleted) };
+    const deleted = num(asRecord(asArray(rows)[0]).deleted);
+    await recordAudit({
+      action: "data.purge",
+      actorId: context.userId,
+      actorEmail: context.userEmail,
+      targetType: "data",
+      detail: `purge manual (180 dias) — ${deleted} registros removidos`,
+    });
+    return { deleted };
   });
 
 export const dbHealthCheck = createServerFn({ method: "GET" })
@@ -230,6 +271,107 @@ export const getDocContent = createServerFn({ method: "POST" })
     if (!content) throw new Error("Documento não encontrado.");
     const lastModified = (docMeta as Record<string, number | null>)[filePath] ?? null;
     return { content, lastModified };
+  });
+
+export interface AuditRow {
+  id: number;
+  created_at: string;
+  actor_email: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  detail: string | null;
+  ip: string | null;
+}
+
+export const getAuditLog = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        limit: z.number().int().min(1).max(100).optional(),
+        offset: z.number().int().min(0).optional(),
+      })
+      .parse(data ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const limit = data.limit ?? 50;
+    const offset = data.offset ?? 0;
+    const [rows] = await db.query(
+      `SELECT id, created_at, actor_email, action, target_type, target_id, detail, ip
+         FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?`,
+      [limit, offset],
+    );
+    const [countRows] = await db.query("SELECT COUNT(*) AS total FROM audit_log");
+    const total = num(asRecord(asArray(countRows)[0]).total);
+    const events: AuditRow[] = asArray(rows).map((r) => {
+      const rec = asRecord(r);
+      return {
+        id: num(rec.id),
+        created_at: dateTimeStr(rec.created_at),
+        actor_email: rec.actor_email ? String(rec.actor_email) : null,
+        action: String(rec.action ?? ""),
+        target_type: rec.target_type ? String(rec.target_type) : null,
+        target_id: rec.target_id ? String(rec.target_id) : null,
+        detail: rec.detail ? String(rec.detail) : null,
+        ip: rec.ip ? String(rec.ip) : null,
+      };
+    });
+    return { events, total, limit, offset };
+  });
+
+/** Jobs de cron conhecidos + prazo (horas) além do qual são considerados atrasados. */
+const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: string }[] = [
+  { job: "import-watch", label: "Importação", maxHours: 24, schedule: "a cada 3h, 10h–22h" },
+  { job: "purge", label: "Purga (180 dias)", maxHours: 26, schedule: "diária, 03h" },
+];
+
+export interface HeartbeatRow {
+  job: string;
+  label: string;
+  schedule: string;
+  last_run_at: string | null;
+  last_status: string | null;
+  last_detail: string | null;
+  last_duration_ms: number | null;
+  /** true = nunca rodou ou passou do prazo esperado. */
+  overdue: boolean;
+}
+
+export const getHeartbeats = createServerFn({ method: "GET" })
+  .middleware([requireAuth, requireRateLimit()])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const [rows] = await db.query(
+      `SELECT job, last_run_at, last_status, last_detail, last_duration_ms,
+              TIMESTAMPDIFF(HOUR, last_run_at, NOW()) AS age_hours
+         FROM cron_heartbeat`,
+    );
+    const byJob = new Map<string, ReturnType<typeof asRecord>>();
+    for (const r of asArray(rows)) {
+      const rec = asRecord(r);
+      byJob.set(String(rec.job), rec);
+    }
+    const result: HeartbeatRow[] = KNOWN_JOBS.map((k) => {
+      const rec = byJob.get(k.job);
+      const lastRun = rec?.last_run_at ? dateTimeStr(rec.last_run_at) : null;
+      const ageHours = rec?.age_hours == null ? null : num(rec.age_hours);
+      const status = rec?.last_status ? String(rec.last_status) : null;
+      const overdue =
+        lastRun == null || ageHours == null || ageHours > k.maxHours || status === "fail";
+      return {
+        job: k.job,
+        label: k.label,
+        schedule: k.schedule,
+        last_run_at: lastRun,
+        last_status: status,
+        last_detail: rec?.last_detail ? String(rec.last_detail) : null,
+        last_duration_ms: rec?.last_duration_ms == null ? null : num(rec.last_duration_ms),
+        overdue,
+      };
+    });
+    return result;
   });
 
 function extractDocTitle(content: string): string | null {

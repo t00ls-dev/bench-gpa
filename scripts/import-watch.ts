@@ -3,6 +3,9 @@ import { readdirSync, renameSync, existsSync, mkdirSync, appendFileSync, rmSync 
 import { join } from "node:path";
 import { extractDate } from "./extract-date";
 import db from "../src/lib/db";
+import { recordHeartbeat } from "../src/lib/heartbeat";
+
+const HB_JOB = "import-watch";
 
 const LOG_FILE = "logs/import.log";
 
@@ -43,6 +46,7 @@ function gitRm(path: string): boolean {
 }
 
 async function main() {
+  const started = Date.now();
   log("====== import-watch start ======");
 
   // 1. git pull
@@ -51,6 +55,7 @@ async function main() {
   if (!pull.ok) {
     log(`Pull: ERROR — ${pull.stderr}`);
     log("====== import-watch abort ======");
+    await recordHeartbeat(HB_JOB, "fail", `git pull falhou: ${pull.stderr}`, Date.now() - started);
     process.exit(1);
   }
   log(`Pull: ${pull.stdout || "Already up to date."}`);
@@ -198,10 +203,23 @@ async function main() {
     }
   }
 
+  const detail =
+    [
+      imported.length && `${imported.length} importados`,
+      renamed.length && `${renamed.length} renomeados`,
+      deduped.length && `${deduped.length} deduplicados`,
+      failed.length && `${failed.length} falhas`,
+    ]
+      .filter(Boolean)
+      .join(", ") || "nenhuma novidade";
+  await recordHeartbeat(HB_JOB, failed.length ? "fail" : "ok", detail, Date.now() - started);
+
   log("====== import-watch end ======");
 }
 
-main().catch((err) => {
-  log(`FATAL: ${err instanceof Error ? err.message : String(err)}`);
+main().catch(async (err) => {
+  const msg = err instanceof Error ? err.message : String(err);
+  log(`FATAL: ${msg}`);
+  await recordHeartbeat(HB_JOB, "fail", `FATAL: ${msg}`);
   process.exit(1);
 });
