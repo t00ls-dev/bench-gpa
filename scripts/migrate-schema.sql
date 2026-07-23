@@ -864,6 +864,20 @@ BEGIN
 END//
 
 -- 12/15: purge_old_aggs
+--
+-- Outra ponta da invariante de retenção; o lado JS está em
+-- src/lib/retention.ts (isWithinRetention), usado pelo import-watch para não
+-- importar o que este purge apagaria — senão vira um loop diário de
+-- importar -> purgar -> reimportar.
+--
+-- A comparação é ESTRITA (`< @cutoff`), logo a data exatamente na borda
+-- (p_days atrás) é PRESERVADA. O lado JS usa `<=` justamente para casar com
+-- isso. Mexeu em um, revise o outro.
+--
+-- DEPENDÊNCIA DE FUSO: os dois lados só coincidem porque o host e o MariaDB
+-- estão em UTC (`time_zone = SYSTEM`, TZ do host `Etc/UTC`) — aí CURRENT_DATE é
+-- o mesmo dia que o JS calcula em UTC. Trocar o fuso para America/Sao_Paulo faz
+-- CURRENT_DATE virar 3h antes do dia UTC e desalinha a borda em um dia.
 CREATE PROCEDURE purge_old_aggs(p_days INT)
 BEGIN
   DECLARE v_deleted INT DEFAULT 0;
