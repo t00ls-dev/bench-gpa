@@ -218,11 +218,13 @@ BEGIN
   END IF;
 
   -- Result set 1: aggregates
-  SELECT
-    COALESCE(SUM(val_vda), 0) AS total,
-    COUNT(DISTINCT prod_code) AS total_plus,
-    COUNT(DISTINCT CASE WHEN val_vda > 0 THEN prod_code END) AS plus_with_sale,
-    COUNT(DISTINCT CASE WHEN val_vda = 0 THEN prod_code END) AS plus_without_sale
+  -- Só `total` é lido (callMetrics, em src/lib/api-types.ts). Este SELECT também
+  -- calculava total_plus/plus_with_sale/plus_without_sale, que o TypeScript
+  -- descartava: três COUNT(DISTINCT prod_code) sobre a janela filtrada de
+  -- sales_prod_daily_agg (~3,4M linhas) a cada chamada, sem nenhum leitor.
+  -- Os KPIs equivalentes que existem de verdade ficam em area_analysis, que os
+  -- entrega para a tela de área — não confundir os dois.
+  SELECT COALESCE(SUM(val_vda), 0) AS total
   FROM sales_prod_daily_agg a
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
