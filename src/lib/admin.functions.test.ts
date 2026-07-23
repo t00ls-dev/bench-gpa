@@ -77,12 +77,14 @@ vi.mock("./rate-limit.middleware", () => ({
 
 vi.mock("./admin-utils", () => ({
   assertAdmin: vi.fn(),
+  invalidateAdminCache: vi.fn(),
 }));
 
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("bcrypt", () => ({ default: { hash: vi.fn() } }));
 
-import { createUser, resetPassword } from "./admin.functions";
+import { createUser, resetPassword, setUserRole, setUserActive } from "./admin.functions";
+import { invalidateAdminCache } from "./admin-utils";
 import db from "./db";
 import bcrypt from "bcrypt";
 
@@ -123,5 +125,34 @@ describe("resetPassword", () => {
       "$2b$12$mockedhash",
       "u1",
     ]);
+  });
+});
+
+describe("invalidação do cache de admin", () => {
+  it("setUserRole descarta o veredito cacheado do alvo", async () => {
+    const result = await (
+      setUserRole as (d: { userId: string; role: string }) => Promise<{ ok: boolean }>
+    )({ userId: "u-alvo", role: "admin" });
+    expect(result.ok).toBe(true);
+    expect(invalidateAdminCache).toHaveBeenCalledWith("u-alvo");
+  });
+
+  it("setUserActive descarta o veredito cacheado do alvo", async () => {
+    const result = await (
+      setUserActive as (d: { userId: string; isActive: boolean }) => Promise<{ ok: boolean }>
+    )({ userId: "u-alvo", isActive: false });
+    expect(result.ok).toBe(true);
+    expect(invalidateAdminCache).toHaveBeenCalledWith("u-alvo");
+  });
+
+  it("não invalida nada quando a própria ação é recusada", async () => {
+    // Auto-rebaixamento é barrado antes do UPDATE; o cache não pode ser mexido.
+    await expect(
+      (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
+        userId: "admin-u1",
+        role: "user",
+      }),
+    ).rejects.toThrow("não pode remover seu próprio acesso");
+    expect(invalidateAdminCache).not.toHaveBeenCalled();
   });
 });
