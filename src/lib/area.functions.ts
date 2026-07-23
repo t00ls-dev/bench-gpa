@@ -52,7 +52,6 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
           grupo: strOrNull(r.grupo),
           subgrupo: strOrNull(r.subgrupo),
           val: num(r.val),
-          qty: num(r.qty),
           lastSaleDate: strOrNull(r.last_sale_date),
         };
       }),

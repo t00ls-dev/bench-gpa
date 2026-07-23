@@ -22,7 +22,6 @@ type Product = {
   grupo: string | null;
   subgrupo: string | null;
   val: number;
-  qty: number;
   lastSaleDate: string | null;
 };
 

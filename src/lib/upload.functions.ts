@@ -6,6 +6,7 @@ import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import { asArray, asRecord, str, num, dateTimeStr } from "./api-types";
 import { SaleRowSchema } from "./schemas";
+import { STAGING_COLS, toStagingRow } from "./staging-row";
 
 export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit("upload")])
@@ -55,49 +56,24 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context, "upload.assertAdmin");
 
-    const rows = data.rows.map((r) => ({
-      ...r,
-      batch_id: data.batch_id,
-      sale_date: data.sale_date,
-    }));
-
-    const columns = [
-      "sale_date",
-      "batch_id",
-      "store_code",
-      "store_name",
-      "prod_code",
-      "prod_name",
-      "depto",
-      "secao",
-      "grupo",
-      "subgrupo",
-      "val_vda",
-      "qty_vda",
-      "val_cus",
-      "qty_cus",
-      "val_dev",
-      "qty_dev",
-      "val_vda_liq",
-      "qty_vda_liq",
-      "val_cus_liq",
-      "qty_cus_liq",
-      "val_sld",
-      "qty_sld",
-      "per_mrg",
-    ];
-
-    const placeholders = rows.map(() => `(${columns.map(() => "?").join(", ")})`).join(", ");
-    const values = rows.flatMap((r) =>
-      columns.map((c) => (r as Record<string, unknown>)[c] ?? null),
+    // Layout e defaults vêm de staging-row.ts, o mesmo módulo que o import via
+    // CLI usa. Esta função mantinha uma cópia própria da lista de colunas — foi
+    // exatamente essa duplicação que deixou os dois caminhos divergirem antes
+    // (o CLI com `?? 0`, este com `?? null`), e o `?? 0` transformava categoria
+    // nula na string "0". Uma fonte só elimina a classe do problema.
+    const placeholders = data.rows
+      .map(() => `(${STAGING_COLS.map(() => "?").join(", ")})`)
+      .join(", ");
+    const values = data.rows.flatMap((r) =>
+      toStagingRow(r as Record<string, unknown>, data.batch_id, data.sale_date),
     );
 
     await db.query(
-      `INSERT INTO staging_sales (${columns.join(", ")}) VALUES ${placeholders}`,
+      `INSERT INTO staging_sales (${STAGING_COLS.join(", ")}) VALUES ${placeholders}`,
       values,
     );
 
-    return { inserted: rows.length };
+    return { inserted: data.rows.length };
   });
 
 export const getImportedDates = createServerFn({ method: "GET" })

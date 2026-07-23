@@ -29,14 +29,9 @@ describe("staging-row", () => {
     expect(out[idx("subgrupo")]).not.toBe("0");
   });
 
-  it("preenche colunas numéricas ausentes com 0", () => {
-    const row = { store_code: "001", prod_code: "1", val_vda: 10 };
-    const out = toStagingRow(row, "batch-1", "2024-03-15");
-
-    expect(out[idx("qty_vda")]).toBe(0);
-    expect(out[idx("val_cus")]).toBe(0);
-    expect(out[idx("per_mrg")]).toBe(0);
-    expect(out[idx("val_vda")]).toBe(10);
+  it("preenche val_vda ausente com 0, não com null", () => {
+    const out = toStagingRow({ store_code: "001", prod_code: "1" }, "batch-1", "2024-03-15");
+    expect(out[idx("val_vda")]).toBe(0);
   });
 
   it("injeta sale_date e batch_id nas posições certas", () => {
@@ -47,16 +42,22 @@ describe("staging-row", () => {
 
   it("preserva valor 0 explícito da origem", () => {
     // `?? default` só troca null/undefined — um 0 de verdade passa direto.
-    const out = toStagingRow({ val_dev: 0 }, "b", "2024-01-01");
-    expect(out[idx("val_dev")]).toBe(0);
+    const out = toStagingRow({ val_vda: 0 }, "b", "2024-01-01");
+    expect(out[idx("val_vda")]).toBe(0);
   });
 
-  it("stagingCellDefault: numéricas -> 0, texto -> null", () => {
+  it("stagingCellDefault: val_vda -> 0, texto -> null", () => {
     expect(stagingCellDefault("val_vda")).toBe(0);
-    expect(stagingCellDefault("qty_sld")).toBe(0);
-    expect(stagingCellDefault("per_mrg")).toBe(0);
     expect(stagingCellDefault("depto")).toBeNull();
     expect(stagingCellDefault("subgrupo")).toBeNull();
     expect(stagingCellDefault("store_name")).toBeNull();
+  });
+
+  it("val_vda é a única medida no layout", () => {
+    // O export do GPA traz só VAL_VDA (verificado nas 68 planilhas de data/).
+    // Se alguém reintroduzir qty/custo/margem aqui sem o parser preenchê-las,
+    // este teste falha e obriga a conferir o export antes.
+    const medidas = STAGING_COLS.filter((c) => /^(val|qty|per)_/.test(c));
+    expect(medidas).toEqual(["val_vda"]);
   });
 });
