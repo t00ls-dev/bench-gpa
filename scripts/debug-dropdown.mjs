@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer";
 
-const EMAIL = "admin@gpabr.com";
-const PASS = "Gpa@Manca123";
+const EMAIL = process.env.TEST_ADMIN_EMAIL || "admin@gpabr.com";
+const PASS = process.env.TEST_ADMIN_PASSWORD || "Gpa@Manca123";
 const URL = "http://localhost:8080";
 
 const browser = await puppeteer.launch({
