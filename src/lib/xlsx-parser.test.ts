@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as XLSX from "xlsx";
-import { parseAnyWorkbook } from "./xlsx-parser";
+import { parseAnyWorkbook, parseCellNumber } from "./xlsx-parser";
 
 function makeWorkbook(rows: unknown[][]): ArrayBuffer {
   const wb = XLSX.utils.book_new();
@@ -90,6 +90,16 @@ describe("xlsx-parser", () => {
     expect(result.sales[0].val_vda).toBe(1500.5);
   });
 
+  it("preserva o separador de milhar pt-BR ponta a ponta", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/01/2024"],
+      [null, null, null, null, "001-PROD", "1.234.567,89"],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sales[0].val_vda).toBe(1234567.89);
+  });
+
   it("emite categorias nulas quando não há hierarquia (gatilho do bug do staging '0')", () => {
     // Produto sem nenhuma linha de Total de hierarquia acima dele: depto/secao/
     // grupo/subgrupo devem sair NULL — nunca "" nem 0.
@@ -116,5 +126,56 @@ describe("xlsx-parser", () => {
     const result = parseAnyWorkbook(buf);
     expect(result.products).toHaveLength(2);
     expect(result.products.find((p) => p.prod_code === "001")?.prod_name).toBe("PROD A");
+  });
+});
+
+describe("parseCellNumber", () => {
+  it("passa números adiante sem tocar", () => {
+    expect(parseCellNumber(1234.56)).toBe(1234.56);
+    expect(parseCellNumber(0)).toBe(0);
+    expect(parseCellNumber(-42)).toBe(-42);
+  });
+
+  it("trata vazio, nulo e lixo não numérico como 0", () => {
+    expect(parseCellNumber(null)).toBe(0);
+    expect(parseCellNumber(undefined)).toBe(0);
+    expect(parseCellNumber("")).toBe(0);
+    expect(parseCellNumber("   ")).toBe(0);
+    expect(parseCellNumber("n/d")).toBe(0);
+    expect(parseCellNumber(NaN)).toBe(0);
+    expect(parseCellNumber(Infinity)).toBe(0);
+  });
+
+  it("lê decimal pt-BR com vírgula", () => {
+    expect(parseCellNumber("1500,50")).toBe(1500.5);
+    expect(parseCellNumber("0,99")).toBe(0.99);
+    expect(parseCellNumber("-12,5")).toBe(-12.5);
+  });
+
+  it("combina milhar e decimal pt-BR (a regressão do bug)", () => {
+    // Antes: .replace(",", ".") trocava só a primeira vírgula e mantinha os
+    // pontos de milhar → "1.234,56" virava 1.234, mil vezes menor.
+    expect(parseCellNumber("1.234,56")).toBe(1234.56);
+    expect(parseCellNumber("1.234.567,89")).toBe(1234567.89);
+    expect(parseCellNumber("-1.234,56")).toBe(-1234.56);
+  });
+
+  it("entende ponto como milhar quando não há vírgula", () => {
+    expect(parseCellNumber("1.234")).toBe(1234);
+    expect(parseCellNumber("12.345")).toBe(12345);
+    expect(parseCellNumber("1.234.567")).toBe(1234567);
+  });
+
+  it("mantém o ponto como decimal quando não delimita grupos de 3", () => {
+    expect(parseCellNumber("1.23")).toBe(1.23);
+    expect(parseCellNumber("1.2345")).toBe(1.2345);
+    expect(parseCellNumber("1234.56")).toBe(1234.56);
+    expect(parseCellNumber("0.5")).toBe(0.5);
+  });
+
+  it("ignora símbolo de moeda e espaços ao redor do número", () => {
+    expect(parseCellNumber("R$ 1.234,56")).toBe(1234.56);
+    expect(parseCellNumber("  789,10  ")).toBe(789.1);
+    expect(parseCellNumber("R$ 2.500,00")).toBe(2500);
   });
 });
