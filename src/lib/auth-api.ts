@@ -58,20 +58,20 @@ export const login = createServerFn({ method: "POST" })
         actorId: actorId ?? null,
         actorEmail: data.email,
         targetType: "session",
-        detail: `motivo: ${reason}`,
+        detail: reason,
         ip,
       });
 
     const rl = authLimiter.check(ip);
     if (!rl.allowed) {
-      await auditFail("rate_limit");
+      await auditFail("excesso de tentativas (rate limit)");
       throw new Error("Muitas tentativas de login. Aguarde um minuto.");
     }
 
     if (data.turnstileToken) {
       const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
       if (!turnstileOk) {
-        await auditFail("turnstile");
+        await auditFail("falha no Turnstile");
         throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
       }
     }
@@ -82,17 +82,17 @@ export const login = createServerFn({ method: "POST" })
     );
     const rows = rowsRaw as unknown as UserRow[];
     if (!rows.length) {
-      await auditFail("sem_usuario");
+      await auditFail("e-mail não cadastrado");
       throw new Error("E-mail ou senha inválidos.");
     }
     const user = rows[0];
     if (!user.is_active) {
-      await auditFail("inativo", user.id);
+      await auditFail("usuário inativo", user.id);
       throw new Error("Usuário inativo. Procure o administrador.");
     }
     const valid = await bcrypt.compare(data.password, user.password);
     if (!valid) {
-      await auditFail("senha_errada", user.id);
+      await auditFail("senha incorreta", user.id);
       throw new Error("E-mail ou senha inválidos.");
     }
     const token = jwt.sign({ userId: user.id, role: user.role, email: user.email }, JWT_SECRET, {
