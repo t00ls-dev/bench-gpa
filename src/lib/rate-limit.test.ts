@@ -1,5 +1,52 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RateLimiter } from "./rate-limit";
+import { RateLimiter, getClientIp } from "./rate-limit";
+
+function req(headers: Record<string, string>): Request {
+  return new Request("http://x/", { headers });
+}
+
+describe("getClientIp", () => {
+  it("retorna 'unknown' sem request", () => {
+    expect(getClientIp(undefined)).toBe("unknown");
+  });
+
+  it("retorna 'unknown' sem headers de IP", () => {
+    expect(getClientIp(req({}))).toBe("unknown");
+  });
+
+  it("prioriza CF-Connecting-IP mesmo com X-Forwarded-For forjado", () => {
+    expect(
+      getClientIp(
+        req({ "x-forwarded-for": "9.9.9.9, 203.0.113.7", "cf-connecting-ip": "203.0.113.7" }),
+      ),
+    ).toBe("203.0.113.7");
+  });
+
+  it("usa True-Client-IP (CF Enterprise) quando não há CF-Connecting-IP", () => {
+    expect(getClientIp(req({ "true-client-ip": "198.51.100.4", "x-real-ip": "10.0.0.1" }))).toBe(
+      "198.51.100.4",
+    );
+  });
+
+  it("usa X-Real-IP em acesso direto ao nginx (sem Cloudflare)", () => {
+    expect(getClientIp(req({ "x-real-ip": "192.0.2.5" }))).toBe("192.0.2.5");
+  });
+
+  it("cai para o primeiro salto do X-Forwarded-For como último recurso", () => {
+    expect(getClientIp(req({ "x-forwarded-for": "192.0.2.9, 10.0.0.1" }))).toBe("192.0.2.9");
+  });
+
+  it("normaliza porta e IPv4-mapeado em IPv6", () => {
+    expect(getClientIp(req({ "cf-connecting-ip": "::ffff:203.0.113.7" }))).toBe("203.0.113.7");
+    expect(getClientIp(req({ "x-real-ip": "192.0.2.5:54321" }))).toBe("192.0.2.5");
+  });
+
+  it("ignora header vazio e segue para o próximo candidato", () => {
+    expect(getClientIp(req({ "cf-connecting-ip": "  ", "x-real-ip": "192.0.2.5" }))).toBe(
+      "192.0.2.5",
+    );
+  });
+});
 
 describe("RateLimiter", () => {
   let limiter: RateLimiter;
