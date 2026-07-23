@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { parseAnyWorkbook } from "../src/lib/xlsx-parser";
+import { STAGING_COLS, toStagingRow } from "../src/lib/staging-row";
 import db from "../src/lib/db";
 
 function parseArgs() {
@@ -29,40 +30,6 @@ function extractArg(args: string[], flag: string): string | undefined {
   const idx = args.indexOf(flag);
   if (idx === -1 || idx + 1 >= args.length) return undefined;
   return args[idx + 1];
-}
-
-const STAGING_COLS = [
-  "sale_date",
-  "batch_id",
-  "store_code",
-  "store_name",
-  "prod_code",
-  "prod_name",
-  "depto",
-  "secao",
-  "grupo",
-  "subgrupo",
-  "val_vda",
-  "qty_vda",
-  "val_cus",
-  "qty_cus",
-  "val_dev",
-  "qty_dev",
-  "val_vda_liq",
-  "qty_vda_liq",
-  "val_cus_liq",
-  "qty_cus_liq",
-  "val_sld",
-  "qty_sld",
-  "per_mrg",
-];
-
-function toStagingRow(r: Record<string, unknown>, batchId: string, saleDate: string) {
-  return STAGING_COLS.map((c) => {
-    if (c === "sale_date") return saleDate;
-    if (c === "batch_id") return batchId;
-    return r[c] ?? 0;
-  });
 }
 
 async function main() {
