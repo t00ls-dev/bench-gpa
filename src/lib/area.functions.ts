@@ -19,6 +19,17 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
+    // "dias sem vender" não é coluna: ordena-se por last_sale_date INVERTIDO —
+    // mais dias parado = venda mais antiga. A tradução precisa acontecer no
+    // servidor porque a listagem é paginada: antes o sortBy 'daysSince' era
+    // mapeado para 'val' e o cliente reordenava só a página recebida, o que
+    // ficou francamente errado quando os PLUs sem venda entraram na lista —
+    // eles têm val = 0, caem no fim da ordenação por venda e nunca chegariam
+    // à primeira página, justamente sendo eles o alvo dessa ordenação.
+    const byDays = data.sortBy === "daysSince";
+    const sortBy = byDays ? "last_sale_date" : data.sortBy;
+    const sortDir = byDays ? (data.sortDir === "desc" ? "asc" : "desc") : data.sortDir;
+
     const [rs] = await db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
       data.dateFrom,
       data.dateTo,
@@ -30,8 +41,8 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       data.page ?? null,
       data.pageSize,
       data.search,
-      data.sortBy === "daysSince" ? "val" : data.sortBy,
-      data.sortDir,
+      sortBy,
+      sortDir,
     ]);
     const [kpiRows, totalCountRows, byDate, products] = rs as unknown[];
     const kpi = asRecord(asArray(kpiRows)[0]);
