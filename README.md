@@ -92,7 +92,8 @@ Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
 - **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h) — não confundir com a janela de 28 dias do import automático.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
 - **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área).
-- **Deploy**: Hestia VPS (`sv1.t00ls.dev`, `gpa.t00ls.dev`). Docs em `docs/`.
+- **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → swap atômico + restart PM2 com rollback automático. Não há PaaS. Docs em `docs/`.
+  - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados) — a aba **Deployments** do GitHub não é mais usada.
 
 ## Estrutura
 
