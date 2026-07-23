@@ -51,11 +51,16 @@ jobs:
       # Checkout dá acesso a scripts/ (migrate-schema.sql + migrations/) —
       # o artifact só contém .output/.
       - uses: actions/checkout@v7
-      # v8: migrada para ESM com os pacotes @actions/* atualizados — o bundle da
-      # v7 ainda usava o construtor legado `Buffer()`, que polui o log com
-      # [DEP0005]. Também passa a falhar (em vez de só avisar) quando o digest do
-      # artifact não bate: um artifact corrompido aborta o deploy ANTES do swap.
+      # v8 (ESM): falha em vez de só avisar quando o digest do artifact não bate
+      # — um artifact corrompido aborta o deploy ANTES do swap.
+      #
+      # NODE_OPTIONS=--no-deprecation: a action ainda usa o construtor legado
+      # `Buffer()` numa dependência transitiva e emite [DEP0005] a cada deploy
+      # (verificado: persiste na v8). Como o código é de terceiros, só resta
+      # silenciar. O escopo é este step apenas — nada nosso roda aqui.
       - uses: actions/download-artifact@v8
+        env:
+          NODE_OPTIONS: "--no-deprecation"
         with:
           name: build-output
           path: .output/
