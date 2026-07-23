@@ -16,6 +16,7 @@ DROP PROCEDURE IF EXISTS imported_dates;
 DROP PROCEDURE IF EXISTS purge_old_aggs;
 DROP PROCEDURE IF EXISTS db_health_check;
 DROP PROCEDURE IF EXISTS refresh_filter_hierarchy;
+DROP PROCEDURE IF EXISTS refresh_product_universe;
 DROP PROCEDURE IF EXISTS has_role;
 
 -- =============================================
@@ -141,6 +142,35 @@ CREATE TABLE IF NOT EXISTS filter_hierarchy (
   INDEX idx_filter_subgrupo (subgrupo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Universo de PLUs: uma linha por (prod_code, store_code) que JÁ vendeu alguma
+-- vez dentro da janela de retenção, com a categoria e o nome da venda mais
+-- recente, mais a data dessa venda.
+--
+-- Derivada de sales_prod_daily_agg (como a filter_hierarchy), regenerada por
+-- refresh_product_universe() ao fim de cada import e após o purge.
+--
+-- Existe por performance. O KPI "PLUs sem venda" precisa comparar o período
+-- contra todo o histórico; fazer isso direto no sales_prod_daily_agg custa um
+-- COUNT(DISTINCT) sobre ~3,4M linhas — medido em 4,6s contra 0,4s da consulta
+-- só do período, numa tela que não tem cache. Aqui são ~176k linhas.
+CREATE TABLE IF NOT EXISTS product_universe (
+  prod_code      VARCHAR(20)  NOT NULL,
+  store_code     VARCHAR(20)  NOT NULL,
+  prod_name      VARCHAR(255),
+  depto          VARCHAR(100),
+  secao          VARCHAR(100),
+  grupo          VARCHAR(100),
+  subgrupo       VARCHAR(100),
+  last_sale_date DATE NOT NULL,
+  PRIMARY KEY (prod_code, store_code),
+  INDEX idx_pu_store (store_code),
+  INDEX idx_pu_depto (depto),
+  INDEX idx_pu_secao (secao),
+  INDEX idx_pu_grupo (grupo),
+  INDEX idx_pu_subgrupo (subgrupo),
+  INDEX idx_pu_last_sale (last_sale_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Trilha de auditoria: ações sensíveis de auth e admin.
 -- actor_email é desnormalizado de propósito — o registro precisa sobreviver
 -- mesmo se o usuário for removido depois.
@@ -176,7 +206,7 @@ CREATE TABLE IF NOT EXISTS cron_heartbeat (
 
 DELIMITER //
 
--- 1/15: dashboard_metrics
+-- 1/16: dashboard_metrics
 CREATE PROCEDURE dashboard_metrics(
   p_date_from DATE,
   p_date_to DATE,
@@ -298,7 +328,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 2/15: dashboard_rankings
+-- 2/16: dashboard_rankings
 CREATE PROCEDURE dashboard_rankings(
   p_date_from DATE,
   p_date_to DATE,
@@ -419,7 +449,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 3/15: filter_options (uses filter_hierarchy — 21k rows instead of 942k)
+-- 3/16: filter_options (uses filter_hierarchy — 21k rows instead of 942k)
 CREATE PROCEDURE filter_options(
   p_date_from DATE,
   p_date_to DATE,
@@ -518,7 +548,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 4/15: area_analysis
+-- 4/16: area_analysis
 CREATE PROCEDURE area_analysis(
   p_date_from DATE,
   p_date_to DATE,
@@ -536,6 +566,9 @@ CREATE PROCEDURE area_analysis(
 BEGIN
   DECLARE v_offset INT DEFAULT 0;
   DECLARE v_limit INT DEFAULT 20;
+  DECLARE v_total DECIMAL(18,2) DEFAULT 0;
+  DECLARE v_with_sale INT DEFAULT 0;
+  DECLARE v_universe INT DEFAULT 0;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
   CREATE TEMPORARY TABLE tmp_filters (
@@ -568,11 +601,18 @@ BEGIN
   END IF;
 
   -- Result set 1: aggregate KPIs
-  SELECT
-    COALESCE(SUM(val_vda), 0) AS total,
-    COUNT(DISTINCT prod_code) AS plus_total,
-    COUNT(DISTINCT CASE WHEN val_vda > 0 THEN prod_code END) AS plus_with_sale,
-    COUNT(DISTINCT CASE WHEN val_vda = 0 THEN prod_code END) AS plus_without_sale
+  --
+  -- Venda e "PLUs com venda" saem do PERÍODO; o universo sai da
+  -- product_universe, que não tem recorte de data — é todo PLU que já vendeu
+  -- dentro da retenção, sob os mesmos filtros de loja/categoria.
+  --
+  -- Antes as três contagens saíam da mesma varredura do período, e como o
+  -- parser descarta linha de valor zero (xlsx-parser.ts), nunca existia linha
+  -- com val_vda = 0: "PLUs sem venda" dava 0 sempre e "PLUs (área)" repetia
+  -- "PLUs com venda". Medido em prod: 339.007 linhas no período, ZERO com
+  -- val_vda <= 0.
+  SELECT COALESCE(SUM(a.val_vda), 0), COUNT(DISTINCT a.prod_code)
+    INTO v_total, v_with_sale
   FROM sales_prod_daily_agg a
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
@@ -581,6 +621,25 @@ BEGIN
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+
+  SELECT COUNT(DISTINCT u.prod_code) INTO v_universe
+  FROM product_universe u
+  WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+
+  -- GREATEST protege dois casos em que o universo pode ficar momentaneamente
+  -- menor que o período: a product_universe desatualizada (import gravou o agg
+  -- mas o refresh falhou) e o PLU reclassificado — o universo guarda a
+  -- categoria da última venda, então sob filtro de categoria ele pode aparecer
+  -- no período e não no universo. Nenhum dos dois pode virar KPI negativo.
+  SELECT
+    v_total                                  AS total,
+    GREATEST(v_universe, v_with_sale)        AS plus_total,
+    v_with_sale                              AS plus_with_sale,
+    GREATEST(v_universe - v_with_sale, 0)    AS plus_without_sale;
 
   -- Result set 2: total count for pagination
   SELECT COUNT(*) AS total_products FROM (
@@ -609,8 +668,26 @@ BEGIN
 
   -- Result set 4: paginated products
   SET @sql = CONCAT(
+     -- last_sale_date: MAX dentro do período quando existe, senão a última
+     -- venda registrada na product_universe.
+     --
+     -- O MAX sozinho é limitado ao recorte e não consegue apontar para antes do
+     -- início do período. Hoje isso não aparece, porque a listagem só traz PLU
+     -- que vendeu no período — e para esses o MAX já é a resposta certa. O
+     -- COALESCE existe para o PLU SEM venda no período: aí o MAX é NULL e a
+     -- resposta correta ("vendeu pela última vez antes do recorte") só está no
+     -- universo. Mantido nesta ordem de propósito: preserva o comportamento
+     -- atual e não passa a exibir data posterior ao fim do período.
+     -- A subquery respeita o filtro de loja para não trazer a última venda de
+     -- uma loja que o usuário tirou do recorte.
      'SELECT a.prod_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo,
-              SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty, MAX(a.sale_date) AS last_sale_date
+              SUM(a.val_vda) AS val, SUM(a.qty_vda) AS qty,
+              COALESCE(MAX(a.sale_date),
+                (SELECT MAX(u.last_sale_date) FROM product_universe u
+                  WHERE u.prod_code = a.prod_code
+                    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
+                      OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+                )) AS last_sale_date
       FROM sales_prod_daily_agg a
       WHERE (? IS NULL OR a.sale_date >= ?)
         AND (? IS NULL OR a.sale_date <= ?)
@@ -643,7 +720,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 5/15: area_filter_hierarchy
+-- 5/16: area_filter_hierarchy
 CREATE PROCEDURE area_filter_hierarchy()
 BEGIN
   SELECT MAX(sale_date) AS latest_date FROM import_log;
@@ -655,7 +732,7 @@ BEGIN
   SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date ASC;
 END//
 
--- 6/15: product_search
+-- 6/16: product_search
 CREATE PROCEDURE product_search(p_q VARCHAR(255))
 BEGIN
   SELECT DISTINCT prod_code, prod_name
@@ -665,7 +742,7 @@ BEGIN
   LIMIT 20;
 END//
 
--- 7/15: get_product_by_code
+-- 7/16: get_product_by_code
 CREATE PROCEDURE get_product_by_code(p_code VARCHAR(20))
 BEGIN
   SELECT DISTINCT prod_code, prod_name
@@ -674,7 +751,7 @@ BEGIN
   LIMIT 1;
 END//
 
--- 8/15: product_analysis
+-- 8/16: product_analysis
 CREATE PROCEDURE product_analysis(
   p_prod_code VARCHAR(20),
   p_store_code VARCHAR(20),
@@ -746,7 +823,7 @@ BEGIN
   LIMIT 4;
 END//
 
--- 9/15: upsert_products_bulk
+-- 9/16: upsert_products_bulk
 CREATE PROCEDURE upsert_products_bulk(
   p_rows JSON,
   p_sale_date DATE
@@ -777,7 +854,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_products;
 END//
 
--- 10/15: finalize_import
+-- 10/16: finalize_import
 CREATE PROCEDURE finalize_import(
   p_batch_id VARCHAR(36),
   p_sale_date DATE,
@@ -851,11 +928,12 @@ BEGIN
     batch_id = VALUES(batch_id);
 
   CALL refresh_filter_hierarchy();
+  CALL refresh_product_universe();
 
   COMMIT;
 END//
 
--- 11/15: imported_dates
+-- 11/16: imported_dates
 CREATE PROCEDURE imported_dates()
 BEGIN
   SELECT sale_date, row_count, imported_at
@@ -863,7 +941,7 @@ BEGIN
   ORDER BY sale_date DESC;
 END//
 
--- 12/15: purge_old_aggs
+-- 12/16: purge_old_aggs
 --
 -- Outra ponta da invariante de retenção; o lado JS está em
 -- src/lib/retention.ts (isWithinRetention), usado pelo import-watch para não
@@ -892,10 +970,17 @@ BEGIN
   DELETE FROM import_log WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 
+  -- O universo de PLUs é derivado do agg que acabou de encolher: um PLU cuja
+  -- última venda saiu na poda tem que sair do universo também, senão passa a
+  -- contar como "sem venda" para sempre.
+  IF v_deleted > 0 THEN
+    CALL refresh_product_universe();
+  END IF;
+
   SELECT v_deleted AS deleted;
 END//
 
--- 13/15: db_health_check
+-- 13/16: db_health_check
 CREATE PROCEDURE db_health_check()
 BEGIN
   SELECT VERSION() AS version, NOW() AS time;
@@ -914,7 +999,7 @@ BEGIN
   ORDER BY size_mb DESC;
 END//
 
--- 14/15: refresh_filter_hierarchy
+-- 14/16: refresh_filter_hierarchy
 CREATE PROCEDURE refresh_filter_hierarchy()
 BEGIN
   TRUNCATE TABLE filter_hierarchy;
@@ -932,7 +1017,35 @@ BEGIN
   WHERE a.depto IS NOT NULL OR a.secao IS NOT NULL OR a.grupo IS NOT NULL OR a.subgrupo IS NOT NULL;
 END//
 
--- 15/15: has_role
+-- 15/16: refresh_product_universe
+-- Regenera a product_universe do zero (mesmo padrão da refresh_filter_hierarchy:
+-- a tabela é derivada, então é recriada, nunca editada em linha).
+--
+-- O JOIN com o MAX(sale_date) por (prod_code, store_code) serve a dois
+-- propósitos de uma vez: `a.sale_date` já É a última venda, e nome/categoria
+-- saem da linha mais recente — um PLU reclassificado fica com a categoria
+-- atual, não com a primeira que teve. Como a PK do agg é
+-- (sale_date, store_code, prod_code), o JOIN devolve exatamente uma linha por
+-- par.
+CREATE PROCEDURE refresh_product_universe()
+BEGIN
+  TRUNCATE TABLE product_universe;
+
+  INSERT INTO product_universe
+    (prod_code, store_code, prod_name, depto, secao, grupo, subgrupo, last_sale_date)
+  SELECT a.prod_code, a.store_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo, a.sale_date
+  FROM sales_prod_daily_agg a
+  JOIN (
+    SELECT prod_code, store_code, MAX(sale_date) AS ult
+    FROM sales_prod_daily_agg
+    GROUP BY prod_code, store_code
+  ) m
+    ON m.prod_code = a.prod_code
+   AND m.store_code = a.store_code
+   AND m.ult = a.sale_date;
+END//
+
+-- 16/16: has_role
 CREATE PROCEDURE has_role(p_user_id VARCHAR(36), p_role VARCHAR(20))
 BEGIN
   SELECT COUNT(*) > 0 AS has_role
