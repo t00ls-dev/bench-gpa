@@ -28,7 +28,7 @@ vi.mock("@tanstack/react-start/server", () => ({
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("bcrypt", () => ({ default: { compare: vi.fn() } }));
 vi.mock("jsonwebtoken", () => ({ default: { sign: vi.fn(), verify: vi.fn() } }));
-vi.mock("./turnstile", () => ({ verifyTurnstile: vi.fn() }));
+vi.mock("./turnstile", () => ({ verifyTurnstile: vi.fn(), isTurnstileEnabled: vi.fn() }));
 vi.mock("./rate-limit", () => ({
   authLimiter: { check: vi.fn() },
   getClientIp: vi.fn(() => "127.0.0.1"),
@@ -39,7 +39,7 @@ import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server
 import db from "./db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { verifyTurnstile } from "./turnstile";
+import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
 import { authLimiter } from "./rate-limit";
 
 beforeEach(() => {
@@ -50,6 +50,7 @@ beforeEach(() => {
     resetAt: Date.now() + 60000,
   });
   vi.mocked(verifyTurnstile).mockResolvedValue(true);
+  vi.mocked(isTurnstileEnabled).mockReturnValue(false);
   vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
   vi.mocked(jwt.sign).mockReturnValue("jwt-token" as never);
   vi.mocked(jwt.verify).mockReturnValue({
@@ -138,6 +139,15 @@ describe("login", () => {
     await expect(
       login({ email: "test@gpabr.com", password: "x", turnstileToken: "bad-token" } as never),
     ).rejects.toThrow("Falha na verificação");
+  });
+
+  it("fail-closed: recusa login sem token quando o Turnstile está ativo", async () => {
+    vi.mocked(isTurnstileEnabled).mockReturnValue(true);
+    await expect(login({ email: "test@gpabr.com", password: "correct" } as never)).rejects.toThrow(
+      "Falha na verificação",
+    );
+    expect(bcrypt.compare).not.toHaveBeenCalled();
+    expect(setCookie).not.toHaveBeenCalled();
   });
 });
 
