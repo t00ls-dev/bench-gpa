@@ -90,6 +90,22 @@ describe("xlsx-parser", () => {
     expect(result.sales[0].val_vda).toBe(1500.5);
   });
 
+  it("emite categorias nulas quando não há hierarquia (gatilho do bug do staging '0')", () => {
+    // Produto sem nenhuma linha de Total de hierarquia acima dele: depto/secao/
+    // grupo/subgrupo devem sair NULL — nunca "" nem 0.
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/01/2024"],
+      [null, null, null, null, "12345-PROD SEM HIER", 42],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sales).toHaveLength(1);
+    expect(result.sales[0].depto).toBeNull();
+    expect(result.sales[0].secao).toBeNull();
+    expect(result.sales[0].grupo).toBeNull();
+    expect(result.sales[0].subgrupo).toBeNull();
+  });
+
   it("builds product map", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
