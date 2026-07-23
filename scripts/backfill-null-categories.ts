@@ -77,7 +77,9 @@ async function main() {
               subgrupo = NULLIF(subgrupo, '0')
         WHERE depto = '0' OR secao = '0' OR grupo = '0' OR subgrupo = '0'`,
     );
-    console.log(`\nsales_prod_daily_agg: ${(res as { affectedRows: number }).affectedRows} linhas atualizadas.`);
+    console.log(
+      `\nsales_prod_daily_agg: ${(res as { affectedRows: number }).affectedRows} linhas atualizadas.`,
+    );
   }
 
   await db.query("CALL refresh_filter_hierarchy()");
@@ -89,7 +91,9 @@ async function main() {
   console.log("\nApós o backfill:");
   console.table(afterAgg);
   console.log(`filter_hierarchy com '0': ${afterHier}`);
-  console.log(remaining === 0 ? "\n✅ Backfill concluído." : `\n⚠️ Ainda restam ${remaining} valores "0".`);
+  console.log(
+    remaining === 0 ? "\n✅ Backfill concluído." : `\n⚠️ Ainda restam ${remaining} valores "0".`,
+  );
   process.exit(remaining === 0 ? 0 : 1);
 }
 
