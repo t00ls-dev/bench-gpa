@@ -18,29 +18,49 @@ export class RateLimiter {
     if (this.cleanupTimer.unref) this.cleanupTimer.unref();
   }
 
+  /**
+   * A ordem dos dois orçamentos importa: o teto por IP é avaliado PRIMEIRO e,
+   * se já reprovar, a requisição sai sem tocar o contador global.
+   *
+   * Antes os dois contadores eram incrementados de uma vez, antes de qualquer
+   * veredito — então as rejeições do próprio abusador continuavam empurrando o
+   * contador compartilhado. Com o authLimiter (10/IP, 40 global), bastava um
+   * curl em loop de um único IP: as 10 primeiras passavam, da 11ª em diante
+   * eram rejeitadas mas seguiam somando, e ao chegar em 41 o login caía para
+   * TODOS os usuários — um atacante amplificado para 100% da base, sem botnet.
+   *
+   * Com o curto-circuito, a contribuição máxima de um IP para o orçamento
+   * global é maxPerIp. O teto global volta a ser o que deveria ser: um
+   * disjuntor de carga agregada, que só dispara com tráfego de fato
+   * distribuído.
+   */
   check(ip: string): { allowed: boolean; remaining: number; resetAt: number } {
     const now = Date.now();
 
-    const entry = this.windows.get(ip);
-    if (!entry || now > entry.resetAt) {
-      this.windows.set(ip, { count: 1, resetAt: now + this.windowMs });
-    } else {
-      entry.count++;
+    let ipEntry = this.windows.get(ip);
+    if (!ipEntry || now > ipEntry.resetAt) {
+      ipEntry = { count: 0, resetAt: now + this.windowMs };
+      this.windows.set(ip, ipEntry);
+    }
+    ipEntry.count++;
+
+    if (ipEntry.count > this.maxPerIp) {
+      return { allowed: false, remaining: 0, resetAt: ipEntry.resetAt };
     }
 
-    const globalEntry = this.globalWindows.get("global");
-    if (!globalEntry || now > globalEntry.resetAt) {
-      this.globalWindows.set("global", { count: 1, resetAt: now + this.windowMs });
-    } else {
-      globalEntry.count++;
+    let gEntry = this.globalWindows.get("global");
+    if (!gEntry || now > gEntry.resetAt) {
+      gEntry = { count: 0, resetAt: now + this.windowMs };
+      this.globalWindows.set("global", gEntry);
     }
+    gEntry.count++;
 
-    const ipEntry = this.windows.get(ip)!;
-    const gEntry = this.globalWindows.get("global")!;
-
-    if (ipEntry.count > this.maxPerIp || gEntry.count > this.maxGlobal) {
-      const resetAt = Math.max(ipEntry.resetAt, gEntry.resetAt);
-      return { allowed: false, remaining: 0, resetAt };
+    if (gEntry.count > this.maxGlobal) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: Math.max(ipEntry.resetAt, gEntry.resetAt),
+      };
     }
 
     return {
