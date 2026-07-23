@@ -15,7 +15,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Deploy:** CI GitHub Actions (`.github/workflows/ci.yml`) → rsync `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), Nitro v3 preset `node-server`, swap atômico + PM2 com rollback. Não há PaaS — o Vercel foi removido em 2026-07-23 (aba Deployments do GitHub não é mais usada)
 - **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 24 server functions
 - **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
-- **Crons:** `cli:purge` (03h), `cli:watch` (07h e 19h) — ver `scripts/setup-crons.sh`
+- **Crons:** `cli:purge` (03h), `cli:watch` (a cada 3h, 10h–22h — `0 10-22/3`) — ver `scripts/setup-crons.sh`
 - **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
 - **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado

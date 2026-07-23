@@ -75,12 +75,11 @@ bun run cli:import data/2026-07/2026-07-13.xlsx
 Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
 
 ```
-0 3 * * * bun run cli:purge  >> logs/purge.log 2>&1   # limpa agregados antigos
-0 7 * * * bun run cli:watch  >> logs/cron.log 2>&1     # importa planilhas novas
-0 19 * * * bun run cli:watch >> logs/cron.log 2>&1     # importa planilhas novas
+0 3 * * * bun run cli:purge >> logs/purge.log 2>&1       # limpa agregados antigos (03h)
+0 10-22/3 * * * bun run cli:watch >> logs/cron.log 2>&1  # importa planilhas novas (a cada 3h, 10h–22h)
 ```
 
-`cli:watch` escaneia `data/YYYY-MM/`, normaliza nomes, importa planilhas novas dentro da janela de 28 dias, e commita automaticamente.
+`cli:watch` escaneia `data/YYYY-MM/` (mês corrente), normaliza nomes, importa planilhas novas dentro do horizonte de 180 dias (cap atrelado ao purge), e commita automaticamente.
 
 ## Arquitetura
 
@@ -88,8 +87,9 @@ Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
 - **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min).
 - **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard (30s), hierarquia área (5min), datas importadas (1min), role (5min/user).
 - **Segurança**: CSP nonce (script-src nonce+strict-dynamic), Turnstile, rate limit em todas as 24 server functions (`requireRateLimit`).
-- **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Janela de import automático: 28 dias.
-- **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h) — não confundir com a janela de 28 dias do import automático.
+- **Auditoria & monitoramento**: `audit_log` registra ações sensíveis (login ok/falho, logout, criação/alteração de usuário, reset de senha, purga); IP resolvido atrás do Cloudflare (`CF-Connecting-IP`). `cron_heartbeat` grava a última execução de cada cron (`import-watch`, `purge`) com status e duração, sinalizando atrasos. Ambos visíveis em `/admin` → aba **Auditoria**.
+- **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Import automático varre o mês corrente com cap de 180 dias.
+- **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). O import automático usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria — evita o loop importar→purgar→reimportar.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
 - **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área).
 - **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → swap atômico + restart PM2 com rollback automático. Não há PaaS. Docs em `docs/`.
