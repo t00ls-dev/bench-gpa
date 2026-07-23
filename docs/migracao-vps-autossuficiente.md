@@ -163,6 +163,14 @@ server {
 }
 ```
 
+> 🔒 **IP real do usuário atrás do Cloudflare.** Com `X-Real-IP $remote_addr`,
+> o app veria o IP da *edge* do Cloudflare, não o do usuário — e o primeiro
+> salto do `X-Forwarded-For` é falsificável. O `getClientIp` já prioriza o
+> `CF-Connecting-IP`, mas para esse header ser **confiável** a origem precisa
+> aceitar tráfego só do Cloudflare. Passo a passo (allowlist de faixas do CF +
+> módulo `realip` + mTLS opcional) em
+> [`docs/seguranca-ip-e-cloudflare.md`](./seguranca-ip-e-cloudflare.md).
+
 ---
 
 ## 5. Criar subdomínio no Hestia
