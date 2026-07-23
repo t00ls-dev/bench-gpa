@@ -16,7 +16,7 @@ Power BI (relatório de vendas)
         │  ← export manual para .xlsx (feito por uma pessoa)
         ▼
 data/YYYY-MM/<arquivo>.xlsx   ← arquivo colocado manualmente no repo
-        │  ← cron cli:watch (07h e 19h)
+        │  ← cron cli:watch (a cada 3h, 10h–22h)
         ▼
 import-watch.ts
   • normaliza o nome para YYYY-MM-DD.xlsx (extract-date.ts)
@@ -37,7 +37,7 @@ correto. O `import-watch` cuida do resto (dedup, cap de retenção, import, comm
 3. **Baixar** o `.xlsx` (ou converter o resultado para o layout que o
    `xlsx-parser` espera — ver "Compatibilidade de layout" abaixo).
 4. **Salvar** em `data/YYYY-MM/<data>.xlsx` na VPS (ou onde o `import-watch` roda).
-5. **Agendar** — provavelmente um cron um pouco antes do `cli:watch` das 07h.
+5. **Agendar** — provavelmente um cron um pouco antes da primeira rodada do `cli:watch` (10h).
 
 ## Perguntas em aberto
 
@@ -89,7 +89,7 @@ real antes de ligar o cron.
   `powerbi-download`) para aparecer no painel `/admin` → Auditoria quando falhar.
 - **Fuso/horário:** o export precisa refletir o dia fechado. Confirmar a hora em
   que o dado do dia anterior fica completo no Power BI antes de escolher o
-  horário do cron (hoje o `cli:watch` roda 07h e 19h).
+  horário do cron (hoje o `cli:watch` roda a cada 3h, das 10h às 22h).
 - **Timezone do nome do arquivo:** a data no nome (`YYYY-MM-DD.xlsx`) deve ser a
   data de venda, não a data de execução — o `extract-date` já lida com isso se o
   conteúdo/nome trouxer a data correta.
