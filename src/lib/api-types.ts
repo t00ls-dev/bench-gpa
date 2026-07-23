@@ -54,7 +54,6 @@ export interface AreaProduct {
   grupo: string | null;
   subgrupo: string | null;
   val: number;
-  qty: number;
   lastSaleDate: string | null;
 }
 export interface AreaAnalysisResult {
