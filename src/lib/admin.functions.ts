@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
-import { assertAdmin } from "./admin-utils";
+import { assertAdmin, invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import { RETENTION_DAYS } from "./retention";
 import { z } from "zod";
@@ -72,6 +72,7 @@ export const setUserRole = createServerFn({ method: "POST" })
       throw new Error("Você não pode remover seu próprio acesso de administrador.");
     }
     await db.query("UPDATE users SET role = ? WHERE id = ?", [data.role, data.userId]);
+    invalidateAdminCache(data.userId);
     await recordAudit({
       action: "user.role_change",
       actorId: context.userId,
@@ -94,6 +95,7 @@ export const setUserActive = createServerFn({ method: "POST" })
       throw new Error("Você não pode inativar sua própria conta.");
     }
     await db.query("UPDATE users SET is_active = ? WHERE id = ?", [data.isActive, data.userId]);
+    invalidateAdminCache(data.userId);
     await recordAudit({
       action: data.isActive ? "user.activate" : "user.deactivate",
       actorId: context.userId,
