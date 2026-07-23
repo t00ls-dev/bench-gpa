@@ -46,10 +46,42 @@ function splitCodeName(s: unknown): { code: string; name: string } | null {
   return { code, name };
 }
 
-function num(v: unknown): number {
+/**
+ * Converte uma célula em número, assumindo o formato pt-BR do export do GPA:
+ * ponto separa milhar, vírgula separa decimal ("1.234,56" → 1234.56).
+ *
+ * Na prática o XLSX quase sempre entrega `number` (lemos com `raw: true`), e é
+ * por isso que o bug do `.replace(",", ".")` — que só trocava a PRIMEIRA
+ * vírgula e deixava os pontos de milhar, transformando "1.234,56" em 1.234 —
+ * nunca apareceu. Basta uma coluna formatada como texto na origem para os
+ * valores chegarem como string e o total do dia sair mil vezes menor.
+ *
+ * Exportado para teste direto: as combinações de milhar/decimal são muitas para
+ * cobrir só através de `parseAnyWorkbook`.
+ */
+export function parseCellNumber(v: unknown): number {
   if (v == null || v === "") return 0;
   if (typeof v === "number") return isFinite(v) ? v : 0;
-  const n = parseFloat(String(v).replace(",", "."));
+
+  // Descarta o que não compõe o número: "R$", espaços (inclusive NBSP), etc.
+  const s = String(v)
+    .trim()
+    .replace(/[^\d,.-]/g, "");
+  if (!s) return 0;
+
+  let normalized = s;
+  if (s.includes(",")) {
+    // Há vírgula → ela é o decimal (a última, se houver mais de uma) e todo
+    // ponto antes dela é separador de milhar.
+    const dec = s.lastIndexOf(",");
+    normalized = s.slice(0, dec).replace(/[.,]/g, "") + "." + s.slice(dec + 1);
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) {
+    // Só pontos, todos delimitando grupos de exatamente 3 dígitos → milhar.
+    // "1.234" é 1234; já "1.23" e "1.2345" continuam sendo decimais.
+    normalized = s.replace(/\./g, "");
+  }
+
+  const n = parseFloat(normalized);
   return isFinite(n) ? n : 0;
 }
 
@@ -124,7 +156,7 @@ function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
       productMap.set(cn.code, cn.name);
       for (const st of stores) {
         const v = row[st.idx];
-        const n = num(v);
+        const n = parseCellNumber(v);
         if (n === 0) continue;
         sales.push({
           store_code: st.code,
