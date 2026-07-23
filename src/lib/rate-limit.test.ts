@@ -110,3 +110,59 @@ describe("RateLimiter", () => {
     expect(limiter.check("1.2.3.4").allowed).toBe(true);
   });
 });
+
+describe("RateLimiter — orçamento global não é armável por um IP só", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("requisição já barrada por IP não consome o orçamento global", () => {
+    const l = new RateLimiter(60_000, 5, 20, "test");
+
+    // Atacante dispara 25x; só as 5 primeiras passam pelo limite por IP.
+    for (let i = 0; i < 25; i++) l.check("6.6.6.6");
+
+    // Vítima na primeira requisição da vida dela: tem que passar. Antes, as 20
+    // rejeições do atacante também incrementavam o contador global e estouravam
+    // o teto de 20 — um curl em loop derrubava o login de todo mundo.
+    expect(l.check("10.0.0.1").allowed).toBe(true);
+
+    l.destroy();
+  });
+
+  it("um IP consome no máximo maxPerIp do orçamento global", () => {
+    const l = new RateLimiter(60_000, 5, 20, "test");
+
+    for (let i = 0; i < 100; i++) l.check("6.6.6.6");
+
+    // Sobram 15 do teto global (20 - 5 do atacante) para IPs distintos.
+    for (let i = 1; i <= 15; i++) {
+      expect(l.check(`10.0.0.${i}`).allowed).toBe(true);
+    }
+
+    l.destroy();
+  });
+
+  it("ainda dispara o disjuntor quando a carga é de fato distribuída", () => {
+    const l = new RateLimiter(60_000, 5, 20, "test");
+
+    // 20 IPs distintos, 1 requisição cada → esgota o teto global legitimamente.
+    for (let i = 1; i <= 20; i++) {
+      expect(l.check(`10.0.1.${i}`).allowed).toBe(true);
+    }
+    expect(l.check("10.0.2.1").allowed).toBe(false);
+
+    l.destroy();
+  });
+
+  it("o orçamento global se recupera quando a janela expira", () => {
+    const l = new RateLimiter(60_000, 5, 20, "test");
+
+    for (let i = 1; i <= 20; i++) l.check(`10.0.1.${i}`);
+    expect(l.check("10.0.2.1").allowed).toBe(false);
+
+    vi.advanceTimersByTime(60_001);
+    expect(l.check("10.0.2.1").allowed).toBe(true);
+
+    l.destroy();
+  });
+});
