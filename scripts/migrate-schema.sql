@@ -802,10 +802,16 @@ BEGIN
   ORDER BY val DESC;
 
   -- Result set 4: evolution (last 28 days)
+  --
+  -- INTERVAL 27, não 28: os dois extremos são inclusivos, então `ref - 27` até
+  -- `ref` são 28 datas. Com 28 vinham 29, contradizendo o rótulo "últimos 28
+  -- dias" da tela e do PDF — e 28 aqui não é número redondo qualquer, são 4
+  -- semanas exatas, o que importa porque a análise ao lado compara o mesmo dia
+  -- da semana. Com 29 dias a janela pegava um dia da semana repetido.
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
   WHERE a.prod_code = p_prod_code
-    AND a.sale_date >= DATE_SUB(v_ref_date, INTERVAL 28 DAY)
+    AND a.sale_date >= DATE_SUB(v_ref_date, INTERVAL 27 DAY)
     AND a.sale_date <= v_ref_date
     AND (p_store_code IS NULL OR a.store_code = p_store_code)
   GROUP BY a.sale_date
