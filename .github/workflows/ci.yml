@@ -51,7 +51,11 @@ jobs:
       # Checkout dá acesso a scripts/ (migrate-schema.sql + migrations/) —
       # o artifact só contém .output/.
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v7
+      # v8: migrada para ESM com os pacotes @actions/* atualizados — o bundle da
+      # v7 ainda usava o construtor legado `Buffer()`, que polui o log com
+      # [DEP0005]. Também passa a falhar (em vez de só avisar) quando o digest do
+      # artifact não bate: um artifact corrompido aborta o deploy ANTES do swap.
+      - uses: actions/download-artifact@v8
         with:
           name: build-output
           path: .output/
@@ -121,8 +125,15 @@ jobs:
             sudo mv "$APPDIR/.output" "$APPDIR/.output.old" 2>/dev/null || true
             sudo mv "$APPDIR/.output.new" "$APPDIR/.output"
 
-            sudo -u admin pm2 delete bench-gpa >&2 || true
-            sudo -u admin pm2 start ecosystem.config.cjs || rollback
+            # startOrReload é idempotente: sobe se não existe, recarrega se já
+            # existe. Substitui o par delete+start, que sempre logava
+            # "[PM2][WARN] Applications bench-gpa not running" e deixava o app
+            # fora do PM2 entre os dois comandos. --update-env força reler o
+            # ecosystem.config.cjs (e o .env que ele carrega); sem a flag, o
+            # reload preservaria o ambiente da execução anterior.
+            # Obs.: com exec_mode "fork" o reload equivale a restart — o blip é
+            # curto, mas não é zero-downtime.
+            sudo -u admin pm2 startOrReload ecosystem.config.cjs --update-env || rollback
 
             sleep 3
             curl -sf --max-time 10 http://127.0.0.1:3000/ -o /dev/null || rollback
