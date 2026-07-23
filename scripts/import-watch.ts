@@ -81,7 +81,7 @@ async function main() {
   }
 
   // 4. Process each file
-  const renamed: string[] = [];
+  const alreadyImported: string[] = [];
   const deduped: string[] = [];
   const imported: string[] = [];
   const skippedOld: string[] = [];
@@ -149,7 +149,7 @@ async function main() {
 
     if (existing) {
       log(`import_log: ${date} already imported — skip`);
-      renamed.push(`${file} → ${newName} (already imported)`);
+      alreadyImported.push(`${file} → ${newName} (already imported)`);
       continue;
     }
 
@@ -179,7 +179,7 @@ async function main() {
 
   // 5. Summary
   const all = [
-    ...renamed.map((s) => `REN: ${s}`),
+    ...alreadyImported.map((s) => `SKIP: ${s}`),
     ...deduped.map((s) => `DUP: ${s}`),
     ...imported.map((s) => `IMP: ${s}`),
     ...skippedOld.map((s) => `OLD: ${s}`),
@@ -195,7 +195,7 @@ async function main() {
   } else {
     exec(["git", "add", "logs/import.log"]);
     const summary = [
-      renamed.length && `${renamed.length} renamed`,
+      alreadyImported.length && `${alreadyImported.length} already-imported`,
       deduped.length && `${deduped.length} deduped`,
       imported.length && `${imported.length} imported`,
       skippedOld.length && `${skippedOld.length} skipped-old`,
@@ -217,7 +217,7 @@ async function main() {
   const detail =
     [
       imported.length && `${imported.length} importados`,
-      renamed.length && `${renamed.length} renomeados`,
+      alreadyImported.length && `${alreadyImported.length} já importados`,
       deduped.length && `${deduped.length} deduplicados`,
       skippedOld.length && `${skippedOld.length} além da retenção`,
       failed.length && `${failed.length} falhas`,
