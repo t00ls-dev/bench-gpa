@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { extractDate } from "./extract-date";
 import db from "../src/lib/db";
 import { recordHeartbeat } from "../src/lib/heartbeat";
-import { RETENTION_DAYS } from "../src/lib/retention";
+import { RETENTION_DAYS, daysSinceUtc, isWithinRetention } from "../src/lib/retention";
 
 const HB_JOB = "import-watch";
 
@@ -156,8 +156,8 @@ async function main() {
     // Cap atrelado ao purge (RETENTION_DAYS): ignora arquivos além do horizonte
     // de retenção — o purge das 3h os apagaria da import_log e a rodada seguinte
     // os reimportaria, num loop diário. Dentro de 180 dias, importa normalmente.
-    const daysAgo = Math.floor((Date.now() - new Date(date + "T00:00:00Z").getTime()) / 86_400_000);
-    if (daysAgo > RETENTION_DAYS) {
+    const daysAgo = daysSinceUtc(date);
+    if (!isWithinRetention(date)) {
       log(`Skip: ${date} além da retenção (${daysAgo}d > ${RETENTION_DAYS}d) — seria purgado`);
       skippedOld.push(`${file} → ${newName} (${daysAgo}d, além da retenção)`);
       continue;
