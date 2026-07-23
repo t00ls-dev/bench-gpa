@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { verifyTurnstile } from "./turnstile";
+import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
 
 describe("verifyTurnstile", () => {
   beforeEach(() => {
@@ -87,5 +87,27 @@ describe("verifyTurnstile", () => {
     vi.stubGlobal("fetch", fetchMock);
     await expect(verifyTurnstile("token")).resolves.toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("isTurnstileEnabled", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("ativo quando há secret e sem bypass", () => {
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "test-secret");
+    delete process.env.TURNSTILE_BYPASS;
+    expect(isTurnstileEnabled()).toBe(true);
+  });
+
+  it("inativo quando o bypass está ligado", () => {
+    vi.stubEnv("TURNSTILE_SECRET_KEY", "test-secret");
+    vi.stubEnv("TURNSTILE_BYPASS", "true");
+    expect(isTurnstileEnabled()).toBe(false);
+  });
+
+  it("inativo quando não há secret (dev)", () => {
+    delete process.env.TURNSTILE_SECRET_KEY;
+    delete process.env.TURNSTILE_BYPASS;
+    expect(isTurnstileEnabled()).toBe(false);
   });
 });

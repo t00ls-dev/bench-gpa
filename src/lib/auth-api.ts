@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { getRequest, getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
 import db from "./db";
 import { z } from "zod";
-import { verifyTurnstile } from "./turnstile";
+import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
 import { authLimiter, getClientIp } from "./rate-limit";
 import { recordAudit } from "./audit";
 
@@ -68,6 +68,12 @@ export const login = createServerFn({ method: "POST" })
       throw new Error("Muitas tentativas de login. Aguarde um minuto.");
     }
 
+    // Fail-closed: quando o Turnstile está ativo, o token é obrigatório —
+    // omiti-lo não pode ser um atalho para pular o CAPTCHA (credential stuffing).
+    if (isTurnstileEnabled() && !data.turnstileToken) {
+      await auditFail("Turnstile ausente");
+      throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+    }
     if (data.turnstileToken) {
       const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
       if (!turnstileOk) {
