@@ -208,26 +208,24 @@ export function AuditLogSection({
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
-                  <th className="py-2 pr-3 whitespace-nowrap">Quando</th>
+                <tr className="border-b text-left uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                  <th className="py-2 pr-3">Quando</th>
                   <th className="py-2 pr-3">Ação</th>
                   <th className="py-2 pr-3">Ator</th>
                   <th className="py-2 pr-3">Detalhe</th>
-                  <th className="py-2 text-right whitespace-nowrap">IP</th>
+                  <th className="py-2 pl-3 text-right">IP</th>
                 </tr>
               </thead>
               <tbody>
                 {data.events.map((ev) => (
-                  <tr key={ev.id} className="border-b border-border/40 align-top">
-                    <td className="py-1.5 pr-3 font-mono whitespace-nowrap">
-                      {fmtDT(ev.created_at)}
-                    </td>
+                  <tr key={ev.id} className="border-b border-border/40 whitespace-nowrap">
+                    <td className="py-1.5 pr-3 font-mono">{fmtDT(ev.created_at)}</td>
                     <td className="py-1.5 pr-3">
                       <ActionBadge action={ev.action} />
                     </td>
-                    <td className="py-1.5 pr-3 break-all">{ev.actor_email ?? "—"}</td>
+                    <td className="py-1.5 pr-3">{ev.actor_email ?? "—"}</td>
                     <td className="py-1.5 pr-3 text-muted-foreground">{ev.detail ?? "—"}</td>
-                    <td className="py-1.5 text-right font-mono text-muted-foreground whitespace-nowrap">
+                    <td className="py-1.5 pl-3 text-right font-mono text-muted-foreground">
                       {ev.ip ?? "—"}
                     </td>
                   </tr>
