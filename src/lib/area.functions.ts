@@ -30,48 +30,65 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     const sortBy = byDays ? "last_sale_date" : data.sortBy;
     const sortDir = byDays ? (data.sortDir === "desc" ? "asc" : "desc") : data.sortDir;
 
-    const [rs] = await db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-      data.dateFrom,
-      data.dateTo,
-      JSON.stringify(data.stores ?? []),
-      JSON.stringify(data.deptos ?? []),
-      JSON.stringify(data.secoes ?? []),
-      JSON.stringify(data.grupos ?? []),
-      JSON.stringify(data.subgrupos ?? []),
-      data.page ?? null,
-      data.pageSize,
-      data.search,
-      sortBy,
-      sortDir,
-    ]);
-    const [kpiRows, totalCountRows, byDate, products] = rs as unknown[];
-    const kpi = asRecord(asArray(kpiRows)[0]);
-    const totalProducts = num(asRecord(asArray(totalCountRows)[0]).total_products);
-    return {
-      total: num(kpi.total),
-      plusTotal: num(kpi.plus_total),
-      plusWithSale: num(kpi.plus_with_sale),
-      plusWithoutSale: num(kpi.plus_without_sale),
-      avgPerPlu: num(kpi.plus_with_sale) > 0 ? num(kpi.total) / num(kpi.plus_with_sale) : 0,
-      products: asArray(products).map((p) => {
-        const r = asRecord(p);
-        return {
-          prod_code: str(r.prod_code),
-          prod_name: str(r.prod_name),
-          depto: strOrNull(r.depto),
-          secao: strOrNull(r.secao),
-          grupo: strOrNull(r.grupo),
-          subgrupo: strOrNull(r.subgrupo),
-          val: num(r.val),
-          lastSaleDate: strOrNull(r.last_sale_date),
-        };
-      }),
-      byDate: parseDateVal(byDate),
-      totalProducts,
-      page: data.page ?? undefined,
-      pageSize: data.pageSize,
-      totalPages: data.pageSize ? Math.ceil(totalProducts / data.pageSize) : undefined,
+    const query = async (): Promise<AreaAnalysisResult> => {
+      const [rs] = await db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+        data.dateFrom,
+        data.dateTo,
+        JSON.stringify(data.stores ?? []),
+        JSON.stringify(data.deptos ?? []),
+        JSON.stringify(data.secoes ?? []),
+        JSON.stringify(data.grupos ?? []),
+        JSON.stringify(data.subgrupos ?? []),
+        data.page ?? null,
+        data.pageSize,
+        data.search,
+        sortBy,
+        sortDir,
+      ]);
+      const [kpiRows, totalCountRows, byDate, products] = rs as unknown[];
+      const kpi = asRecord(asArray(kpiRows)[0]);
+      const totalProducts = num(asRecord(asArray(totalCountRows)[0]).total_products);
+      return {
+        total: num(kpi.total),
+        plusTotal: num(kpi.plus_total),
+        plusWithSale: num(kpi.plus_with_sale),
+        plusWithoutSale: num(kpi.plus_without_sale),
+        avgPerPlu: num(kpi.plus_with_sale) > 0 ? num(kpi.total) / num(kpi.plus_with_sale) : 0,
+        products: asArray(products).map((p) => {
+          const r = asRecord(p);
+          return {
+            prod_code: str(r.prod_code),
+            prod_name: str(r.prod_name),
+            depto: strOrNull(r.depto),
+            secao: strOrNull(r.secao),
+            grupo: strOrNull(r.grupo),
+            subgrupo: strOrNull(r.subgrupo),
+            val: num(r.val),
+            lastSaleDate: strOrNull(r.last_sale_date),
+          };
+        }),
+        byDate: parseDateVal(byDate),
+        totalProducts,
+        page: data.page ?? undefined,
+        pageSize: data.pageSize,
+        totalPages: data.pageSize ? Math.ceil(totalProducts / data.pageSize) : undefined,
+      };
     };
+
+    // Esta era a tela mais cara do sistema sem nenhum cache. Medido em prod:
+    // 2,6s na janela padrão de 7 dias e 23,7s quando o usuário abre para 28 —
+    // a cada troca de página, de ordenação ou de filtro, tudo repetido do zero.
+    //
+    // O export para PDF é a exceção deliberada: ele pede a lista inteira
+    // (pageSize alto), o que dá megabytes por entrada, e é um clique isolado
+    // que raramente se repete com os mesmos filtros. Cachear isso encheria a
+    // memória do processo — a VPS tem 1,9 GB e o SimpleCache não tem teto de
+    // tamanho, só TTL.
+    const { cache } = await import("./cache");
+    if ((data.pageSize ?? 0) > 1000) return query();
+
+    const key = `area:${data.dateFrom}:${data.dateTo}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.page ?? ""}:${data.pageSize}:${data.search}:${sortBy}:${sortDir}`;
+    return cache.wrap(key, query);
   });
 
 export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
