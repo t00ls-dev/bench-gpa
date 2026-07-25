@@ -929,6 +929,17 @@ BEGIN
     imported_at = CURRENT_TIMESTAMP,
     batch_id = VALUES(batch_id);
 
+  -- Estes dois CALLs só estão DENTRO da transação porque os refreshes usam
+  -- DELETE. Enquanto usavam TRUNCATE, a atomicidade prometida aqui era
+  -- ilusória: TRUNCATE é DDL e faz commit implícito, então a transação
+  -- terminava na primeira linha do refresh_filter_hierarchy — o EXIT HANDLER
+  -- deixava de desfazer qualquer coisa e este COMMIT virava no-op. Verificado
+  -- no banco em 2026-07-25: START TRANSACTION; INSERT; TRUNCATE outra_tabela;
+  -- ROLLBACK; deixa o INSERT gravado.
+  --
+  -- Se um dia algum destes refreshes voltar a usar TRUNCATE, esta transação
+  -- volta a não valer nada — mover os CALLs para depois do COMMIT seria o
+  -- mínimo, mas o certo é manter DELETE.
   CALL refresh_filter_hierarchy();
   CALL refresh_product_universe();
 
@@ -969,14 +980,29 @@ BEGIN
   DELETE FROM sales_prod_daily_agg WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 
+  -- products faltava aqui desde sempre: a tabela não era purgada por nada, só
+  -- recebia INSERT IGNORE a cada import (~10,2k linhas/dia, sem teto). Ela
+  -- alimenta product_search e get_product_by_code, então um PLU cujas vendas
+  -- foram purgadas continuava aparecendo na busca e abria uma página de produto
+  -- sem dado nenhum.
+  --
+  -- Descoberto em 2026-07-25, ao purgar à mão as datas anteriores a 27/05: foi
+  -- preciso apagar products e regenerar a filter_hierarchy fora desta proc,
+  -- justamente porque ela não fazia nem um nem outro.
+  DELETE FROM products WHERE sale_date < @cutoff;
+  SET v_deleted = v_deleted + ROW_COUNT();
+
   DELETE FROM import_log WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 
-  -- O universo de PLUs é derivado do agg que acabou de encolher: um PLU cuja
-  -- última venda saiu na poda tem que sair do universo também, senão passa a
-  -- contar como "sem venda" para sempre.
+  -- As duas tabelas derivadas saem do agg que acabou de encolher. O universo de
+  -- PLUs: um PLU cuja última venda saiu na poda tem que sair do universo
+  -- também, senão passa a contar como "sem venda" para sempre. A hierarquia de
+  -- filtros: sem o refresh, os filtros seguem oferecendo combinações de
+  -- loja/categoria que já não existem em lugar nenhum.
   IF v_deleted > 0 THEN
     CALL refresh_product_universe();
+    CALL refresh_filter_hierarchy();
   END IF;
 
   SELECT v_deleted AS deleted;
@@ -1002,9 +1028,21 @@ BEGIN
 END//
 
 -- 14/16: refresh_filter_hierarchy
+--
+-- DELETE, não TRUNCATE. Os dois esvaziam a tabela, mas TRUNCATE é DDL: provoca
+-- commit implícito e não respeita MVCC. Mediu-se em 2026-07-25, com 164k linhas
+-- na product_universe: durante os ~33s do refresh, um leitor concorrente via
+-- ZERO linha na tabela — e a tela Área parte do universo, então ela ficava
+-- vazia a cada import, em pleno horário comercial (o cron roda 10h–22h). Com
+-- DELETE, o leitor continua enxergando a versão anterior até o COMMIT.
+--
+-- O custo medido do DELETE sobre o TRUNCATE foi de +11% (32,8s → 36,5s), que é
+-- barato pelo que compra: além da visibilidade, o DELETE é transacional, então
+-- uma falha no meio do refresh volta ao estado anterior em vez de deixar a
+-- tabela truncada. Ver a nota de atomicidade no finalize_import.
 CREATE PROCEDURE refresh_filter_hierarchy()
 BEGIN
-  TRUNCATE TABLE filter_hierarchy;
+  DELETE FROM filter_hierarchy;
 
   INSERT INTO filter_hierarchy (store_code, store_name, depto, secao, grupo, subgrupo)
   SELECT DISTINCT
@@ -1029,9 +1067,12 @@ END//
 -- atual, não com a primeira que teve. Como a PK do agg é
 -- (sale_date, store_code, prod_code), o JOIN devolve exatamente uma linha por
 -- par.
+--
+-- DELETE em vez de TRUNCATE pelo mesmo motivo da refresh_filter_hierarchy: com
+-- TRUNCATE a tabela fica visivelmente vazia para quem lê durante o refresh.
 CREATE PROCEDURE refresh_product_universe()
 BEGIN
-  TRUNCATE TABLE product_universe;
+  DELETE FROM product_universe;
 
   INSERT INTO product_universe
     (prod_code, store_code, prod_name, depto, secao, grupo, subgrupo, last_sale_date)
