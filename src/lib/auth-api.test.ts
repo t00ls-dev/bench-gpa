@@ -68,6 +68,7 @@ beforeEach(() => {
         password: "$2b$12$hash",
         role: "admin",
         is_active: true,
+        token_version: 0,
       },
     ],
   ] as never);
@@ -78,8 +79,10 @@ describe("login", () => {
     const result = await login({ email: "test@gpabr.com", password: "correct" } as never);
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
+    // tokenVersion vai no payload para que resetPassword consiga invalidar esta
+    // sessão depois — ver auth-middleware.test.ts.
     expect(jwt.sign).toHaveBeenCalledWith(
-      { userId: "u1", role: "admin", email: "test@gpabr.com" },
+      { userId: "u1", role: "admin", email: "test@gpabr.com", tokenVersion: 0 },
       expect.any(String),
       { expiresIn: 604800 },
     );
@@ -166,6 +169,26 @@ describe("getMe", () => {
   it("returns null when user is inactive", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [{ id: "u1", email: "test@gpabr.com", name: "Teste", role: "admin", is_active: false }],
+    ] as never);
+    const user = await getMe();
+    expect(user).toBeNull();
+  });
+
+  // O guard das rotas (_authenticated/route.tsx) decide por este retorno — se
+  // ele não checasse token_version, um token anterior ao reset de senha ainda
+  // entraria na aplicação mesmo com o requireAuth barrando as server functions.
+  it("returns null quando a senha foi redefinida depois da emissão do token", async () => {
+    vi.mocked(db.query).mockResolvedValue([
+      [
+        {
+          id: "u1",
+          email: "test@gpabr.com",
+          name: "Teste",
+          role: "admin",
+          is_active: true,
+          token_version: 1,
+        },
+      ],
     ] as never);
     const user = await getMe();
     expect(user).toBeNull();

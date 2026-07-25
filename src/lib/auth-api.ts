@@ -19,6 +19,7 @@ interface UserRow {
   password: string;
   role: string;
   is_active: boolean;
+  token_version: number;
 }
 
 function setSessionCookie(token: string): void {
@@ -83,7 +84,7 @@ export const login = createServerFn({ method: "POST" })
     }
 
     const [rowsRaw] = await db.query(
-      "SELECT id, email, name, password, role, is_active FROM users WHERE email = ?",
+      "SELECT id, email, name, password, role, is_active, token_version FROM users WHERE email = ?",
       [data.email],
     );
     const rows = rowsRaw as unknown as UserRow[];
@@ -101,9 +102,18 @@ export const login = createServerFn({ method: "POST" })
       await auditFail("senha incorreta", user.id);
       throw new Error("E-mail ou senha inválidos.");
     }
-    const token = jwt.sign({ userId: user.id, role: user.role, email: user.email }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRY_SECONDS,
-    });
+    // tokenVersion sela a sessão à senha vigente: resetPassword incrementa a
+    // coluna e este token deixa de ser aceito no request seguinte.
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        role: user.role,
+        email: user.email,
+        tokenVersion: user.token_version,
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY_SECONDS },
+    );
     setSessionCookie(token);
     await recordAudit({
       action: "auth.login",
@@ -125,13 +135,19 @@ export const getMe = createServerFn({ method: "GET" }).handler(async () => {
       userId: string;
       role: string;
       email: string;
+      tokenVersion?: number;
     };
     const [rowsRaw] = await db.query(
-      "SELECT id, email, name, role, is_active FROM users WHERE id = ?",
+      "SELECT id, email, name, role, is_active, token_version FROM users WHERE id = ?",
       [payload.userId],
     );
     const rows = rowsRaw as unknown as UserRow[];
     if (!rows.length || !rows[0].is_active) {
+      return null;
+    }
+    // Mesma checagem de sessão revogada do requireAuth — sem ela o guard das
+    // rotas continuaria deixando entrar com um token anterior ao reset de senha.
+    if ((payload.tokenVersion ?? 0) !== rows[0].token_version) {
       return null;
     }
     return { id: rows[0].id, email: rows[0].email, name: rows[0].name, role: rows[0].role };
