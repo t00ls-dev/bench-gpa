@@ -115,14 +115,23 @@ export const resetPassword = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const hash = await bcrypt.hash(data.password, 12);
-    await db.query("UPDATE users SET password = ? WHERE id = ?", [hash, data.userId]);
+    // token_version + 1 derruba as sessões já abertas com a senha antiga. Sem
+    // isto, redefinir a senha de uma conta comprometida não expulsava ninguém:
+    // o JWT é stateless e seguiria aceito por até 7 dias (JWT_EXPIRY). Note o
+    // contraste com setUserActive, que sempre funcionou — requireAuth relê
+    // `is_active` do banco a cada request, e a senha era o único vetor sem essa
+    // rede.
+    await db.query(
+      "UPDATE users SET password = ?, token_version = token_version + 1 WHERE id = ?",
+      [hash, data.userId],
+    );
     await recordAudit({
       action: "user.password_reset",
       actorId: context.userId,
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: data.userId,
-      detail: "redefiniu a senha",
+      detail: "redefiniu a senha (sessões anteriores revogadas)",
     });
     return { ok: true };
   });

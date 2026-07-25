@@ -121,10 +121,12 @@ describe("resetPassword", () => {
     )({ userId: "u1", password: "N3w!Str0ng" });
     expect(result.ok).toBe(true);
     expect(bcrypt.hash).toHaveBeenCalledWith("N3w!Str0ng", 12);
-    expect(db.query).toHaveBeenCalledWith("UPDATE users SET password = ? WHERE id = ?", [
-      "$2b$12$mockedhash",
-      "u1",
-    ]);
+    // O incremento de token_version no MESMO update é o que derruba as sessões
+    // abertas com a senha antiga; sem ele o JWT seguiria válido por até 7 dias.
+    expect(db.query).toHaveBeenCalledWith(
+      "UPDATE users SET password = ?, token_version = token_version + 1 WHERE id = ?",
+      ["$2b$12$mockedhash", "u1"],
+    );
   });
 });
 

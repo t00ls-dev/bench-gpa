@@ -23,13 +23,19 @@ DROP PROCEDURE IF EXISTS has_role;
 -- TABLES
 -- =============================================
 
+-- token_version: contador que invalida sessões já emitidas. O JWT é stateless e
+-- vale 7 dias, então sem isto redefinir a senha de uma conta comprometida não
+-- derrubava quem já estava logado. O token carrega a versão vigente na emissão;
+-- requireAuth/getMe comparam com a do banco e resetPassword incrementa.
+-- Ver migrations/0003_token_version.sql.
 CREATE TABLE IF NOT EXISTS users (
-  id         VARCHAR(36) PRIMARY KEY,
-  email      VARCHAR(255) NOT NULL UNIQUE,
-  name       VARCHAR(255) NOT NULL,
-  password   VARCHAR(255) NOT NULL,
-  role       ENUM('admin','user') NOT NULL DEFAULT 'user',
-  is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+  id            VARCHAR(36) PRIMARY KEY,
+  email         VARCHAR(255) NOT NULL UNIQUE,
+  name          VARCHAR(255) NOT NULL,
+  password      VARCHAR(255) NOT NULL,
+  role          ENUM('admin','user') NOT NULL DEFAULT 'user',
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+  token_version INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_users_email (email),
