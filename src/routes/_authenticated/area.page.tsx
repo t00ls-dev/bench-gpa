@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/area.functions";
+import { EXPORT_PAGE_SIZE } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { fmtBRL, fmtInt } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
@@ -90,17 +91,24 @@ function AreaPage() {
     gcTime: 30 * 60_000,
   });
   const hierData = hierQ.data;
-  const hierarchy = hierData?.hierarchy ?? [];
+  // useMemo porque o `?? []` criava um array novo a cada render, e `hierarchy` é
+  // dependência do useMemo de `stores` — que portanto recalculava sempre.
+  const hierarchy = useMemo(() => hierData?.hierarchy ?? [], [hierData]);
   const opts = hierData;
 
   const baseDateIso = dateTo || opts?.latestDate || undefined;
-  const daysSinceNum = (iso: string | null): number | null => {
-    if (!iso || !baseDateIso) return null;
-    return Math.floor(
-      (new Date(baseDateIso + "T00:00:00").getTime() - new Date(iso + "T00:00:00").getTime()) /
-        86400000,
-    );
-  };
+  // useCallback para poder entrar como dependência do useMemo de `products` sem
+  // recriar a função (e invalidar o memo) a cada render.
+  const daysSinceNum = useCallback(
+    (iso: string | null): number | null => {
+      if (!iso || !baseDateIso) return null;
+      return Math.floor(
+        (new Date(baseDateIso + "T00:00:00").getTime() - new Date(iso + "T00:00:00").getTime()) /
+          86400000,
+      );
+    },
+    [baseDateIso],
+  );
   const daysSinceLabel = (iso: string | null): string => {
     const n = daysSinceNum(iso);
     return n === null ? "-" : String(n);
@@ -207,7 +215,7 @@ function AreaPage() {
       else cmp = aD - bD;
       return sortAsc ? cmp : -cmp;
     });
-  }, [data, sortKey, sortAsc, baseDateIso]);
+  }, [data, sortKey, sortAsc, daysSinceNum]);
   const total = data?.total ?? 0;
   const noSale = data?.plusWithoutSale ?? 0;
   const totalRows = data?.totalProducts ?? 0;
@@ -266,7 +274,11 @@ function AreaPage() {
           sortBy: sortKey,
           sortDir,
           page: 1,
-          pageSize: 999999,
+          // O PDF precisa da listagem inteira, não da página exibida. O valor
+          // vem de schemas.ts porque três coisas dependem dele ao mesmo tempo:
+          // o teto do AreaAnalysisSchema, o limiar que mantém esta resposta
+          // fora do cache (area.functions.ts) e o tamanho do universo de PLUs.
+          pageSize: EXPORT_PAGE_SIZE,
         },
       });
       const searchTerm = search.trim().toLowerCase();
