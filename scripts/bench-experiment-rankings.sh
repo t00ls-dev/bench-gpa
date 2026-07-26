@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+#
+# ⚠️ NÃO COPIE ESTE MÉTODO. Ele está aqui como registro do experimento de
+# 2026-07-26, não como modelo.
+#
+# O script compara SQL avulso que IMITA a proc, em vez de medir a proc. Isso
+# funcionou para dashboard_rankings por sorte, e FALHOU para area_analysis: a
+# variante candidata e a de controle omitiam os mesmos cinco predicados
+# NOT EXISTS/OR de filtro, o controle bateu com a proc real dentro de 7% no
+# cenário onde as duas versões se comportam igual, e eu li isso como prova de
+# fidelidade. A reescrita foi para produção e deixou a tela Área 32% mais lenta.
+#
+# O jeito certo de testar uma variante de proc:
+#   1. criar a proc candidata com OUTRO NOME, com o corpo completo;
+#   2. medir com scripts/bench-procs.sh (que aceita --scenario);
+#   3. provar correção com scripts/validate-procs.sh;
+#   4. derrubar a candidata.
+# Ver docs/medicao-performance.md.
+#
 # Experimento READ-ONLY: "uma varredura + rollups" vs "cinco varreduras".
 # Só usa TEMPORARY TABLE (escopo de sessão, some ao desconectar). Não cria
 # índice, não altera proc, não escreve em tabela persistente.
