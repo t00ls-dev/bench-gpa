@@ -226,6 +226,25 @@ não responde a filtro, busca nem tamanho de página. Era a materialização.
 inviável, criar a proc candidata com outro nome e medi-la pelo harness — não
 comparar SQL avulso com stored procedure.
 
+### Estado final, depois do revert
+
+Bateria de confirmação em prod, com todos os hashes idênticos aos do baseline:
+
+| Cenário | Baseline | Final | |
+| --- | ---: | ---: | --- |
+| `metrics_28d` | 46.342 ms | **9.582 ms** | −79% |
+| `rankings_28d` | 32.373 ms | **19.672 ms** | −39% |
+| `area_28d_sem_filtro` | 23.011 ms | 23.652 ms | revertido ao original |
+| `area_28d_depto` | 24.025 ms | 23.800 ms | revertido ao original |
+| `area_28d_loja` | 21.716 ms | 22.223 ms | revertido ao original |
+| `area_28d_export` | 23.345 ms | 23.208 ms | revertido ao original |
+| `area_28d_busca` | 23.278 ms | 22.973 ms | revertido ao original |
+| `area_7d_sem_filtro` | 2.114 ms | 2.196 ms | revertido ao original |
+| `filtros_28d` | 222 ms | 220 ms | — |
+
+As duas procs que dominavam o custo da tela inicial saíram de 78,7s somados para
+29,3s. A tela Área ficou como estava.
+
 ## Como comparar depois de uma mudança
 
 ```bash
