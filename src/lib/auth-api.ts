@@ -7,10 +7,9 @@ import { z } from "zod";
 import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
 import { authLimiter, getClientIp } from "./rate-limit";
 import { recordAudit } from "./audit";
+import { SESSION_COOKIE, JWT_EXPIRY_SECONDS } from "./auth-config";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
-const SESSION_COOKIE = "session";
-const JWT_EXPIRY_SECONDS = Number(process.env.JWT_EXPIRY) || 7 * 24 * 60 * 60;
 
 interface UserRow {
   id: string;

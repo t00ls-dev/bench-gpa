@@ -4,6 +4,7 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { assertAdmin, invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import { RETENTION_DAYS } from "./retention";
+import { BCRYPT_COST } from "./auth-config";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import db from "./db";
@@ -46,7 +47,7 @@ export const createUser = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const hash = await bcrypt.hash(data.password, 12);
+    const hash = await bcrypt.hash(data.password, BCRYPT_COST);
     const id = crypto.randomUUID();
     await db.query(
       "INSERT INTO users (id, email, name, password, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
@@ -114,7 +115,7 @@ export const resetPassword = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const hash = await bcrypt.hash(data.password, 12);
+    const hash = await bcrypt.hash(data.password, BCRYPT_COST);
     // token_version + 1 derruba as sessões já abertas com a senha antiga. Sem
     // isto, redefinir a senha de uma conta comprometida não expulsava ninguém:
     // o JWT é stateless e seguiria aceito por até 7 dias (JWT_EXPIRY). Note o
