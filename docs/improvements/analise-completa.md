@@ -11,15 +11,17 @@ Esta análise **substitui** o snapshot de 21/07/2026 22:53, que estava desatuali
 
 | Métrica                          | Valor                                    |
 | --------------------------------- | ----------------------------------------- |
-| Arquivos .ts/.tsx (`src/`)        | 140                                       |
-| Linhas de código (`src/`)         | 13.739                                    |
-| Server functions (`createServerFn`) | 27 (5 arquivos `*.functions.ts` + `auth-api.ts`) |
-| `requireRateLimit` aplicado       | ✅ 100% das funções lidas (24/24 nos 5 arquivos `*.functions.ts`), tier explícito por rota (`"api"`/`"upload"`) |
-| Lint                               | ✅ 0 erros, 8 warnings (pré-existentes, catalogados abaixo) |
+> Métricas remedidas em 26/07/2026.
+
+| Arquivos .ts/.tsx (`src/`)        | 155                                       |
+| Linhas de código (`src/`)         | 16.083                                    |
+| Server functions (`createServerFn`) | 39                                      |
+| `requireRateLimit` aplicado       | ✅ 100% das funções lidas, tier explícito por rota (`"api"`/`"upload"`) |
+| Lint                               | ✅ 0 erros, 6 warnings (todos ruído de fast-refresh do shadcn/ui; os 2 de `exhaustive-deps` foram corrigidos) |
 | Typecheck (`tsc --noEmit`)        | ✅ 0 erros |
-| Testes (`vitest run`)             | ✅ 138 passando, 17 arquivos |
-| Cobertura geral                    | ~55% lines (ver `docs/coverage-summary.md`, gerado via `bun run coverage:summary`) |
-| Cobertura das server functions de negócio | 🔴 0% em `dashboard`, `area`, `product`, `upload`; ~23% em `admin` |
+| Testes (`vitest run`)             | ✅ 205 passando, 21 arquivos |
+| Cobertura geral                    | 57,2% lines (ver `docs/coverage-summary.md`, gerado via `bun run coverage:summary`) |
+| Cobertura das server functions de negócio | 🟡 `area` 66,7%, `dashboard` 26,8%, `admin` ~22%; `product` e `upload` ainda em 0% |
 | Arquivos >300 linhas               | 7 |
 
 ---
@@ -43,6 +45,14 @@ Itens que estavam listados como problema em versões anteriores desta análise e
 | 🟢 Cron de `cli:review` (05h/06h) | Script nunca existiu (`cli:review` ausente de `package.json`) — cron falhava todo dia silenciosamente. Removido de `setup-crons.sh` e do crontab ativo |
 | 🟢 Dark mode pronto mas não plugado | `<ThemeToggle />` adicionado ao header (`route.tsx`). **Bônus**: achou e corrigiu um bug real no processo — `useSyncExternalStore` sem `getServerSnapshot` quebrava a renderização SSR assim que o componente era usado de verdade (nunca tinha sido testado em produção) |
 | 🟠 Toggle de tema não persistia entre reloads | A classe `dark` só era aplicada dentro do handler de clique, nunca no mount — `useEffect` agora sincroniza a classe com o tema resolvido a cada mudança (incluindo no carregamento da página) |
+| 🟠 `purge_old_aggs` deixava metade do trabalho para trás | Não apagava `products` (que não era purgada por nada: ~10,2k linhas/dia sem teto, alimentando `product_search` com PLUs cujas vendas já tinham sumido) nem chamava `refresh_filter_hierarchy`. Descoberto ao purgar à mão as datas anteriores a 27/05, quando foi preciso fazer as duas coisas fora da proc (commit `37c2ba8`) |
+| 🟠 Atomicidade ilusória no `finalize_import` | Os refreshes usavam `TRUNCATE`, que é DDL: faz commit implícito (a transação terminava ali, o `EXIT HANDLER` deixava de desfazer e o `COMMIT` virava no-op) e não respeita MVCC. **Medido**: durante os ~33s do refresh um leitor concorrente via ZERO linha na `product_universe` — a tela Área ficava vazia a cada import, em horário comercial. Trocado por `DELETE`, que custa +11% e resolve os dois (commit `37c2ba8`) |
+| 🔴 Reset de senha não derrubava as sessões abertas | JWT stateless de 7 dias sem revogação: redefinir a senha de uma conta comprometida não expulsava ninguém. `users.token_version` selada no token e conferida em `requireAuth`/`getMe`; `resetPassword` incrementa. Transição sem deslogar ninguém via `payload.tokenVersion ?? 0` (commit `1b923d6`) |
+| 🟡 `requireAuth` lia o `role` do banco e o descartava | Usava `payload.role` do JWT, congelado na emissão — um usuário rebaixado seguiria `admin` no contexto por até 7 dias. Inofensivo só porque `assertAdmin` refazia a consulta, mas era armadilha para o próximo uso (commit `1b923d6`) |
+| 🟠 Telas mais caras sem cache nenhum | `getAreaAnalysis` (2,6s na janela padrão, 23,7s em 28 dias, medido em prod) e `getDashboardRankings` (3,8s) eram as duas únicas server functions de análise sem cache — o `dashboard_metrics` já era cacheado pelo `callMetrics`. Export de PDF fica de fora do cache de propósito (commit `1fdfa53`) |
+| 🟢 Metadados de SEO/social num app interno | `og:*`, `twitter:*` e `description` removidos do `__root.tsx`; indexação é anti-feature aqui. `public/robots.txt` mantido (`Disallow: /`) — bloqueia, não habilita (PR #1) |
+| 🟠 Planilhas versionadas / git como meio de transporte de dados | Os XLSX chegavam pela interface do GitHub e o `import-watch` fazia `pull`→`mv`→`commit`→`push`. 41 MiB de pack e, pior, o push automático quebraria em silêncio sob qualquer regra de proteção de branch. `data/` virou inbox local ignorado; o cron foi desligado e a importação passou a ser deliberada (PR #2) |
+| 🟢 `KNOWN_JOBS` com "Purga (180 dias)" escrito à mão | No mesmo arquivo que já importa `RETENTION_DAYS` e o usa corretamente duas linhas antes — mudaria a retenção e o painel passaria a mentir. Agora interpola a constante (PR #1) |
 | 🟠 Data de "Atualizado" sempre igual no histórico de importações | `str()` (helper genérico) trunca `Date` para `YYYY-MM-DD` — correto para `sale_date` (coluna `DATE`), errado para `imported_at`/`created_at` (colunas `TIMESTAMP`, têm hora). Como o mysql2 retorna `TIMESTAMP` como objeto `Date`, a hora era descartada antes de chegar no frontend. Afetava 3 lugares: `getImportedDates` (upload.functions.ts), `getLatestSaleInfo` (dashboard.functions.ts), e `listUsers` (admin.functions.ts, via cast `as {...}` que também mentia sobre `is_active` ser `boolean` quando na real é `0`/`1`). Corrigido com um novo helper `dateTimeStr()` (preserva o ISO completo) usado nos três; `sale_date` continua com `str()`, que é o comportamento certo pra ele. Auditoria completa: nenhum outro campo `DATE`/`TIMESTAMP`/`DECIMAL` do schema tem o mesmo problema (verificado contra dados reais do banco). |
 
 ---
