@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { parseAnyWorkbook } from "../src/lib/xlsx-parser";
 import { STAGING_COLS, toStagingRow } from "../src/lib/staging-row";
 import db from "../src/lib/db";
+import { IMPORT_CHUNK_SIZE } from "../src/lib/import-config";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -13,7 +14,7 @@ Uso: bun run scripts/import.ts <arquivo.xlsx> [opções]
 
 Opções:
   --user-id UUID     ID do usuário que está importando
-  --chunk-size N     Linhas por lote (padrão 1000)
+  --chunk-size N     Linhas por lote (padrão ${IMPORT_CHUNK_SIZE})
   --help             Exibe esta mensagem
 `);
     process.exit(0);
@@ -21,7 +22,7 @@ Opções:
 
   const filePath = args.find((a) => !a.startsWith("--"))!;
   const userId = extractArg(args, "--user-id");
-  const chunkSize = parseInt(extractArg(args, "--chunk-size") ?? "1000", 10);
+  const chunkSize = parseInt(extractArg(args, "--chunk-size") ?? String(IMPORT_CHUNK_SIZE), 10);
 
   return { filePath, userId, chunkSize };
 }
