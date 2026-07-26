@@ -243,84 +243,78 @@ BEGIN
     SELECT DISTINCT value FROM JSON_TABLE(p_subgrupos, '$[*]' COLUMNS (value VARCHAR(100) PATH '$')) AS j;
   END IF;
 
+  -- UMA varredura de sales_prod_daily_agg, não quatro.
+  --
+  -- Os quatro result sets precisam de três grãos: sale_date (byDate), store_code
+  -- (byStore) e depto (byDepto); o total é a soma de tudo. Antes cada um saía da
+  -- sua própria varredura da tabela inteira — os mesmos ~1,4M linhas relidos
+  -- quatro vezes para agrupar por uma coluna diferente. Medido em prod
+  -- (docs/medicao-performance.md): 46,3s numa janela de 28 dias, a proc mais cara
+  -- do sistema.
+  --
+  -- O grão comum (sale_date, store_code, depto) colapsa esses ~1,4M linhas em
+  -- poucos milhares: 56 datas x ~10 lojas x ~20 departamentos. Somar de novo a
+  -- partir dele dá exatamente o mesmo número — SUM é associativo, e nenhum dos
+  -- quatro result sets precisa de grão mais fino que este. Se um dia algum
+  -- precisar (por seção, por produto), o grão da temporária tem de crescer junto,
+  -- ou o número sai errado sem nada acusar.
+  --
+  -- CREATE ... AS SELECT de propósito, em vez de tabela declarada: preserva o
+  -- tipo que o SUM produz, sem risco de truncar num DECIMAL escolhido a mão.
+  DROP TEMPORARY TABLE IF EXISTS tmp_period;
+  CREATE TEMPORARY TABLE tmp_period ENGINE=InnoDB AS
+  SELECT a.sale_date, a.store_code, a.depto, SUM(a.val_vda) AS val
+  FROM sales_prod_daily_agg a
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
+      OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
+      OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL)
+      OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL)
+      OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL)
+      OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+  GROUP BY a.sale_date, a.store_code, a.depto;
+
   -- Result set 1: aggregates
   -- Só `total` é lido (callMetrics, em src/lib/api-types.ts). Este SELECT também
   -- calculava total_plus/plus_with_sale/plus_without_sale, que o TypeScript
   -- descartava: três COUNT(DISTINCT prod_code) sobre a janela filtrada de
-  -- sales_prod_daily_agg (~3,4M linhas) a cada chamada, sem nenhum leitor.
-  -- Os KPIs equivalentes que existem de verdade ficam em area_analysis, que os
-  -- entrega para a tela de área — não confundir os dois.
-  SELECT COALESCE(SUM(val_vda), 0) AS total
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
-      OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
-      OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL)
-      OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL)
-      OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL)
-      OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+  -- sales_prod_daily_agg a cada chamada, sem nenhum leitor. Os KPIs equivalentes
+  -- que existem de verdade ficam em area_analysis, que os entrega para a tela de
+  -- área — não confundir os dois.
+  SELECT COALESCE(SUM(val), 0) AS total FROM tmp_period;
 
   -- Result set 2: byStore
-  SELECT a.store_code AS code, s.store_name AS name, SUM(a.val_vda) AS val
-  FROM sales_prod_daily_agg a
-  LEFT JOIN stores s ON s.store_code = a.store_code
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
-      OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
-      OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL)
-      OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL)
-      OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL)
-      OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-  GROUP BY a.store_code, s.store_name
+  -- store_name é dependente funcional de store_code, então juntar depois de
+  -- agregar dá o mesmo que juntar antes — e junta contra alguns milhares de
+  -- linhas em vez de milhões.
+  SELECT p.store_code AS code, s.store_name AS name, SUM(p.val) AS val
+  FROM tmp_period p
+  LEFT JOIN stores s ON s.store_code = p.store_code
+  GROUP BY p.store_code, s.store_name
   ORDER BY val DESC;
 
   -- Result set 3: byDepto
-  SELECT a.depto AS name, SUM(a.val_vda) AS val
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
-      OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
-      OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL)
-      OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL)
-      OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL)
-      OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-    AND a.depto IS NOT NULL
-  GROUP BY a.depto
+  -- O IS NOT NULL passou para o rollup. Dá o mesmo conjunto: depto faz parte da
+  -- chave do grão, então descartar o grupo NULL aqui é idêntico a ter descartado
+  -- as linhas antes de agrupar.
+  SELECT p.depto AS name, SUM(p.val) AS val
+  FROM tmp_period p
+  WHERE p.depto IS NOT NULL
+  GROUP BY p.depto
   ORDER BY val DESC;
 
   -- Result set 4: byDate
-  SELECT a.sale_date AS date, SUM(a.val_vda) AS val
-  FROM sales_prod_daily_agg a
-  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
-      OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
-      OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL)
-      OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL)
-      OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL)
-      OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-  GROUP BY a.sale_date
-  ORDER BY a.sale_date;
+  SELECT p.sale_date AS date, SUM(p.val) AS val
+  FROM tmp_period p
+  GROUP BY p.sale_date
+  ORDER BY p.sale_date;
 
+  DROP TEMPORARY TABLE IF EXISTS tmp_period;
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
@@ -368,80 +362,83 @@ BEGIN
 
   SET @limit_val = COALESCE(p_limit, 10);
 
+  -- UMA varredura de sales_prod_daily_agg, não cinco.
+  --
+  -- Os cinco rankings são cinco agrupamentos diferentes do MESMO recorte: depto,
+  -- seção, grupo, subgrupo e produto. Antes cada um relia a tabela inteira para
+  -- agrupar por uma coluna. Medido em prod (docs/medicao-performance.md): 32,4s
+  -- numa janela de 28 dias.
+  --
+  -- O grão fino (as quatro categorias + produto) é o menor grão que serve os
+  -- cinco: agrupar por ele e somar de novo dá exatamente o mesmo total, porque
+  -- SUM é associativo e cada coluna de ranking é uma projeção desta chave.
+  -- Verificado em prod: o hash do resultado é idêntico ao da versão anterior.
+  --
+  -- Medido: 30,7s -> 17,8s (-42%). NÃO são os 80% que "cinco varreduras viram
+  -- uma" sugere, e a razão importa para quem for mexer nisto depois: materializar
+  -- a temporária custa caro por si só (~1,4M linhas colapsando em ~100k grupos,
+  -- escritos em disco). Uma variante com DUAS temporárias mais baratas — uma no
+  -- grão de categoria, outra no de produto — foi medida e ficou em 31,8s, ou
+  -- seja, igual ao original: o preço da materialização é por temporária, não por
+  -- linha lida. Uma só compensa; duas não.
+  DROP TEMPORARY TABLE IF EXISTS tmp_period;
+  CREATE TEMPORARY TABLE tmp_period ENGINE=InnoDB AS
+  SELECT a.depto, a.secao, a.grupo, a.subgrupo, a.prod_code, a.prod_name,
+         SUM(a.val_vda) AS v
+  FROM sales_prod_daily_agg a
+  WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+  GROUP BY a.depto, a.secao, a.grupo, a.subgrupo, a.prod_code, a.prod_name;
+
+  -- A coluna da temporária chama-se `v`, não `val`: os rollups devolvem
+  -- `SUM(v) AS val` e ordenam por `val`. Se a coluna também se chamasse `val`, o
+  -- ORDER BY teria duas resoluções possíveis — o servidor prefere o alias, mas
+  -- não é o tipo de detalhe que deva estar sustentando a ordenação de um ranking.
+  --
+  -- O PREPARE fica por causa do LIMIT ?, que é a razão de ele existir aqui: as
+  -- datas não são mais placeholders, já foram aplicadas na varredura acima.
+
   -- byDepto
-  PREPARE stmt FROM 'SELECT depto AS name, SUM(val_vda) AS val
-    FROM sales_prod_daily_agg a
-    WHERE (? IS NULL OR a.sale_date >= ?)
-      AND (? IS NULL OR a.sale_date <= ?)
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-      AND a.depto IS NOT NULL
-    GROUP BY a.depto ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
+  PREPARE stmt FROM 'SELECT depto AS name, SUM(v) AS val
+    FROM tmp_period WHERE depto IS NOT NULL
+    GROUP BY depto ORDER BY val DESC LIMIT ?';
+  EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- bySecao
-  PREPARE stmt FROM 'SELECT a.secao AS name, SUM(a.val_vda) AS val
-    FROM sales_prod_daily_agg a
-    WHERE (? IS NULL OR a.sale_date >= ?)
-      AND (? IS NULL OR a.sale_date <= ?)
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-      AND a.secao IS NOT NULL
-    GROUP BY a.secao ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
+  PREPARE stmt FROM 'SELECT secao AS name, SUM(v) AS val
+    FROM tmp_period WHERE secao IS NOT NULL
+    GROUP BY secao ORDER BY val DESC LIMIT ?';
+  EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- byGrupo
-  PREPARE stmt FROM 'SELECT a.grupo AS name, SUM(a.val_vda) AS val
-    FROM sales_prod_daily_agg a
-    WHERE (? IS NULL OR a.sale_date >= ?)
-      AND (? IS NULL OR a.sale_date <= ?)
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-      AND a.grupo IS NOT NULL
-    GROUP BY a.grupo ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
+  PREPARE stmt FROM 'SELECT grupo AS name, SUM(v) AS val
+    FROM tmp_period WHERE grupo IS NOT NULL
+    GROUP BY grupo ORDER BY val DESC LIMIT ?';
+  EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- bySubgrupo
-  PREPARE stmt FROM 'SELECT a.subgrupo AS name, SUM(a.val_vda) AS val
-    FROM sales_prod_daily_agg a
-    WHERE (? IS NULL OR a.sale_date >= ?)
-      AND (? IS NULL OR a.sale_date <= ?)
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-      AND a.subgrupo IS NOT NULL
-    GROUP BY a.subgrupo ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
+  PREPARE stmt FROM 'SELECT subgrupo AS name, SUM(v) AS val
+    FROM tmp_period WHERE subgrupo IS NOT NULL
+    GROUP BY subgrupo ORDER BY val DESC LIMIT ?';
+  EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- byProduto
-  PREPARE stmt FROM 'SELECT a.prod_code AS code, a.prod_name AS name, SUM(a.val_vda) AS val
-    FROM sales_prod_daily_agg a
-    WHERE (? IS NULL OR a.sale_date >= ?)
-      AND (? IS NULL OR a.sale_date <= ?)
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-      AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-    GROUP BY a.prod_code, a.prod_name ORDER BY val DESC LIMIT ?';
-  EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to, @limit_val;
+  PREPARE stmt FROM 'SELECT prod_code AS code, prod_name AS name, SUM(v) AS val
+    FROM tmp_period
+    GROUP BY prod_code, prod_name ORDER BY val DESC LIMIT ?';
+  EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
+  DROP TEMPORARY TABLE IF EXISTS tmp_period;
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
@@ -607,8 +604,23 @@ BEGIN
   -- com val_vda = 0: "PLUs sem venda" dava 0 sempre e "PLUs (área)" repetia
   -- "PLUs com venda". Medido em prod: 339.007 linhas no período, ZERO com
   -- val_vda <= 0.
-  SELECT COALESCE(SUM(a.val_vda), 0), COUNT(DISTINCT a.prod_code)
-    INTO v_total, v_with_sale
+  -- DUAS varreduras de sales_prod_daily_agg, não três.
+  --
+  -- O KPI de venda e a listagem paginada pediam a MESMA agregação do período por
+  -- produto, cada um na sua varredura: o KPI somava tudo, a listagem montava uma
+  -- subquery derivada idêntica para o LEFT JOIN. Materializar uma vez e usar nos
+  -- dois elimina uma passagem inteira pela tabela.
+  --
+  -- A terceira varredura (byDate) continua existindo e não dá para juntar aqui:
+  -- ela precisa do grão sale_date, e incluir a data nesta chave faria a
+  -- temporária deixar de colapsar — seriam ~1,4M linhas em vez de ~15k, o que
+  -- custa mais do que a varredura que economizaria.
+  --
+  -- Medido em prod (docs/medicao-performance.md): 21,3s -> 13,4s (-37%), com
+  -- hash do resultado idêntico.
+  DROP TEMPORARY TABLE IF EXISTS tmp_period;
+  CREATE TEMPORARY TABLE tmp_period (PRIMARY KEY (prod_code)) ENGINE=InnoDB AS
+  SELECT a.prod_code, SUM(a.val_vda) AS v, MAX(a.sale_date) AS last_in_period
   FROM sales_prod_daily_agg a
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
@@ -616,7 +628,13 @@ BEGIN
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+  GROUP BY a.prod_code;
+
+  -- Venda e "PLUs com venda" saem da temporária: somar as somas por produto dá o
+  -- mesmo total, e a contagem de linhas É o COUNT(DISTINCT prod_code) de antes,
+  -- porque prod_code é a chave do grão.
+  SELECT COALESCE(SUM(v), 0), COUNT(*) INTO v_total, v_with_sale FROM tmp_period;
 
   SELECT COUNT(DISTINCT u.prod_code) INTO v_universe
   FROM product_universe u
@@ -707,7 +725,7 @@ BEGIN
 
   SET @sql = CONCAT(
      'SELECT u.prod_code, u.prod_name, u.depto, u.secao, u.grupo, u.subgrupo,
-             COALESCE(s.val, 0) AS val,
+             COALESCE(s.v, 0) AS val,
              COALESCE(s.last_in_period, u.last_sale_date) AS last_sale_date
       FROM (
         SELECT uu.prod_code,
@@ -724,38 +742,28 @@ BEGIN
       ' AND (uu.prod_name LIKE ? OR uu.prod_code LIKE ?)', ''),
     '   GROUP BY uu.prod_code
       ) u
-      LEFT JOIN (
-        SELECT a.prod_code, SUM(a.val_vda) AS val,
-               MAX(a.sale_date) AS last_in_period
-        FROM sales_prod_daily_agg a
-        WHERE (? IS NULL OR a.sale_date >= ?)
-          AND (? IS NULL OR a.sale_date <= ?)
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-        GROUP BY a.prod_code
-      ) s ON s.prod_code = u.prod_code',
+      LEFT JOIN tmp_period s ON s.prod_code = u.prod_code',
     CONCAT(' ORDER BY ', @sort_col, ' ', @sort_dir),
     IF(v_limit > 0, CONCAT(' LIMIT ', v_limit), ''),
     IF(v_offset > 0, CONCAT(' OFFSET ', v_offset), '')
   );
 
-  -- Ordem dos placeholders: o filtro de busca agora vive na subquery do
-  -- universo, que vem ANTES da subquery do período — por isso @search_param
-  -- precede as datas aqui.
+  -- Placeholders: sobrou só o da busca, duas vezes (nome e código). As quatro
+  -- datas moravam na subquery do período, que virou a tmp_period — o recorte de
+  -- data já foi aplicado quando ela foi materializada. Sem USING no ramo sem
+  -- busca, porque aí não há placeholder nenhum.
   IF p_search IS NOT NULL AND p_search != '' THEN
     SET @search_param = CONCAT('%', p_search, '%');
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING @search_param, @search_param, p_date_from, p_date_from, p_date_to, p_date_to;
+    EXECUTE stmt USING @search_param, @search_param;
     DEALLOCATE PREPARE stmt;
   ELSE
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to;
+    EXECUTE stmt;
     DEALLOCATE PREPARE stmt;
   END IF;
 
+  DROP TEMPORARY TABLE IF EXISTS tmp_period;
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
