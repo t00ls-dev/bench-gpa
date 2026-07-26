@@ -27,9 +27,7 @@ import { ImportHistory } from "@/components/import-history";
 import { DataCoverage } from "@/components/admin-data-coverage";
 import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
-
-const CHUNK_SIZE = 1000;
-const MAX_TOTAL_ROWS = 200_000;
+import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS } from "@/lib/import-config";
 
 interface FileEntry {
   file: File;
@@ -97,9 +95,9 @@ export default function UploadPage() {
       const parsed = entry.parsed;
       if (!parsed) continue;
       const totalLines = parsed.sales.length;
-      if (totalLines > MAX_TOTAL_ROWS) {
+      if (totalLines > IMPORT_MAX_ROWS) {
         toast.error(
-          `Arquivo excede o limite de ${fmtInt(MAX_TOTAL_ROWS)} linhas (${fmtInt(totalLines)}).`,
+          `Arquivo excede o limite de ${fmtInt(IMPORT_MAX_ROWS)} linhas (${fmtInt(totalLines)}).`,
         );
         continue;
       }
@@ -166,15 +164,15 @@ export default function UploadPage() {
       },
     });
 
-    const totalChunks = Math.ceil(parsed.sales.length / CHUNK_SIZE);
+    const totalChunks = Math.ceil(parsed.sales.length / IMPORT_CHUNK_SIZE);
     for (let i = 0; i < totalChunks; i++) {
       if (cancelRef.current) {
         update({ status: "error", errorMsg: "Cancelado" });
         return;
       }
-      const chunk = parsed.sales.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      const chunk = parsed.sales.slice(i * IMPORT_CHUNK_SIZE, (i + 1) * IMPORT_CHUNK_SIZE);
       await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
-      const processed = Math.min((i + 1) * CHUNK_SIZE, parsed.sales.length);
+      const processed = Math.min((i + 1) * IMPORT_CHUNK_SIZE, parsed.sales.length);
       processedTotalRef.current += chunk.length;
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
       const speed = Math.round(processedTotalRef.current / elapsed);
