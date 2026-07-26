@@ -14,6 +14,7 @@ import {
   parseDateVal,
 } from "./api-types";
 import { AreaAnalysisSchema } from "./schemas";
+import { CACHE_TTL_LONG } from "./cache";
 
 /**
  * Acima deste tamanho de página a resposta não entra no cache — é o caminho do
@@ -136,6 +137,6 @@ export const getAreaFilterHierarchy = createServerFn({ method: "POST" })
             .sort(),
         };
       },
-      300_000,
+      CACHE_TTL_LONG,
     );
   });

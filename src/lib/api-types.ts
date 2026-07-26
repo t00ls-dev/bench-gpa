@@ -2,6 +2,7 @@ import { safeError } from "./safe-error";
 import { FilterSchema } from "./schemas";
 import type { Filters } from "./schemas";
 import db from "./db";
+import { CACHE_TTL_SHORT } from "./cache";
 
 export interface NameVal {
   name: string;
@@ -172,22 +173,26 @@ function metricsCacheKey(f: Filters): string {
 export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {
   const { cache } = await import("./cache");
   const key = metricsCacheKey(f);
-  return cache.wrap(key, async () => {
-    const [rs] = await db.query("CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)", [
-      f.dateFrom || null,
-      f.dateTo || null,
-      JSON.stringify(f.stores ?? []),
-      JSON.stringify(f.deptos ?? []),
-      JSON.stringify(f.secoes ?? []),
-      JSON.stringify(f.grupos ?? []),
-      JSON.stringify(f.subgrupos ?? []),
-    ]);
-    const [aggregate, byStore, byDepto, byDate] = rs as unknown[];
-    return {
-      total: num(asRecord(asArray(aggregate)[0]).total),
-      byStore: parseCodeNameVal(byStore),
-      byDepto: parseNameVal(byDepto),
-      byDate: parseDateVal(byDate),
-    };
-  });
+  return cache.wrap(
+    key,
+    async () => {
+      const [rs] = await db.query("CALL dashboard_metrics(?, ?, ?, ?, ?, ?, ?)", [
+        f.dateFrom || null,
+        f.dateTo || null,
+        JSON.stringify(f.stores ?? []),
+        JSON.stringify(f.deptos ?? []),
+        JSON.stringify(f.secoes ?? []),
+        JSON.stringify(f.grupos ?? []),
+        JSON.stringify(f.subgrupos ?? []),
+      ]);
+      const [aggregate, byStore, byDepto, byDate] = rs as unknown[];
+      return {
+        total: num(asRecord(asArray(aggregate)[0]).total),
+        byStore: parseCodeNameVal(byStore),
+        byDepto: parseNameVal(byDepto),
+        byDate: parseDateVal(byDate),
+      };
+    },
+    CACHE_TTL_SHORT,
+  );
 }

@@ -124,7 +124,32 @@ export function getClientIp(request?: Request): string {
   return candidate ?? "unknown";
 }
 
-export const apiLimiter = new RateLimiter(60_000, 300, 1000, "api");
-export const authLimiter = new RateLimiter(60_000, 10, 40, "auth");
-export const uploadLimiter = new RateLimiter(60_000, 200, 500, "upload");
-export const ssrLimiter = new RateLimiter(60_000, 300, 1500, "ssr");
+/**
+ * Janela de contagem dos quatro tiers. Um minuto em todos — o valor estava
+ * repetido literal em cada construção, dando a impressão de serem ajustáveis
+ * separadamente quando na prática nunca divergiram.
+ */
+export const RATE_LIMIT_WINDOW_MS = 60_000;
+
+/**
+ * Tetos por tier: `[porIp, global]`.
+ *
+ * Não afrouxar sem medir: a VPS tem um núcleo e dois usuários reais. O teto do
+ * `auth` é o mais sensível — cada tentativa de login custa um bcrypt de custo 12
+ * (ver BCRYPT_COST em auth-config.ts), que satura o núcleo sozinho.
+ *
+ * O teto global é um disjuntor de carga agregada, não um limite por usuário: a
+ * contribuição máxima de um IP para ele é o próprio teto por IP, graças ao
+ * curto-circuito documentado em `check()`.
+ */
+export const RATE_LIMITS = {
+  api: [300, 1000],
+  auth: [10, 40],
+  upload: [200, 500],
+  ssr: [300, 1500],
+} as const;
+
+export const apiLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.api, "api");
+export const authLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.auth, "auth");
+export const uploadLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.upload, "upload");
+export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.ssr, "ssr");
