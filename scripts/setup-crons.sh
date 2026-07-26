@@ -7,12 +7,17 @@ set -euo pipefail
 BENCH_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bun/bin)"
 
+# A importação NÃO tem cron. Ela acontece pela tela /upload do app, que é o
+# caminho normal, ou sob demanda no servidor com `bun run cli:import <arquivo>`
+# (um arquivo) ou `bun run cli:watch` (varre o inbox em data/).
+#
+# O cron do cli:watch existia porque as planilhas chegavam pelo git e alguém
+# precisava reagir a elas; foi desligado em 2026-07-26 junto com a saída dos
+# dados do versionamento. Os scripts continuam disponíveis para uso manual — se
+# um dia voltar a fazer sentido automatizar, reintroduzir a linha aqui E o job
+# em KNOWN_JOBS (src/lib/admin.functions.ts), senão o painel admin não monitora.
 CRONS=(
 	"0 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:purge >> logs/purge.log 2>&1"
-  # Import: arquivo fica disponível ~9h e é enviado manualmente em horário
-  # variável — checa a cada 3h (10h–22h). O import-watch é idempotente (pula
-  # dias já importados), então rodar várias vezes é seguro e no-op sem novidade.
-  "0 10-22/3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:watch >> logs/cron.log 2>&1"
 )
 
 # Remove linhas antigas do bench-gpa e reinstala
