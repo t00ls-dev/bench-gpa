@@ -9,6 +9,11 @@ reconstruir contexto a partir do histórico do git.
   produção; PR roda o CI sem deployar. Não existe ambiente de teste ainda.
 - **Testar antes de commitar:** `bun run check`, e validação contra o MariaDB
   local quando a mudança tocar banco ou auth.
+- **Se mexer nas procs de análise**, as duas ferramentas são um par e nenhuma
+  basta sozinha: `scripts/bench-procs.sh` mede o custo em prod e
+  `scripts/validate-procs.sh` prova que o resultado não mudou (37 cenários, dois
+  hashes cada). Uma proc mais rápida que devolve outro número é um bug mais
+  rápido. Detalhes em `docs/medicao-performance.md`.
 - Merges próximos no tempo colapsam em um deploy só (o CI da `main` tem
   `cancel-in-progress: true`), o que reduz a janela de indisponibilidade.
 
