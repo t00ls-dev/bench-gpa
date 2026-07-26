@@ -3,6 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
 import db from "./db";
+import { SESSION_COOKIE } from "./auth-config";
 
 export interface AuthContext {
   userId: string;
@@ -24,7 +25,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
   const request = getRequest();
   const cookieHeader = request?.headers?.get("cookie") || "";
   const parsed = parse(cookieHeader);
-  const token = parsed["session"];
+  const token = parsed[SESSION_COOKIE];
   if (!token) throw new Error("Unauthorized: no session cookie");
 
   try {

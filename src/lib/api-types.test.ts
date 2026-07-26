@@ -3,6 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("./cache", () => ({
   cache: { wrap: vi.fn((_key: string, fn: () => Promise<unknown>) => fn()) },
+  // O mock precisa expor as constantes também: `callMetrics` passa
+  // CACHE_TTL_SHORT explicitamente para o wrap desde que os TTLs deixaram de
+  // ser literais soltos (antes esta chamada caía no default invisível).
+  CACHE_TTL_SHORT: 60_000,
+  CACHE_TTL_LONG: 300_000,
 }));
 
 import {
