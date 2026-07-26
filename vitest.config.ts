@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { COVERAGE_THRESHOLDS } from "./scripts/coverage-thresholds";
 
 export default defineConfig({
   plugins: [tsconfigPaths({ projects: ["./tsconfig.json"] })],
@@ -19,12 +20,9 @@ export default defineConfig({
         "src/server.ts",
         "src/styles.css.ts",
       ],
-      thresholds: {
-        lines: 40,
-        statements: 40,
-        functions: 30,
-        branches: 25,
-      },
+      // Fonte única, compartilhada com o gerador do resumo — ver
+      // scripts/coverage-thresholds.ts.
+      thresholds: COVERAGE_THRESHOLDS,
     },
   },
 });
