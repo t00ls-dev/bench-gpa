@@ -140,6 +140,48 @@ Isso não é a query: é o conjunto deixando de caber nos 128 MB de buffer pool.
 Enquanto esse degrau existir, qualquer reescrita de proc opera sobre um piso de
 disco.
 
+---
+
+## Experimento 2 — o modelo de custo que fecha os números
+
+O experimento 1 sugeria "menos varreduras, menos tempo". Testando mais variantes,
+essa regra se mostrou errada. O que fecha é **varreduras × largura da chave de
+agrupamento**, mais o preço fixo de materializar cada temporária.
+
+| Variante | Varreduras | Chave do grão | Linhas na temporária | Mediana |
+| --- | ---: | --- | ---: | ---: |
+| `rankings` hoje | 5 | — | — | 30.677 ms |
+| `rankings` C — 1 temporária no grão fino | 1 | 6 colunas, inclui `prod_name` VARCHAR(255) | ~15k | **17.777 ms** |
+| `rankings` D — 2 temporárias mais baratas | 2 | 4 e 2 colunas | 1.523 e 15.270 | 31.783 ms |
+| `metrics` hoje | 4 | — | — | 45.832 ms |
+| `metrics` E — 1 temporária | 1 | 3 colunas estreitas | 2.415 | **9.341 ms** |
+| `area` hoje | 3 | — | — | 21.269 ms |
+| `area` F — temporária por produto | 2 | 1 coluna | ~15k | **13.352 ms** |
+
+Todos os hashes idênticos aos das versões atuais.
+
+**D é a variante instrutiva:** duas temporárias *pequenas* custaram o mesmo que as
+cinco varreduras originais. Materializar tem preço por temporária, não por linha
+lida — trocar cinco leituras baratas por duas materializações não compra nada.
+
+E é o oposto: `metrics` ganha 5x porque seu grão comum
+(`sale_date`, `store_code`, `depto`) tem 2.415 linhas e três colunas estreitas.
+`rankings` ganha menos porque precisa de `prod_code` e `prod_name` na chave, e
+agrupar 1,4M linhas por uma chave de ~475 bytes é caro por si só.
+
+**Regra prática para a próxima vez:** materializar uma temporária só compensa
+quando ela é (a) uma só, (b) de chave estreita, e (c) reaproveitada por vários
+result sets. Faltando qualquer uma das três, meça antes.
+
+### O que ficou de fora, e por quê
+
+`area_analysis` continua com 2 varreduras em vez de 1: o `byDate` precisa do grão
+`sale_date`, e incluir a data na chave da temporária faria ela deixar de colapsar
+(~1,4M linhas em vez de ~15k). Custaria mais que a varredura economizada.
+
+`product_analysis` faz **7** varreduras e não está no baseline — mas ela filtra por
+um `prod_code` só, então usa índice e não sofre do mesmo problema. Fica anotado.
+
 ## Como comparar depois de uma mudança
 
 ```bash
