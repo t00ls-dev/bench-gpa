@@ -99,7 +99,8 @@ describe("getDashboardRankings", () => {
   });
 
   // Era a única metade da tela inicial ainda sem cache — o dashboard_metrics já
-  // era cacheado pelo callMetrics. Media 3,8s em prod na janela padrão.
+  // era cacheado pelo callMetrics. Media 3,8s em prod na janela padrão, antes de
+  // a proc passar a varrer o agregado uma vez só (19,0s em 28 dias hoje).
   describe("cache", () => {
     it("serve a segunda chamada igual sem tocar no banco", async () => {
       const a = await call({});
