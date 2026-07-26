@@ -15,6 +15,26 @@ export const FilterSchema = DateRangeSchema.extend({
 
 export type Filters = z.infer<typeof FilterSchema>;
 
+/**
+ * Tamanho de página usado pelo export (PDF), que precisa da listagem inteira.
+ *
+ * Não é um número redondo por acaso: tem de ser (a) maior que o universo de PLUs
+ * sob qualquer filtro — eram ~13,6k PLUs distintos em prod em 2026-07 —, (b)
+ * menor ou igual ao teto do AreaAnalysisSchema, e (c) MAIOR que o limiar de
+ * cache em area.functions.ts, que é o que mantém a listagem inteira fora do
+ * SimpleCache. Ao mexer em qualquer um dos três, revisar os outros dois.
+ */
+export const EXPORT_PAGE_SIZE = 50_000;
+
+/**
+ * Teto de pageSize. Medido em 2026-07-25: um LIMIT grande NÃO encarece a
+ * consulta (250 e 999999 deram o mesmo tempo, ~32s) porque o LIMIT não cria
+ * linhas — o custo é dominado pelos agregados. O teto existe para limitar o
+ * PAYLOAD serializado, não a CPU do banco, e para barrar pedidos absurdos de um
+ * cliente autenticado. Precisa acomodar o EXPORT_PAGE_SIZE.
+ */
+const MAX_PAGE_SIZE = EXPORT_PAGE_SIZE;
+
 export const AreaAnalysisSchema = z.object({
   dateFrom: z.string(),
   dateTo: z.string(),
@@ -23,9 +43,9 @@ export const AreaAnalysisSchema = z.object({
   secoes: z.array(z.string()).optional().default([]),
   grupos: z.array(z.string()).optional().default([]),
   subgrupos: z.array(z.string()).optional().default([]),
-  page: z.number().int().optional(),
-  pageSize: z.number().int().optional().default(50),
-  search: z.string().optional().default(""),
+  page: z.number().int().positive().optional(),
+  pageSize: z.number().int().positive().max(MAX_PAGE_SIZE).optional().default(50),
+  search: z.string().max(255).optional().default(""),
   sortBy: z.enum(["val", "prod_code", "prod_name", "daysSince"]).optional().default("val"),
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
 });
