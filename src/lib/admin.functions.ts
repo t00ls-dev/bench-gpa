@@ -340,9 +340,16 @@ export const getAuditLog = createServerFn({ method: "POST" })
  * Antes era a string fixa "Purga (180 dias)" — no MESMO arquivo que já importa a
  * constante e a usa corretamente em purgeOldAggs. Bastava mudar a retenção para
  * o painel admin passar a exibir um prazo que não é o praticado.
+ *
+ * `import-watch` saiu desta lista em 2026-07-26, quando o cron dele foi
+ * desligado (a importação passou a ser pela tela /upload ou sob demanda no
+ * servidor). Um job SEM cron aqui fica com o último heartbeat parado no tempo e
+ * é exibido como ATRASADO para sempre — alarme falso permanente, o oposto do que
+ * este painel serve. A linha antiga continua na tabela cron_heartbeat como
+ * registro histórico, apenas não é mais lida. Ao reativar o cron, reintroduzir o
+ * job aqui E a linha em scripts/setup-crons.sh.
  */
 const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: string }[] = [
-  { job: "import-watch", label: "Importação", maxHours: 24, schedule: "a cada 3h, 10h–22h" },
   {
     job: "purge",
     label: `Purga (${RETENTION_DAYS} dias)`,
