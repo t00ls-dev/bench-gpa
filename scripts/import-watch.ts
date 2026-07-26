@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readdirSync, renameSync, existsSync, mkdirSync, appendFileSync, rmSync } from "node:fs";
+import { readdirSync, existsSync, mkdirSync, appendFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { extractDate } from "./extract-date";
 import db from "../src/lib/db";
@@ -9,6 +9,20 @@ import { RETENTION_DAYS, daysSinceUtc, isWithinRetention } from "../src/lib/rete
 const HB_JOB = "import-watch";
 
 const LOG_FILE = "logs/import.log";
+
+/**
+ * Pasta que o watcher observa. É um INBOX local, não versionada (ver .gitignore)
+ * — quem coloca arquivo aqui é o operador, via scp/rsync. O outro caminho de
+ * importação é a tela /upload do app, que não passa por aqui.
+ *
+ * Antes as planilhas eram versionadas e este script as recebia por `git pull`,
+ * renomeava com `git mv` e devolvia com `git commit`+`git push`. O git servia de
+ * meio de transporte de dados, o que inchava o repositório (41 MiB de pack) e —
+ * o que motivou a mudança — impedia proteger a branch main: qualquer regra de
+ * "exigir pull request" faria este push automático ser recusado, e o script só
+ * registra o erro no log sem marcar falha no heartbeat, então quebraria calado.
+ */
+const INBOX_DIR = "data";
 
 function log(msg: string) {
   const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -34,122 +48,61 @@ function exec(
   };
 }
 
-function isTracked(path: string): boolean {
-  return exec(["git", "ls-files", "--error-unmatch", path]).ok;
-}
-
-function gitMv(src: string, dst: string): boolean {
-  return exec(["git", "mv", src, dst]).ok;
-}
-
-function gitRm(path: string): boolean {
-  return exec(["git", "rm", "--cached", path]).ok;
+/**
+ * Todos os .xlsx sob `data/`, incluindo as subpastas por mês.
+ *
+ * Varre a árvore inteira de propósito: enquanto as planilhas vinham pelo git, só
+ * o diretório do mês corrente era observado (`data/YYYY-MM`), porque o commit
+ * garantia o lugar certo. Num inbox alimentado à mão, exigir a subpasta correta
+ * só produziria o silêncio de "copiei e não importou".
+ */
+function listXlsx(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    if (entry.startsWith(".")) continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...listXlsx(full));
+    else if (entry.toLowerCase().endsWith(".xlsx")) out.push(full);
+  }
+  return out.sort();
 }
 
 async function main() {
   const started = Date.now();
   log("====== import-watch start ======");
 
-  // 1. git pull
-  log("Pull: starting...");
-  const pull = exec(["git", "pull", "--rebase", "--autostash"]);
-  if (!pull.ok) {
-    log(`Pull: ERROR — ${pull.stderr}`);
-    log("====== import-watch abort ======");
-    await recordHeartbeat(HB_JOB, "fail", `git pull falhou: ${pull.stderr}`, Date.now() - started);
-    process.exit(1);
+  if (!existsSync(INBOX_DIR)) {
+    log(`Inbox: ${INBOX_DIR}/ não existe, criando`);
+    mkdirSync(INBOX_DIR, { recursive: true });
   }
-  log(`Pull: ${pull.stdout || "Already up to date."}`);
+  log(`Inbox: ${INBOX_DIR}/`);
 
-  // 2. Current month directory
-  const now = new Date();
-  const monthDir = `data/${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const files = listXlsx(INBOX_DIR);
+  if (files.length === 0) log("Nenhum arquivo .xlsx no inbox.");
 
-  if (!existsSync(monthDir)) {
-    log(`Scan: ${monthDir}/ — not found, creating`);
-    mkdirSync(monthDir, { recursive: true });
-  } else {
-    log(`Scan: ${monthDir}/`);
-  }
-
-  // 3. List all .xlsx files
-  const allFiles = readdirSync(monthDir).filter((f) => f.endsWith(".xlsx"));
-  allFiles.sort();
-
-  if (allFiles.length === 0) {
-    log("No xlsx files found.");
-  }
-
-  // 4. Process each file
-  const alreadyImported: string[] = [];
-  const deduped: string[] = [];
   const imported: string[] = [];
+  const alreadyImported: string[] = [];
   const skippedOld: string[] = [];
   const failed: string[] = [];
-  let fileOps = false;
 
-  for (const file of allFiles) {
-    const filePath = join(monthDir, file);
-    const tracked = isTracked(filePath);
-    const normalized = /^\d{4}-\d{2}-\d{2}\.xlsx$/.test(file);
+  for (const filePath of files) {
+    log(`Found: ${filePath}`);
 
-    log(`Found: ${file}${tracked ? " (tracked)" : ""}${normalized ? " (normalized)" : ""}`);
-
-    // Extract date: from normalized name or via extractDate
-    let date: string | null;
-    if (normalized) {
-      date = file.slice(0, 10);
-    } else {
-      date = extractDate(filePath);
-    }
-
+    const date = extractDate(filePath);
     if (!date) {
-      log(`Date: ERROR — could not extract from ${file}`);
-      failed.push(`${file} — could not extract date`);
+      log(`Date: ERROR — não foi possível extrair a data de ${filePath}`);
+      failed.push(`${filePath} — data não identificada`);
       continue;
     }
     log(`Date: ${date}`);
 
-    const newName = `${date}.xlsx`;
-    const newPath = join(monthDir, newName);
-
-    // --- Rename / Dedup (only for non-normalized) ---
-    if (!normalized) {
-      if (file === newName) {
-        log(`Rename: already normalized`);
-      } else if (existsSync(newPath)) {
-        if (tracked) {
-          gitRm(filePath);
-          if (existsSync(filePath)) rmSync(filePath, { force: true });
-        } else {
-          rmSync(filePath, { force: true });
-        }
-        fileOps = true;
-        log(`Dedup: ${file} removed (${newName} exists)`);
-        deduped.push(`${file} → removed (${newName} exists)`);
-        continue;
-      } else if (tracked) {
-        if (!gitMv(filePath, newPath)) {
-          log(`Rename: ERROR — git mv failed`);
-          failed.push(`${file} — git mv failed`);
-          continue;
-        }
-        fileOps = true;
-        log(`Git mv: ${file} → ${newName}`);
-      } else {
-        fileOps = true;
-        renameSync(filePath, newPath);
-        log(`Renamed: ${file} → ${newName}`);
-      }
-    }
-
-    // --- Check import_log (for all files) ---
     const [rows] = await db.query("SELECT sale_date FROM import_log WHERE sale_date = ?", [date]);
-    const existing = (Array.isArray(rows) ? rows : [])[0];
-
-    if (existing) {
-      log(`import_log: ${date} already imported — skip`);
-      alreadyImported.push(`${file} → ${newName} (already imported)`);
+    if ((Array.isArray(rows) ? rows : [])[0]) {
+      // Não apaga: o operador pode ter colocado uma versão corrigida da mesma
+      // data. Reimportar exige apagar a data no admin antes — decisão dele, não
+      // deste script, que só importa o que ainda não existe.
+      log(`import_log: ${date} já importado — mantido no inbox, nada a fazer`);
+      alreadyImported.push(`${filePath} (${date} já importado)`);
       continue;
     }
 
@@ -159,66 +112,42 @@ async function main() {
     const daysAgo = daysSinceUtc(date);
     if (!isWithinRetention(date)) {
       log(`Skip: ${date} além da retenção (${daysAgo}d > ${RETENTION_DAYS}d) — seria purgado`);
-      skippedOld.push(`${file} → ${newName} (${daysAgo}d, além da retenção)`);
+      skippedOld.push(`${filePath} (${daysAgo}d, além da retenção)`);
       continue;
     }
 
-    // --- Import ---
-    fileOps = true;
     log(`Import: starting...`);
-    const imp = exec(["bun", "run", "cli:import", newPath]);
+    const imp = exec(["bun", "run", "cli:import", filePath]);
     if (!imp.ok) {
       log(`Import: ERROR — ${imp.stderr}`);
-      failed.push(`${file} → ${newName} (import error)`);
-    } else {
-      const lastLine = imp.stdout.split("\n").filter(Boolean).pop() || "?";
-      log(`Import: ${lastLine}`);
-      imported.push(`${file} → ${newName}`);
+      failed.push(`${filePath} (erro na importação)`);
+      continue;
     }
+
+    const lastLine = imp.stdout.split("\n").filter(Boolean).pop() || "?";
+    log(`Import: ${lastLine}`);
+
+    // Importou: o arquivo cumpriu seu papel e é descartado. A fonte de verdade
+    // passa a ser o banco, que tem dump diário do HestiaCP para o Backblaze; se
+    // um dia for preciso reconstruir, as planilhas são rebaixáveis do portal do
+    // GPA. Só se apaga depois do sucesso — falha mantém o arquivo para retry.
+    rmSync(filePath, { force: true });
+    log(`Removido do inbox: ${filePath}`);
+    imported.push(`${filePath} → ${date}`);
   }
 
-  // 5. Summary
   const all = [
-    ...alreadyImported.map((s) => `SKIP: ${s}`),
-    ...deduped.map((s) => `DUP: ${s}`),
     ...imported.map((s) => `IMP: ${s}`),
+    ...alreadyImported.map((s) => `SKIP: ${s}`),
     ...skippedOld.map((s) => `OLD: ${s}`),
     ...failed.map((s) => `FAIL: ${s}`),
   ];
   for (const p of all) log(p);
 
-  // 6. Commit + push se houve operações em arquivos
-  const hasOps = fileOps;
-
-  if (!hasOps) {
-    log("Git: no file operations — skip commit");
-  } else {
-    exec(["git", "add", "logs/import.log"]);
-    const summary = [
-      alreadyImported.length && `${alreadyImported.length} already-imported`,
-      deduped.length && `${deduped.length} deduped`,
-      imported.length && `${imported.length} imported`,
-      skippedOld.length && `${skippedOld.length} skipped-old`,
-      failed.length && `${failed.length} failed`,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    const ts = new Date().toISOString().replace("T", " ").slice(0, 16);
-    const commit = exec(["git", "commit", "-m", `import-watch: ${ts} — ${summary}`]);
-    if (!commit.ok) {
-      log(`Git commit: ERROR — ${commit.stderr}`);
-    } else {
-      log(`Git: ${commit.stdout}`);
-      const push = exec(["git", "push"]);
-      log(`Git push: ${push.ok ? push.stdout || "OK" : "ERROR — " + push.stderr}`);
-    }
-  }
-
   const detail =
     [
       imported.length && `${imported.length} importados`,
       alreadyImported.length && `${alreadyImported.length} já importados`,
-      deduped.length && `${deduped.length} deduplicados`,
       skippedOld.length && `${skippedOld.length} além da retenção`,
       failed.length && `${failed.length} falhas`,
     ]
@@ -235,9 +164,6 @@ async function main() {
 // trabalho. Sem isto, cada rodada do cron (a cada 3h) deixava para trás um bun
 // de ~55 MB: foram encontrados 6 vivos ao mesmo tempo, ~350 MB de RAM numa
 // máquina de 1,9 GB — que é o que empurrava a caixa para o swap.
-//
-// O import.ts e o purge-aggs.ts já faziam isso; só este caminho tinha exit
-// apenas nos ramos de erro.
 main()
   .then(() => process.exit(0))
   .catch(async (err) => {
