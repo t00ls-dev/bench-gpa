@@ -3,7 +3,7 @@
 > Data: 22/07/2026 (manual, leitura completa do código + execução real de lint/typecheck/testes/coverage)
 > Atualizado na mesma data após uma rodada de correções — ver seção "✅ Resolvido" abaixo para o que mudou desde a versão anterior deste documento.
 
-Esta análise **substitui** o snapshot de 21/07/2026 22:53, que estava desatualizado: a automação que o gerava (`code-review.yml` + `scripts/code-review.ts`) foi **removida no commit `e672ef1`**, com a justificativa "CI + deploy já cobrem" — mas isso ficou obsoleto assim que o CI passou a rodar lint/typecheck (ver histórico de resolução abaixo). Os demais arquivos em `docs/improvements/` (`estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `performance.md`, `novas-analises.md`) ainda citam `analytics.functions.ts` (hoje dividido em `dashboard/area/product.functions.ts`), RPCs Supabase e `client.ts`, que não existem mais no código MariaDB atual. Trate-os como histórico até serem reescritos.
+Esta análise **substitui** o snapshot de 21/07/2026 22:53, que estava desatualizado: a automação que o gerava (`code-review.yml` + `scripts/code-review.ts`) foi **removida no commit `e672ef1`**, com a justificativa "CI + deploy já cobrem" — mas isso ficou obsoleto assim que o CI passou a rodar lint/typecheck (ver histórico de resolução abaixo). Os demais arquivos em `docs/improvements/` (`estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `novas-analises.md`, `melhorias-pendentes.md`) ainda citam `analytics.functions.ts` (hoje dividido em `dashboard/area/product.functions.ts`), RPCs Supabase e `client.ts`, que não existem mais no código MariaDB atual. **Desde 26/07/2026 cada um traz um aviso no topo** — antes o alerta só existia aqui e no README, e quem abrisse o arquivo direto (pelo `/admin/docs`, por exemplo) não via nada. O `performance.md` foi apagado em vez de marcado: era o mais convidativo para quem fosse atacar performance e o mais errado, hoje substituído por `docs/medicao-performance.md`.
 
 ---
 
@@ -159,7 +159,7 @@ Nenhum item aberto no momento.
 4. Decidir sobre as colunas QTD/VALIDADE do PDF de Área (manter como formulário intencional ou remover)
 5. Renderizar `data.previous.byDate` no Dashboard (gráfico comparativo)
 6. Extrair hook/util compartilhado de parsing de filtros + export PDF entre dashboard/produto/área
-7. Reescrever `estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `performance.md`, `novas-analises.md` (referenciam código Supabase-era que não existe mais)
+7. Reescrever `estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `novas-analises.md`, `melhorias-pendentes.md` (referenciam código Supabase-era que não existe mais; marcados com aviso em 26/07/2026)
 8. Paralelizar `diagnoseData` (6 queries sequenciais → `Promise.all`)
 9. Adicionar `.max()` no schema Zod de `insertSalesChunk`
 10. Mecanismo de revogação de sessão (blacklist ou refresh token)

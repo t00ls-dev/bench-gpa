@@ -6,17 +6,52 @@ bloco variou de 8,6s a 0,9s entre execuções, um índice de teste apareceu sem 
 sido criado, e um índice de cobertura em `depto` não mudou nada. Sem chão, "ficou
 mais rápido" é opinião.
 
-A ferramenta é `scripts/bench-procs.sh`. O critério de validade é a **dispersão**
-(`max/min`): acima de ~1,3 a medição se declara inválida.
+## As duas ferramentas
+
+São um par, e nenhuma das duas basta sozinha. Tempo sem correção não vale nada:
+uma proc mais rápida que devolve outro número é um bug mais rápido.
+
+### `scripts/bench-procs.sh` — quanto custa
+
+Mede em produção, com o cronômetro dentro da sessão SQL. O critério de validade é
+a **dispersão** (`max/min`): acima de ~1,3 a medição se declara inválida. Somente
+leitura, e recusa rodar sob carga (1 núcleo, 2 usuários).
 
 ```bash
 ssh -i ~/.ssh/gpa-key -p 9767 debian@sv1.t00ls.dev \
   'sudo -u admin bash -s -- --out /tmp/bench-depois' < scripts/bench-procs.sh
 ```
 
-Ele é somente leitura, recusa rodar sob carga (1 núcleo, 2 usuários) e grava dois
-hashes por cenário. Depois de mexer numa proc os hashes **têm** de bater — ganho
-de tempo que muda resultado não é ganho.
+### `scripts/validate-procs.sh` — se o resultado mudou
+
+37 cenários sobre as três procs, cada um com dois hashes. Roda no banco local.
+
+```bash
+scripts/validate-procs.sh /tmp/antes.txt          # com o schema atual
+# edite migrate-schema.sql e reaplique no banco local
+scripts/validate-procs.sh /tmp/depois.txt
+diff /tmp/antes.txt /tmp/depois.txt               # vazio = aprovado
+```
+
+Os cenários não são "alguns casos": cada um cobre um caminho que já quebrou ou
+que a reescrita de 26/07 tocou — datas nulas, período vazio, as quatro
+ordenações mais um `p_sort_by` inválido, e busca com e sem match, que exercita os
+**dois ramos do PREPARE** de `area_analysis` (contagens de placeholder
+diferentes, e contagem de placeholder é erro de execução, não de compilação).
+
+Dois hashes por cenário porque empate de ordenação é não-determinístico: se
+`ordem` divergir mas `conjunto` bater, é empate; se `conjunto` divergir, é dado
+diferente, e isso é sério.
+
+### Como testar uma variante de proc
+
+**Não** comparar SQL avulso que imita a proc — foi exatamente esse atalho que
+levou à regressão de 26/07 (ver adiante). O caminho certo:
+
+1. criar a proc candidata com **outro nome**, com o corpo completo;
+2. medir com `bench-procs.sh` (aceita `--scenario`);
+3. provar correção com `validate-procs.sh`;
+4. derrubar a candidata.
 
 ---
 
