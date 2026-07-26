@@ -182,6 +182,50 @@ result sets. Faltando qualquer uma das três, meça antes.
 `product_analysis` faz **7** varreduras e não está no baseline — mas ela filtra por
 um `prod_code` só, então usa índice e não sofre do mesmo problema. Fica anotado.
 
+---
+
+## Pós-deploy — 2026-07-26, o experimento errou sobre a Área
+
+Medição das procs de verdade em prod, depois do deploy. Todos os hashes idênticos
+aos do baseline: as três procs sempre devolveram o resultado certo.
+
+| Cenário | Baseline | Depois | |
+| --- | ---: | ---: | --- |
+| `metrics_28d` | 46.342 ms | **10.064 ms** | −78% |
+| `rankings_28d` | 32.373 ms | **18.963 ms** | −41% |
+| `area_28d_sem_filtro` | 23.011 ms | 30.567 ms | **+33%** |
+| `area_28d_depto` | 24.025 ms | 30.104 ms | **+25%** |
+| `area_28d_loja` | 21.716 ms | 30.378 ms | **+40%** |
+| `area_28d_export` | 23.345 ms | 30.203 ms | **+29%** |
+| `area_28d_busca` | 23.278 ms | 30.676 ms | **+32%** |
+| `filtros_28d` | 222 ms | 215 ms | — |
+
+`metrics` e `rankings` entregaram o que o experimento previu (9,3s e 17,8s).
+**`area_analysis` fez o oposto**: o experimento previu 13,4s e a proc mediu 30,4s.
+Revertida para a versão de 3 varreduras.
+
+### O erro de método, que é o que importa
+
+No experimento, a variante F replicou a consulta **sem os cinco predicados
+`NOT EXISTS (...) OR col IN (...)`** — só o recorte de datas. A variante de
+controle (A) tinha a mesma omissão, mediu 21,3s contra os 23,0s da proc real, e eu
+tratei esses 7% como prova de que o experimento era fiel.
+
+Não era. Um controle que bate no cenário onde as duas versões se comportam igual
+não valida nada sobre o cenário onde elas divergem. Os predicados de filtro são
+baratos numa subquery derivada que já vai ser materializada de qualquer jeito, e
+caros quando são a condição de uma `CREATE TEMPORARY TABLE ... AS SELECT`.
+
+O sintoma que denuncia isso nos números: depois da mudança, os cinco cenários da
+Área mediram entre 30,1s e 30,7s — praticamente idênticos, enquanto antes variavam
+de 21,7s a 24,0s. Uniformidade assim é sinal de um custo fixo dominando tudo, que
+não responde a filtro, busca nem tamanho de página. Era a materialização.
+
+**Regra para a próxima:** o controle do experimento tem de reproduzir a consulta
+**inteira**, predicados de filtro incluídos. Se replicar a proc por completo for
+inviável, criar a proc candidata com outro nome e medi-la pelo harness — não
+comparar SQL avulso com stored procedure.
+
 ## Como comparar depois de uma mudança
 
 ```bash
