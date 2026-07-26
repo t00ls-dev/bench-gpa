@@ -1,6 +1,18 @@
 #!/bin/bash
 # setup-crons.sh — Instala/atualiza as crons do Bench GPA
 # Uso: bash scripts/setup-crons.sh
+#
+# ⚠️ NÃO RODE ISTO EM PRODUÇÃO. Lá quem é dono do crontab é o HestiaCP: a fonte
+# de verdade é /usr/local/hestia/data/users/admin/cron.conf, e o crontab cru é
+# gerado a partir dela. Este script escreve direto com `crontab`, então mexeria
+# só no lado gerado — que o Hestia sobrescreve na próxima alteração, desfazendo
+# a mudança sem avisar.
+#
+# Em produção, usar as ferramentas do Hestia:
+#   sudo /usr/local/hestia/bin/v-add-cron-job admin '0' '3' '*' '*' '*' '<cmd>'
+#   sudo /usr/local/hestia/bin/v-change-cron-job / v-delete-cron-job
+#
+# Este script serve para ambiente próprio (dev, ou uma VPS sem painel).
 
 set -euo pipefail
 
