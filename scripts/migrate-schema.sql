@@ -542,6 +542,17 @@ BEGIN
 END//
 
 -- 4/16: area_analysis
+--
+-- NÃO reescrever esta proc no modelo de "uma varredura + temporária" sem medir a
+-- proc inteira. Já foi tentado (PR #9) e REGREDIU em produção: 23,0s -> 30,6s na
+-- janela de 28 dias, revertido no PR seguinte. O experimento que aprovou a
+-- mudança replicou a consulta sem os cinco predicados NOT EXISTS/OR de filtro —
+-- eles são baratos numa subquery derivada e caros como condição de um
+-- CREATE TEMPORARY TABLE ... AS SELECT. Ver docs/medicao-performance.md.
+--
+-- O mesmo modelo FUNCIONOU em dashboard_metrics (46,3s -> 10,1s) e
+-- dashboard_rankings (32,4s -> 19,0s), que não fazem o LEFT JOIN contra a
+-- product_universe. A diferença está aí, não na ideia.
 CREATE PROCEDURE area_analysis(
   p_date_from DATE,
   p_date_to DATE,
@@ -604,23 +615,8 @@ BEGIN
   -- com val_vda = 0: "PLUs sem venda" dava 0 sempre e "PLUs (área)" repetia
   -- "PLUs com venda". Medido em prod: 339.007 linhas no período, ZERO com
   -- val_vda <= 0.
-  -- DUAS varreduras de sales_prod_daily_agg, não três.
-  --
-  -- O KPI de venda e a listagem paginada pediam a MESMA agregação do período por
-  -- produto, cada um na sua varredura: o KPI somava tudo, a listagem montava uma
-  -- subquery derivada idêntica para o LEFT JOIN. Materializar uma vez e usar nos
-  -- dois elimina uma passagem inteira pela tabela.
-  --
-  -- A terceira varredura (byDate) continua existindo e não dá para juntar aqui:
-  -- ela precisa do grão sale_date, e incluir a data nesta chave faria a
-  -- temporária deixar de colapsar — seriam ~1,4M linhas em vez de ~15k, o que
-  -- custa mais do que a varredura que economizaria.
-  --
-  -- Medido em prod (docs/medicao-performance.md): 21,3s -> 13,4s (-37%), com
-  -- hash do resultado idêntico.
-  DROP TEMPORARY TABLE IF EXISTS tmp_period;
-  CREATE TEMPORARY TABLE tmp_period (PRIMARY KEY (prod_code)) ENGINE=InnoDB AS
-  SELECT a.prod_code, SUM(a.val_vda) AS v, MAX(a.sale_date) AS last_in_period
+  SELECT COALESCE(SUM(a.val_vda), 0), COUNT(DISTINCT a.prod_code)
+    INTO v_total, v_with_sale
   FROM sales_prod_daily_agg a
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
@@ -628,13 +624,7 @@ BEGIN
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-  GROUP BY a.prod_code;
-
-  -- Venda e "PLUs com venda" saem da temporária: somar as somas por produto dá o
-  -- mesmo total, e a contagem de linhas É o COUNT(DISTINCT prod_code) de antes,
-  -- porque prod_code é a chave do grão.
-  SELECT COALESCE(SUM(v), 0), COUNT(*) INTO v_total, v_with_sale FROM tmp_period;
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
 
   SELECT COUNT(DISTINCT u.prod_code) INTO v_universe
   FROM product_universe u
@@ -725,7 +715,7 @@ BEGIN
 
   SET @sql = CONCAT(
      'SELECT u.prod_code, u.prod_name, u.depto, u.secao, u.grupo, u.subgrupo,
-             COALESCE(s.v, 0) AS val,
+             COALESCE(s.val, 0) AS val,
              COALESCE(s.last_in_period, u.last_sale_date) AS last_sale_date
       FROM (
         SELECT uu.prod_code,
@@ -742,28 +732,38 @@ BEGIN
       ' AND (uu.prod_name LIKE ? OR uu.prod_code LIKE ?)', ''),
     '   GROUP BY uu.prod_code
       ) u
-      LEFT JOIN tmp_period s ON s.prod_code = u.prod_code',
+      LEFT JOIN (
+        SELECT a.prod_code, SUM(a.val_vda) AS val,
+               MAX(a.sale_date) AS last_in_period
+        FROM sales_prod_daily_agg a
+        WHERE (? IS NULL OR a.sale_date >= ?)
+          AND (? IS NULL OR a.sale_date <= ?)
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+        GROUP BY a.prod_code
+      ) s ON s.prod_code = u.prod_code',
     CONCAT(' ORDER BY ', @sort_col, ' ', @sort_dir),
     IF(v_limit > 0, CONCAT(' LIMIT ', v_limit), ''),
     IF(v_offset > 0, CONCAT(' OFFSET ', v_offset), '')
   );
 
-  -- Placeholders: sobrou só o da busca, duas vezes (nome e código). As quatro
-  -- datas moravam na subquery do período, que virou a tmp_period — o recorte de
-  -- data já foi aplicado quando ela foi materializada. Sem USING no ramo sem
-  -- busca, porque aí não há placeholder nenhum.
+  -- Ordem dos placeholders: o filtro de busca agora vive na subquery do
+  -- universo, que vem ANTES da subquery do período — por isso @search_param
+  -- precede as datas aqui.
   IF p_search IS NOT NULL AND p_search != '' THEN
     SET @search_param = CONCAT('%', p_search, '%');
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING @search_param, @search_param;
+    EXECUTE stmt USING @search_param, @search_param, p_date_from, p_date_from, p_date_to, p_date_to;
     DEALLOCATE PREPARE stmt;
   ELSE
     PREPARE stmt FROM @sql;
-    EXECUTE stmt;
+    EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to;
     DEALLOCATE PREPARE stmt;
   END IF;
 
-  DROP TEMPORARY TABLE IF EXISTS tmp_period;
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
