@@ -16,4 +16,4 @@ Doc obsoletas removidas: `migracao-sqlite.md`, `pereciveis-plano.md`, `analise-p
 | [`melhorias-pendentes.md`](./melhorias-pendentes.md) | ⚠️ Desatualizado — melhorias por criticidade e área                                           |
 | [`novas-analises.md`](./novas-analises.md)           | ⚠️ Desatualizado — novas features possíveis (RPCs sem UI + dados disponíveis)                 |
 | [`arquitetura.md`](./arquitetura.md)                 | ⚠️ Desatualizado — observações arquiteturais (duplicações, padrões, segurança)                |
-| [`performance.md`](./performance.md)                 | ⚠️ Desatualizado — issues de performance identificadas                                        |
+| ~~`performance.md`~~                                  | **Apagado em 26/07/2026** — era ativamente enganoso: priorizava issues que a medição em produção mostrou irrelevantes. Substituído por [`../medicao-performance.md`](../medicao-performance.md), com números medidos. Recuperável no histórico do git |
