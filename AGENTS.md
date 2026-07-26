@@ -16,6 +16,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 24 server functions
 - **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
 - **Crons:** `cli:purge` (03h), `cli:watch` (a cada 3h, 10h–22h — `0 10-22/3`) — ver `scripts/setup-crons.sh`
+- **Dados:** as planilhas **não são versionadas** (`data/` no `.gitignore`). Entram pela tela `/upload` ou por um inbox local em `data/` no servidor, que o `cli:watch` varre e esvazia após importar. O git não é meio de transporte de dados
 - **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
 - **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
