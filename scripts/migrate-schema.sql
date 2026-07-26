@@ -680,6 +680,31 @@ BEGIN
   -- categoria vindos do agg, então PLU reclassificado no meio do período virava
   -- duas linhas (13.608 grupos para 13.595 PLUs distintos em prod). Aqui a
   -- classificação é uma só, a da última venda.
+
+  -- Ordenação por whitelist. Diferente das datas e da busca, que viajam como
+  -- placeholders do PREPARE, a coluna do ORDER BY não pode ser parametrizada —
+  -- ela É estrutura da consulta, então entra concatenada. Antes o valor de
+  -- p_sort_by ia direto para o CONCAT: qualquer texto que chegasse virava SQL.
+  --
+  -- A borda em TypeScript já restringe a um enum Zod (AreaAnalysisSchema), e é
+  -- por isso que nunca houve exploração possível pela aplicação. Mas a proc é
+  -- chamável por qualquer cliente do banco — CLI, console, uma integração
+  -- futura — e não pode depender de quem chama ter validado antes.
+  --
+  -- Os quatro valores são os que a aplicação realmente envia: três vêm do enum
+  -- e `last_sale_date` é a tradução de "daysSince" feita em area.functions.ts
+  -- (ordenar por "dias sem vender" é ordenar por última venda, invertido).
+  -- Qualquer outra coisa cai no default em vez de falhar: uma listagem ordenada
+  -- por venda é melhor resposta a um parâmetro inválido do que um erro 500.
+  SET @sort_col = CASE p_sort_by
+    WHEN 'val' THEN 'val'
+    WHEN 'prod_code' THEN 'prod_code'
+    WHEN 'prod_name' THEN 'prod_name'
+    WHEN 'last_sale_date' THEN 'last_sale_date'
+    ELSE 'val'
+  END;
+  SET @sort_dir = IF(p_sort_dir = 'asc' OR p_sort_dir = 'ASC', 'ASC', 'DESC');
+
   SET @sql = CONCAT(
      'SELECT u.prod_code, u.prod_name, u.depto, u.secao, u.grupo, u.subgrupo,
              COALESCE(s.val, 0) AS val,
@@ -712,9 +737,7 @@ BEGIN
           AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
         GROUP BY a.prod_code
       ) s ON s.prod_code = u.prod_code',
-    IF(p_sort_by IS NOT NULL AND p_sort_by != '',
-      CONCAT(' ORDER BY ', p_sort_by, ' ', IF(p_sort_dir = 'asc' OR p_sort_dir = 'ASC', 'ASC', 'DESC')),
-      ' ORDER BY val DESC'),
+    CONCAT(' ORDER BY ', @sort_col, ' ', @sort_dir),
     IF(v_limit > 0, CONCAT(' LIMIT ', v_limit), ''),
     IF(v_offset > 0, CONCAT(' OFFSET ', v_offset), '')
   );
