@@ -64,22 +64,43 @@ bun run lint
 
 ## Importação de Dados
 
-### Manual
+As planilhas **não são versionadas** — `data/` está no `.gitignore`. São dados
+operacionais do GPA e o repositório não é meio de transporte deles. Há dois
+caminhos para importar:
+
+### Pela aplicação (uso normal)
+
+Tela `/upload`, restrita a admin: aceita vários arquivos de uma vez e lê a data
+de dentro da planilha (marcador `DTA_VENDA`), então o nome do arquivo não
+importa. Importa na hora, sem esperar o cron.
+
+### Pelo servidor (lotes, sob demanda)
+
+Copie os arquivos para `data/` no servidor (`scp`/`rsync`, em qualquer subpasta)
+e rode:
 
 ```bash
-bun run cli:import data/2026-07/2026-07-13.xlsx
+bun run cli:import data/2026-07-13.xlsx   # um arquivo específico
+bun run cli:watch                          # varre o inbox inteiro
 ```
 
-### Automática (cron)
+`cli:watch` percorre `data/` e subpastas, identifica a data pelo nome ou pelo
+conteúdo, importa o que ainda não está na `import_log` e está dentro do horizonte
+de 180 dias (cap atrelado ao purge) e **apaga a planilha depois de importar** — a
+fonte de verdade passa a ser o banco, que tem dump diário para o Backblaze.
+Arquivo que falhou fica no inbox para nova tentativa; data já importada é
+mantida e apenas sinalizada no log.
 
-Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
+**A importação não roda em cron.** O agendamento do `cli:watch` foi desligado em
+26/07/2026: ele existia para reagir às planilhas que chegavam pelo git, e sem
+isso a importação passou a ser um ato deliberado — pela tela ou por estes
+comandos. A única cron ativa é a purga:
 
 ```
 0 3 * * * bun run cli:purge >> logs/purge.log 2>&1       # limpa agregados antigos (03h)
-0 10-22/3 * * * bun run cli:watch >> logs/cron.log 2>&1  # importa planilhas novas (a cada 3h, 10h–22h)
 ```
 
-`cli:watch` escaneia `data/YYYY-MM/` (mês corrente), normaliza nomes, importa planilhas novas dentro do horizonte de 180 dias (cap atrelado ao purge), e commita automaticamente.
+Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 
 ## Arquitetura
 
@@ -105,7 +126,7 @@ Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
 │   ├── lib/          → Server functions, schemas Zod, cache, CSP, rate limit, Turnstile, PDF export
 │   └── routes/       → Rotas TanStack Router (lazy loaded)
 ├── scripts/          → CLI de import (manual e automático)
-├── data/             → Planilhas XLSX organizadas por mês
+├── data/             → Inbox local de planilhas XLSX (não versionado)
 └── docs/             → Documentação técnica e planos de migração
 ```
 

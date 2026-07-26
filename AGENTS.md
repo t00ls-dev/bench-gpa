@@ -15,7 +15,8 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Deploy:** CI GitHub Actions (`.github/workflows/ci.yml`) → rsync `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), Nitro v3 preset `node-server`, swap atômico + PM2 com rollback. Não há PaaS — o Vercel foi removido em 2026-07-23 (aba Deployments do GitHub não é mais usada)
 - **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 24 server functions
 - **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
-- **Crons:** `cli:purge` (03h), `cli:watch` (a cada 3h, 10h–22h — `0 10-22/3`) — ver `scripts/setup-crons.sh`
+- **Crons:** só `cli:purge` (03h) — ver `scripts/setup-crons.sh`. O cron do `cli:watch` foi desligado em 2026-07-26; o script segue disponível para uso manual
+- **Dados:** as planilhas **não são versionadas** (`data/` no `.gitignore`). Entram pela tela `/upload` (caminho normal) ou por um inbox local em `data/` no servidor, importado sob demanda com `cli:import`/`cli:watch`, que esvazia o inbox após importar. O git não é meio de transporte de dados
 - **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
 - **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
