@@ -119,7 +119,7 @@ describe("getAreaAnalysis", () => {
     expect(r.products[0]).toMatchObject({ prod_code: "1", val: 1000, lastSaleDate: "2026-07-20" });
   });
 
-  // A tela media 2,6s em prod na janela padrão e 23,7s em 28 dias, e batia no
+  // A tela mede 2,1s em prod na janela padrão e 23,0s em 28 dias, e batia no
   // banco a cada troca de página, ordenação ou filtro.
   describe("cache", () => {
     it("serve a segunda chamada igual sem tocar no banco", async () => {
