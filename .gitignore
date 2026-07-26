@@ -19,6 +19,21 @@ dist-ssr
 # Environment (secrets — never commit)
 .env
 
+# Inbox de planilhas — dados operacionais do GPA, nada aqui é versionado.
+# O git chegou a ser o meio de transporte destes arquivos (subida pela interface
+# do GitHub + `git pull` no servidor), o que inchou o repositório e impedia
+# proteger a branch main: o import-watch commitava e pushava sozinho, e qualquer
+# regra de "exigir pull request" faria esse push ser recusado em silêncio.
+# Agora `data/` é um inbox local do servidor, alimentado por scp/rsync ou pela
+# tela /upload do app, e o watcher apaga a planilha depois de importar.
+#
+# O diretório inteiro é ignorado de propósito, não só *.xlsx: é uma pasta de
+# trabalho, e qualquer coisa deixada nela (planilha, imagem, rascunho) não tem
+# por que entrar no repositório. O import-watch cria o diretório se não existir.
+# As imagens da identidade visual vivem em public/, que é de onde a aplicação as
+# serve.
+data/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
