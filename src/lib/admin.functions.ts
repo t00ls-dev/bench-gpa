@@ -333,10 +333,22 @@ export const getAuditLog = createServerFn({ method: "POST" })
     return { events, total, limit, offset };
   });
 
-/** Jobs de cron conhecidos + prazo (horas) além do qual são considerados atrasados. */
+/**
+ * Jobs de cron conhecidos + prazo (horas) além do qual são considerados atrasados.
+ *
+ * O rótulo da purga interpola RETENTION_DAYS em vez de trazer o número escrito.
+ * Antes era a string fixa "Purga (180 dias)" — no MESMO arquivo que já importa a
+ * constante e a usa corretamente em purgeOldAggs. Bastava mudar a retenção para
+ * o painel admin passar a exibir um prazo que não é o praticado.
+ */
 const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: string }[] = [
   { job: "import-watch", label: "Importação", maxHours: 24, schedule: "a cada 3h, 10h–22h" },
-  { job: "purge", label: "Purga (180 dias)", maxHours: 26, schedule: "diária, 03h" },
+  {
+    job: "purge",
+    label: `Purga (${RETENTION_DAYS} dias)`,
+    maxHours: 26,
+    schedule: "diária, 03h",
+  },
 ];
 
 export interface HeartbeatRow {
