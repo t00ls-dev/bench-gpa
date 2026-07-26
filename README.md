@@ -74,29 +74,33 @@ Tela `/upload`, restrita a admin: aceita vários arquivos de uma vez e lê a dat
 de dentro da planilha (marcador `DTA_VENDA`), então o nome do arquivo não
 importa. Importa na hora, sem esperar o cron.
 
-### Pelo inbox do servidor (lotes)
+### Pelo servidor (lotes, sob demanda)
 
 Copie os arquivos para `data/` no servidor (`scp`/`rsync`, em qualquer subpasta)
-e o cron cuida do resto:
+e rode:
 
 ```bash
-bun run cli:import data/2026-07-13.xlsx   # um arquivo, na hora
+bun run cli:import data/2026-07-13.xlsx   # um arquivo específico
 bun run cli:watch                          # varre o inbox inteiro
 ```
 
-Instalado via `bash scripts/setup-crons.sh` (fonte da verdade das crons):
-
-```
-0 3 * * * bun run cli:purge >> logs/purge.log 2>&1       # limpa agregados antigos (03h)
-0 10-22/3 * * * bun run cli:watch >> logs/cron.log 2>&1  # importa planilhas novas (a cada 3h, 10h–22h)
-```
-
-`cli:watch` varre `data/` e subpastas, identifica a data pelo nome ou pelo
+`cli:watch` percorre `data/` e subpastas, identifica a data pelo nome ou pelo
 conteúdo, importa o que ainda não está na `import_log` e está dentro do horizonte
 de 180 dias (cap atrelado ao purge) e **apaga a planilha depois de importar** — a
 fonte de verdade passa a ser o banco, que tem dump diário para o Backblaze.
 Arquivo que falhou fica no inbox para nova tentativa; data já importada é
 mantida e apenas sinalizada no log.
+
+**A importação não roda em cron.** O agendamento do `cli:watch` foi desligado em
+26/07/2026: ele existia para reagir às planilhas que chegavam pelo git, e sem
+isso a importação passou a ser um ato deliberado — pela tela ou por estes
+comandos. A única cron ativa é a purga:
+
+```
+0 3 * * * bun run cli:purge >> logs/purge.log 2>&1       # limpa agregados antigos (03h)
+```
+
+Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 
 ## Arquitetura
 
