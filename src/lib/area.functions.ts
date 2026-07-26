@@ -84,8 +84,11 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     };
 
     // Esta era a tela mais cara do sistema sem nenhum cache. Medido em prod:
-    // 2,6s na janela padrão de 7 dias e 23,7s quando o usuário abre para 28 —
-    // a cada troca de página, de ordenação ou de filtro, tudo repetido do zero.
+    // 2,1s na janela padrão de 7 dias e 23,0s quando o usuário abre para 28
+    // (medido com scripts/bench-procs.sh) — a cada troca de página, de ordenação
+    // ou de filtro, tudo repetido do zero. Esta proc segue varrendo o agregado
+    // três vezes: reduzir isso foi tentado e regrediu, ver o aviso no cabeçalho
+    // de area_analysis em scripts/migrate-schema.sql.
     //
     // O export para PDF é a exceção deliberada: ele pede a lista inteira
     // (EXPORT_PAGE_SIZE), o que dá megabytes por entrada, e é um clique isolado
