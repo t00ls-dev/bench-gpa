@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
+import { defaultDateWindow } from "@/lib/date-window";
 
 export interface Filters {
   dateFrom: string;
@@ -64,8 +65,8 @@ export function FilterBar({ value, onChange }: Props) {
   useEffect(() => {
     const avail = opts?.availableDates ?? [];
     if (avail.length > 0 && !value.dateFrom && !value.dateTo) {
-      const win = avail.slice(-7);
-      onChange({ ...value, dateFrom: win[0], dateTo: avail[avail.length - 1] });
+      const win = defaultDateWindow(avail);
+      if (win) onChange({ ...value, dateFrom: win.from, dateTo: win.to });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.availableDates]);
