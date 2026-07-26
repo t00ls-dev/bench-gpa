@@ -14,6 +14,7 @@ import { AreaKpiCards } from "@/components/area-kpi-cards";
 import { AreaFilters } from "@/components/area-filters";
 import { Layers, Loader2 } from "lucide-react";
 import { Route } from "./area";
+import { defaultDateWindow } from "@/lib/date-window";
 
 type Product = {
   prod_code: string;
@@ -117,9 +118,8 @@ function AreaPage() {
   useEffect(() => {
     if (opts?.latestDate && (!dateFrom || !dateTo)) {
       const avail = (opts?.availableDates ?? []) as string[];
-      const latest = opts.latestDate;
-      const win = avail.filter((d) => d <= latest).slice(-7);
-      setRange({ from: win[0] ?? latest, to: latest });
+      const win = defaultDateWindow(avail, opts.latestDate);
+      if (win) setRange(win);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.latestDate]);
