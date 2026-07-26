@@ -58,25 +58,19 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // App interno, atrás de autenticação: não há público externo a atrair, então
+  // metadado de indexação e de preview social é anti-feature aqui. Foram
+  // removidos daqui `description`, `og:title`, `og:description`, `twitter:title`
+  // e `twitter:description` — não reintroduzir. O `public/robots.txt` continua
+  // com `Disallow: /` de propósito: ele bloqueia indexação, que é o que
+  // queremos.
+  //
+  // O que fica é funcional: charset, viewport e o título da aba.
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Bench GPA" },
-      {
-        name: "description",
-        content: "Plataforma de análise operacional e comercial do Grupo Pão de Açúcar.",
-      },
-      { property: "og:title", content: "Bench GPA" },
-      { name: "twitter:title", content: "Bench GPA" },
-      {
-        property: "og:description",
-        content: "Plataforma de análise operacional e comercial do Grupo Pão de Açúcar.",
-      },
-      {
-        name: "twitter:description",
-        content: "Plataforma de análise operacional e comercial do Grupo Pão de Açúcar.",
-      },
     ],
     links: [
       { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },

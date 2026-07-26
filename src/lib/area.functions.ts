@@ -15,6 +15,13 @@ import {
 } from "./api-types";
 import { AreaAnalysisSchema } from "./schemas";
 
+/**
+ * Acima deste tamanho de página a resposta não entra no cache — é o caminho do
+ * export para PDF. Ver a nota de invariante no corpo de getAreaAnalysis e o
+ * EXPORT_PAGE_SIZE em schemas.ts, que precisa ser maior que este valor.
+ */
+export const CACHE_BYPASS_PAGE_SIZE = 1000;
+
 export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
@@ -80,12 +87,18 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     // a cada troca de página, de ordenação ou de filtro, tudo repetido do zero.
     //
     // O export para PDF é a exceção deliberada: ele pede a lista inteira
-    // (pageSize alto), o que dá megabytes por entrada, e é um clique isolado
+    // (EXPORT_PAGE_SIZE), o que dá megabytes por entrada, e é um clique isolado
     // que raramente se repete com os mesmos filtros. Cachear isso encheria a
     // memória do processo — a VPS tem 1,9 GB e o SimpleCache não tem teto de
     // tamanho, só TTL.
+    //
+    // INVARIANTE: CACHE_BYPASS_PAGE_SIZE < EXPORT_PAGE_SIZE <= o teto do
+    // AreaAnalysisSchema (schemas.ts). Se o export deixar de superar este
+    // limiar, a listagem inteira volta a ser cacheada silenciosamente e o
+    // consumo de memória do processo passa a crescer com o uso do PDF.
+    // Coberto por teste em area.functions.test.ts.
     const { cache } = await import("./cache");
-    if ((data.pageSize ?? 0) > 1000) return query();
+    if ((data.pageSize ?? 0) > CACHE_BYPASS_PAGE_SIZE) return query();
 
     const key = `area:${data.dateFrom}:${data.dateTo}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.page ?? ""}:${data.pageSize}:${data.search}:${sortBy}:${sortDir}`;
     return cache.wrap(key, query);
