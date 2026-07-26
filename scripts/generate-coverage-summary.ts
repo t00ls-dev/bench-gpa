@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { COVERAGE_THRESHOLDS as THRESHOLDS } from "./coverage-thresholds";
 
 type Metric = { total: number; covered: number; skipped: number; pct: number };
 type FileSummary = {
@@ -10,9 +11,6 @@ type FileSummary = {
   branches: Metric;
 };
 type CoverageSummary = Record<string, FileSummary> & { total: FileSummary };
-
-// Kept in sync with the `coverage.thresholds` block in vitest.config.ts
-const THRESHOLDS = { lines: 40, statements: 40, functions: 30, branches: 25 };
 
 const root = resolve(import.meta.dir, "..");
 const summaryPath = join(root, "coverage/coverage-summary.json");

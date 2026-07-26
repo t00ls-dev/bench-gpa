@@ -7,6 +7,7 @@ import db from "./db";
 import { asArray, asRecord, str, num, dateTimeStr } from "./api-types";
 import { SaleRowSchema } from "./schemas";
 import { STAGING_COLS, toStagingRow } from "./staging-row";
+import { CACHE_TTL_SHORT } from "./cache";
 
 export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit("upload")])
@@ -94,7 +95,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
           };
         });
       },
-      60_000,
+      CACHE_TTL_SHORT,
     );
   });
 
