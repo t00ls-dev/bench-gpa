@@ -1,4 +1,5 @@
 import db from "./db";
+import { DETAIL_MAX_LENGTH } from "./audit";
 
 export type HeartbeatStatus = "ok" | "fail";
 
@@ -22,7 +23,7 @@ export async function recordHeartbeat(
          last_status = VALUES(last_status),
          last_detail = VALUES(last_detail),
          last_duration_ms = VALUES(last_duration_ms)`,
-      [job, status, detail ? detail.slice(0, 500) : null, durationMs ?? null],
+      [job, status, detail ? detail.slice(0, DETAIL_MAX_LENGTH) : null, durationMs ?? null],
     );
   } catch (err) {
     console.error(

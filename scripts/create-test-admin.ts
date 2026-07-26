@@ -1,6 +1,7 @@
 import { createPool } from "mysql2/promise";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
+import { BCRYPT_COST } from "../src/lib/auth-config";
 
 const pool = createPool({
   host: process.env.DB_HOST || "localhost",
@@ -13,7 +14,7 @@ const pool = createPool({
 const email = "test@gpabr.com";
 const name = "Teste";
 const password = "Gpa@Test1970";
-const hash = await bcrypt.hash(password, 12);
+const hash = await bcrypt.hash(password, BCRYPT_COST);
 const id = randomUUID();
 
 await pool.query(

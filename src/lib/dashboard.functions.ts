@@ -19,6 +19,7 @@ import {
   dateTimeStr,
 } from "./api-types";
 import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
+import { CACHE_TTL_SHORT, CACHE_TTL_LONG } from "./cache";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
@@ -62,7 +63,7 @@ export const getFilterOptions = createServerFn({ method: "POST" })
             .sort(),
         };
       },
-      300_000,
+      CACHE_TTL_LONG,
     );
   });
 
@@ -113,24 +114,30 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
     // e a proc varre a sales_prod_daily_agg cinco vezes, uma por ranking.
     const { cache } = await import("./cache");
     const key = `rankings:${data.dateFrom ?? ""}:${data.dateTo ?? ""}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.limit ?? 10}`;
-    return cache.wrap(key, async () => {
-      const [rs2] = await db.query("CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)", [
-        data.dateFrom || null,
-        data.dateTo || null,
-        JSON.stringify(data.stores ?? []),
-        JSON.stringify(data.deptos ?? []),
-        JSON.stringify(data.secoes ?? []),
-        JSON.stringify(data.grupos ?? []),
-        JSON.stringify(data.subgrupos ?? []),
-        data.limit ?? 10,
-      ]);
-      const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as unknown[];
-      return {
-        byDepto: parseNameVal(byDepto),
-        bySecao: parseNameVal(bySecao),
-        byGrupo: parseNameVal(byGrupo),
-        bySubgrupo: parseNameVal(bySubgrupo),
-        byProduto: parseCodeNameVal(byProduto),
-      };
-    });
+    return cache.wrap(
+      key,
+      async () => {
+        const [rs2] = await db.query("CALL dashboard_rankings(?, ?, ?, ?, ?, ?, ?, ?)", [
+          data.dateFrom || null,
+          data.dateTo || null,
+          JSON.stringify(data.stores ?? []),
+          JSON.stringify(data.deptos ?? []),
+          JSON.stringify(data.secoes ?? []),
+          JSON.stringify(data.grupos ?? []),
+          JSON.stringify(data.subgrupos ?? []),
+          data.limit ?? 10,
+        ]);
+        const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as unknown[];
+        return {
+          byDepto: parseNameVal(byDepto),
+          bySecao: parseNameVal(bySecao),
+          byGrupo: parseNameVal(byGrupo),
+          bySubgrupo: parseNameVal(bySubgrupo),
+          byProduto: parseCodeNameVal(byProduto),
+        };
+      },
+      // Explícito agora: antes esta chamada omitia o TTL e caía no default de
+      // 60s do SimpleCache, o que era invisível para quem lesse só aqui.
+      CACHE_TTL_SHORT,
+    );
   });

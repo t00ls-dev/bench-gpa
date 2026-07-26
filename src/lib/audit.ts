@@ -2,6 +2,14 @@ import { getRequest } from "@tanstack/react-start/server";
 import db from "./db";
 import { getClientIp } from "./rate-limit";
 
+/**
+ * Limite do campo `detail`. Espelha `VARCHAR(500)` no schema — tanto em
+ * `audit_log` quanto em `cron_heartbeat`, que truncavam com o mesmo 500 escrito
+ * à mão em arquivos diferentes. Truncar aqui evita que um detalhe longo derrube
+ * a gravação inteira por "Data too long".
+ */
+export const DETAIL_MAX_LENGTH = 500;
+
 export interface AuditEntry {
   /** Ação no formato "dominio.verbo", ex.: "auth.login", "user.role_change". */
   action: string;
@@ -38,7 +46,7 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
         entry.action,
         entry.targetType ?? null,
         entry.targetId ?? null,
-        entry.detail ? entry.detail.slice(0, 500) : null,
+        entry.detail ? entry.detail.slice(0, DETAIL_MAX_LENGTH) : null,
         ip,
       ],
     );
