@@ -19,6 +19,16 @@ dist-ssr
 # Environment (secrets — never commit)
 .env
 
+# Planilhas de venda — dados operacionais do GPA, não versionar.
+# O git chegou a ser o meio de transporte destes arquivos (subida pela interface
+# do GitHub + `git pull` no servidor), o que inchou o repositório e impedia
+# proteger a branch main: o import-watch commitava e pushava sozinho, e qualquer
+# regra de "exigir pull request" faria esse push ser recusado em silêncio.
+# Agora `data/` é um inbox local do servidor, alimentado por scp/rsync ou pela
+# tela /upload do app, e o watcher apaga a planilha depois de importar.
+data/**/*.xlsx
+data/**/*.xls
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
