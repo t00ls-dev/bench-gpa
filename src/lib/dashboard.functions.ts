@@ -110,8 +110,10 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
     // Mesmo cache que o callMetrics já usava para o dashboard_metrics — esta era
     // a única metade da tela inicial que ainda batia no banco a cada render.
-    // Medido em prod: 3,8s por chamada numa janela de 7 dias (o padrão da UI),
-    // e a proc varre a sales_prod_daily_agg cinco vezes, uma por ranking.
+    // A proc já varreu a sales_prod_daily_agg cinco vezes, uma por ranking, e
+    // media 3,8s na janela padrão de 7 dias. Hoje varre uma vez só: medido em
+    // prod, 32,4s -> 19,0s numa janela de 28 dias (docs/medicao-performance.md).
+    // Continua cara o bastante para o cache valer.
     const { cache } = await import("./cache");
     const key = `rankings:${data.dateFrom ?? ""}:${data.dateTo ?? ""}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.limit ?? 10}`;
     return cache.wrap(
