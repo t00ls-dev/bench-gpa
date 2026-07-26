@@ -1,5 +1,15 @@
 # Novas Análises Possíveis
 
+> ## ⚠️ DOCUMENTO HISTÓRICO — NÃO USAR COMO REFERÊNCIA
+>
+> Escrito na era Supabase. Referencia `analytics.functions.ts`, `client.ts` e RPCs
+> que **não existem mais** no código atual (MariaDB + stored procedures).
+> Mantido só como registro do que se pensava na época.
+>
+> **O que está atualizado:** `docs/improvements/analise-completa.md` para o estado
+> geral, `docs/medicao-performance.md` para performance (com números medidos em
+> produção) e `docs/continuar.md` para o que está aberto.
+
 Baseado nos RPCs existentes no banco sem UI e nos dados disponíveis.
 
 > ⚠️ Independente da migração (Supabase → MariaDB) — todas as features abaixo são de frontend/UX e seguem válidas.
