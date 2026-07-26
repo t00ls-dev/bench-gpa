@@ -5,30 +5,40 @@
 
 ## Objetivo
 
-Eliminar a etapa manual de exportar a planilha diária do Power BI e colocá-la em
-`data/YYYY-MM/`. Hoje um humano faz esse export/download; queremos que o dado
-chegue sozinho até o pipeline de import já existente.
+Eliminar a etapa manual de exportar a planilha diária do Power BI. Hoje um humano
+faz esse export/download e sobe o arquivo; queremos que o dado chegue sozinho até
+o pipeline de import já existente.
 
 ## Fluxo atual (manual)
+
+> **Atualizado em 2026-07-26.** O desenho anterior deste documento descrevia as
+> planilhas versionadas em `data/YYYY-MM/` e um cron `cli:watch` a cada 3h, que
+> importava e dava commit/push sozinho. Isso mudou: os dados saíram do git (o
+> repositório não é meio de transporte de dados) e o cron foi desligado — a
+> importação passou a ser um ato deliberado.
 
 ```
 Power BI (relatório de vendas)
         │  ← export manual para .xlsx (feito por uma pessoa)
         ▼
-data/YYYY-MM/<arquivo>.xlsx   ← arquivo colocado manualmente no repo
-        │  ← cron cli:watch (a cada 3h, 10h–22h)
-        ▼
-import-watch.ts
-  • normaliza o nome para YYYY-MM-DD.xlsx (extract-date.ts)
-  • pula datas já em import_log
-  • ignora arquivos além de RETENTION_DAYS (180d, atrelado ao purge)
-  • importa via cli:import → sales_daily_agg / sales_prod_daily_agg
-  • commita e dá push automático
+   dois caminhos possíveis:
+
+   (a) tela /upload do app            (b) inbox no servidor
+       • aceita vários arquivos           • copiar para data/ (scp/rsync)
+       • lê a data de dentro da           • rodar `bun run cli:watch`
+         planilha (DTA_VENDA)               (ou cli:import <arquivo>)
+       • importa na hora                  • apaga a planilha após importar
+        │                                  │
+        └──────────────┬───────────────────┘
+                       ▼
+        sales_daily_agg / sales_prod_daily_agg
+        • pula datas já em import_log
+        • ignora arquivos além de RETENTION_DAYS (180d, atrelado ao purge)
 ```
 
-**O que já está pronto e NÃO muda:** todo o trecho a partir de `data/YYYY-MM/`.
-A automação só precisa **produzir o `.xlsx` diário nessa pasta** com o conteúdo
-correto. O `import-watch` cuida do resto (dedup, cap de retenção, import, commit).
+**O que já está pronto e NÃO muda:** todo o trecho a partir da chegada do
+`.xlsx`. A automação só precisa **produzir o arquivo** com o conteúdo correto e
+entregá-lo por um dos dois caminhos.
 
 ## O que a automação precisa fazer
 
@@ -36,8 +46,12 @@ correto. O `import-watch` cuida do resto (dedup, cap de retenção, import, comm
 2. **Disparar/obter** o export do relatório de vendas do dia.
 3. **Baixar** o `.xlsx` (ou converter o resultado para o layout que o
    `xlsx-parser` espera — ver "Compatibilidade de layout" abaixo).
-4. **Salvar** em `data/YYYY-MM/<data>.xlsx` na VPS (ou onde o `import-watch` roda).
-5. **Agendar** — provavelmente um cron um pouco antes da primeira rodada do `cli:watch` (10h).
+4. **Entregar** o arquivo: copiar para `data/` na VPS, ou enviá-lo pela mesma
+   rota que a tela `/upload` usa. O nome do arquivo é irrelevante — a data sai do
+   conteúdo (marcador `DTA_VENDA`).
+5. **Importar**: se usar o inbox, chamar `bun run cli:watch` ao final do
+   download. Não há mais cron de import para "esperar" — o que na verdade
+   simplifica, porque o dado entra assim que chega, sem janela de até 3h.
 
 ## Perguntas em aberto
 
@@ -84,15 +98,19 @@ real antes de ligar o cron.
   (nunca versionar) — seguir o padrão já usado para `DB_PASS`/`JWT_SECRET`.
 - **Idempotência:** já garantida pelo `import-watch` (checa `import_log` e o cap
   de 180 dias). A automação pode rodar/re-rodar sem duplicar.
-- **Falhas silenciosas:** o `import-watch` já grava `cron_heartbeat`; o passo de
-  download deveria ter o **mesmo tratamento de heartbeat** (job próprio, ex.
-  `powerbi-download`) para aparecer no painel `/admin` → Auditoria quando falhar.
+- **Falhas silenciosas:** o `import-watch` grava `cron_heartbeat`, mas hoje ele
+  **não roda em cron** — e, por isso, saiu do `KNOWN_JOBS` (um job sem cron
+  apareceria como atrasado para sempre). Se a automação for criada, ela deve ter
+  heartbeat próprio (ex. `powerbi-download`) **e** ser adicionada ao `KNOWN_JOBS`
+  em `src/lib/admin.functions.ts`, senão não aparece no painel `/admin` →
+  Auditoria quando falhar.
 - **Fuso/horário:** o export precisa refletir o dia fechado. Confirmar a hora em
   que o dado do dia anterior fica completo no Power BI antes de escolher o
-  horário do cron (hoje o `cli:watch` roda a cada 3h, das 10h às 22h).
-- **Timezone do nome do arquivo:** a data no nome (`YYYY-MM-DD.xlsx`) deve ser a
-  data de venda, não a data de execução — o `extract-date` já lida com isso se o
-  conteúdo/nome trouxer a data correta.
+  horário do cron de download — não há mais cron de import para se alinhar.
+- **Data da venda:** deve ser a data de venda, não a de execução. O nome do
+  arquivo é irrelevante: o parser lê o marcador `DTA_VENDA` de dentro da
+  planilha, e o `extract-date` só usa o nome como atalho quando ele já traz uma
+  data válida.
 
 ## Próximos passos
 
@@ -101,8 +119,9 @@ real antes de ligar o cron.
 3. Se B/C: registrar service principal no Entra ID e conceder acesso ao
    workspace/dataset no Power BI.
 4. Protótipo: baixar **um** dia real e validar o layout contra o `xlsx-parser`.
-5. Integrar: script `scripts/powerbi-download.ts` que salva em `data/YYYY-MM/`,
-   com heartbeat próprio, agendado via `scripts/setup-crons.sh` antes do `cli:watch`.
+5. Integrar: script `scripts/powerbi-download.ts` que salva no inbox `data/` e
+   chama o import ao final, com heartbeat próprio, agendado via
+   `scripts/setup-crons.sh` e registrado no `KNOWN_JOBS`.
 6. Documentar credenciais/rotina de rotação no `.env.example` e neste doc.
 
 ## Referências

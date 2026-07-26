@@ -1056,4 +1056,5 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] Login com Turnstile funcional
 - [ ] Dashboard com dados
 - [ ] CSP nonce funcionando (verificar console)
-- [ ] Cron jobs configurados (purge 03h, import a cada 3h das 10h–22h)
+- [ ] Cron jobs configurados (purge 03h — desde 2026-07-26 é a única cron; o
+      import deixou de ser agendado e acontece pela tela `/upload` ou sob demanda)
