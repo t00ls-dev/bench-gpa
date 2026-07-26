@@ -87,7 +87,60 @@ Duas coisas saltam:
   primária. O ganho esperado é indireto (menos disputa pelo buffer pool, import
   mais rápido, backup menor), e portanto precisa ser medido, não presumido.
 
-### Como comparar depois de uma mudança
+---
+
+## Experimento 1 — uma varredura em vez de cinco (`dashboard_rankings`)
+
+Feito em prod, somente com `TEMPORARY TABLE` (escopo de sessão, some ao
+desconectar): nada de proc alterada, índice criado ou escrita persistente. Três
+variantes, três repetições cada, aquecimento descartado.
+
+| Variante | Mediana | Hash do conjunto |
+| --- | ---: | --- |
+| **A** — como a proc faz hoje: 5 varreduras, predicado `(? IS NULL OR ...)` | 30.677 ms | `6664a8c02aff` |
+| **B** — 5 varreduras, predicado de data direto | 31.849 ms | `6664a8c02aff` |
+| **C** — 1 varredura para uma temporária no grão fino + 5 rollups | **17.777 ms** | `6664a8c02aff` |
+
+Duas validações antes de ler o resultado: a variante A mediu 30,7s contra os
+32,4s da proc real, ou seja, o experimento reproduz o caminho de produção com 5%
+de erro; e os três hashes são iguais **ao hash que a proc real produziu no
+baseline** — as variantes entregam o mesmo resultado, não uma aproximação.
+
+### B não ganhou nada, e isso derruba uma hipótese
+
+O plano original supunha que `(p_date_from IS NULL OR a.sale_date >= p_date_from)`
+estivesse impedindo o uso do índice, e que tornar o predicado direto traria ganho.
+**Não trouxe** (31,8s contra 30,7s — dentro do ruído).
+
+O motivo, olhando o dataset: 28 dias são metade das 56 datas armazenadas. Nenhum
+índice ajuda uma consulta que precisa de metade das linhas — varrer *é* o plano
+correto. O predicado nunca foi o problema.
+
+Corolário prático: **não adianta criar índice para acelerar a janela de 28 dias.**
+
+### C ganhou 42%, e menos do que parecia
+
+Cinco varreduras viraram uma, mas o tempo caiu 42%, não 80%. A varredura única
+carrega o agrupamento no grão fino (~1,4M linhas colapsando em ~100k grupos), que
+não é de graça, e os rollups saem de uma temporária InnoDB que também tem custo.
+O ganho é real e reproduzível; a aritmética de "5 varreduras → 1/5 do tempo" não
+se sustenta.
+
+### O piso é I/O, e dá para vê-lo nos números
+
+Custo por linha varrida, derivado do baseline:
+
+| Janela | Linhas por varredura | Tempo por varredura | Por linha |
+| --- | ---: | ---: | ---: |
+| 7 dias | ~344k | ~700 ms | 2,0 µs |
+| 28 dias | ~1,4M | ~7.670 ms | 5,5 µs |
+
+A mesma operação fica **2,75x mais cara por linha** só por a janela ser maior.
+Isso não é a query: é o conjunto deixando de caber nos 128 MB de buffer pool.
+Enquanto esse degrau existir, qualquer reescrita de proc opera sobre um piso de
+disco.
+
+## Como comparar depois de uma mudança
 
 ```bash
 diff <(cut -f1,3,7,8,9 antes/results.tsv) <(cut -f1,3,7,8,9 depois/results.tsv)
