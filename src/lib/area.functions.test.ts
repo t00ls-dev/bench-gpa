@@ -43,9 +43,10 @@ vi.mock("./rate-limit.middleware", () => ({
 }));
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
-import { getAreaAnalysis } from "./area.functions";
+import { getAreaAnalysis, CACHE_BYPASS_PAGE_SIZE } from "./area.functions";
 import db from "./db";
 import { cache } from "./cache";
+import { AreaAnalysisSchema, EXPORT_PAGE_SIZE } from "./schemas";
 
 // A proc devolve 4 result sets: KPIs, total para paginação, byDate e produtos.
 const RESULTADO_DA_PROC = [
@@ -150,10 +151,50 @@ describe("getAreaAnalysis", () => {
 
     // O export para PDF pede a lista inteira: megabytes por entrada, num clique
     // que raramente se repete. Cachear encheria a memória do processo.
-    it("não cacheia o caminho do export (pageSize alto)", async () => {
-      await call({ pageSize: 999999 });
-      await call({ pageSize: 999999 });
+    it("não cacheia o caminho do export", async () => {
+      await call({ pageSize: EXPORT_PAGE_SIZE });
+      await call({ pageSize: EXPORT_PAGE_SIZE });
       expect(db.query).toHaveBeenCalledTimes(2);
+    });
+
+    it("ainda cacheia exatamente no limiar (só acima dele é que escapa)", async () => {
+      await call({ pageSize: CACHE_BYPASS_PAGE_SIZE });
+      await call({ pageSize: CACHE_BYPASS_PAGE_SIZE });
+      expect(db.query).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // Três constantes em dois arquivos precisam concordar. Se o export deixar de
+  // superar o limiar, a listagem inteira volta a ser cacheada em silêncio e a
+  // memória do processo passa a crescer com o uso do PDF; se passar do teto do
+  // schema, o export quebra com erro de validação.
+  describe("invariante entre o export, o limiar de cache e o teto do schema", () => {
+    it("o export supera o limiar de bypass do cache", () => {
+      expect(EXPORT_PAGE_SIZE).toBeGreaterThan(CACHE_BYPASS_PAGE_SIZE);
+    });
+
+    it("o export é aceito pelo schema", () => {
+      const r = AreaAnalysisSchema.safeParse({
+        dateFrom: "2026-07-14",
+        dateTo: "2026-07-20",
+        pageSize: EXPORT_PAGE_SIZE,
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("o schema recusa pageSize acima do teto", () => {
+      const r = AreaAnalysisSchema.safeParse({
+        dateFrom: "2026-07-14",
+        dateTo: "2026-07-20",
+        pageSize: EXPORT_PAGE_SIZE + 1,
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it("o schema recusa pageSize e page não positivos", () => {
+      const base = { dateFrom: "2026-07-14", dateTo: "2026-07-20" };
+      expect(AreaAnalysisSchema.safeParse({ ...base, pageSize: 0 }).success).toBe(false);
+      expect(AreaAnalysisSchema.safeParse({ ...base, page: -5 }).success).toBe(false);
     });
   });
 });
