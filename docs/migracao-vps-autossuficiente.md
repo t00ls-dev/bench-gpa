@@ -819,7 +819,7 @@ npm install -g pm2
 ```bash
 cd /home/admin/web/gpa.t00ls.dev
 
-git clone https://github.com/pedrorodbit/bench-gpa.git public_html
+git clone https://github.com/t00ls-dev/bench-gpa.git public_html
 cd public_html
 
 bun install
