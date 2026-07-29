@@ -9,6 +9,9 @@ function sanitizeNext(next: unknown): string {
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  head: () => ({
+    links: [{ rel: "preconnect", href: "https://challenges.cloudflare.com" }],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
