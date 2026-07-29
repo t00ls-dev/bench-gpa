@@ -178,7 +178,7 @@ function AuthedLayout() {
               to="/"
               className="flex items-center gap-2 px-3 py-2 font-display text-lg font-bold"
             >
-              <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
+              <img src="/gpa-logo-mini.webp" alt="GPA" className="h-9 w-auto" />
             </Link>
           </SidebarHeader>
           <SidebarContent>
@@ -214,7 +214,7 @@ function AuthedLayout() {
                 to="/"
                 className="flex items-center gap-2 font-display text-lg font-bold md:hidden"
               >
-                <img src="/gpa-logo-mini.png" alt="GPA" className="h-9 w-auto" />
+                <img src="/gpa-logo-mini.webp" alt="GPA" className="h-9 w-auto" />
               </Link>
               <SidebarTrigger className="hidden md:flex" />
               <div className="ml-auto flex items-center gap-3">
