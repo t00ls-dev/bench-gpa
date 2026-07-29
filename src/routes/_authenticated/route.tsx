@@ -6,7 +6,7 @@ import {
   useRouter,
   useLocation,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import type { FC } from "react";
 import {
   LayoutDashboard,
@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGotoHotkey } from "@/lib/use-hotkey";
+import { useGotoHotkey, useHotkey } from "@/lib/use-hotkey";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -42,6 +42,13 @@ import {
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
+
+const CommandPalette = lazy(() =>
+  import("@/components/command-palette").then((m) => ({ default: m.CommandPalette })),
+);
+const HelpOverlay = lazy(() =>
+  import("@/components/help-overlay").then((m) => ({ default: m.HelpOverlay })),
+);
 
 interface UserProfile {
   id: string;
@@ -126,6 +133,10 @@ function AuthedLayout() {
   };
 
   useVersionCheck();
+
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useHotkey("?", openHelp, !helpOpen);
 
   useGotoHotkey("d", () => router.navigate({ to: "/" }));
   useGotoHotkey("p", () =>
@@ -223,6 +234,10 @@ function AuthedLayout() {
         </SidebarInset>
         <MobileNav isAdmin={isAdmin} userEmail={user.email} onSignOut={signOut} />
       </SidebarProvider>
+      <Suspense fallback={null}>
+        <CommandPalette />
+        <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
+      </Suspense>
     </>
   );
 }
