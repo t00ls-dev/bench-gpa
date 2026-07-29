@@ -74,9 +74,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Bench GPA" },
     ],
     links: [
-      { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-      { rel: "manifest", href: "/manifest.json" },
+      // `?v=` amarra a URL ao commit do build: cada deploy vira uma URL nova,
+      // o que invalida cache de navegador e de CDN (Cloudflare) sem precisar
+      // de purge manual. Os ícones referenciados de dentro do manifest.json
+      // levam o mesmo tratamento no prebuild (scripts/prebuild-version-manifest.mjs).
+      { rel: "icon", type: "image/x-icon", href: `/favicon.ico?v=${__COMMIT_HASH__}` },
+      { rel: "apple-touch-icon", href: `/apple-touch-icon.png?v=${__COMMIT_HASH__}` },
+      { rel: "manifest", href: `/manifest.json?v=${__COMMIT_HASH__}` },
       { rel: "stylesheet", href: appCss },
     ],
   }),
