@@ -82,7 +82,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // PNG explícito ao lado do .ico: navegadores modernos preferem PNG
       // quando disponível, e este arquivo tem transparência confirmada
       // (mesmo mark do favicon, exportado direto como PNG sem contêiner ICO).
-      { rel: "icon", type: "image/png", sizes: "192x192", href: `/icons/icon-192.png?v=${__COMMIT_HASH__}` },
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "192x192",
+        href: `/icons/icon-192.png?v=${__COMMIT_HASH__}`,
+      },
       { rel: "apple-touch-icon", href: `/apple-touch-icon.png?v=${__COMMIT_HASH__}` },
       { rel: "manifest", href: `/manifest.json?v=${__COMMIT_HASH__}` },
       { rel: "stylesheet", href: appCss },
