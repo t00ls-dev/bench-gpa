@@ -45,10 +45,13 @@ function applySecurityHeaders(
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://challenges.cloudflare.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self'",
     "connect-src 'self' https://challenges.cloudflare.com",
     "frame-src https://challenges.cloudflare.com",
     "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
   ].join("; ");
 
   const headers: [string, string][] = [
@@ -57,6 +60,7 @@ function applySecurityHeaders(
     ["x-frame-options", "DENY"],
     ["x-content-type-options", "nosniff"],
     ["referrer-policy", "strict-origin-when-cross-origin"],
+    ["permissions-policy", "camera=(), microphone=(), geolocation=(), payment=()"],
     ["cache-control", "no-cache, no-store, must-revalidate"],
   ];
 
