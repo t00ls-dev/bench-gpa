@@ -145,7 +145,7 @@ function AuthPage() {
                 id="email"
                 type="email"
                 required
-                placeholder="uilton.leite@gpabr.com"
+                placeholder="nome.sobrenome@gpabr.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1.5"
