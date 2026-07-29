@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "postbuild": "bun run scripts/postbuild-restore-manifest.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -14,7 +15,7 @@
     "cli:watch": "bun run scripts/import-watch.ts",
     "cli:purge": "bun run scripts/purge-aggs.ts",
     "gendocmeta": "bun run scripts/generate-doc-meta.ts",
-    "prebuild": "bun run gendocmeta",
+    "prebuild": "bun run gendocmeta && bun run scripts/prebuild-version-manifest.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
