@@ -7,14 +7,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useCallback, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
-import { CommandPalette } from "@/components/command-palette";
-import { HelpOverlay } from "@/components/help-overlay";
 import { RouteProgress } from "@/components/route-progress";
-import { useHotkey } from "@/lib/use-hotkey";
 
 function NotFoundComponent() {
   return (
@@ -116,16 +113,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const [helpOpen, setHelpOpen] = useState(false);
-  const openHelp = useCallback(() => setHelpOpen(true), []);
-  useHotkey("?", openHelp, !helpOpen);
   return (
     <QueryClientProvider client={queryClient}>
       <RouteProgress />
       <Outlet />
       <Toaster richColors position="top-right" />
-      <CommandPalette />
-      <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
     </QueryClientProvider>
   );
 }
