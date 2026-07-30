@@ -120,11 +120,24 @@ Achado lateral: o MariaDB de dev local tinha índices de cobertura (`ix_cov_*`)
 que não existem no `migrate-schema.sql`, sobra de um experimento anterior nunca
 revertida — considerar recriar o banco local do zero numa próxima sessão.
 
-### 3. `product_analysis` faz 7 varreduras
+### 3. `product_analysis` faz 7 varreduras — ✅ medido em 30/07/2026, não é problema
 
-Nunca entrou no baseline. Provavelmente não sofre do mesmo problema porque filtra
-por um `prod_code` só, o que usa índice — mas isso é suposição, não medição.
-Acrescentar um cenário ao harness antes de qualquer conclusão.
+Dois cenários novos em `bench-procs.sh` (`produto_alto_volume`, `produto_baixo_
+volume` — o produto com mais e o com menos linhas na tabela toda, já que
+`lastFourSameWeekday`/`lastFourAll` varrem o histórico inteiro do produto, sem
+limite de data além do `v_ref_date`). Medido em produção, 20 amostras:
+
+| Cenário | Mediana | Faixa |
+| --- | ---: | --- |
+| `produto_alto_volume` (56 linhas de resultado) | 9 ms | 8-13 ms |
+| `produto_baixo_volume` (4 linhas de resultado) | 2 ms | 2-3 ms |
+
+A suspeita do doc estava certa: filtrar por `prod_code` (índice
+`idx_prod_daily_prod_code`, sobrevivente da limpeza do item 2) reduz o
+conjunto a quase nada antes de qualquer agregação. Contra as 2-24s de
+`area_analysis`/`dashboard_metrics`/`dashboard_rankings`, `product_analysis` é
+3-4 ordens de magnitude mais barata. Sem ação pendente — fechado sem mudança
+de proc.
 
 ### 4. Fusão total da lógica de cascata `FilterBar`/`AreaFilters`
 
