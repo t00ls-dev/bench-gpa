@@ -22,6 +22,7 @@ Sua função NÃO é apenas responder ao que foi pedido — é analisar continua
 - **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
 - **UX implementado:** atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard/Produto/Área), HOWTO page
 - **Migração concluída:** self-hosted ativo — MariaDB 11.4, JWT bcrypt, Turnstile CAPTCHA, PM2 + nginx no VPS Hestia
+- **PWA:** `manifest.json` + ícones versionados por hash do commit (cache-busting automático a cada deploy); instalável em mobile, sem suporte offline
 
 ---
 
@@ -79,7 +80,7 @@ Ao iniciar, SEMPRE:
 
 | Papel           | Foco                                                            |
 | --------------- | --------------------------------------------------------------- |
-| Usuário         | Fluxos, cliques, clareza, tempo até完成任务                     |
+| Usuário         | Fluxos, cliques, clareza, tempo até completar a tarefa          |
 | Gerente         | KPIs, relatórios, valor de negócio, ROI                         |
 | Operador        | Automações, importação, consistência de dados                   |
 | Administrador   | Permissões, auditoria, logs, config                             |
