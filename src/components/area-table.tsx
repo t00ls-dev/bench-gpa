@@ -90,6 +90,7 @@ export function AreaTable({
   onSortToggle,
   onExportPDF,
   pdfLoading,
+  pdfElapsed,
 }: {
   products: Product[];
   totalRows: number;
@@ -110,6 +111,7 @@ export function AreaTable({
   onSortToggle: (k: SortKey) => void;
   onExportPDF: () => void;
   pdfLoading: boolean;
+  pdfElapsed: number;
 }) {
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -165,20 +167,31 @@ export function AreaTable({
               <SelectItem value="250">250 / página</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onExportPDF}
-            className="h-9"
-            disabled={pdfLoading}
-          >
-            {pdfLoading ? (
-              <Loader2 className="mr-1.5 size-4 animate-spin" />
-            ) : (
-              <FileText className="mr-1.5 size-4" />
-            )}{" "}
-            PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExportPDF}
+              className="h-9"
+              disabled={pdfLoading}
+            >
+              {pdfLoading ? (
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              ) : (
+                <FileText className="mr-1.5 size-4" />
+              )}{" "}
+              {pdfLoading ? `Gerando… ${pdfElapsed}s` : "PDF"}
+            </Button>
+            {pdfLoading && pdfElapsed >= 5 && (
+              <span
+                role="status"
+                aria-live="polite"
+                className="hidden text-xs text-muted-foreground sm:inline"
+              >
+                Áreas grandes podem levar até ~20s
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
