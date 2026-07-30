@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/area.functions";
@@ -76,6 +76,27 @@ function AreaPage() {
   const setGrupos = (v: string[]) => patch(cascadePatch("grupos", v));
   const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
   const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
+
+  // Click-through do ranking do Dashboard (?store=&depto=&secao=&grupo=&subgrupo=):
+  // substitui os filtros de categoria persistidos pelo nível clicado, uma
+  // única vez por navegação — não deve reaplicar se o usuário mudar os
+  // filtros depois (por isso o guard em ref em vez de rodar a cada render).
+  const searchParams = Route.useSearch();
+  const appliedSearchRef = useRef(false);
+  useEffect(() => {
+    if (appliedSearchRef.current) return;
+    const { store, depto, secao, grupo, subgrupo } = searchParams;
+    if (!store && !depto && !secao && !grupo && !subgrupo) return;
+    appliedSearchRef.current = true;
+    patch({
+      stores: store ? [store] : af.stores,
+      deptos: depto ? [depto] : [],
+      secoes: secao ? [secao] : [],
+      grupos: grupo ? [grupo] : [],
+      subgrupos: subgrupo ? [subgrupo] : [],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const {
     dateFrom,

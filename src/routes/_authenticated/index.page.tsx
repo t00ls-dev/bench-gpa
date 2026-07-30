@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { getDashboard, getDashboardRankings } from "@/lib/dashboard.functions";
 import { QUERY_STALE_CORE } from "@/lib/query-config";
 import { FilterBar, type Filters } from "@/components/filter-bar";
@@ -47,6 +48,27 @@ function Dashboard() {
   const fn = useServerFn(getDashboard);
   const fnRank = useServerFn(getDashboardRankings);
   const enabled = !!filters.dateFrom && !!filters.dateTo;
+
+  const navigate = useNavigate();
+  // Só carrega a loja no click-through se o Dashboard já estava filtrado
+  // numa única loja — com múltiplas/nenhuma loja, o destino decide sozinho.
+  const clickThroughStore = filters.stores.length === 1 ? filters.stores[0] : undefined;
+  const goToArea = (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
+    if (!name) return;
+    const search = {
+      store: clickThroughStore,
+      depto: undefined as string | undefined,
+      secao: undefined as string | undefined,
+      grupo: undefined as string | undefined,
+      subgrupo: undefined as string | undefined,
+    };
+    search[dim] = name;
+    navigate({ to: "/area", search });
+  };
+  const goToProduto = (code?: string) => {
+    if (!code) return;
+    navigate({ to: "/produto", search: { plu: code, store: clickThroughStore } });
+  };
 
   const { data, isFetching, isLoading } = useQuery({
     queryKey: ["dashboard", filters],
@@ -148,6 +170,7 @@ function Dashboard() {
                 title="Top Departamentos"
                 items={rankings?.byDepto ?? []}
                 isLoading={rankingLoading}
+                onItemClick={(it) => goToArea("depto", it.name)}
               />
             )}
           </ErrorBoundary>
@@ -157,6 +180,7 @@ function Dashboard() {
                 title="Top Seções"
                 items={rankings?.bySecao ?? []}
                 isLoading={rankingLoading}
+                onItemClick={(it) => goToArea("secao", it.name)}
               />
             )}
           </ErrorBoundary>
@@ -166,6 +190,7 @@ function Dashboard() {
                 title="Top Grupos"
                 items={rankings?.byGrupo ?? []}
                 isLoading={rankingLoading}
+                onItemClick={(it) => goToArea("grupo", it.name)}
               />
             )}
           </ErrorBoundary>
@@ -175,6 +200,7 @@ function Dashboard() {
                 title="Top Subgrupos"
                 items={rankings?.bySubgrupo ?? []}
                 isLoading={rankingLoading}
+                onItemClick={(it) => goToArea("subgrupo", it.name)}
               />
             )}
           </ErrorBoundary>
@@ -187,6 +213,7 @@ function Dashboard() {
             title="Top Produtos"
             items={rankings?.byProduto ?? []}
             isLoading={rankingLoading}
+            onItemClick={(it) => goToProduto(it.code)}
           />
         </section>
       </ErrorBoundary>
