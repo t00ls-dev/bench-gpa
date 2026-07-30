@@ -280,7 +280,14 @@ function Dashboard() {
         }
       >
         <ErrorBoundary>
-          <DashboardCharts data={data} isLoading={isLoading} hideStores={hideStores} />
+          <DashboardCharts
+            data={data}
+            isLoading={isLoading}
+            hideStores={hideStores}
+            dateFrom={filters.dateFrom}
+            dateTo={filters.dateTo}
+            compare={filters.compare}
+          />
         </ErrorBoundary>
       </Suspense>
 
