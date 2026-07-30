@@ -43,6 +43,12 @@ function applySecurityHeaders(
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    // style-src usa unsafe-inline (não nonce) porque Radix UI (Popover, Select,
+    // Tooltip, DropdownMenu) e Recharts injetam `style` inline via JS em tempo de
+    // execução pra posicionamento/renderização, sem suportar nonce de CSP. Nonce
+    // aqui quebraria posicionamento desses componentes. Risco residual é baixo:
+    // diferente de script-src, unsafe-inline em style-src não permite executar JS
+    // — só CSS. Ver auditoria MDN Observatory de 30/07/2026 (nota A+/115).
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://challenges.cloudflare.com",
     "font-src 'self'",
