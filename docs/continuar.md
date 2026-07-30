@@ -206,13 +206,40 @@ nada do lado local. O checkout usado pelas crons em produção
 vestigial desde o item 5 (aponta pro remote errado, sem credencial, e não é
 mais usado pra sincronizar nada; os arquivos chegam por rsync do deploy).
 
-### 7. Cobertura de teste zero nas server functions de negócio
+### 7. Cobertura de teste zero nas server functions de negócio — ✅ feito em 30/07/2026
 
-`dashboard.functions.ts` (26,8%), `admin-docs`/`admin-system.functions.ts`
-(0%, nasceram do split do PR #21 sem teste próprio), `product.functions.ts` e
-`upload.functions.ts` (0%). É o código que processa dinheiro/vendas e o
-pipeline de import — o que mais precisaria de rede de segurança pra refactors.
-Ver `docs/coverage-summary.md` para o detalhe por arquivo.
+Os 5 arquivos, um PR cada, maior risco primeiro (pipeline de import e dado de
+venda antes das ferramentas administrativas):
+
+| Arquivo | Antes | Depois |
+| --- | ---: | ---: |
+| `upload.functions.ts` | 0% | 92,1% |
+| `product.functions.ts` | 0% | 81,25% |
+| `dashboard.functions.ts` | 26,8% | 92,85% |
+| `admin-system.functions.ts` | 0% | 98,36% |
+| `admin-docs.functions.ts` | 0% | 88,88% |
+
+Cobertura total do projeto (statements): 55,6% → 74,2%.
+
+Mesmo molde de mock em todos (`createServerFn`/`auth-middleware`/`rate-limit.
+middleware`/`db` mockados, copiado de `area.functions.test.ts`, que já existia
+no repo antes desta rodada). Nenhum arquivo chega a 100% — o que sobra em
+todos é a função inline de `.inputValidator((d) => Schema.parse(d))`, que esse
+molde de mock nunca invoca (bypassa a validação real de propósito, pra não
+acoplar o teste no Zod). Não é lacuna de teste real: os schemas em si já são
+testados à parte, é só o coverage tool atribuindo a função-closure ao arquivo
+onde ela está escrita.
+
+`admin-docs.functions.ts` teve um desafio a mais: usa `import.meta.glob`
+(transform do Vite, carrega `docs/**/*.md` como string em build) em vez de
+`db.query`, e isso não dá pra mockar — os testes rodam contra a pasta `docs/`
+real do repo, com asserções estruturais em vez de conteúdo exato.
+
+**Correção registrada**: as duas primeiras PRs deste item (`upload`/`product`)
+reportaram "0% → 100%" incorretamente — o relatório de cobertura no console
+trunca nomes de arquivo longos (`....functions.ts`), um `grep` mal-feito não
+achou a linha real e a ausência foi lida (errado) como "100%, oculto do
+relatório". Os números certos são os da tabela acima.
 
 ### 8. Itens de produto/UX herdados de `melhorias-pendentes.md` (era Lovable/Supabase)
 
