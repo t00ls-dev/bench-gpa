@@ -48,7 +48,7 @@ function ProdutoPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
-  const [storeCode, setStoreCode] = useState<string>(store ?? "__all__");
+  const [storeCodes, setStoreCodes] = useState<string[]>(store ? [store] : []);
   const tRef = useRef<number | null>(null);
 
   const getProductByCodeFn = useServerFn(getProductByCode);
@@ -90,12 +90,12 @@ function ProdutoPage() {
   });
 
   const { data: analysisData, isFetching: analysisLoading } = useQuery({
-    queryKey: ["product-analysis", selected?.prod_code, storeCode],
+    queryKey: ["product-analysis", selected?.prod_code, storeCodes],
     queryFn: () =>
       analysis({
         data: {
           prodCode: selected!.prod_code,
-          storeCode: storeCode === "__all__" ? null : storeCode,
+          storeCodes,
           referenceDate: null,
         },
       }),
@@ -103,6 +103,18 @@ function ProdutoPage() {
     staleTime: QUERY_STALE_CORE,
     placeholderData: (prev) => prev,
   });
+
+  // byStore (result set 3 da proc) sempre traz TODAS as lojas — filtrar aqui
+  // pro gráfico de comparação refletir só o subconjunto escolhido, sem outra
+  // ida ao banco. Com 0 ou 1 loja selecionada não filtra (0 = todas; com 1 o
+  // gráfico fica escondido via hideStoreComp, então o filtro não importa).
+  const filteredAnalysisData = useMemo(() => {
+    if (!analysisData || storeCodes.length < 2) return analysisData;
+    return {
+      ...analysisData,
+      byStore: (analysisData.byStore ?? []).filter((s) => storeCodes.includes(s.code)),
+    };
+  }, [analysisData, storeCodes]);
 
   const refWeekdayIdx = analysisData?.refDate
     ? new Date(analysisData.refDate + "T00:00:00Z").getUTCDay()
@@ -138,9 +150,11 @@ function ProdutoPage() {
       const pn = selected?.prod_name ?? "";
       const pc = selected?.prod_code ?? "";
       const storeLabel =
-        storeCode === "__all__" || storeCode == null
+        storeCodes.length === 0
           ? "Todas as lojas"
-          : (stores.find((s) => s.store_code === storeCode)?.store_name ?? storeCode);
+          : storeCodes.length === 1
+            ? (stores.find((s) => s.store_code === storeCodes[0])?.store_name ?? storeCodes[0])
+            : `${storeCodes.length} lojas`;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
@@ -275,17 +289,14 @@ function ProdutoPage() {
         <div>
           <Label className="text-xs">Loja</Label>
           <MultiSelect
-            single
-            label="Selecione"
-            options={[
-              { value: "__all__", label: "Todas as lojas" },
-              ...stores.map((s) => ({
-                value: s.store_code,
-                label: `${s.store_code} - ${s.store_name}`,
-              })),
-            ]}
-            value={[storeCode]}
-            onChange={(v) => setStoreCode(v[0] ?? "__all__")}
+            label="Todas as lojas"
+            noun={{ one: "loja", other: "lojas" }}
+            options={stores.map((s) => ({
+              value: s.store_code,
+              label: `${s.store_code} - ${s.store_name}`,
+            }))}
+            value={storeCodes}
+            onChange={setStoreCodes}
           />
         </div>
       </div>
@@ -339,7 +350,7 @@ function ProdutoPage() {
       {selected && analysisData && analysisData.product && (
         <ProductKPIs
           analysisData={{
-            ...analysisData,
+            ...filteredAnalysisData,
             refDate: analysisData.refDate ?? undefined,
             product: analysisData.product ?? undefined,
           }}
@@ -349,7 +360,7 @@ function ProdutoPage() {
           refWeekdayPlural={refWeekdayPlural}
           refArticle={refArticle}
           sameWeekdayDates={sameWeekdayDates}
-          hideStoreComp={storeCode !== "__all__"}
+          hideStoreComp={storeCodes.length === 1}
         />
       )}
 
