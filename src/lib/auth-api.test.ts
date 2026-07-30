@@ -6,6 +6,11 @@ vi.hoisted(() => {
 
 type Handler = (opts: { data?: unknown; context: unknown }) => unknown;
 
+// inputValidator vira um passthrough — o parser Zod real passado a
+// `.inputValidator(...)` nunca é chamado. Isso inclui os `.default(...)`
+// do schema: quem chama `login(...)` nos testes precisa passar o valor já
+// "pós-parse" explicitamente (ex.: `rememberMe: false`), porque a ausência do
+// campo aqui não recebe o default que receberia em produção.
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
     const chain: { inputValidator?: unknown; handler?: unknown } = {};
@@ -76,20 +81,55 @@ beforeEach(() => {
 
 describe("login", () => {
   it("sets an httpOnly session cookie and returns ok, never exposing the token to the caller", async () => {
-    const result = await login({ email: "test@gpabr.com", password: "correct" } as never);
+    // rememberMe: false explícito porque este mock de createServerFn nunca
+    // invoca o parser Zod real (ver comentário no topo do arquivo) — em
+    // produção o default do schema cobriria a ausência do campo.
+    const result = await login({
+      email: "test@gpabr.com",
+      password: "correct",
+      rememberMe: false,
+    } as never);
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
     // tokenVersion vai no payload para que resetPassword consiga invalidar esta
-    // sessão depois — ver auth-middleware.test.ts.
+    // sessão depois — ver auth-middleware.test.ts. Sem "manter conectado", a
+    // sessão nasce como "normal" (não persistente, expira em 1h de
+    // inatividade) — ver src/lib/auth-config.ts.
     expect(jwt.sign).toHaveBeenCalledWith(
-      { userId: "u1", role: "admin", email: "test@gpabr.com", tokenVersion: 0 },
+      {
+        userId: "u1",
+        role: "admin",
+        email: "test@gpabr.com",
+        tokenVersion: 0,
+        loginAt: expect.any(Number),
+        persistent: false,
+      },
       expect.any(String),
-      { expiresIn: 604800 },
+      { expiresIn: 3600 },
     );
     expect(setCookie).toHaveBeenCalledWith(
       "session",
       "jwt-token",
-      expect.objectContaining({ httpOnly: true, path: "/", sameSite: "lax" }),
+      expect.objectContaining({ httpOnly: true, path: "/", sameSite: "lax", maxAge: 3600 }),
+    );
+  });
+
+  it("com rememberMe, emite uma sessão persistente de 7 dias", async () => {
+    const result = await login({
+      email: "test@gpabr.com",
+      password: "correct",
+      rememberMe: true,
+    } as never);
+    expect(result).toEqual({ ok: true });
+    expect(jwt.sign).toHaveBeenCalledWith(
+      expect.objectContaining({ persistent: true }),
+      expect.any(String),
+      { expiresIn: 7 * 24 * 60 * 60 },
+    );
+    expect(setCookie).toHaveBeenCalledWith(
+      "session",
+      "jwt-token",
+      expect.objectContaining({ maxAge: 7 * 24 * 60 * 60 }),
     );
   });
 
@@ -158,6 +198,16 @@ describe("getMe", () => {
   it("returns user when session cookie is valid", async () => {
     const user = await getMe();
     expect(user).toEqual({ id: "u1", email: "test@gpabr.com", name: "Teste", role: "admin" });
+  });
+
+  // getMe roda a cada navegação (cacheado 60s no guard de rotas) — não pode
+  // ter o efeito colateral de reemitir a sessão a cada chamada. Quem desliza
+  // a sessão por atividade é o requireAuth, chamado pelas funções que de fato
+  // buscam dados (ver auth-middleware.test.ts).
+  it("não reemite o cookie (não desliza a sessão)", async () => {
+    await getMe();
+    expect(jwt.sign).not.toHaveBeenCalled();
+    expect(setCookie).not.toHaveBeenCalled();
   });
 
   it("returns null when there is no session cookie", async () => {

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useSearch } from "@tanstack/react-router";
 import { LogIn, Loader2 } from "lucide-react";
@@ -33,6 +34,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
 
@@ -106,9 +108,15 @@ function AuthPage() {
 
     try {
       const { login } = await import("@/lib/auth-api");
-      const payload: { email: string; password: string; turnstileToken?: string } = {
+      const payload: {
+        email: string;
+        password: string;
+        turnstileToken?: string;
+        rememberMe: boolean;
+      } = {
         email: email.trim().toLowerCase(),
         password,
+        rememberMe,
       };
       if (!TURNSTILE_BYPASS) payload.turnstileToken = turnstileToken;
       await login({ data: payload });
@@ -167,6 +175,17 @@ function AuthPage() {
                 className="mt-1.5"
                 autoComplete="current-password"
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <Label htmlFor="remember-me">Manter conectado</Label>
+                <p className="text-xs text-muted-foreground">
+                  Fica conectado por 7 dias neste dispositivo, mesmo sem uso. Deixe desmarcado em
+                  computadores compartilhados.
+                </p>
+              </div>
+              <Switch id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} />
             </div>
 
             {!TURNSTILE_BYPASS && <div className="flex justify-center" ref={turnstileRef} />}
