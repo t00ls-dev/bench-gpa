@@ -6,6 +6,7 @@ import { EXPORT_PAGE_SIZE } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { fmtBRL, fmtInt } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
 import { fmtBRShort } from "@/lib/utils";
 import { openPdfBlob } from "@/lib/export-pdf";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -256,6 +257,7 @@ function AreaPage() {
   if (sg) pathParts.push(sg);
 
   const [pdfLoading, setPdfLoading] = useState(false);
+  const pdfElapsed = useElapsedSeconds(pdfLoading);
 
   const openPdfInNewTab = async () => {
     setPdfLoading(true);
@@ -493,6 +495,7 @@ function AreaPage() {
             onSortToggle={toggleSort}
             onExportPDF={openPdfInNewTab}
             pdfLoading={pdfLoading}
+            pdfElapsed={pdfElapsed}
           />
         </>
       )}
