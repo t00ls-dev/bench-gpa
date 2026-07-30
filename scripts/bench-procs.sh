@@ -154,6 +154,14 @@ D7="$(sql -e "SELECT DATE_SUB('$LAST', INTERVAL 6 DAY);")"
 D28="$(sql -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")"
 DEPTO="$(sql -e "SELECT depto FROM sales_prod_daily_agg WHERE sale_date>='$D28' GROUP BY depto ORDER BY COUNT(*) DESC LIMIT 1;")"
 STORE="$(sql -e "SELECT store_code FROM sales_prod_daily_agg WHERE sale_date>='$D28' GROUP BY store_code ORDER BY COUNT(*) DESC LIMIT 1;")"
+# product_analysis (item 3 de docs/continuar.md) faz 7 varreduras de
+# sales_prod_daily_agg, todas filtradas por prod_code = ? — inclusive
+# lastFourSameWeekday/lastFourAll, que não têm limite de data além de
+# v_ref_date, ou seja, varrem o histórico inteiro daquele produto. O custo
+# esperado escala com o volume do produto, não com o período, daí os dois
+# extremos: o produto com mais linhas na tabela toda e o com menos.
+PROD_HIGH="$(sql -e "SELECT prod_code FROM sales_prod_daily_agg GROUP BY prod_code ORDER BY COUNT(*) DESC LIMIT 1;")"
+PROD_LOW="$(sql -e "SELECT prod_code FROM sales_prod_daily_agg GROUP BY prod_code ORDER BY COUNT(*) ASC LIMIT 1;")"
 J_DEPTO="[\"$(printf '%s' "$DEPTO" | sed 's/"/\\"/g')\"]"
 J_STORE="[\"$STORE\"]"
 NUL="JSON_ARRAY()"
@@ -169,6 +177,8 @@ SCENARIOS=(
 "rankings_28d|CALL dashboard_rankings('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,10)"
 "metrics_28d|CALL dashboard_metrics('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL)"
 "filtros_28d|CALL filter_options('$D28','$LAST',$NUL,$NUL,$NUL,$NUL)"
+"produto_alto_volume|CALL product_analysis('$PROD_HIGH',$NUL,NULL)"
+"produto_baixo_volume|CALL product_analysis('$PROD_LOW',$NUL,NULL)"
 )
 
 RESULTS="$OUT_DIR/results.tsv"
@@ -176,6 +186,7 @@ printf 'cenario\tamostras_ms\tmediana_ms\tmin_ms\tmax_ms\tdispersao\thash_ordem\
 
 echo "Saída em: $OUT_DIR"
 echo "Janela: $D28 .. $LAST (28d) | $D7 .. $LAST (7d) | depto='$DEPTO' loja='$STORE'"
+echo "Produtos: alto_volume='$PROD_HIGH' baixo_volume='$PROD_LOW'"
 echo
 
 for entry in "${SCENARIOS[@]}"; do
