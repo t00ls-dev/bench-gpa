@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { listUsers } from "@/lib/admin-users.functions";
 import {
-  listUsers,
   diagnoseData,
   dbHealthCheck,
   getHeartbeats,
   getAuditLog,
-} from "@/lib/admin.functions";
+} from "@/lib/admin-system.functions";
 import { AdminUserManagement } from "@/components/admin-user-management";
 import { DataCountSection, DbHealthSection } from "@/components/admin-system-panel";
 import { HeartbeatSection, AuditLogSection } from "@/components/admin-audit-panel";

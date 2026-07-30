@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import type { AuditRow, HeartbeatRow } from "@/lib/admin.functions";
+import type { AuditRow, HeartbeatRow } from "@/lib/admin-system.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
