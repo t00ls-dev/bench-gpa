@@ -48,6 +48,12 @@ interface ProcessingState {
   currentDate: string;
 }
 
+// Tentativas extras além da original (3 no total), reiniciando o arquivo do
+// zero a cada uma — ver comentário em processOne sobre por que não é retry
+// por chunk.
+const MAX_FILE_RETRIES = 2;
+const FILE_RETRY_DELAY_MS = 1500;
+
 const IDLE_STATE: ProcessingState = {
   busy: false,
   progressPct: 0,
@@ -136,7 +142,6 @@ export default function UploadPage() {
     });
     update({ status: "processing" });
 
-    const batchId = crypto.randomUUID();
     const stores = [
       ...new Map(
         parsed.sales.map((r) => [
@@ -155,43 +160,73 @@ export default function UploadPage() {
       })
       .map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
 
-    await doBeginImport({
-      data: {
-        sale_date: date,
-        batch_id: batchId,
-        total_rows: parsed.sales.length,
-        stores,
-        products,
-      },
-    });
-
-    const totalChunks = Math.ceil(parsed.sales.length / IMPORT_CHUNK_SIZE);
-    for (let i = 0; i < totalChunks; i++) {
+    // Retry no nível do arquivo inteiro, não do chunk. insertSalesChunk faz um
+    // INSERT simples sem proteção contra duplicata (sem ON DUPLICATE KEY, sem
+    // coluna de sequência de chunk) — reenviar só o chunk que falhou arrisca
+    // duplicar linhas na staging_sales se o INSERT já tiver sido gravado no
+    // servidor e só a resposta tiver se perdido na rede. finalize_import agrega
+    // via GROUP BY/SUM direto da staging (não valida contagem de linhas), então
+    // duplicata vira venda inflada silenciosamente, não um erro visível.
+    // Reiniciar o arquivo é seguro porque beginImport começa com
+    // DELETE FROM staging_sales WHERE sale_date = ? — cada tentativa parte de
+    // uma staging limpa para aquela data, sem risco de duplicata.
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_FILE_RETRIES; attempt++) {
       if (cancelRef.current) {
         update({ status: "error", errorMsg: "Cancelado" });
         return;
       }
-      const chunk = parsed.sales.slice(i * IMPORT_CHUNK_SIZE, (i + 1) * IMPORT_CHUNK_SIZE);
-      await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
-      const processed = Math.min((i + 1) * IMPORT_CHUNK_SIZE, parsed.sales.length);
-      processedTotalRef.current += chunk.length;
-      const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      const speed = Math.round(processedTotalRef.current / elapsed);
-      const remaining = (parsed.sales.length - processed) / speed;
-      setProcessing((p) => ({
-        ...p,
-        progressPct: Math.round((processed / parsed.sales.length) * 100),
-        speed,
-        eta: Math.round(remaining),
-        processed,
-      }));
+      if (attempt > 0) {
+        toast.info(`Falhou, tentando novamente (${attempt + 1}/${MAX_FILE_RETRIES + 1})… ${date}`);
+        await new Promise((r) => setTimeout(r, FILE_RETRY_DELAY_MS));
+      }
+      try {
+        const batchId = crypto.randomUUID();
+        await doBeginImport({
+          data: {
+            sale_date: date,
+            batch_id: batchId,
+            total_rows: parsed.sales.length,
+            stores,
+            products,
+          },
+        });
+
+        const totalChunks = Math.ceil(parsed.sales.length / IMPORT_CHUNK_SIZE);
+        for (let i = 0; i < totalChunks; i++) {
+          if (cancelRef.current) {
+            update({ status: "error", errorMsg: "Cancelado" });
+            return;
+          }
+          const chunk = parsed.sales.slice(i * IMPORT_CHUNK_SIZE, (i + 1) * IMPORT_CHUNK_SIZE);
+          await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
+          const processed = Math.min((i + 1) * IMPORT_CHUNK_SIZE, parsed.sales.length);
+          processedTotalRef.current += chunk.length;
+          const elapsed = (Date.now() - startTimeRef.current) / 1000;
+          const speed = Math.round(processedTotalRef.current / elapsed);
+          const remaining = (parsed.sales.length - processed) / speed;
+          setProcessing((p) => ({
+            ...p,
+            progressPct: Math.round((processed / parsed.sales.length) * 100),
+            speed,
+            eta: Math.round(remaining),
+            processed,
+          }));
+        }
+
+        await doFinalizeImport({
+          data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length },
+        });
+
+        update({ status: "done", totalLines: parsed.sales.length });
+        return;
+      } catch (err) {
+        lastError = err;
+      }
     }
-
-    await doFinalizeImport({
-      data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length },
-    });
-
-    update({ status: "done", totalLines: parsed.sales.length });
+    const msg = lastError instanceof Error ? lastError.message : "Erro desconhecido";
+    update({ status: "error", errorMsg: msg });
+    throw lastError;
   };
 
   const confirmImport = async () => {
