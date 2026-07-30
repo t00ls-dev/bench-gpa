@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { DbHealthData } from "@/lib/admin.functions";
+import type { DbHealthData } from "@/lib/admin-system.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HardDrive, Activity, Loader2, RefreshCw, AlertTriangle } from "lucide-react";

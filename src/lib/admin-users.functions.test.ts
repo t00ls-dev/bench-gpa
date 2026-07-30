@@ -83,7 +83,7 @@ vi.mock("./admin-utils", () => ({
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("bcrypt", () => ({ default: { hash: vi.fn() } }));
 
-import { createUser, resetPassword, setUserRole, setUserActive } from "./admin.functions";
+import { createUser, resetPassword, setUserRole, setUserActive } from "./admin-users.functions";
 import { invalidateAdminCache } from "./admin-utils";
 import db from "./db";
 import bcrypt from "bcrypt";
