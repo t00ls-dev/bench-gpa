@@ -36,14 +36,40 @@ export function DashboardCharts({
   data,
   isLoading,
   hideStores,
+  dateFrom,
+  dateTo,
+  compare,
 }: {
   data: DashboardData | undefined;
   isLoading: boolean;
   hideStores?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
+  compare?: "none" | "prev_period" | "prev_week" | "prev_month";
 }) {
+  // O período anterior vem com datas de calendário reais (ex.: 28 dias antes),
+  // não as mesmas datas do período atual — replica o deslocamento de
+  // shiftPeriod() (src/lib/api-types.ts) para "trazer" cada data do anterior
+  // para o dia correspondente do atual antes de casar no Map. Sem isso o
+  // lookup por data literal nunca batia e "Anterior" ficava sempre null.
+  const shiftDays = useMemo(() => {
+    if (compare === "prev_week") return 7;
+    if (compare === "prev_month") return 30;
+    if (!dateFrom || !dateTo) return 0;
+    const f = new Date(dateFrom + "T00:00:00Z");
+    const t = new Date(dateTo + "T00:00:00Z");
+    return Math.round((t.getTime() - f.getTime()) / 86400000) + 1;
+  }, [compare, dateFrom, dateTo]);
+
   const chartData: ChartRow[] = useMemo(() => {
     const raw = data?.current.byDate ?? [];
-    const prevByDate = new Map((data?.previous?.byDate ?? []).map((d) => [d.date, d.val]));
+    const prevByDate = new Map(
+      (data?.previous?.byDate ?? []).map((d) => {
+        const dt = new Date(d.date + "T00:00:00Z");
+        dt.setUTCDate(dt.getUTCDate() + shiftDays);
+        return [dt.toISOString().slice(0, 10), d.val];
+      }),
+    );
     const result: ChartRow[] = raw.map((d) => ({
       date: d.date,
       Atual: d.val,
@@ -56,7 +82,7 @@ export function DashboardCharts({
       result[i].ma7 = sum / 7;
     }
     return result;
-  }, [data]);
+  }, [data, shiftDays]);
 
   const vals = chartData.map((d) => d.Atual);
   const maxVal = vals.length ? Math.max(...vals) : 0;
@@ -154,7 +180,6 @@ export function DashboardCharts({
                   dataKey="date"
                   tick={{ fontSize: 11 }}
                   tickFormatter={(v) => fmtBRShort(String(v))}
-                  interval={4}
                 />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                 <Tooltip content={<ChartTooltip />} />
