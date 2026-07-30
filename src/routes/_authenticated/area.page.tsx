@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/area.functions";
-import { EXPORT_PAGE_SIZE } from "@/lib/schemas";
+import { EXPORT_PAGE_SIZE, AREA_PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { fmtBRL, fmtInt } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
+import { QUERY_STALE_CORE, QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import { fmtBRShort } from "@/lib/utils";
 import { openPdfBlob } from "@/lib/export-pdf";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,8 +90,8 @@ function AreaPage() {
   const hierQ = useQuery({
     queryKey: ["area-filter-hierarchy"],
     queryFn: () => getHierarchy({}),
-    staleTime: 10 * 60_000,
-    gcTime: 30 * 60_000,
+    staleTime: QUERY_STALE_REFERENCE,
+    gcTime: QUERY_GC_REFERENCE,
   });
   const hierData = hierQ.data;
   // useMemo porque o `?? []` criava um array novo a cada render, e `hierarchy` é
@@ -142,7 +143,7 @@ function AreaPage() {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("val");
   const [sortAsc, setSortAsc] = useState(false);
-  const [pageSize, setPageSize] = useState<25 | 50 | 100 | 250>(50);
+  const [pageSize, setPageSize] = useState<(typeof AREA_PAGE_SIZE_OPTIONS)[number]>(50);
   const [page, setPage] = useState(1);
   const sortDir = sortAsc ? "asc" : "desc";
 
@@ -196,7 +197,7 @@ function AreaPage() {
         },
       }),
     enabled: ready,
-    staleTime: 5 * 60_000,
+    staleTime: QUERY_STALE_CORE,
     retry: 1,
     placeholderData: (prev) => prev,
   });
@@ -490,7 +491,7 @@ function AreaPage() {
               setSearch("");
               setPage(1);
             }}
-            onPageSizeChange={(v) => setPageSize(v as 25 | 50 | 100 | 250)}
+            onPageSizeChange={(v) => setPageSize(v as (typeof AREA_PAGE_SIZE_OPTIONS)[number])}
             onPageChange={setPage}
             onSortToggle={toggleSort}
             onExportPDF={openPdfInNewTab}

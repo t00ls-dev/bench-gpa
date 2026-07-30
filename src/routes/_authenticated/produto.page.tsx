@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/product.functions";
 import { getStores } from "@/lib/dashboard.functions";
+import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
@@ -14,6 +15,8 @@ import { Package, FileText, Loader2 } from "lucide-react";
 import { fmtBRShort } from "@/lib/utils";
 import { openPdfBlob } from "@/lib/export-pdf";
 import { Route } from "./produto";
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 const WEEKDAYS_FULL = [
   "Domingo",
@@ -54,7 +57,7 @@ function ProdutoPage() {
     queryKey: ["product-by-code", plu],
     queryFn: () => getProductByCodeFn({ data: { prodCode: plu! } }),
     enabled: !!plu && !selected,
-    staleTime: 10 * 60_000,
+    staleTime: QUERY_STALE_REFERENCE,
   });
 
   useEffect(() => {
@@ -65,7 +68,9 @@ function ProdutoPage() {
 
   useEffect(() => {
     if (tRef.current) window.clearTimeout(tRef.current);
-    tRef.current = window.setTimeout(() => setDebounced(query), 250);
+    // 250ms: rápido o bastante para não atrasar a busca, alto o bastante para
+    // não disparar uma query por tecla enquanto o usuário ainda digita.
+    tRef.current = window.setTimeout(() => setDebounced(query), SEARCH_DEBOUNCE_MS);
   }, [query]);
 
   const search = useServerFn(searchProducts);
@@ -75,7 +80,7 @@ function ProdutoPage() {
   const { data: stores = [] } = useQuery({
     queryKey: ["stores-all"],
     queryFn: () => getStoresFn({}),
-    staleTime: 10 * 60_000,
+    staleTime: QUERY_STALE_REFERENCE,
   });
 
   const { data: suggestions, isFetching: searchFetching } = useQuery({
@@ -95,7 +100,7 @@ function ProdutoPage() {
         },
       }),
     enabled: !!selected,
-    staleTime: 5 * 60_000,
+    staleTime: QUERY_STALE_CORE,
     placeholderData: (prev) => prev,
   });
 

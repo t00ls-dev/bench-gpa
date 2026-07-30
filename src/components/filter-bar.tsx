@@ -7,6 +7,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
 import { FilterField } from "@/components/filter-field";
 import { defaultDateWindow } from "@/lib/date-window";
+import { QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 
 export interface Filters {
   dateFrom: string;
@@ -53,8 +54,8 @@ export function FilterBar({ value, onChange }: Props) {
           grupos: value.grupos,
         },
       }),
-    staleTime: 10 * 60_000,
-    gcTime: 30 * 60_000,
+    staleTime: QUERY_STALE_REFERENCE,
+    gcTime: QUERY_GC_REFERENCE,
   });
 
   // Seed default date range to the last 7 available dates, not the full
