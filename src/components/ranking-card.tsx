@@ -11,10 +11,12 @@ export function RankingCard({
   title,
   items,
   isLoading,
+  onItemClick,
 }: {
   title: string;
   items: Item[];
   isLoading?: boolean;
+  onItemClick?: (item: Item) => void;
 }) {
   return (
     <div className="kpi-card min-w-0">
@@ -31,7 +33,14 @@ export function RankingCard({
             {items.map((it, i) => {
               const label = it.code ? `${it.code} - ${it.name ?? ""}` : (it.name ?? "");
               return (
-                <tr key={`${label}-${i}`} className="border-b border-border/60">
+                <tr
+                  key={`${label}-${i}`}
+                  className={
+                    "border-b border-border/60" +
+                    (onItemClick ? " cursor-pointer hover:bg-muted/50" : "")
+                  }
+                  onClick={onItemClick ? () => onItemClick(it) : undefined}
+                >
                   <td className="py-2 pr-3 truncate" title={label} aria-label={label}>
                     {label}
                   </td>
