@@ -326,3 +326,14 @@ Estão em `docs/medicao-performance.md`, mas as que mais custaram:
    `apache2.ssl.conf`) — restaurar com um `cp` direto se acontecer de novo.
    Verificar sempre com `curl -sD - https://gpa.t00ls.dev/ | grep
    content-security-policy` — se sumir, é este bug batendo de novo.
+
+   **Efeito colateral do mesmo rebuild, achado logo depois**: o `chmod` do
+   Hestia sobre `public_html/` reverteu a permissão pra `751`
+   (`drwxr-x--x`, igual às outras duas docroots da VPS) — mas o deploy do
+   CI/CD precisa de escrita de grupo ali pra criar `.output.new` (o usuário
+   SSH do deploy está no grupo `www-data`, não é o dono `admin`). O próximo
+   deploy quebrou com `mkdir ... Permission denied` no rsync. Corrigido com
+   `chmod g+w public_html/` (vira `771`) — **mesmo aviso do item acima: se
+   `v-rebuild-web-domains` rodar de novo neste domínio, verificar também
+   `ls -ld .../public_html/` (precisa ter `w` no grupo) antes de assumir que
+   só o vhost quebrou.**
