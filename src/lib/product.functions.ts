@@ -44,7 +44,7 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
     z
       .object({
         prodCode: z.string(),
-        storeCode: z.string().optional().nullable(),
+        storeCodes: z.array(z.string()).optional().default([]),
         referenceDate: z.string().optional().nullable(),
       })
       .parse(d),
@@ -52,7 +52,7 @@ export const getProductAnalysis = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<ProductAnalysisResult> => {
     const [rs] = await db.query("CALL product_analysis(?, ?, ?)", [
       data.prodCode,
-      data.storeCode || null,
+      JSON.stringify(data.storeCodes ?? []),
       data.referenceDate || null,
     ]);
     const [productRows, refValueRows, byStore, evolution, lastFourSameWeekday, lastFourAll] =

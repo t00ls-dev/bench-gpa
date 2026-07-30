@@ -800,9 +800,19 @@ BEGIN
 END//
 
 -- 8/16: product_analysis
+--
+-- p_store_codes é JSON (array de códigos de loja), não mais VARCHAR único —
+-- suporta comparar um subconjunto específico de lojas, não só "uma loja" ou
+-- "todas". Array vazio = todas (mesmo comportamento de p_store_code IS NULL
+-- de antes). Diferente da regressão de area_analysis
+-- (docs/medicao-performance.md): aqui o filtro por prod_code já é altamente
+-- seletivo (um produto tem poucas dezenas/centenas de linhas no total em
+-- sales_prod_daily_agg), então o custo do JSON_CONTAINS é irrelevante — não
+-- é o mesmo padrão de predicado repetido sobre uma tabela inteira sem
+-- filtro seletivo antes dele.
 CREATE PROCEDURE product_analysis(
   p_prod_code VARCHAR(20),
-  p_store_code VARCHAR(20),
+  p_store_codes JSON,
   p_ref_date DATE
 )
 BEGIN
@@ -828,9 +838,11 @@ BEGIN
   FROM sales_prod_daily_agg
   WHERE prod_code = p_prod_code
     AND sale_date = v_ref_date
-    AND (p_store_code IS NULL OR store_code = p_store_code);
+    AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(store_code)));
 
-  -- Result set 3: byStore
+  -- Result set 3: byStore — sempre TODAS as lojas, sem filtro de p_store_codes.
+  -- O cliente decide se mostra e para quais códigos filtrar (comparação de
+  -- um subconjunto não precisa de outra ida ao banco).
   SELECT a.store_code AS code, COALESCE(s.store_name, a.store_code) AS name, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
   LEFT JOIN stores s ON s.store_code = a.store_code
@@ -851,7 +863,7 @@ BEGIN
   WHERE a.prod_code = p_prod_code
     AND a.sale_date >= DATE_SUB(v_ref_date, INTERVAL 27 DAY)
     AND a.sale_date <= v_ref_date
-    AND (p_store_code IS NULL OR a.store_code = p_store_code)
+    AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(a.store_code)))
   GROUP BY a.sale_date
   ORDER BY a.sale_date;
 
@@ -861,7 +873,7 @@ BEGIN
   WHERE a.prod_code = p_prod_code
     AND DAYOFWEEK(a.sale_date) = DAYOFWEEK(v_ref_date)
     AND a.sale_date < v_ref_date
-    AND (p_store_code IS NULL OR a.store_code = p_store_code)
+    AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(a.store_code)))
   GROUP BY a.sale_date
   ORDER BY a.sale_date DESC
   LIMIT 4;
@@ -871,7 +883,7 @@ BEGIN
   FROM sales_prod_daily_agg a
   WHERE a.prod_code = p_prod_code
     AND a.sale_date < v_ref_date
-    AND (p_store_code IS NULL OR a.store_code = p_store_code)
+    AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(a.store_code)))
   GROUP BY a.sale_date
   ORDER BY a.sale_date DESC
   LIMIT 4;
