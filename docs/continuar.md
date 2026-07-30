@@ -139,15 +139,26 @@ conjunto a quase nada antes de qualquer agregação. Contra as 2-24s de
 3-4 ordens de magnitude mais barata. Sem ação pendente — fechado sem mudança
 de proc.
 
-### 4. Fusão total da lógica de cascata `FilterBar`/`AreaFilters`
+### 4. Fusão total da lógica de cascata `FilterBar`/`AreaFilters` — ⚠️ parcial em 30/07/2026
 
-PR #22 só uniu o markup repetido (`FilterField`). A lógica de cascata em si
-continua duplicada e diferente de propósito: `FilterBar` busca opções em
-cascata via query no servidor (dashboard não carrega a hierarquia inteira, pelo
-custo de agregação); `AreaFilters` recebe a hierarquia completa já carregada e
-cascateia em memória no cliente. Fundir as duas estratégias trocaria uma
-decisão de performance deliberada por uma abstração, sem teste automatizado
-hoje pra cobrir regressão. Se for revisitar, escrever os testes primeiro.
+PR #22 só uniu o markup repetido (`FilterField`). As duas estratégias de
+CÁLCULO DE OPÇÕES continuam deliberadamente separadas e não foram fundidas —
+`FilterBar` busca em cascata via query no servidor, `AreaFilters` cascateia em
+memória sobre a hierarquia já carregada — e continuam sem essa unificação por
+decisão, não por falta de tempo (fundir isso trocaria uma decisão de
+performance por uma abstração).
+
+O que **era** duplicado de verdade e não tinha motivo de performance por trás:
+o reset em cascata (trocar um nível zera os níveis dependentes) existia
+idêntico em `filter-bar.tsx` e em `area.page.tsx` (não em `area-filters.tsx`,
+que é só apresentação). Extraído para `src/lib/filter-cascade.ts`
+(`cascadePatch`) e reusado nos dois lugares. A computação de opções do
+`AreaFilters` também foi extraída (`computeAreaCascadeOptions`) — não porque
+duplicava `FilterBar`, mas porque não tinha teste nenhum antes.
+
+12 testes novos em `src/lib/filter-cascade.test.ts`, 100% de cobertura no
+arquivo. Testado manualmente em `/` e `/area` (Puppeteer + MariaDB local) sem
+regressão visual ou funcional.
 
 ### 5. Refresh incremental por `sale_date`
 
