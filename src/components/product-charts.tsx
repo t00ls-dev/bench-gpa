@@ -153,7 +153,7 @@ export function ProductCharts({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2.5 rounded-sm border-2 border-dotted border-[var(--chart-3)] opacity-70" />{" "}
-            Média móvel (7 pontos)
+            Média 7d
           </span>
         </div>
       </div>
