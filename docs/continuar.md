@@ -160,10 +160,29 @@ duplicava `FilterBar`, mas porque não tinha teste nenhum antes.
 arquivo. Testado manualmente em `/` e `/area` (Puppeteer + MariaDB local) sem
 regressão visual ou funcional.
 
-### 5. Refresh incremental por `sale_date`
+### 5. Refresh incremental por `sale_date` — ✅ resolvido diferente em 30/07/2026
 
-`refresh_product_universe` e `refresh_filter_hierarchy` regeneram a tabela inteira
-a cada import. É redesenho, não ajuste.
+Não virou incremental de verdade (isso continua sendo redesenho — `MAX(sale_date)`
+por `(prod_code, store_code)` e reclassificação de categoria não dão pra
+atualizar em linha sem reler tudo). Em vez disso, decidido junto com o usuário:
+`refresh_product_universe`/`refresh_filter_hierarchy` saíram de dentro de
+`finalize_import` (todo import) e de `purge_old_aggs` (toda poda) e viraram um
+cron dedicado, diário às 03h30 — 30min depois do purge, pra já ver o agg
+pós-poda numa passada só (`scripts/refresh-universe.ts`, monitorado em
+Administração → Auditoria → Heartbeat das crons).
+
+**Troca aceita conscientemente**: um PLU vendido pela primeira vez hoje (nunca
+vendido antes) não aparece na listagem de Área no mesmo dia — só depois do
+refresh das 03h30, porque `area_analysis` faz `LEFT JOIN` do período **sobre**
+`product_universe`, que é quem decide quais produtos existem. Categoria nova
+(depto/secao/grupo/subgrupo) tem o mesmo atraso nos filtros. Aceito porque PLU
+genuinamente novo é raro — a maioria dos imports reusa o catálogo do dia
+anterior.
+
+Testado localmente: schema recompila limpo, `finalize_import` continua
+funcionando (rollback correto testado com `CALL` inválido), `bun run
+cli:refresh-universe` roda e grava heartbeat, painel admin mostra os dois jobs
+corretamente.
 
 ### 6. Reescrita de histórico do git
 

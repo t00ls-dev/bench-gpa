@@ -3,7 +3,13 @@ import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { assertAdmin } from "./admin-utils";
 import { recordAudit } from "./audit";
-import { RETENTION_DAYS, PURGE_CRON_LABEL, PURGE_MAX_HOURS_OVERDUE } from "./retention";
+import {
+  RETENTION_DAYS,
+  PURGE_CRON_LABEL,
+  PURGE_MAX_HOURS_OVERDUE,
+  REFRESH_UNIVERSE_CRON_LABEL,
+  REFRESH_UNIVERSE_MAX_HOURS_OVERDUE,
+} from "./retention";
 import { z } from "zod";
 import db from "./db";
 import { asArray, asRecord, num, dateTimeStr } from "./api-types";
@@ -182,6 +188,12 @@ const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: stri
     label: `Purga (${RETENTION_DAYS} dias)`,
     maxHours: PURGE_MAX_HOURS_OVERDUE,
     schedule: PURGE_CRON_LABEL,
+  },
+  {
+    job: "refresh-universe",
+    label: "Atualiza universo de produtos/hierarquia de filtros",
+    maxHours: REFRESH_UNIVERSE_MAX_HOURS_OVERDUE,
+    schedule: REFRESH_UNIVERSE_CRON_LABEL,
   },
 ];
 
