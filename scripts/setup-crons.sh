@@ -27,7 +27,13 @@ BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bu
 # precisava reagir a elas; foi desligado em 2026-07-26 junto com a saída dos
 # dados do versionamento. Os scripts continuam disponíveis para uso manual — se
 # um dia voltar a fazer sentido automatizar, reintroduzir a linha aqui E o job
-# em KNOWN_JOBS (src/lib/admin.functions.ts), senão o painel admin não monitora.
+# em KNOWN_JOBS (src/lib/admin-system.functions.ts), senão o painel admin não
+# monitora.
+#
+# O "0 3" abaixo é a fonte real do horário do purge. TS não lê bash, então o
+# painel admin mostra um texto solto (PURGE_CRON_LABEL em src/lib/retention.ts)
+# descrevendo o mesmo horário. Mudar aqui (ou no v-add-cron-job do Hestia em
+# produção) sem mudar lá deixa o painel exibindo um horário que não é o real.
 CRONS=(
 	"0 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:purge >> logs/purge.log 2>&1"
 )
