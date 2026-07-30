@@ -81,6 +81,78 @@ jobs:
             scripts/run-migrations.sh scripts/migrate-schema.sql scripts/migrations \
             "$REMOTE/_migrations/"
 
+          # src/ + scripts/ + manifesto de deps: os cron jobs (cli:purge,
+          # cli:refresh-universe) rodam `bun run scripts/X.ts` direto no
+          # checkout do servidor, fora do bundle do .output — precisam do
+          # próprio TS fonte, não só do build. Até 30/07/2026 esse checkout
+          # era um clone manual nunca resincronizado (apontava pro remote
+          # errado, sem credencial pra pull de repo privado): as crons rodavam
+          # código de semanas atrás sem ninguém perceber. Ver docs/continuar.md
+          # item 5.
+          #
+          # Vai para .cronsrc.new/, NÃO direto em src/scripts/etc — esses
+          # caminhos já existem no servidor com dono admin:www-data (o usuário
+          # de deploy do rsync não tem permissão de escrita neles; testado
+          # manualmente em 30/07/2026, rsync direto falha com "Permission
+          # denied" em toda árvore). O staging fica com o dono do usuário do
+          # rsync (sem conflito, é um diretório novo) e o swap pro lugar certo
+          # com sudo acontece no step seguinte — mesmo padrão do
+          # .output.new → .output logo abaixo.
+          #
+          # `|| echo` em cada linha: o shell do step tem -e por padrão — sem
+          # isto, uma falha aqui abortaria o STEP inteiro (que já rodou o
+          # rsync crítico do .output/ antes) e bloquearia migrations/atomic
+          # swap por um problema que não afeta o app rodando. Mesmo raciocínio
+          # do continue-on-error no step seguinte.
+          rsync -az --mkpath --delete -e "$SSH_CMD" src/ "$REMOTE/.cronsrc.new/src/" \
+            || echo "AVISO: falha ao sincronizar src/ (cron scripts podem ficar desatualizados)"
+          rsync -az --mkpath --delete -e "$SSH_CMD" scripts/ "$REMOTE/.cronsrc.new/scripts/" \
+            || echo "AVISO: falha ao sincronizar scripts/ (cron scripts podem ficar desatualizados)"
+          rsync -az --mkpath -e "$SSH_CMD" package.json bun.lock tsconfig.json bunfig.toml "$REMOTE/.cronsrc.new/" \
+            || echo "AVISO: falha ao sincronizar manifesto de deps (cron scripts podem ficar desatualizados)"
+
+      # Independente do resto do deploy: só afeta o checkout usado pelos cron
+      # jobs, não o app rodando (que é o bundle self-contained em .output/).
+      # Medido na própria VPS (30/07/2026): 41s do zero, sem estresse de
+      # memória (1 núcleo, 1,9 GB); ~1s quando node_modules já bate com
+      # bun.lock, que é o caso comum (só mudou dependência 1 de ~50 deploys
+      # até aqui). Guarda com `[ -d "$STAGE" ]` porque o step anterior pode
+      # ter falhado o rsync (viram os `|| echo` acima) e deixado sem staging —
+      # sem a guarda, o `mv` de um diretório inexistente abortaria este step
+      # à toa mesmo já tendo continue-on-error.
+      #
+      # continue-on-error: uma falha aqui (rede, npm fora do ar) não pode travar
+      # o deploy do app de verdade — migrations e o atomic swap seguem mesmo
+      # que este step falhe. O pior caso é a próxima cron rodar código de um
+      # deploy atrás até o deploy seguinte corrigir; o app em produção nunca
+      # fica pendurado esperando isto.
+      - name: Atualiza checkout e dependências usados pelas crons
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 30s
+          command_timeout: 3m
+          script: |
+            set -euo pipefail
+            APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
+            STAGE="$APPDIR/.cronsrc.new"
+            if [ -d "$STAGE" ]; then
+              sudo chown -R admin:www-data "$STAGE"
+              for item in src scripts package.json bun.lock tsconfig.json bunfig.toml; do
+                sudo rm -rf "$APPDIR/$item"
+                sudo mv "$STAGE/$item" "$APPDIR/$item"
+              done
+              sudo rm -rf "$STAGE"
+              cd "$APPDIR"
+              sudo -u admin bun install --frozen-lockfile
+            else
+              echo "AVISO: staging .cronsrc.new ausente (rsync anterior deve ter falhado) — pulando"
+            fi
+
       # Migrations ANTES do swap: o baseline é idempotente e backward-compatible
       # (re-sincroniza procedures sem quebrar o código antigo ainda em execução).
       # Se falhar, o job para aqui — nenhum código novo é ativado e o app atual
