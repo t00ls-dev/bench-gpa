@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/product.functions";
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
@@ -17,6 +18,12 @@ import { openPdfBlob } from "@/lib/export-pdf";
 import { Route } from "./produto";
 
 const SEARCH_DEBOUNCE_MS = 250;
+const MAX_RECENT_PRODUCTS = 5;
+
+interface RecentProduct {
+  prod_code: string;
+  prod_name: string;
+}
 
 const WEEKDAYS_FULL = [
   "Domingo",
@@ -49,6 +56,10 @@ function ProdutoPage() {
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
   const [storeCodes, setStoreCodes] = useState<string[]>(store ? [store] : []);
+  const [recentProducts, setRecentProducts] = usePersistentState<RecentProduct[]>(
+    "bench-gpa:produto:recentes",
+    [],
+  );
   const tRef = useRef<number | null>(null);
 
   const getProductByCodeFn = useServerFn(getProductByCode);
@@ -254,6 +265,9 @@ function ProdutoPage() {
   const handleSelect = (s: { prod_code: string; prod_name: string }) => {
     setSelected(s);
     setQuery("");
+    setRecentProducts((prev) =>
+      [s, ...prev.filter((p) => p.prod_code !== s.prod_code)].slice(0, MAX_RECENT_PRODUCTS),
+    );
   };
 
   return (
@@ -307,6 +321,7 @@ function ProdutoPage() {
         selected={selected}
         suggestions={suggestions}
         searchFetching={searchFetching}
+        recent={recentProducts}
         onQueryChange={(v) => {
           setQuery(v);
           setSelected(null);
