@@ -14,6 +14,7 @@
     "cli:import": "bun run scripts/import.ts",
     "cli:watch": "bun run scripts/import-watch.ts",
     "cli:purge": "bun run scripts/purge-aggs.ts",
+    "cli:refresh-universe": "bun run scripts/refresh-universe.ts",
     "gendocmeta": "bun run scripts/generate-doc-meta.ts",
     "prebuild": "bun run gendocmeta && bun run scripts/prebuild-version-manifest.mjs",
     "typecheck": "tsc --noEmit",
