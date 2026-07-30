@@ -26,6 +26,7 @@ import { AppFooter } from "@/components/app-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGotoHotkey, useHotkey } from "@/lib/use-hotkey";
 import { useVersionCheck } from "@/hooks/use-version-check";
+import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -66,7 +67,7 @@ export const Route = createFileRoute("/_authenticated")({
       const user = await context.queryClient.ensureQueryData({
         queryKey: ["me"],
         queryFn: () => getMe(),
-        staleTime: 60_000,
+        staleTime: QUERY_STALE_IDENTITY,
       });
       if (!user) throw new Error("not authenticated");
       return { user: user as UserProfile };

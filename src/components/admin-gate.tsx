@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ShieldOff, WifiOff } from "lucide-react";
+import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 
 export function AdminGate({
   children,
@@ -17,7 +18,7 @@ export function AdminGate({
   } = useQuery({
     queryKey: ["me"],
     queryFn: async () => (await import("@/lib/auth-api")).getMe(),
-    staleTime: 60_000,
+    staleTime: QUERY_STALE_IDENTITY,
     enabled: !knownAdmin,
     retry: false,
   });

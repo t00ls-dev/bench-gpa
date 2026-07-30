@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDashboard, getDashboardRankings } from "@/lib/dashboard.functions";
+import { QUERY_STALE_CORE } from "@/lib/query-config";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard } from "@/components/kpi-card";
 import { fmtBRL } from "@/lib/utils";
@@ -55,8 +56,7 @@ function Dashboard() {
     queryKey: ["dashboard", filters],
     queryFn: () => fn({ data: filters }),
     enabled,
-    staleTime: 5 * 60_000,
-    gcTime: 10 * 60_000,
+    staleTime: QUERY_STALE_CORE,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });
@@ -65,8 +65,7 @@ function Dashboard() {
     queryKey: ["dashboard-rankings", filters],
     queryFn: () => fnRank({ data: { ...filters, limit: 10 } }),
     enabled,
-    staleTime: 5 * 60_000,
-    gcTime: 10 * 60_000,
+    staleTime: QUERY_STALE_CORE,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   });

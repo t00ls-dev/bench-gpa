@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarCheck, GitCommitHorizontal } from "lucide-react";
 import { getLatestSaleInfo } from "@/lib/dashboard.functions";
+import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 
 function fmtDate(iso: string) {
   if (typeof iso !== "string") return "—";
@@ -27,7 +28,7 @@ export function AppFooter() {
   const { data } = useQuery({
     queryKey: ["latest-sale"],
     queryFn: () => fn(),
-    staleTime: 60_000,
+    staleTime: QUERY_STALE_IDENTITY,
   });
 
   return (

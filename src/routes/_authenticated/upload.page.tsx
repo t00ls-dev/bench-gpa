@@ -7,6 +7,7 @@ import {
   finalizeImport,
   getImportedDates,
 } from "@/lib/upload.functions";
+import { QUERY_STALE_CORE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,8 +66,8 @@ export default function UploadPage() {
   const imported = useQuery({
     queryKey: ["imported-dates"],
     queryFn: () => getImported(),
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
+    staleTime: QUERY_STALE_CORE,
+    gcTime: QUERY_GC_REFERENCE,
   });
 
   const [entries, setEntries] = useState<FileEntry[]>([]);
