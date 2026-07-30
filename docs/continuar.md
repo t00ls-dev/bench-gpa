@@ -184,11 +184,27 @@ funcionando (rollback correto testado com `CALL` inválido), `bun run
 cli:refresh-universe` roda e grava heartbeat, painel admin mostra os dois jobs
 corretamente.
 
-### 6. Reescrita de histórico do git
+### 6. Reescrita de histórico do git — ✅ feito em 30/07/2026
 
-~41 MiB de XLSX em blobs permanentes no `.git`. Aprovado pelo usuário, mas o valor
-caiu quando a proteção de branch foi descartada. Mais seguro agora que nenhuma
-cron faz `git pull`.
+`git filter-repo --path-glob '*.xlsx' --invert-paths` removeu 68 arquivos XLSX
+(39,6 MiB) de todos os commits do histórico. `.git` caiu de 52 MiB para 2,6 MiB.
+Conteúdo do HEAD idêntico (typecheck/lint/test passando igual, zero diferença de
+árvore) — só o histórico mudou, todo hash de commit é novo.
+
+Backup completo do histórico anterior salvo antes de reescrever
+(`git bundle create ... --all`), fora do repo. `push --force` para `main`
+(sem proteção de branch, sem cron fazendo `git pull` — ver item 5, produção
+agora sincroniza por rsync, não depende do git daquele checkout). Um branch
+remoto órfão (`chore/remove-indices-categoria-sales-prod-daily-agg`, já
+mergeado, sobrevivera a um `--delete-branch` que não colou) foi apagado antes,
+pra não sobrar como referência à história antiga.
+
+**Qualquer clone existente deste repositório fica desatualizado e precisa ser
+reclonado — um `git pull` normal quebra**, porque os hashes não batem mais com
+nada do lado local. O checkout usado pelas crons em produção
+(`/home/admin/web/gpa.t00ls.dev/public_html/.git`) não foi tocado — já era
+vestigial desde o item 5 (aponta pro remote errado, sem credencial, e não é
+mais usado pra sincronizar nada; os arquivos chegam por rsync do deploy).
 
 ### 7. Cobertura de teste zero nas server functions de negócio
 
