@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { listDocs, getDocContent } from "@/lib/admin.functions";
+import { listDocs, getDocContent } from "@/lib/admin-docs.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookText, FileText } from "lucide-react";
