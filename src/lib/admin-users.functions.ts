@@ -115,7 +115,8 @@ export const resetPassword = createServerFn({ method: "POST" })
     const hash = await bcrypt.hash(data.password, BCRYPT_COST);
     // token_version + 1 derruba as sessões já abertas com a senha antiga. Sem
     // isto, redefinir a senha de uma conta comprometida não expulsava ninguém:
-    // o JWT é stateless e seguiria aceito por até 7 dias (JWT_EXPIRY). Note o
+    // o JWT continuaria aceito até expirar sozinho (até 7 dias, no caso de uma
+    // sessão "manter conectado" — ver src/lib/auth-config.ts). Note o
     // contraste com setUserActive, que sempre funcionou — requireAuth relê
     // `is_active` do banco a cada request, e a senha era o único vetor sem essa
     // rede.

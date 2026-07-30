@@ -18,19 +18,30 @@
 export const SESSION_COOKIE = "session";
 
 /**
- * Validade da sessão, em segundos. Vale para o `expiresIn` do JWT e para o
- * `maxAge` do cookie — os dois têm de ser o mesmo número, senão o cookie
- * sobrevive ao token (usuário "logado" que toma 401 a cada ação) ou morre antes
- * dele (deslogado sem motivo aparente).
- *
- * `JWT_EXPIRY` no ambiente sobrepõe. O default de 7 dias vivia em três lugares:
- * aqui, no `ecosystem.config.cjs` (como a string mágica "604800") e no
- * `.env.example`. O do PM2 vencia em produção, o que tornava este default letra
- * morta lá e vivo em dev — divergência fácil de não perceber. O ecosystem
- * deixou de ter default próprio: se a variável não estiver no `.env`, o PM2 não
- * injeta nada e este valor passa a valer em todos os ambientes.
+ * Sessão "normal" (checkbox "Manter conectado" desmarcado no login): desliza a
+ * cada request autenticado — cada chamada que passa por `requireAuth` reemite
+ * o cookie com um novo prazo de INACTIVITY_TIMEOUT_SECONDS a partir de agora.
+ * Fica ociosa esse tempo sem gerar nenhum request e expira.
  */
-export const JWT_EXPIRY_SECONDS = Number(process.env.JWT_EXPIRY) || 7 * 24 * 60 * 60;
+export const INACTIVITY_TIMEOUT_SECONDS = 60 * 60; // 1h
+
+/**
+ * Teto absoluto da sessão "normal", contado a partir do login original
+ * (`loginAt` no payload do JWT, não reemitido no slide) — existe pra cobrir o
+ * caso de um dispositivo em uso contínuo (ex.: terminal fixo numa loja) que
+ * nunca ficaria ocioso tempo suficiente pra bater o INACTIVITY_TIMEOUT_SECONDS
+ * sozinho. Sem este teto, o slide renovaria pra sempre.
+ */
+export const SESSION_ABSOLUTE_CAP_SECONDS = 24 * 60 * 60; // 24h
+
+/**
+ * Sessão "Manter conectado" (checkbox marcado no login): expiração fixa, sem
+ * slide e sem o teto acima — os dois se contradiriam. Mesmo valor que já era o
+ * padrão único do sistema antes desta mudança: quem marcar o checkbox não fica
+ * pior do que estava, quem não marcar passa a ter uma janela de exposição bem
+ * menor (1h ocioso / 24h de uso contínuo, em vez de 7 dias fixos sempre).
+ */
+export const REMEMBER_ME_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 dias
 
 /**
  * Custo do bcrypt. Estava repetido em `createUser`, `resetPassword` e no script
