@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { Label } from "@/components/ui/label";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
+import { FilterField } from "@/components/filter-field";
 
 interface HierarchyItem {
   store_code: string;
@@ -105,8 +105,7 @@ export function AreaFilters({
   return (
     <div className="kpi-card mb-4 space-y-3 min-w-0 overflow-hidden">
       <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
-        <div className="lg:col-span-2">
-          <Label className="text-xs">Período</Label>
+        <FilterField label="Período" className="lg:col-span-2">
           <div className="mt-1">
             <DateRangePicker
               from={dateFrom}
@@ -116,9 +115,8 @@ export function AreaFilters({
               onChange={onRangeChange}
             />
           </div>
-        </div>
-        <div>
-          <Label className="text-xs">Loja</Label>
+        </FilterField>
+        <FilterField label="Loja">
           <MultiSelect
             single
             label="Selecione"
@@ -129,9 +127,8 @@ export function AreaFilters({
             value={fStores}
             onChange={onStoresChange}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Departamento</Label>
+        </FilterField>
+        <FilterField label="Departamento">
           <MultiSelect
             single
             label="Selecione"
@@ -139,9 +136,8 @@ export function AreaFilters({
             value={fDeptos}
             onChange={onDeptosChange}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Seção</Label>
+        </FilterField>
+        <FilterField label="Seção">
           <MultiSelect
             label="Todas"
             noun={{ one: "seção", other: "seções" }}
@@ -149,9 +145,8 @@ export function AreaFilters({
             value={fSecoes}
             onChange={onSecoesChange}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Grupo</Label>
+        </FilterField>
+        <FilterField label="Grupo">
           <MultiSelect
             label="Todos"
             noun={{ one: "grupo", other: "grupos" }}
@@ -159,9 +154,8 @@ export function AreaFilters({
             value={fGrupos}
             onChange={onGruposChange}
           />
-        </div>
-        <div className="md:col-span-2">
-          <Label className="text-xs">Subgrupo</Label>
+        </FilterField>
+        <FilterField label="Subgrupo" className="md:col-span-2">
           <MultiSelect
             label="Todos"
             noun={{ one: "subgrupo", other: "subgrupos" }}
@@ -169,7 +163,7 @@ export function AreaFilters({
             value={fSubgrupos}
             onChange={onSubgruposChange}
           />
-        </div>
+        </FilterField>
       </div>
     </div>
   );
