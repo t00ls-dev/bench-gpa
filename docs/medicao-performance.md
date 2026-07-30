@@ -287,3 +287,41 @@ diff <(cut -f1,3,7,8,9 antes/results.tsv) <(cut -f1,3,7,8,9 depois/results.tsv)
 ```
 
 As colunas de hash têm de ser idênticas. As de tempo são o resultado.
+
+---
+
+## PR #23 — 2026-07-30, remoção de contagem duplicada em `area_analysis`
+
+Não é uma reescrita — não repete o experimento de 1 varredura/temporária que
+regrediu (ver seções acima). O profiling interno (`SET profiling=1` + `SHOW
+PROFILES`) mostrou que o Result Set 2 (`total_products`) rodava a mesma query,
+idêntica, que já populava `v_universe` (Result Set 1) linhas antes — mesma
+tabela (`product_universe`, não a tabela grande), mesmo `WHERE`, mesmo
+`COUNT(DISTINCT prod_code)`. Trocado por `SELECT v_universe AS total_products;`.
+
+Correção provada com `validate-procs.sh` (37 cenários, hash idêntico
+antes/depois). Timing confirmado com `bench-procs.sh` contra produção:
+
+| Cenário | Baseline (pós-revert, 26/07) | Depois do PR #23 | |
+| --- | ---: | ---: | --- |
+| `area_28d_sem_filtro` | 23.652 ms | **23.178 ms** | −2%, dispersão válida (1.08x) |
+| `area_7d_sem_filtro` | 2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras, 2 warmup) | ~−7 a −11%, dispersão 1.39x — **acima do limite de 1.3x**, repetido duas vezes com o mesmo padrão |
+
+Ganho real e correto, mas pequeno: a query removida só toca `product_universe`,
+fração pequena do tempo total no pior caso (28 dias). O cenário de 7 dias
+mostrou um sinal proporcionalmente maior, mas sem bater o critério de
+confiabilidade do próprio harness — não tratar como número confirmado.
+
+**Armadilha nova, registrada em `docs/continuar.md` também**: medir com `time
+mariadb ... -e "CALL ..." > arquivo` seguido de `wc -l`/processamento do
+arquivo infla o tempo com I/O de disco e formatação de texto do cliente `mariadb`,
+não custo de servidor. Uma medição inicial de `area_28d_sem_filtro` chegou a
+33,9s dessa forma; com o output redirecionado direto pro `/dev/null` (sem
+arquivo intermediário) e comparado contra `SHOW PROFILES` do mesmo cenário, o
+tempo real de servidor era ~23s — o resto era artefato do método de medição, não
+do banco. `bench-procs.sh` já evita esse problema por medir com `NOW(6)` dentro
+da própria sessão SQL; o erro só acontece em medição ad-hoc fora do harness.
+
+O teto de `area_analysis` (as 2-3 varreduras completas de `sales_prod_daily_agg`)
+continua o mesmo. Não há correção pendente óbvia — a via mais direta (reduzir
+varreduras) já foi tentada e não funciona para esta proc especificamente.

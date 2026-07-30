@@ -2,6 +2,18 @@
 
 > Data: 22/07/2026 (manual, leitura completa do código + execução real de lint/typecheck/testes/coverage)
 > Atualizado na mesma data após uma rodada de correções — ver seção "✅ Resolvido" abaixo para o que mudou desde a versão anterior deste documento.
+>
+> **Métricas re-medidas em 30/07/2026** (tabela abaixo). Entre 22/07 e 30/07 rodou
+> uma auditoria **separada** desta (relatório de performance/segurança/UX ad-hoc,
+> não este arquivo), com 13 PRs mergeados (#14 a #26): correções rápidas de
+> segurança/performance, atualização de `seroval`/`xlsx` por vulnerabilidade,
+> lazy-loading, conversão de logos para WebP, remoção de 21 dependências e 27
+> componentes shadcn mortos, indicador de progresso no export de PDF, divisão de
+> `admin.functions.ts` em módulos, extração de `FilterField` compartilhado,
+> remoção de uma contagem duplicada em `area_analysis`, e as quatro partes de
+> centralização de constantes ("números mágicos"). Nenhum item da lista de
+> **Recomendações** deste documento foi tocado nessa rodada — são pendências
+> independentes. Estado corrente e o que ainda está aberto: `docs/continuar.md`.
 
 Esta análise **substitui** o snapshot de 21/07/2026 22:53, que estava desatualizado: a automação que o gerava (`code-review.yml` + `scripts/code-review.ts`) foi **removida no commit `e672ef1`**, com a justificativa "CI + deploy já cobrem" — mas isso ficou obsoleto assim que o CI passou a rodar lint/typecheck (ver histórico de resolução abaixo). Os demais arquivos em `docs/improvements/` (`estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `novas-analises.md`, `melhorias-pendentes.md`) ainda citam `analytics.functions.ts` (hoje dividido em `dashboard/area/product.functions.ts`), RPCs Supabase e `client.ts`, que não existem mais no código MariaDB atual. **Desde 26/07/2026 cada um traz um aviso no topo** — antes o alerta só existia aqui e no README, e quem abrisse o arquivo direto (pelo `/admin/docs`, por exemplo) não via nada. O `performance.md` foi apagado em vez de marcado: era o mais convidativo para quem fosse atacar performance e o mais errado, hoje substituído por `docs/medicao-performance.md`.
 
@@ -9,20 +21,22 @@ Esta análise **substitui** o snapshot de 21/07/2026 22:53, que estava desatuali
 
 ## 📊 Métricas Gerais (medidas agora)
 
+> Métricas re-medidas em 30/07/2026. A queda de arquivos/linhas em relação à
+> medição de 26/07 é sobretudo a remoção de 27 componentes shadcn e 5
+> dependências npm mortos (PR #19), não perda de funcionalidade.
+
 | Métrica                          | Valor                                    |
 | --------------------------------- | ----------------------------------------- |
-> Métricas remedidas em 26/07/2026.
-
-| Arquivos .ts/.tsx (`src/`)        | 155                                       |
-| Linhas de código (`src/`)         | 16.083                                    |
+| Arquivos .ts/.tsx (`src/`)        | 115                                       |
+| Linhas de código (`src/`)         | 12.008                                    |
 | Server functions (`createServerFn`) | 39                                      |
 | `requireRateLimit` aplicado       | ✅ 100% das funções lidas, tier explícito por rota (`"api"`/`"upload"`) |
-| Lint                               | ✅ 0 erros, 6 warnings (todos ruído de fast-refresh do shadcn/ui; os 2 de `exhaustive-deps` foram corrigidos) |
+| Lint                               | ✅ 0 erros, 3 warnings (ruído de fast-refresh do shadcn/ui) |
 | Typecheck (`tsc --noEmit`)        | ✅ 0 erros |
-| Testes (`vitest run`)             | ✅ 205 passando, 21 arquivos |
-| Cobertura geral                    | 57,2% lines (ver `docs/coverage-summary.md`, gerado via `bun run coverage:summary`) |
-| Cobertura das server functions de negócio | 🟡 `area` 66,7%, `dashboard` 26,8%, `admin` ~22%; `product` e `upload` ainda em 0% |
-| Arquivos >300 linhas               | 7 |
+| Testes (`vitest run`)             | ✅ 214 passando, 22 arquivos |
+| Cobertura geral                    | 55,6% lines (ver `docs/coverage-summary.md`, gerado via `bun run coverage:summary`) |
+| Cobertura das server functions de negócio | 🟡 `area` 66,7%, `admin-users` 74,3% (herdou o teste do antigo `admin.functions.ts`), `dashboard` 26,8%; `admin-docs`, `admin-system`, `product` e `upload` em 0% |
+| Arquivos >300 linhas               | 6 (`sidebar.tsx` 744 — shadcn, não é código próprio; `area.page.tsx` 507; `upload.page.tsx` 375; `produto.page.tsx` 370; `index.page.tsx` 341; `area-table.tsx` 322) |
 
 ---
 
