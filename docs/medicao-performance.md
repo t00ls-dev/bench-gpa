@@ -325,3 +325,68 @@ da própria sessão SQL; o erro só acontece em medição ad-hoc fora do harness
 O teto de `area_analysis` (as 2-3 varreduras completas de `sales_prod_daily_agg`)
 continua o mesmo. Não há correção pendente óbvia — a via mais direta (reduzir
 varreduras) já foi tentada e não funciona para esta proc especificamente.
+
+## 2026-07-30 — remoção dos 4 índices de categoria em `sales_prod_daily_agg`
+
+Item 2 da lista "Aberto" de `docs/continuar.md`. A hipótese já estava registrada
+antes de medir: os índices em `depto`/`secao`/`grupo`/`subgrupo` não aceleram
+nenhuma proc (filtrar por uma dessas colunas custa *mais* que não filtrar — o
+plano de acesso real é sempre a varredura por `sale_date`), então só ocupam
+espaço. Faltava quantificar o espaço e provar que remover não regride nada.
+
+**Tamanho, via `mysql.innodb_index_stats`** (não dá para consultar por
+`information_schema.STATISTICS`/`TABLES` comum — não tem coluna de tamanho por
+índice; precisou de acesso root local no servidor):
+
+| Índice | Tamanho |
+| --- | ---: |
+| PRIMARY (dados) | 538,41 MB |
+| `idx_prod_daily_subgrupo` | 169,56 MB |
+| `idx_prod_daily_grupo` | 142,55 MB |
+| `idx_prod_daily_secao` | 121,42 MB |
+| `idx_prod_daily_prod_code` | 117,67 MB |
+| `idx_prod_daily_depto` | 99,28 MB |
+| `idx_prod_daily_sale_date` | 63,12 MB |
+
+Os 4 juntos: **532,81 MB — 74,7% de todo o índice da tabela**, quase do
+tamanho dos dados reais, contra um `innodb_buffer_pool_size` de 128 MB (default
+de fábrica, ver item 1 de `continuar.md`).
+
+**Antes/depois com `bench-procs.sh`** (9 cenários, produção):
+
+| Cenário | Antes | Depois | Δ |
+| --- | ---: | ---: | ---: |
+| `area_7d_sem_filtro` | 2.153 ms | 1.986 ms | −8% |
+| `area_28d_sem_filtro` | 24.022 ms | 23.430 ms | −2% |
+| `area_28d_depto` | 23.744 ms | 24.394 ms | +3% |
+| `area_28d_loja` | 21.822 ms | 22.939 ms | +5% |
+| `area_28d_export` | 23.681 ms | 24.300 ms | +3% |
+| `area_28d_busca` | 24.012 ms | 23.134 ms | −4% |
+| `rankings_28d` | 19.303 ms | 19.171 ms | −1% |
+| `metrics_28d` | 9.873 ms | 10.756 ms | +9% (disp. 1.41x nas duas pontas, não confiar) |
+| `filtros_28d` | 228 ms | 250 ms | disp. alta nas duas pontas, não confiar |
+
+Hashes idênticos nos 9 cenários (`diff` vazio) — nenhuma proc mudou de
+resultado. As medianas oscilam ±2-8% sem sinal consistente de ganho ou perda,
+dentro do ruído normal — **como esperado**, já que esses índices nunca
+ajudavam leitura; a hipótese não era "fica mais rápido", era "não fica mais
+lento, e libera espaço". `bp_pages_free` mal se moveu no instante da medição
+(843→895 páginas) — o ganho de buffer pool é de regime permanente (dias
+reciclando cache sem 532 MB de índice morto competindo por espaço), não algo
+visível numa janela de minutos.
+
+Removido em produção via `DROP INDEX` direto (92ms, `ALGORITHM=INPLACE,
+LOCK=NONE`), formalizado depois em
+`scripts/migrations/0004_drop_indices_categoria_sales_prod_daily_agg.sql`
+(idempotente via `DROP INDEX IF EXISTS`, seguro tanto para reaplicar em prod
+quanto para instalação nova, onde o baseline já cria a tabela sem esses
+índices). `scripts/validate-procs.sh` local confirmou hash idêntico nos 37
+cenários depois da migration.
+
+**Achado lateral**: o MariaDB de dev local tinha índices `ix_cov_*` (cobertura)
+em `depto`/`secao`/`grupo`/`subgrupo`/`store_code`/`sale_date+prod_code` que
+não existem em nenhum lugar do `migrate-schema.sql` — sobra de um experimento
+anterior nunca revertida no ambiente local (bate com a armadilha #1 já
+registrada abaixo: "um índice de cobertura em `depto` não mudou nada"). Não
+afeta produção, mas o dev local não é mais um espelho fiel do schema
+versionado; considerar recriar o banco local do zero numa próxima sessão.
