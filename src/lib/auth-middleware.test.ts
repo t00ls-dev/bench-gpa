@@ -12,10 +12,13 @@ vi.mock("@tanstack/react-start/server", () => ({
   getRequest: vi.fn(() => ({
     headers: new Map([["cookie", "session=valid-jwt"]]),
   })),
+  setCookie: vi.fn(),
 }));
 
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
-vi.mock("jsonwebtoken", () => ({ default: { verify: vi.fn() } }));
+vi.mock("jsonwebtoken", () => ({
+  default: { verify: vi.fn(), sign: vi.fn(() => "reissued-jwt") },
+}));
 vi.mock("cookie", () => ({
   parse: vi.fn(() => ({ session: "valid-jwt" })),
 }));
@@ -23,6 +26,8 @@ vi.mock("cookie", () => ({
 import { requireAuth } from "./auth-middleware";
 import db from "./db";
 import jwt from "jsonwebtoken";
+import { setCookie } from "@tanstack/react-start/server";
+import { SESSION_ABSOLUTE_CAP_SECONDS } from "./auth-config";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -162,5 +167,67 @@ describe("requireAuth", () => {
       [{ id: "u1", role: "user", is_active: true, token_version: 0 }],
     ] as never);
     await expect(call()).resolves.toMatchObject({ context: { userRole: "user" } });
+  });
+
+  // Expiração por inatividade: cada request autenticado renova a sessão
+  // "normal" — sem isso, a sessão teria que ter prazo fixo desde o login.
+  describe("sliding session", () => {
+    it("reemite o cookie a cada request de uma sessão normal (não persistente)", async () => {
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "u1",
+        role: "admin",
+        email: "test@gpabr.com",
+        tokenVersion: 0,
+        loginAt: Math.floor(Date.now() / 1000) - 60,
+        persistent: false,
+      } as never);
+      await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
+      expect(jwt.sign).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: "u1", persistent: false }),
+        "test-secret",
+        expect.objectContaining({ expiresIn: expect.any(Number) }),
+      );
+      expect(setCookie).toHaveBeenCalledWith("session", "reissued-jwt", expect.any(Object));
+    });
+
+    it("não reemite o cookie de uma sessão 'manter conectado' (persistent)", async () => {
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "u1",
+        role: "admin",
+        email: "test@gpabr.com",
+        tokenVersion: 0,
+        loginAt: Math.floor(Date.now() / 1000) - SESSION_ABSOLUTE_CAP_SECONDS - 1000,
+        persistent: true,
+      } as never);
+      await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
+      expect(jwt.sign).not.toHaveBeenCalled();
+      expect(setCookie).not.toHaveBeenCalled();
+    });
+
+    it("rejeita sessão normal que passou do teto absoluto, mesmo com token ainda válido", async () => {
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "u1",
+        role: "admin",
+        email: "test@gpabr.com",
+        tokenVersion: 0,
+        loginAt: Math.floor(Date.now() / 1000) - SESSION_ABSOLUTE_CAP_SECONDS - 10,
+        persistent: false,
+      } as never);
+      await expect(call()).rejects.toThrow("Unauthorized: session expired");
+      expect(setCookie).not.toHaveBeenCalled();
+    });
+
+    // Transição: tokens emitidos antes desta mudança não têm `loginAt` — em
+    // vez de expirar todo mundo no deploy, tratamos como login agora.
+    it("trata token legado sem loginAt como login agora, sem expirar na hora", async () => {
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "u1",
+        role: "admin",
+        email: "test@gpabr.com",
+        tokenVersion: 0,
+      } as never);
+      await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
+      expect(setCookie).toHaveBeenCalled();
+    });
   });
 });

@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { getRequest, getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
+import { getRequest, getCookie, deleteCookie } from "@tanstack/react-start/server";
 import db from "./db";
 import { z } from "zod";
 import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
 import { authLimiter, getClientIp } from "./rate-limit";
 import { recordAudit } from "./audit";
-import { SESSION_COOKIE, JWT_EXPIRY_SECONDS } from "./auth-config";
+import { SESSION_COOKIE } from "./auth-config";
+import { issueSession, resolveSession } from "./session";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -19,16 +20,6 @@ interface UserRow {
   role: string;
   is_active: boolean;
   token_version: number;
-}
-
-function setSessionCookie(token: string): void {
-  setCookie(SESSION_COOKIE, token, {
-    httpOnly: true,
-    path: "/",
-    maxAge: JWT_EXPIRY_SECONDS,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
 }
 
 function clearSessionCookie(): void {
@@ -45,6 +36,9 @@ export const login = createServerFn({ method: "POST" })
           .transform((e) => e.toLowerCase().trim()),
         password: z.string().min(1),
         turnstileToken: z.string().optional(),
+        // "Manter conectado": sessão fixa de 7 dias em vez da normal (desliza
+        // por atividade, teto de 24h). Ver src/lib/auth-config.ts.
+        rememberMe: z.boolean().optional().default(false),
       })
       .parse(d),
   )
@@ -101,19 +95,10 @@ export const login = createServerFn({ method: "POST" })
       await auditFail("senha incorreta", user.id);
       throw new Error("E-mail ou senha inválidos.");
     }
-    // tokenVersion sela a sessão à senha vigente: resetPassword incrementa a
-    // coluna e este token deixa de ser aceito no request seguinte.
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        email: user.email,
-        tokenVersion: user.token_version,
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRY_SECONDS },
+    issueSession(
+      { id: user.id, role: user.role, email: user.email, tokenVersion: user.token_version },
+      data.rememberMe,
     );
-    setSessionCookie(token);
     await recordAudit({
       action: "auth.login",
       actorId: user.id,
@@ -126,30 +111,18 @@ export const login = createServerFn({ method: "POST" })
 
 export const getMe = createServerFn({ method: "GET" }).handler(async () => {
   const token = getCookie(SESSION_COOKIE);
-  if (!token) {
-    return null;
-  }
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      role: string;
-      email: string;
-      tokenVersion?: number;
+    // slide: false — getMe roda a cada navegação (cacheado 60s no guard de
+    // rotas) e não deve ter o efeito colateral de reemitir o cookie; quem
+    // renova a sessão por atividade é o requireAuth, chamado pelas funções que
+    // de fato buscam dados.
+    const session = await resolveSession(token, { slide: false });
+    return {
+      id: session.userId,
+      email: session.userEmail,
+      name: session.userName,
+      role: session.userRole,
     };
-    const [rowsRaw] = await db.query(
-      "SELECT id, email, name, role, is_active, token_version FROM users WHERE id = ?",
-      [payload.userId],
-    );
-    const rows = rowsRaw as unknown as UserRow[];
-    if (!rows.length || !rows[0].is_active) {
-      return null;
-    }
-    // Mesma checagem de sessão revogada do requireAuth — sem ela o guard das
-    // rotas continuaria deixando entrar com um token anterior ao reset de senha.
-    if ((payload.tokenVersion ?? 0) !== rows[0].token_version) {
-      return null;
-    }
-    return { id: rows[0].id, email: rows[0].email, name: rows[0].name, role: rows[0].role };
   } catch {
     return null;
   }

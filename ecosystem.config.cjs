@@ -45,14 +45,6 @@ module.exports = {
         DB_USER: env.DB_USER ?? "admin_gpa",
         DB_PASS: env.DB_PASS ?? "",
         JWT_SECRET: env.JWT_SECRET ?? "",
-        // Sem default próprio de propósito. O default da validade da sessão é
-        // JWT_EXPIRY_SECONDS, em src/lib/auth-config.ts — este arquivo é .cjs e
-        // não consegue importar o TS, então a única forma de não duplicar o
-        // número é NÃO ter um aqui. Antes havia a string "604800", que vencia em
-        // produção e tornava o default do código letra morta lá e vivo em dev.
-        // O spread condicional evita injetar a chave como "undefined" quando a
-        // variável não está no .env — aí o código usa o dele.
-        ...(env.JWT_EXPIRY ? { JWT_EXPIRY: env.JWT_EXPIRY } : {}),
         TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY ?? "",
         TURNSTILE_BYPASS: env.TURNSTILE_BYPASS ?? "false",
       },
