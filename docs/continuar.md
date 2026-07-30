@@ -163,24 +163,24 @@ nome/email, `MultiSelect` com teclado/ARIA, `AdminGate` com erro de rede,
 sessão via `token_version` no reset de senha) **já estava resolvida** — o
 arquivo original nunca foi atualizado. O que sobrou genuinamente aberto:
 
+**Feitos em 30/07/2026** (PRs #31-#36): sessão expirada preserva `?next=`;
+Produto ganhou comparação de subconjunto de lojas (`product_analysis` trocou
+`p_store_code` por `p_store_codes JSON`), histórico de buscas recentes
+(localStorage) e linha de tendência (média móvel de 7 pontos); upload ganhou
+retry automático — no nível do **arquivo inteiro**, não do chunk
+(`insertSalesChunk` não é idempotente — ver commit do PR #36 pro porquê).
+
+O que sobrou genuinamente aberto:
+
 - **Dashboard**: exportação só em PDF (falta XLSX); rankings sem click-through
   pra `/area`/`/produto`; sem filtros ativos exibidos como chips.
-  (~~`data.previous.byDate` sem gráfico~~ — **verificação anterior estava
-  errada**: `dashboard-charts.tsx` já renderiza a linha "Anterior" tracejada,
-  preenchimento entre curvas e tooltip comparativo. O grep de 30/07/2026 só
-  checou `index.page.tsx`, não o componente filho onde `data` é consumido.
-  Corrigido em 30/07/2026.)
-- **Produto**: seletor de loja é single-select (`MultiSelect single` em
-  `produto.page.tsx`) — sem comparação entre lojas; exportação só em PDF;
-  sem histórico de buscas (localStorage); sem linha de tendência/média móvel.
+- **Produto**: exportação só em PDF (falta XLSX).
 - **Área**: PDF exporta só a tabela, sem os cards de KPI; nome do arquivo não
   é descritivo (`openPdfBlob` abre em nova aba sem `download=` customizado).
-- **Upload**: sem retry automático de chunk que falhou; sem remover/reordenar
-  arquivo na fila antes de importar.
+- **Upload**: sem remover/reordenar arquivo na fila antes de importar.
 - **Admin**: sem paginação de usuários (relevante quando a lista crescer).
-- **Auth**: sem fluxo de "esqueci minha senha"; sessão expirada já redireciona
-  pra `/auth` com toast (`router.tsx`), mas sem `?next=<rota atual>` — o
-  usuário não volta pra onde estava depois de logar de novo.
+- **Auth**: sem fluxo de "esqueci minha senha" — o único item alto-esforço
+  desta lista (endpoint + envio de email + UI completos).
 
 Nenhum desses tem prioridade estabelecida — ficam registrados pra quando
 o produto (não a engenharia) decidir o que vale a pena.
