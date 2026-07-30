@@ -146,7 +146,9 @@ CREATE TABLE IF NOT EXISTS filter_hierarchy (
 -- recente, mais a data dessa venda.
 --
 -- Derivada de sales_prod_daily_agg (como a filter_hierarchy), regenerada por
--- refresh_product_universe() ao fim de cada import e após o purge.
+-- refresh_product_universe() num cron diário (scripts/refresh-universe.ts),
+-- não mais ao fim de cada import/purge — ver comentário em finalize_import
+-- sobre por quê (item 5 de docs/continuar.md).
 --
 -- Existe por performance. O KPI "PLUs sem venda" precisa comparar o período
 -- contra todo o histórico; fazer isso direto no sales_prod_daily_agg custa um
@@ -982,20 +984,15 @@ BEGIN
     imported_at = CURRENT_TIMESTAMP,
     batch_id = VALUES(batch_id);
 
-  -- Estes dois CALLs só estão DENTRO da transação porque os refreshes usam
-  -- DELETE. Enquanto usavam TRUNCATE, a atomicidade prometida aqui era
-  -- ilusória: TRUNCATE é DDL e faz commit implícito, então a transação
-  -- terminava na primeira linha do refresh_filter_hierarchy — o EXIT HANDLER
-  -- deixava de desfazer qualquer coisa e este COMMIT virava no-op. Verificado
-  -- no banco em 2026-07-25: START TRANSACTION; INSERT; TRUNCATE outra_tabela;
-  -- ROLLBACK; deixa o INSERT gravado.
-  --
-  -- Se um dia algum destes refreshes voltar a usar TRUNCATE, esta transação
-  -- volta a não valer nada — mover os CALLs para depois do COMMIT seria o
-  -- mínimo, mas o certo é manter DELETE.
-  CALL refresh_filter_hierarchy();
-  CALL refresh_product_universe();
-
+  -- Até 30/07/2026, chamava refresh_filter_hierarchy()/refresh_product_universe()
+  -- aqui dentro — cada import pagava ~30-36s de regeneração completa das duas
+  -- tabelas (varrem sales_prod_daily_agg inteira, não só a data importada; ver
+  -- comentário nas procs). Item 5 de docs/continuar.md: PLU/categoria novos são
+  -- raros o bastante para não justificar esse custo síncrono em toda importação.
+  -- As duas passaram a rodar num cron diário (scripts/refresh-universe.ts, 03h30,
+  -- depois do purge das 03h) — um PLU vendido pela primeira vez hoje só aparece
+  -- na Área após o refresh seguinte, não no mesmo dia. Aceito conscientemente:
+  -- ver a troca completa na decisão registrada em docs/continuar.md item 5.
   COMMIT;
 END//
 
@@ -1054,16 +1051,14 @@ BEGIN
   DELETE FROM import_log WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 
-  -- As duas tabelas derivadas saem do agg que acabou de encolher. O universo de
-  -- PLUs: um PLU cuja última venda saiu na poda tem que sair do universo
-  -- também, senão passa a contar como "sem venda" para sempre. A hierarquia de
-  -- filtros: sem o refresh, os filtros seguem oferecendo combinações de
-  -- loja/categoria que já não existem em lugar nenhum.
-  IF v_deleted > 0 THEN
-    CALL refresh_product_universe();
-    CALL refresh_filter_hierarchy();
-  END IF;
-
+  -- Até 30/07/2026, chamava refresh_product_universe()/refresh_filter_hierarchy()
+  -- aqui (condicionado a v_deleted > 0) — as duas tabelas derivadas precisam
+  -- refletir o agg que acabou de encolher, senão um PLU cuja última venda saiu
+  -- na poda nunca sai do universo, e os filtros seguem oferecendo combinações
+  -- que já não existem. Isso agora é responsabilidade do cron dedicado
+  -- (scripts/refresh-universe.ts, 03h30 — depois do purge das 03h, então já
+  -- enxerga o agg pós-poda), não mais desta proc. Ver item 5 de
+  -- docs/continuar.md e o comentário equivalente em finalize_import.
   SELECT v_deleted AS deleted;
 END//
 
