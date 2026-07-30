@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getFilterOptions } from "@/lib/dashboard.functions";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
+import { FilterField } from "@/components/filter-field";
 import { defaultDateWindow } from "@/lib/date-window";
 
 export interface Filters {
@@ -99,8 +99,7 @@ export function FilterBar({ value, onChange }: Props) {
   return (
     <div className="kpi-card mb-6">
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-        <div className="lg:col-span-2">
-          <Label className="text-xs">Período</Label>
+        <FilterField label="Período" className="lg:col-span-2">
           <div className="mt-1">
             <DateRangePicker
               from={value.dateFrom}
@@ -110,9 +109,8 @@ export function FilterBar({ value, onChange }: Props) {
               onChange={(r) => setF({ dateFrom: r.from, dateTo: r.to })}
             />
           </div>
-        </div>
-        <div>
-          <Label className="text-xs">Loja</Label>
+        </FilterField>
+        <FilterField label="Loja">
           <MultiSelect
             label="Todas"
             noun={{ one: "loja", other: "lojas" }}
@@ -123,9 +121,8 @@ export function FilterBar({ value, onChange }: Props) {
             value={value.stores}
             onChange={setStores}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Departamento</Label>
+        </FilterField>
+        <FilterField label="Departamento">
           <MultiSelect
             label="Todos"
             noun={{ one: "departamento", other: "departamentos" }}
@@ -133,9 +130,8 @@ export function FilterBar({ value, onChange }: Props) {
             value={value.deptos}
             onChange={setDeptos}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Seção</Label>
+        </FilterField>
+        <FilterField label="Seção">
           <MultiSelect
             label="Todas"
             noun={{ one: "seção", other: "seções" }}
@@ -143,9 +139,8 @@ export function FilterBar({ value, onChange }: Props) {
             value={value.secoes}
             onChange={setSecoes}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Grupo</Label>
+        </FilterField>
+        <FilterField label="Grupo">
           <MultiSelect
             label="Todos"
             noun={{ one: "grupo", other: "grupos" }}
@@ -153,9 +148,8 @@ export function FilterBar({ value, onChange }: Props) {
             value={value.grupos}
             onChange={setGrupos}
           />
-        </div>
-        <div>
-          <Label className="text-xs">Subgrupo</Label>
+        </FilterField>
+        <FilterField label="Subgrupo">
           <MultiSelect
             label="Todos"
             noun={{ one: "subgrupo", other: "subgrupos" }}
@@ -163,10 +157,9 @@ export function FilterBar({ value, onChange }: Props) {
             value={value.subgrupos}
             onChange={(v) => setF({ subgrupos: v })}
           />
-        </div>
+        </FilterField>
       </div>
-      <div className="mt-3">
-        <Label className="text-xs">Comparar com</Label>
+      <FilterField label="Comparar com" className="mt-3">
         <div className="mt-1 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Comparar com">
           {[
             { v: "prev_period", l: "Período anterior" },
@@ -190,7 +183,7 @@ export function FilterBar({ value, onChange }: Props) {
             </button>
           ))}
         </div>
-      </div>
+      </FilterField>
     </div>
   );
 }
