@@ -17,6 +17,7 @@ import { AreaFilters } from "@/components/area-filters";
 import { Layers, Loader2 } from "lucide-react";
 import { Route } from "./area";
 import { defaultDateWindow } from "@/lib/date-window";
+import { cascadePatch } from "@/lib/filter-cascade";
 
 type Product = {
   prod_code: string;
@@ -69,11 +70,10 @@ function AreaPage() {
     sanitizeAF,
   );
   const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
-  const setStores = (v: string[]) =>
-    patch({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
-  const setDeptos = (v: string[]) => patch({ deptos: v, secoes: [], grupos: [], subgrupos: [] });
-  const setSecoes = (v: string[]) => patch({ secoes: v, grupos: [], subgrupos: [] });
-  const setGrupos = (v: string[]) => patch({ grupos: v, subgrupos: [] });
+  const setStores = (v: string[]) => patch(cascadePatch("stores", v));
+  const setDeptos = (v: string[]) => patch(cascadePatch("deptos", v));
+  const setSecoes = (v: string[]) => patch(cascadePatch("secoes", v));
+  const setGrupos = (v: string[]) => patch(cascadePatch("grupos", v));
   const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
   const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
 

@@ -2,15 +2,7 @@ import { useMemo } from "react";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
 import { FilterField } from "@/components/filter-field";
-
-interface HierarchyItem {
-  store_code: string;
-  store_name: string;
-  depto: string | null;
-  secao: string | null;
-  grupo: string | null;
-  subgrupo: string | null;
-}
+import { computeAreaCascadeOptions, type HierarchyItem } from "@/lib/filter-cascade";
 
 export function AreaFilters({
   hierarchy,
@@ -47,59 +39,13 @@ export function AreaFilters({
   onGruposChange: (v: string[]) => void;
   onSubgruposChange: (v: string[]) => void;
 }) {
-  const stores = useMemo(() => {
-    const seen = new Set<string>();
-    return hierarchy.filter((r) => {
-      if (seen.has(r.store_code)) return false;
-      seen.add(r.store_code);
-      return true;
-    });
-  }, [hierarchy]);
-
-  const deptoBase = useMemo(
-    () =>
-      fStores.length === 0 ? hierarchy : hierarchy.filter((r) => fStores.includes(r.store_code)),
-    [hierarchy, fStores],
-  );
-  const deptosOpts = useMemo(
-    () => [...new Set(deptoBase.map((r) => r.depto).filter(Boolean) as string[])].sort(),
-    [deptoBase],
-  );
-
-  const secaoBase = useMemo(
-    () =>
-      fDeptos.length === 0
-        ? deptoBase
-        : deptoBase.filter((r) => r.depto && fDeptos.includes(r.depto)),
-    [deptoBase, fDeptos],
-  );
-  const secoesOpts = useMemo(
-    () => [...new Set(secaoBase.map((r) => r.secao).filter(Boolean) as string[])].sort(),
-    [secaoBase],
-  );
-
-  const grupoBase = useMemo(
-    () =>
-      fSecoes.length === 0
-        ? secaoBase
-        : secaoBase.filter((r) => r.secao && fSecoes.includes(r.secao)),
-    [secaoBase, fSecoes],
-  );
-  const gruposOpts = useMemo(
-    () => [...new Set(grupoBase.map((r) => r.grupo).filter(Boolean) as string[])].sort(),
-    [grupoBase],
-  );
-
-  const subgrupoBase = useMemo(
-    () =>
-      fGrupos.length === 0
-        ? grupoBase
-        : grupoBase.filter((r) => r.grupo && fGrupos.includes(r.grupo)),
-    [grupoBase, fGrupos],
-  );
-  const subgruposOpts = useMemo(
-    () => [...new Set(subgrupoBase.map((r) => r.subgrupo).filter(Boolean) as string[])].sort(),
-    [subgrupoBase],
+  // Cascata em memória: cada nível filtra o subconjunto da hierarquia que já
+  // casa com os níveis selecionados acima dele. Lógica pura testada em
+  // src/lib/filter-cascade.test.ts — ver comentário lá sobre por que essa
+  // estratégia (em memória) não é unificada com a do FilterBar (server-side).
+  const { stores, deptosOpts, secoesOpts, gruposOpts, subgruposOpts } = useMemo(
+    () => computeAreaCascadeOptions(hierarchy, { fStores, fDeptos, fSecoes, fGrupos }),
+    [hierarchy, fStores, fDeptos, fSecoes, fGrupos],
   );
 
   return (
