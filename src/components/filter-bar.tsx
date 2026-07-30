@@ -8,6 +8,7 @@ import { MultiSelect } from "@/components/multi-select";
 import { FilterField } from "@/components/filter-field";
 import { defaultDateWindow } from "@/lib/date-window";
 import { QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
+import { cascadePatch } from "@/lib/filter-cascade";
 
 export interface Filters {
   dateFrom: string;
@@ -91,11 +92,10 @@ export function FilterBar({ value, onChange }: Props) {
   const strList = (arr: unknown): string[] => (arr ?? []) as string[];
 
   // Cascading reset: when a parent changes, drop dependent selections.
-  const setStores = (v: string[]) =>
-    setF({ stores: v, deptos: [], secoes: [], grupos: [], subgrupos: [] });
-  const setDeptos = (v: string[]) => setF({ deptos: v, secoes: [], grupos: [], subgrupos: [] });
-  const setSecoes = (v: string[]) => setF({ secoes: v, grupos: [], subgrupos: [] });
-  const setGrupos = (v: string[]) => setF({ grupos: v, subgrupos: [] });
+  const setStores = (v: string[]) => setF(cascadePatch("stores", v));
+  const setDeptos = (v: string[]) => setF(cascadePatch("deptos", v));
+  const setSecoes = (v: string[]) => setF(cascadePatch("secoes", v));
+  const setGrupos = (v: string[]) => setF(cascadePatch("grupos", v));
 
   return (
     <div className="kpi-card mb-6">
