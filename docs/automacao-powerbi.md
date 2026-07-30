@@ -102,7 +102,7 @@ real antes de ligar o cron.
   **não roda em cron** — e, por isso, saiu do `KNOWN_JOBS` (um job sem cron
   apareceria como atrasado para sempre). Se a automação for criada, ela deve ter
   heartbeat próprio (ex. `powerbi-download`) **e** ser adicionada ao `KNOWN_JOBS`
-  em `src/lib/admin.functions.ts`, senão não aparece no painel `/admin` →
+  em `src/lib/admin-system.functions.ts`, senão não aparece no painel `/admin` →
   Auditoria quando falhar.
 - **Fuso/horário:** o export precisa refletir o dia fechado. Confirmar a hora em
   que o dado do dia anterior fica completo no Power BI antes de escolher o
