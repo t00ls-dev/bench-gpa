@@ -25,7 +25,9 @@ export const getRouter = () => {
           toast.error("Sessão expirada. Faça login novamente.");
           const { logout } = await import("./lib/auth-api");
           await logout().catch(() => {});
-          window.location.href = "/auth";
+          const path = window.location.pathname + window.location.search;
+          const next = path && path !== "/" ? `?next=${encodeURIComponent(path)}` : "";
+          window.location.href = `/auth${next}`;
         }
       },
     }),
