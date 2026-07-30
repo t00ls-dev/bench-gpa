@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { fmtDT } from "@/lib/utils";
+import { QUERY_STALE_ADMIN, QUERY_STALE_LIVE } from "@/lib/query-config";
 
 const PAGE_SIZE = 50;
 
@@ -54,7 +55,7 @@ export function HeartbeatSection({
   const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["admin-heartbeats"],
     queryFn: () => heartbeatsFn(),
-    staleTime: 30_000,
+    staleTime: QUERY_STALE_ADMIN,
     retry: false,
   });
 
@@ -173,7 +174,7 @@ export function AuditLogSection({
   const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["admin-audit", offset],
     queryFn: () => auditFn({ limit: PAGE_SIZE, offset }),
-    staleTime: 15_000,
+    staleTime: QUERY_STALE_LIVE,
     placeholderData: keepPreviousData,
     retry: false,
   });
