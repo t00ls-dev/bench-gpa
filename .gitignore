@@ -51,3 +51,6 @@ data/
 
 # Coverage reports
 coverage/
+
+# Saída local de scripts/bench-procs.sh (medição ad-hoc, não é fonte)
+.bench-local/
