@@ -178,9 +178,10 @@ describe("getFilterOptions", () => {
 
   it("passa dateFrom/dateTo reais quando informados (não cai no fallback null)", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(PROC_RESULT as never);
-    await (
-      getFilterOptions as (d: { dateFrom: string; dateTo: string }) => Promise<unknown>
-    )({ dateFrom: "2026-07-01", dateTo: "2026-07-20" });
+    await (getFilterOptions as (d: { dateFrom: string; dateTo: string }) => Promise<unknown>)({
+      dateFrom: "2026-07-01",
+      dateTo: "2026-07-20",
+    });
     expect(db.query).toHaveBeenCalledWith("CALL filter_options(?, ?, ?, ?, ?, ?)", [
       "2026-07-01",
       "2026-07-20",
