@@ -104,15 +104,21 @@ toda proc opera sobre um piso de disco.
 1,9 GB, já usa 379 MB de swap, e o page cache do SO está absorvendo parte do I/O —
 não é memória livre esperando. O usuário optou por não seguir com isto por ora.
 
-### 2. Os quatro índices de categoria
+### 2. Os quatro índices de categoria — ✅ feito em 30/07/2026
 
-`depto`, `secao`, `grupo`, `subgrupo` em `sales_prod_daily_agg`. A medição mostra
-que **não filtram** (filtrar por departamento custa *mais* que não filtrar). Os
-índices somam mais que os dados.
+`depto`, `secao`, `grupo`, `subgrupo` em `sales_prod_daily_agg` somavam 532,81 MB
+(74,7% do índice da tabela, quase o tamanho dos dados reais) sem acelerar
+nenhuma proc — filtrar por qualquer uma dessas colunas já custava mais que não
+filtrar. Removidos em produção via `DROP INDEX` direto (92ms) e formalizados em
+`scripts/migrations/0004_drop_indices_categoria_sales_prod_daily_agg.sql`
+(idempotente). Antes/depois com `bench-procs.sh` (9 cenários): hash idêntico em
+todos, sem regressão de leitura fora do ruído normal (±2-8%). O ganho é espaço
+de buffer pool/disco, não velocidade de leitura — que já era zero. Detalhe
+completo em `docs/medicao-performance.md`.
 
-⚠️ Derrubá-los **não** acelera varredura de chave primária. O ganho seria indireto
-— menos disputa pelo buffer pool, import mais rápido, backup menor — e continua
-**não medido**. Medir antes, com `scripts/bench-procs.sh`, e comparar os hashes.
+Achado lateral: o MariaDB de dev local tinha índices de cobertura (`ix_cov_*`)
+que não existem no `migrate-schema.sql`, sobra de um experimento anterior nunca
+revertida — considerar recriar o banco local do zero numa próxima sessão.
 
 ### 3. `product_analysis` faz 7 varreduras
 
