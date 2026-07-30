@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductHierarchyTrail } from "@/components/product-hierarchy-trail";
-import { Search, Package, X, Loader2 } from "lucide-react";
+import { Search, Package, X, Loader2, Clock } from "lucide-react";
 
 interface Suggestion {
   prod_code: string;
@@ -14,6 +14,7 @@ export function ProductSearch({
   selected,
   suggestions,
   searchFetching,
+  recent,
   product,
   onQueryChange,
   onSelect,
@@ -24,6 +25,7 @@ export function ProductSearch({
   selected: { prod_code: string; prod_name: string } | null;
   suggestions: Suggestion[] | undefined;
   searchFetching: boolean;
+  recent?: Suggestion[];
   product?:
     | { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null }
     | null
@@ -70,6 +72,27 @@ export function ProductSearch({
             <span className="truncate max-w-[40vw] sm:max-w-[260px]">{selected.prod_name}</span>
           </span>
           {product && <ProductHierarchyTrail product={product} />}
+        </div>
+      )}
+      {!selected && query.length === 0 && recent && recent.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="size-3" /> Recentes:
+          </span>
+          {recent.map((r) => (
+            <button
+              key={r.prod_code}
+              type="button"
+              onClick={() => onSelect(r)}
+              className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              title={r.prod_name}
+            >
+              <span className="font-mono">{r.prod_code}</span>{" "}
+              <span className="truncate max-w-[140px] inline-block align-bottom">
+                {r.prod_name}
+              </span>
+            </button>
+          ))}
         </div>
       )}
       {!selected &&
