@@ -1,7 +1,8 @@
 # Onde parar e por onde retomar
 
 Estado em **2026-07-30**. Este documento existe para a próxima sessão não ter de
-reconstruir contexto a partir do histórico do git.
+reconstruir contexto a partir do histórico do git. Para o "como chegamos até
+aqui" (Lovable → Supabase → self-hosted), ver `docs/historia-do-projeto.md`.
 
 ## Como trabalhar aqui
 
@@ -147,6 +148,38 @@ cron faz `git pull`.
 `upload.functions.ts` (0%). É o código que processa dinheiro/vendas e o
 pipeline de import — o que mais precisaria de rede de segurança pra refactors.
 Ver `docs/coverage-summary.md` para o detalhe por arquivo.
+
+### 8. Itens de produto/UX herdados de `melhorias-pendentes.md` (era Lovable/Supabase)
+
+Esse arquivo listava ~28 pendências escritas ainda na Era 1 (ver
+`docs/historia-do-projeto.md`), misturando itens já resolvidos com itens
+genuinamente abertos. Conferido item a item contra o código em 30/07/2026: a
+maioria (dark mode, `assertAdmin` duplicado, cancelar upload, Web Worker de
+parse — via `xlsx-worker.ts`/`upload-dropzone.tsx`, confirmação em ações
+destrutivas do admin, loading inline no Switch, busca de usuário por
+nome/email, `MultiSelect` com teclado/ARIA, `AdminGate` com erro de rede,
+`fmtBRL` movido pra `utils.ts`, cache de admin invalidando em
+`setUserRole`/`setUserActive` via `invalidateAdminCache`, e revogação de
+sessão via `token_version` no reset de senha) **já estava resolvida** — o
+arquivo original nunca foi atualizado. O que sobrou genuinamente aberto:
+
+- **Dashboard**: `data.previous.byDate` segue sem gráfico comparativo;
+  exportação só em PDF (falta XLSX); rankings sem click-through pra
+  `/area`/`/produto`; sem filtros ativos exibidos como chips.
+- **Produto**: seletor de loja é single-select (`MultiSelect single` em
+  `produto.page.tsx`) — sem comparação entre lojas; exportação só em PDF;
+  sem histórico de buscas (localStorage); sem linha de tendência/média móvel.
+- **Área**: PDF exporta só a tabela, sem os cards de KPI; nome do arquivo não
+  é descritivo (`openPdfBlob` abre em nova aba sem `download=` customizado).
+- **Upload**: sem retry automático de chunk que falhou; sem remover/reordenar
+  arquivo na fila antes de importar.
+- **Admin**: sem paginação de usuários (relevante quando a lista crescer).
+- **Auth**: sem fluxo de "esqueci minha senha"; sessão expirada já redireciona
+  pra `/auth` com toast (`router.tsx`), mas sem `?next=<rota atual>` — o
+  usuário não volta pra onde estava depois de logar de novo.
+
+Nenhum desses tem prioridade estabelecida — ficam registrados pra quando
+o produto (não a engenharia) decidir o que vale a pena.
 
 ## Decidido NÃO fazer
 

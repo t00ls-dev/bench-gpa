@@ -83,9 +83,9 @@ Nenhum item aberto no momento.
 
 ### 🟡 Médio
 
-- **Cache de admin não invalida na revogação**: `admin-utils.ts:4-17` cacheia `assertAdmin` por 5 min. Um usuário rebaixado via `setUserRole` continua com privilégio de admin em cache por até 5 min.
+- ~~**Cache de admin não invalida na revogação**~~ ✅ Resolvido (verificado 30/07/2026) — `invalidateAdminCache(userId)` existe em `admin-utils.ts` e é chamado por `setUserRole`/`setUserActive` em `admin-users.functions.ts`. Um usuário rebaixado perde o privilégio cacheado na hora, não em até 5 min.
 - **Cache de leitura não invalida pós-escrita**: `getFilterOptions`/`getAreaFilterHierarchy` (TTL 5 min) e `getImportedDates` (TTL 1 min) continuam servindo dados stale por até 5 min após um upload novo ser finalizado — mesmo o banco já tendo `refresh_filter_hierarchy()` atualizado.
-- **Sem revogação de sessão**: JWT sem refresh nem blacklist — logout só limpa o cookie local; um token copiado continua válido até expirar (agora configurável via `JWT_EXPIRY`, mas ainda sem mecanismo de revogação).
+- ~~**Sem revogação de sessão**~~ 🟡 Parcial (verificado 30/07/2026) — `users.token_version` é selado no JWT e conferido em `requireAuth`/`getMe` a cada request (`auth-middleware.ts`); `resetPassword` incrementa, derrubando sessões antigas na hora. Não é blacklist geral nem refresh token — só revoga no reset de senha, não em um "logout everywhere" sob demanda.
 - **Correções de permissão do VPS existem só como commits vazios** (`b1e58f3`, `7c03965` — mensagens documentando ações manuais tipo `usermod`/`chmod` feitas direto no servidor). Não estão em `docs/migracao-vps-autossuficiente.md` nem em script idempotente — se o VPS for reconstruído, essa configuração se perde silenciosamente.
 
 ### ✅ Bem implementado (confirmado por leitura direta)
@@ -135,10 +135,10 @@ Nenhum item aberto no momento.
 ## 🏗️ Dívida Técnica (priorizada)
 
 1. 🟡 Zero cobertura de teste nas 4 server functions de negócio mais importantes.
-2. 🟡 Cache sem invalidação ativa pós-escrita (admin role, upload, purge) — só expira por TTL.
+2. 🟡 Cache de leitura (`getFilterOptions`, `getAreaFilterHierarchy`, `getImportedDates`) sem invalidação ativa pós-upload — só expira por TTL. (Cache de admin role já invalida ativamente, ver "🟡 Médio" acima.)
 3. 🟢 Duplicação de parsing/export entre as 3 páginas de analytics.
-4. 🟢 `docs/improvements/*.md` (exceto este arquivo) desatualizados desde a migração Supabase→MariaDB.
-5. 🟢 Sem revogação de sessão (JWT sem blacklist/refresh).
+4. ~~🟢 `docs/improvements/*.md` (exceto este arquivo) desatualizados~~ ✅ Resolvido em 30/07/2026 — ver `docs/historia-do-projeto.md` e `docs/continuar.md` §8.
+5. 🟢 Revogação de sessão parcial (token_version só no reset de senha, sem "logout everywhere" sob demanda nem refresh token).
 6. 🟢 Correções de permissão do VPS não documentadas de forma idempotente.
 7. 🟢 Casts `as {...}` sem passar por `asRecord`/conversão em `product.functions.ts:27,38` e `auth-api.ts:70,104` — campos são só `VARCHAR`/booleanos checados por truthy (`!user.is_active`), então não quebram em runtime, mas é o mesmo padrão frágil que causou o bug do `imported_at`. Vale padronizar por consistência, não por bug ativo.
 
@@ -173,10 +173,10 @@ Nenhum item aberto no momento.
 4. Decidir sobre as colunas QTD/VALIDADE do PDF de Área (manter como formulário intencional ou remover)
 5. Renderizar `data.previous.byDate` no Dashboard (gráfico comparativo)
 6. Extrair hook/util compartilhado de parsing de filtros + export PDF entre dashboard/produto/área
-7. Reescrever `estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `novas-analises.md`, `melhorias-pendentes.md` (referenciam código Supabase-era que não existe mais; marcados com aviso em 26/07/2026)
+7. ~~Reescrever `estado-atual.md`, `discrepancias.md`, `arquitetura.md`, `novas-analises.md`, `melhorias-pendentes.md`~~ ✅ Resolvido em 30/07/2026 — os três primeiros removidos (conteúdo 100% superado, sem valor além do que `docs/historia-do-projeto.md` já resume), `melhorias-pendentes.md` teve os itens ainda abertos migrados para `docs/continuar.md` §8 e foi removido, `novas-analises.md` foi desmarcado como histórico (é backlog de feature, não diagnóstico de código — segue válido)
 8. Paralelizar `diagnoseData` (6 queries sequenciais → `Promise.all`)
 9. Adicionar `.max()` no schema Zod de `insertSalesChunk`
-10. Mecanismo de revogação de sessão (blacklist ou refresh token)
+10. Mecanismo de revogação de sessão sob demanda ("logout everywhere") ou refresh token — hoje só revoga no reset de senha (ver "🏗️ Dívida Técnica" #5)
 
 ---
 
