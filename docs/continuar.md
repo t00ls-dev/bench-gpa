@@ -163,9 +163,13 @@ nome/email, `MultiSelect` com teclado/ARIA, `AdminGate` com erro de rede,
 sessão via `token_version` no reset de senha) **já estava resolvida** — o
 arquivo original nunca foi atualizado. O que sobrou genuinamente aberto:
 
-- **Dashboard**: `data.previous.byDate` segue sem gráfico comparativo;
-  exportação só em PDF (falta XLSX); rankings sem click-through pra
-  `/area`/`/produto`; sem filtros ativos exibidos como chips.
+- **Dashboard**: exportação só em PDF (falta XLSX); rankings sem click-through
+  pra `/area`/`/produto`; sem filtros ativos exibidos como chips.
+  (~~`data.previous.byDate` sem gráfico~~ — **verificação anterior estava
+  errada**: `dashboard-charts.tsx` já renderiza a linha "Anterior" tracejada,
+  preenchimento entre curvas e tooltip comparativo. O grep de 30/07/2026 só
+  checou `index.page.tsx`, não o componente filho onde `data` é consumido.
+  Corrigido em 30/07/2026.)
 - **Produto**: seletor de loja é single-select (`MultiSelect single` em
   `produto.page.tsx`) — sem comparação entre lojas; exportação só em PDF;
   sem histórico de buscas (localStorage); sem linha de tendência/média móvel.
