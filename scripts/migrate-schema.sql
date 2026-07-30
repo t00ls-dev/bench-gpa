@@ -652,13 +652,14 @@ BEGIN
   -- (Como antes, não considera p_search — a busca reduz a lista mas não este
   -- total. Limitação pré-existente, mantida para não mudar duas coisas de uma
   -- vez.)
-  SELECT COUNT(DISTINCT u.prod_code) AS total_products
-  FROM product_universe u
-  WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+  --
+  -- v_universe (result set 1) já é exatamente esta contagem — mesma tabela,
+  -- mesmo WHERE, calculada linhas acima. Reaproveita em vez de escanear
+  -- product_universe de novo. NÃO confundir com a regressão documentada em
+  -- docs/medicao-performance.md: aquela mexia em sales_prod_daily_agg via
+  -- CREATE TEMPORARY TABLE ... AS SELECT; isto só reusa uma variável já
+  -- calculada, sem alterar o plano de nenhuma varredura na tabela grande.
+  SELECT v_universe AS total_products;
 
   -- Result set 3: byDate evolution
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
