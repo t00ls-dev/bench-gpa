@@ -16,6 +16,8 @@ import {
   Loader2,
 } from "lucide-react";
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, keywords: "início home" },
   { to: "/produto", label: "Produto", icon: Package, keywords: "produto busca pesquisa" },
@@ -69,7 +71,7 @@ export function CommandPalette() {
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(debounceRef.current ?? undefined);
   }, [search, doSearch]);
 

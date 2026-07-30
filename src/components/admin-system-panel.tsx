@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HardDrive, Activity, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { fmtBytes } from "@/lib/utils";
+import { QUERY_STALE_ADMIN } from "@/lib/query-config";
 
 function RefreshButton({ fetching, onClick }: { fetching: boolean; onClick: () => void }) {
   return (
@@ -47,7 +48,7 @@ export function DataCountSection({
   } = useQuery({
     queryKey: ["admin-diagnose"],
     queryFn: () => diagnoseFn(),
-    staleTime: 30_000,
+    staleTime: QUERY_STALE_ADMIN,
     retry: false,
   });
 
@@ -107,7 +108,7 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
   const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["admin-db-health"],
     queryFn: () => healthFn(),
-    staleTime: 30_000,
+    staleTime: QUERY_STALE_ADMIN,
     retry: false,
   });
 

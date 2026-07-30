@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fmtBRL, fmtInt } from "@/lib/utils";
+import { AREA_PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import {
   ChevronLeft,
   ChevronRight,
@@ -161,10 +162,11 @@ export function AreaTable({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="25">25 / página</SelectItem>
-              <SelectItem value="50">50 / página</SelectItem>
-              <SelectItem value="100">100 / página</SelectItem>
-              <SelectItem value="250">250 / página</SelectItem>
+              {AREA_PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n} / página
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
