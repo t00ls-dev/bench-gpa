@@ -3,7 +3,7 @@ import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { assertAdmin } from "./admin-utils";
 import { recordAudit } from "./audit";
-import { RETENTION_DAYS } from "./retention";
+import { RETENTION_DAYS, PURGE_CRON_LABEL, PURGE_MAX_HOURS_OVERDUE } from "./retention";
 import { z } from "zod";
 import db from "./db";
 import { asArray, asRecord, num, dateTimeStr } from "./api-types";
@@ -164,7 +164,9 @@ export const getAuditLog = createServerFn({ method: "POST" })
  * O rótulo da purga interpola RETENTION_DAYS em vez de trazer o número escrito.
  * Antes era a string fixa "Purga (180 dias)" — no MESMO arquivo que já importa a
  * constante e a usa corretamente em purgeOldAggs. Bastava mudar a retenção para
- * o painel admin passar a exibir um prazo que não é o praticado.
+ * o painel admin passar a exibir um prazo que não é o praticado. `schedule` e
+ * `maxHours` seguem o mesmo raciocínio, agora como PURGE_CRON_LABEL e
+ * PURGE_MAX_HOURS_OVERDUE em retention.ts — ver lá o porquê de cada valor.
  *
  * `import-watch` saiu desta lista em 2026-07-26, quando o cron dele foi
  * desligado (a importação passou a ser pela tela /upload ou sob demanda no
@@ -178,8 +180,8 @@ const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: stri
   {
     job: "purge",
     label: `Purga (${RETENTION_DAYS} dias)`,
-    maxHours: 26,
-    schedule: "diária, 03h",
+    maxHours: PURGE_MAX_HOURS_OVERDUE,
+    schedule: PURGE_CRON_LABEL,
   },
 ];
 

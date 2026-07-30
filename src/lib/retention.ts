@@ -13,6 +13,27 @@
 export const RETENTION_DAYS = 180;
 
 /**
+ * Agendamento do cron de purge, para exibição no painel de heartbeats do
+ * admin (KNOWN_JOBS em admin-system.functions.ts).
+ *
+ * A fonte real do agendamento em produção é o cron.conf do HestiaCP
+ * (v-add-cron-job "0" "3" "*" "*" "*"), não este arquivo — ver
+ * scripts/setup-crons.sh, que documenta isso e não deve rodar em produção.
+ * Bash/cron não importa TS, então não há como estas duas pontas se
+ * referenciarem de verdade. Ao mudar o horário do cron em produção, mude
+ * também PURGE_CRON_LABEL aqui — senão o painel mostra um horário que não é
+ * o praticado.
+ */
+export const PURGE_CRON_LABEL = "diária, 03h";
+
+/**
+ * Prazo (horas) após o agendamento antes do heartbeat do purge ser
+ * considerado atrasado: 24h do intervalo diário + 2h de folga para variação
+ * no horário real de execução.
+ */
+export const PURGE_MAX_HOURS_OVERDUE = 26;
+
+/**
  * Idade de uma data `YYYY-MM-DD` em dias de calendário UTC.
  *
  * Datas futuras devolvem valor negativo — o chamador trata como "dentro da
