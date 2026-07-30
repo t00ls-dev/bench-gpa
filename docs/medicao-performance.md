@@ -390,3 +390,34 @@ anterior nunca revertida no ambiente local (bate com a armadilha #1 já
 registrada abaixo: "um índice de cobertura em `depto` não mudou nada"). Não
 afeta produção, mas o dev local não é mais um espelho fiel do schema
 versionado; considerar recriar o banco local do zero numa próxima sessão.
+
+## 2026-07-30 — `product_analysis` (item 3), dois cenários novos no harness
+
+Nunca tinha entrado no baseline. A suposição registrada era que filtrar por um
+`prod_code` só reduz o custo a quase nada, por usar
+`idx_prod_daily_prod_code` — mas isso nunca foi medido, e a proc faz 7
+referências a `sales_prod_daily_agg`, das quais duas (`lastFourSameWeekday`,
+`lastFourAll`) não têm limite de data além de `v_ref_date`: varrem o
+histórico inteiro daquele produto.
+
+Dois cenários novos em `bench-procs.sh` — `produto_alto_volume` e
+`produto_baixo_volume`, o produto com mais e o com menos linhas em toda a
+tabela (não só na janela de 28 dias, porque é o volume total do produto que
+limita o custo dessas duas varreduras sem fim de data):
+
+| Cenário | Mediana | Faixa (20 amostras) | Linhas de resultado |
+| --- | ---: | --- | ---: |
+| `produto_alto_volume` | 9 ms | 8-13 ms | 56 |
+| `produto_baixo_volume` | 2 ms | 2-3 ms | 4 |
+
+A dispersão (`max/min`) desses dois cenários fica acima de 1,3x mesmo com 20
+amostras (1,62x e 1,50x) — o critério de validade do harness foi calibrado
+para procs de segundos, onde 30% de variação é sinal de instabilidade real.
+Em milissegundos, 4-5ms de diferença é ruído normal de agendamento do SO, não
+instabilidade do banco; a mediana ficou estável nas duas rodadas (5 e 20
+amostras), então o número é confiável apesar do flag.
+
+Suposição confirmada: `product_analysis` custa 3-4 ordens de magnitude menos
+que `area_analysis`/`dashboard_metrics`/`dashboard_rankings` (ms contra
+segundos). Filtrar por `prod_code` de fato elimina o problema de varredura
+completa que afeta as outras procs. Item fechado sem mudança de proc.
