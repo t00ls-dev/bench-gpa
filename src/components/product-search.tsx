@@ -75,24 +75,24 @@ export function ProductSearch({
         </div>
       )}
       {!selected && query.length === 0 && recent && recent.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <div className="mt-2">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="size-3" /> Recentes:
           </span>
-          {recent.map((r) => (
-            <button
-              key={r.prod_code}
-              type="button"
-              onClick={() => onSelect(r)}
-              className="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
-              title={r.prod_name}
-            >
-              <span className="font-mono">{r.prod_code}</span>{" "}
-              <span className="truncate max-w-[140px] inline-block align-bottom">
-                {r.prod_name}
-              </span>
-            </button>
-          ))}
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {recent.map((r) => (
+              <button
+                key={r.prod_code}
+                type="button"
+                onClick={() => onSelect(r)}
+                className="flex w-40 items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                title={`${r.prod_code} - ${r.prod_name}`}
+              >
+                <span className="font-mono shrink-0">{r.prod_code}</span>
+                <span className="truncate">{r.prod_name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {!selected &&
