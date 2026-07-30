@@ -72,6 +72,30 @@ export function ProductCharts({
 
   const maxAvg = Math.max(...dowData.map((d) => d.avg), 0);
 
+  const evolutionVals = evolutionWithMa.map((d) => d.val);
+  const evolutionMaxVal = evolutionVals.length ? Math.max(...evolutionVals) : 0;
+  const evolutionMinVal = evolutionVals.length ? Math.min(...evolutionVals) : 0;
+  const evolutionMaxIndex = evolutionVals.indexOf(evolutionMaxVal);
+  const evolutionMinIndex = evolutionVals.indexOf(evolutionMinVal);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function EvolutionDot(props: any) {
+    const { cx, cy, index } = props;
+    if (cx == null || cy == null) return null;
+    if (index !== evolutionMaxIndex && index !== evolutionMinIndex) return null;
+    const isMax = index === evolutionMaxIndex;
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={isMax ? "var(--success)" : "var(--destructive)"}
+        stroke="var(--card)"
+        strokeWidth={2}
+      />
+    );
+  }
+
   return (
     <section className={`mt-6 grid gap-4 ${hideStoreComp ? "" : "lg:grid-cols-2"}`}>
       {hideStoreComp ? null : (
@@ -132,7 +156,7 @@ export function ProductCharts({
                 dataKey="val"
                 stroke="var(--chart-2)"
                 strokeWidth={2.5}
-                dot={false}
+                dot={<EvolutionDot />}
               />
               <Line
                 type="monotone"
