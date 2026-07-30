@@ -143,7 +143,18 @@ function AuthedLayout() {
   useGotoHotkey("p", () =>
     router.navigate({ to: "/produto", search: { plu: undefined, store: undefined } }),
   );
-  useGotoHotkey("a", () => router.navigate({ to: "/area" }));
+  useGotoHotkey("a", () =>
+    router.navigate({
+      to: "/area",
+      search: {
+        store: undefined,
+        depto: undefined,
+        secao: undefined,
+        grupo: undefined,
+        subgrupo: undefined,
+      },
+    }),
+  );
   useGotoHotkey("u", () => router.navigate({ to: "/upload" }));
   useGotoHotkey("o", () => router.navigate({ to: "/admin/docs" }));
   useGotoHotkey("n", () => router.navigate({ to: "/admin" }));
