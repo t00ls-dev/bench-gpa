@@ -94,6 +94,13 @@ CREATE TABLE IF NOT EXISTS sales_daily_agg (
   INDEX idx_daily_sale_date (sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Sem índice em depto/secao/grupo/subgrupo de propósito: nenhuma proc de
+-- análise se beneficia deles (filtrar por qualquer um custava mais que não
+-- filtrar — o plano de acesso real é sempre a varredura por sale_date). Os 4
+-- juntos chegaram a ocupar 532,81 MB, 74,7% do índice da tabela. Removidos em
+-- produção e medidos em 2026-07-30 (ver scripts/migrations/0004_drop_indices_
+-- categoria_sales_prod_daily_agg.sql e docs/medicao-performance.md) — hash
+-- idêntico nas procs, sem regressão de leitura. Não recrie sem medir de novo.
 CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
@@ -106,11 +113,7 @@ CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   val_vda     DECIMAL(15,2) NOT NULL DEFAULT 0,
   PRIMARY KEY (sale_date, store_code, prod_code),
   INDEX idx_prod_daily_sale_date (sale_date),
-  INDEX idx_prod_daily_prod_code (prod_code),
-  INDEX idx_prod_daily_depto (depto),
-  INDEX idx_prod_daily_secao (secao),
-  INDEX idx_prod_daily_grupo (grupo),
-  INDEX idx_prod_daily_subgrupo (subgrupo)
+  INDEX idx_prod_daily_prod_code (prod_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS import_log (
