@@ -85,11 +85,11 @@ export function ProductSearch({
                 key={r.prod_code}
                 type="button"
                 onClick={() => onSelect(r)}
-                className="flex w-40 items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                className="flex min-w-0 max-w-full flex-1 basis-40 items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
                 title={`${r.prod_code} - ${r.prod_name}`}
               >
                 <span className="font-mono shrink-0">{r.prod_code}</span>
-                <span className="truncate">{r.prod_name}</span>
+                <span className="min-w-0 truncate">{r.prod_name}</span>
               </button>
             ))}
           </div>
