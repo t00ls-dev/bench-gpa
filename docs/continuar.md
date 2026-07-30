@@ -268,3 +268,45 @@ Estão em `docs/medicao-performance.md`, mas as que mais custaram:
    I/O de arquivo e renderização de texto, não custo de query. Redirecionar pro
    `/dev/null` ou usar `SET profiling=1` + `SHOW PROFILES` pra isolar o tempo
    real gasto no servidor.
+5. **HestiaCP não regenera o vhost de `gpa.t00ls.dev` corretamente — bug
+   reproduzível, não pontual.** Descoberto em 30/07/2026 quando um auto-update
+   do Hestia (1.9.7 → 1.9.8) rodou `v-rebuild-web-domains` e derrubou o site:
+   `/` passou a devolver `200` com a página padrão "Success!" do Hestia em vez
+   do `307` pro `/auth` — o app (Node/PM2 na porta 3000) nunca foi tocado, só o
+   proxy reverso na frente dele.
+
+   O domínio usa um template customizado (`node-ssr`) que só tinha variante
+   `apache2/php-fpm/node-ssr.tpl`, não `apache2/node-ssr.tpl` (a domínio usa
+   `BACKEND: default`, sem PHP). Sem essa variante, o rebuild escreve o
+   conteúdo **do template nginx** dentro do arquivo de config **do Apache**
+   (`/etc/apache2/conf.d/domains/gpa.t00ls.dev.conf`), quebrando o
+   `apache2ctl configtest` pra sempre (`Include` de um arquivo com nome errado,
+   `nginx.*` em vez de `apache2.*`) — e o nginx real (`/etc/nginx/conf.d/
+   domains/gpa.t00ls.dev*.conf`) fica no template `default` genérico
+   (proxy pra Apache na 8080, que serve a página placeholder), não no
+   `node-ssr` (proxy direto pra Node na 3000).
+
+   Criei `apache2/node-ssr.tpl`/`.stpl` (cópia do `default.tpl`/`.stpl` —
+   Apache não precisa fazer nada de verdade aqui, é só um stub válido pra não
+   quebrar o `apache2ctl configtest` global, que afeta `t00ls.dev` e
+   `cepeg.t00ls.dev` também) — **não resolveu**. Rodei
+   `v-change-web-domain-tpl admin gpa.t00ls.dev node-ssr yes` duas vezes
+   depois disso: as duas vezes reproduziu o MESMO bug (conteúdo nginx dentro
+   do arquivo apache, `apache2 restart failed`). Não é falta do arquivo de
+   template — é bug real na resolução/geração do Hestia 1.9.8 pra essa
+   combinação de template custom + backend default.
+
+   **Fix aplicado (sobrevive até o próximo `v-rebuild-web-domains`, não é
+   permanente)**: sobrescrevi os 4 arquivos gerados diretamente — 2 nginx
+   (`gpa.t00ls.dev.conf`/`.ssl.conf`, proxy direto pra `127.0.0.1:3000`, o
+   conteúdo certo do template `node-ssr`) e 2 apache (mesmos nomes, stub
+   válido baseado no `default.tpl`/`.stpl` renderizado à mão, só pra não
+   quebrar o `configtest`). **Qualquer coisa que dispare
+   `v-rebuild-web-domains` de novo — outro update do Hestia, ou qualquer
+   comando Hestia que mexa neste domínio (`v-change-web-domain-tpl`,
+   `v-add-web-domain-ssl-*`, etc.) — reverte isso e quebra o site de novo.**
+   Backup dos 4 arquivos corretos em `/tmp/gpa-conf-backup-working/` no
+   próprio `sv1` (`nginx.conf`, `nginx.ssl.conf`, `apache2.conf`,
+   `apache2.ssl.conf`) — restaurar com um `cp` direto se acontecer de novo.
+   Verificar sempre com `curl -sD - https://gpa.t00ls.dev/ | grep
+   content-security-policy` — se sumir, é este bug batendo de novo.
