@@ -1010,6 +1010,12 @@ END//
 CREATE PROCEDURE purge_old_aggs(p_days INT)
 BEGIN
   DECLARE v_deleted INT DEFAULT 0;
+  -- O 180 é só fallback: toda chamada real (purgeOldAggs em
+  -- admin-system.functions.ts, scripts/purge-aggs.ts) passa p_days
+  -- explicitamente a partir de RETENTION_DAYS (src/lib/retention.ts). SQL não
+  -- importa TS, então este literal só é exercitado por uma chamada manual
+  -- direto no banco — mas se RETENTION_DAYS mudar, mude aqui também, para o
+  -- fallback não ficar defasado do valor praticado.
   SET @cutoff = DATE_SUB(CURRENT_DATE, INTERVAL COALESCE(p_days, 180) DAY);
 
   DELETE FROM sales_daily_agg WHERE sale_date < @cutoff;
