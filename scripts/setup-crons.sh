@@ -30,12 +30,21 @@ BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bu
 # em KNOWN_JOBS (src/lib/admin-system.functions.ts), senão o painel admin não
 # monitora.
 #
-# O "0 3" abaixo é a fonte real do horário do purge. TS não lê bash, então o
-# painel admin mostra um texto solto (PURGE_CRON_LABEL em src/lib/retention.ts)
+# O "0 3"/"30 3" abaixo são a fonte real dos horários de purge e
+# refresh-universe. TS não lê bash, então o painel admin mostra um texto solto
+# (PURGE_CRON_LABEL/REFRESH_UNIVERSE_CRON_LABEL em src/lib/retention.ts)
 # descrevendo o mesmo horário. Mudar aqui (ou no v-add-cron-job do Hestia em
 # produção) sem mudar lá deixa o painel exibindo um horário que não é o real.
+#
+# refresh-universe roda 30min DEPOIS do purge de propósito — regenera
+# product_universe/filter_hierarchy já enxergando o agg pós-poda numa única
+# passada. Até 30/07/2026 esse refresh rodava síncrono a cada import e a cada
+# purge com linha removida; passou a ser um cron dedicado (item 5 de
+# docs/continuar.md) porque cada regeneração custa ~30-36s e PLU/categoria
+# novos são raros o bastante para não justificar pagar isso em toda importação.
 CRONS=(
 	"0 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:purge >> logs/purge.log 2>&1"
+	"30 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:refresh-universe >> logs/refresh-universe.log 2>&1"
 )
 
 # Remove linhas antigas do bench-gpa e reinstala

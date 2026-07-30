@@ -34,6 +34,26 @@ export const PURGE_CRON_LABEL = "diária, 03h";
 export const PURGE_MAX_HOURS_OVERDUE = 26;
 
 /**
+ * Agendamento do cron de refresh-universe (product_universe/filter_hierarchy),
+ * para exibição no painel de heartbeats do admin — mesma ressalva de
+ * PURGE_CRON_LABEL: a fonte real é o cron.conf do HestiaCP em produção.
+ *
+ * Roda 30min depois do purge (03h) de propósito: assim já enxerga o agg
+ * pós-poda numa única passada, em vez de precisar rodar duas vezes por dia.
+ * Até 30/07/2026 este refresh rodava síncrono dentro de finalize_import (todo
+ * import) e de purge_old_aggs (toda poda com linha removida) — item 5 de
+ * docs/continuar.md: um PLU/categoria novo agora só aparece na Área após este
+ * cron, não no mesmo dia do import. Aceito porque isso é raro.
+ */
+export const REFRESH_UNIVERSE_CRON_LABEL = "diária, 03h30";
+
+/**
+ * Prazo (horas) após o agendamento antes do heartbeat do refresh-universe ser
+ * considerado atrasado — mesmo raciocínio de PURGE_MAX_HOURS_OVERDUE.
+ */
+export const REFRESH_UNIVERSE_MAX_HOURS_OVERDUE = 26;
+
+/**
  * Idade de uma data `YYYY-MM-DD` em dias de calendário UTC.
  *
  * Datas futuras devolvem valor negativo — o chamador trata como "dentro da
