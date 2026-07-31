@@ -192,17 +192,17 @@ const KNOWN_JOBS: {
 }[] = [
   {
     job: "purge",
-    label: `Limpeza de dados antigos (${RETENTION_DAYS} dias)`,
+    // Curto de propósito — o rótulo completo (no hint) quebrava o badge de
+    // status ao lado no card (ver admin-audit-panel.tsx).
+    label: "Limpeza de dados antigos",
     hint: `Remove agregados de vendas (diários e por produto) e logs de importação com mais de ${RETENTION_DAYS} dias, mantendo o banco otimizado sem afetar dados recentes.`,
     maxHours: PURGE_MAX_HOURS_OVERDUE,
     schedule: PURGE_CRON_LABEL,
   },
   {
     job: "refresh-universe",
-    // Curto de propósito — o nome completo (no hint) quebrava o badge de
-    // status ao lado no card (ver admin-audit-panel.tsx).
-    label: "Universo de produtos e filtros",
-    hint: "Atualiza universo de produtos/hierarquia de filtros",
+    label: "Produtos e filtros",
+    hint: "Atualiza a lista de produtos e a hierarquia de departamento/seção/grupo/subgrupo usada nos filtros do Dashboard e da Área.",
     maxHours: REFRESH_UNIVERSE_MAX_HOURS_OVERDUE,
     schedule: REFRESH_UNIVERSE_CRON_LABEL,
   },
