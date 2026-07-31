@@ -35,7 +35,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { fmtBRShort, fmtInt } from "@/lib/utils";
-import { AREA_PAGE_SIZE_OPTIONS } from "@/lib/schemas";
+import { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { CreateUserDialog } from "@/components/create-user-dialog";
 import { ResetPasswordDialog } from "@/components/reset-password-dialog";
 
@@ -62,7 +62,7 @@ export function AdminUserManagement({
   const [resetTarget, setResetTarget] = useState<{ id: string; email: string } | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<(typeof AREA_PAGE_SIZE_OPTIONS)[number]>(25);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
   const [pending, setPending] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{
     type: "role" | "active";
@@ -121,13 +121,13 @@ export function AdminUserManagement({
         <div className="flex items-center gap-2">
           <Select
             value={String(pageSize)}
-            onValueChange={(v) => setPageSize(Number(v) as (typeof AREA_PAGE_SIZE_OPTIONS)[number])}
+            onValueChange={(v) => setPageSize(Number(v) as (typeof PAGE_SIZE_OPTIONS)[number])}
           >
             <SelectTrigger className="h-9 w-[110px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {AREA_PAGE_SIZE_OPTIONS.map((n) => (
+              {PAGE_SIZE_OPTIONS.map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n} / página
                 </SelectItem>
