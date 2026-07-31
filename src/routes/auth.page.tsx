@@ -178,13 +178,7 @@ function AuthPage() {
             </div>
 
             <div className="flex items-center justify-between gap-2">
-              <div>
-                <Label htmlFor="remember-me">Manter conectado</Label>
-                <p className="text-xs text-muted-foreground">
-                  Fica conectado por 7 dias neste dispositivo, mesmo sem uso. Deixe desmarcado em
-                  computadores compartilhados.
-                </p>
-              </div>
+              <Label htmlFor="remember-me">Manter conectado por 7 dias</Label>
               <Switch id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} />
             </div>
 
