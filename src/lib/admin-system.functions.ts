@@ -192,7 +192,8 @@ const KNOWN_JOBS: {
 }[] = [
   {
     job: "purge",
-    label: `Purga (${RETENTION_DAYS} dias)`,
+    label: `Limpeza de dados antigos (${RETENTION_DAYS} dias)`,
+    hint: `Remove agregados de vendas (diários e por produto) e logs de importação com mais de ${RETENTION_DAYS} dias, mantendo o banco otimizado sem afetar dados recentes.`,
     maxHours: PURGE_MAX_HOURS_OVERDUE,
     schedule: PURGE_CRON_LABEL,
   },
