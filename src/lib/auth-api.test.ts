@@ -251,4 +251,29 @@ describe("logout", () => {
     expect(result).toEqual({ ok: true });
     expect(deleteCookie).toHaveBeenCalledWith("session", { path: "/" });
   });
+
+  it("revoga o token no servidor incrementando token_version", async () => {
+    await logout();
+    expect(db.query).toHaveBeenCalledWith(
+      "UPDATE users SET token_version = token_version + 1 WHERE id = ?",
+      ["u1"],
+    );
+  });
+
+  it("não tenta revogar nem auditar quando não há cookie de sessão", async () => {
+    vi.mocked(getCookie).mockReturnValue(undefined);
+    const result = await logout();
+    expect(result).toEqual({ ok: true });
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
+  it("não quebra se o token do cookie for inválido/expirado", async () => {
+    vi.mocked(jwt.verify).mockImplementation(() => {
+      throw new Error("jwt expired");
+    });
+    const result = await logout();
+    expect(result).toEqual({ ok: true });
+    expect(db.query).not.toHaveBeenCalled();
+    expect(deleteCookie).toHaveBeenCalledWith("session", { path: "/" });
+  });
 });
