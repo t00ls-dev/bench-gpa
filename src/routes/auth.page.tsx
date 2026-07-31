@@ -177,9 +177,9 @@ function AuthPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="remember-me">Manter conectado por 7 dias</Label>
+            <div className="flex items-center gap-2">
               <Switch id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} />
+              <Label htmlFor="remember-me">Manter-me conectado por 7 dias</Label>
             </div>
 
             {!TURNSTILE_BYPASS && <div className="flex justify-center" ref={turnstileRef} />}
