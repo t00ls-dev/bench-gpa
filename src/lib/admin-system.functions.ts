@@ -16,12 +16,7 @@ import { asArray, asRecord, num, dateTimeStr } from "./api-types";
 import { fmtBytes } from "./utils";
 
 type TableName =
-  | "staging_sales"
-  | "sales_daily_agg"
-  | "products"
-  | "stores"
-  | "filter_hierarchy"
-  | "import_log";
+  "staging_sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
 
 async function countRows(table: TableName) {
   const [rows] = await db.query("SELECT COUNT(*) AS count FROM ??", [table]);
