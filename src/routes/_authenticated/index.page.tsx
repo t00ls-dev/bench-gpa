@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { getDashboard, getDashboardRankings } from "@/lib/dashboard.functions";
-import { QUERY_STALE_CORE } from "@/lib/query-config";
+import { getAreaFilterHierarchy } from "@/lib/area.functions";
+import { QUERY_STALE_CORE, QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard } from "@/components/kpi-card";
 import { fmtBRL } from "@/lib/utils";
@@ -50,14 +51,36 @@ function Dashboard() {
   const enabled = !!filters.dateFrom && !!filters.dateTo;
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const getHierarchy = useServerFn(getAreaFilterHierarchy);
   // Só carrega a loja no click-through se o Dashboard já estava filtrado
   // numa única loja — com múltiplas/nenhuma loja, o destino decide sozinho.
   const clickThroughStore = filters.stores.length === 1 ? filters.stores[0] : undefined;
-  const goToArea = (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
+  const goToArea = async (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
     if (!name) return;
+    // A Área exige Departamento pra mostrar qualquer coisa (`ready` em
+    // area.page.tsx) — clicar em Seção/Grupo/Subgrupo sem resolver o
+    // Departamento-pai levava a uma tela vazia pedindo pra selecionar Loja e
+    // Departamento, com a Seção/Grupo/Subgrupo já aplicada por baixo dos
+    // panos mas sem nenhum dado visível. Busca a hierarquia (mesma query e
+    // mesmo cache — client e servidor — que a própria Área já usa; se a Área
+    // já foi visitada nesta sessão, isso não gera nenhum request novo) só
+    // quando precisa, pra achar o depto dono do nível clicado.
+    let depto: string | undefined;
+    if (dim === "depto") {
+      depto = name;
+    } else {
+      const hierData = await queryClient.fetchQuery({
+        queryKey: ["area-filter-hierarchy"],
+        queryFn: () => getHierarchy({}),
+        staleTime: QUERY_STALE_REFERENCE,
+        gcTime: QUERY_GC_REFERENCE,
+      });
+      depto = hierData.hierarchy.find((h) => h[dim] === name)?.depto ?? undefined;
+    }
     const search = {
       store: clickThroughStore,
-      depto: undefined as string | undefined,
+      depto,
       secao: undefined as string | undefined,
       grupo: undefined as string | undefined,
       subgrupo: undefined as string | undefined,

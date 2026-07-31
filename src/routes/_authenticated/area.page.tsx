@@ -69,7 +69,14 @@ function AreaPage() {
     },
     sanitizeAF,
   );
-  const patch = (p: Partial<AF>) => setAf({ ...af, ...p });
+  // Atualização funcional de propósito: se dois efeitos chamarem patch() no
+  // mesmo commit (ex.: hierarquia já em cache faz o efeito de período padrão
+  // e o de click-through do Dashboard disputarem o primeiro render), cada
+  // `setAf({...af, ...p})` calculado a partir do MESMO `af` (fechamento
+  // parado no render anterior) apaga o patch do outro — só o último a
+  // "vencer" sobrevive. `setAf(prev => ...)` sempre parte do estado mais
+  // recente, mesmo entre updates do mesmo commit.
+  const patch = (p: Partial<AF>) => setAf((prev) => ({ ...prev, ...p }));
   const setStores = (v: string[]) => patch(cascadePatch("stores", v));
   const setDeptos = (v: string[]) => patch(cascadePatch("deptos", v));
   const setSecoes = (v: string[]) => patch(cascadePatch("secoes", v));
