@@ -182,16 +182,27 @@ export const getAuditLog = createServerFn({ method: "POST" })
  * registro histórico, apenas não é mais lida. Ao reativar o cron, reintroduzir o
  * job aqui E a linha em scripts/setup-crons.sh.
  */
-const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: string }[] = [
+const KNOWN_JOBS: {
+  job: string;
+  label: string;
+  /** Texto completo pro tooltip, quando o label abrevia — ver HeartbeatCard. */
+  hint?: string;
+  maxHours: number;
+  schedule: string;
+}[] = [
   {
     job: "purge",
-    label: `Purga (${RETENTION_DAYS} dias)`,
+    // Curto de propósito — o rótulo completo (no hint) quebrava o badge de
+    // status ao lado no card (ver admin-audit-panel.tsx).
+    label: "Limpeza de dados antigos",
+    hint: `Remove agregados de vendas (diários e por produto) e logs de importação com mais de ${RETENTION_DAYS} dias, mantendo o banco otimizado sem afetar dados recentes.`,
     maxHours: PURGE_MAX_HOURS_OVERDUE,
     schedule: PURGE_CRON_LABEL,
   },
   {
     job: "refresh-universe",
-    label: "Atualiza universo de produtos/hierarquia de filtros",
+    label: "Produtos e filtros",
+    hint: "Atualiza a lista de produtos e a hierarquia de departamento/seção/grupo/subgrupo usada nos filtros do Dashboard e da Área.",
     maxHours: REFRESH_UNIVERSE_MAX_HOURS_OVERDUE,
     schedule: REFRESH_UNIVERSE_CRON_LABEL,
   },
@@ -200,6 +211,7 @@ const KNOWN_JOBS: { job: string; label: string; maxHours: number; schedule: stri
 export interface HeartbeatRow {
   job: string;
   label: string;
+  hint: string | null;
   schedule: string;
   last_run_at: string | null;
   last_status: string | null;
@@ -233,6 +245,7 @@ export const getHeartbeats = createServerFn({ method: "GET" })
       return {
         job: k.job,
         label: k.label,
+        hint: k.hint ?? null,
         schedule: k.schedule,
         last_run_at: lastRun,
         last_status: status,
