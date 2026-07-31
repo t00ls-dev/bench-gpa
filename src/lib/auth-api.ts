@@ -133,6 +133,15 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
   if (token) {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+      // token_version + 1 revoga o JWT no servidor, não só o cookie no
+      // navegador — mesmo padrão de resetPassword (admin-users.functions.ts).
+      // Sem isto, um token capturado antes do logout (proxy, dispositivo
+      // compartilhado, etc.) continuava aceito até expirar sozinho (até 7
+      // dias numa sessão "manter conectado" — auth-config.ts). Efeito
+      // colateral aceito: desloga todas as sessões do usuário, não só esta.
+      await db.query("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [
+        payload.userId,
+      ]);
       await recordAudit({
         action: "auth.logout",
         actorId: payload.userId,
@@ -140,7 +149,7 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
         targetType: "session",
       });
     } catch {
-      // Token inválido/expirado — nada a auditar.
+      // Token inválido/expirado — nada a revogar nem auditar.
     }
   }
   clearSessionCookie();
