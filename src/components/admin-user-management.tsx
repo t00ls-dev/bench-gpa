@@ -99,8 +99,8 @@ export function AdminUserManagement({
   const paged = filtered.slice((pageClamped - 1) * pageSize, pageClamped * pageSize);
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="kpi-card p-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="relative grow max-w-xs">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -131,7 +131,7 @@ export function AdminUserManagement({
         </div>
       </div>
 
-      <div className="kpi-card overflow-x-auto p-0">
+      <div className="overflow-x-auto border-t">
         {isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -227,7 +227,7 @@ export function AdminUserManagement({
       </div>
 
       {!isLoading && totalRows > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t p-4 text-xs text-muted-foreground">
           <div>
             Exibindo {(pageClamped - 1) * pageSize + 1}–
             {Math.min(pageClamped * pageSize, totalRows)} de {fmtInt(totalRows)} usuários
