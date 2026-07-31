@@ -116,7 +116,7 @@ export function ProductCharts({
                 />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                 <Tooltip
-                  formatter={(v: number) => fmtBRL(v)}
+                  formatter={(v) => fmtBRL(Number(v))}
                   labelFormatter={(label, payload) => {
                     const p = payload?.[0]?.payload as StorePoint | undefined;
                     return p ? `${p.code} - ${p.name}` : String(label);
@@ -143,7 +143,7 @@ export function ProductCharts({
               />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
               <Tooltip
-                formatter={(v: number) => fmtBRL(v)}
+                formatter={(v) => fmtBRL(Number(v))}
                 labelFormatter={(v) => fmtBRShort(String(v))}
               />
               <Line
@@ -175,7 +175,7 @@ export function ProductCharts({
               <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStart" />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
               <Tooltip
-                formatter={(v: number) => fmtBRL(v)}
+                formatter={(v) => fmtBRL(Number(v))}
                 labelFormatter={(label) => {
                   const item = dowData.find((d) => d.label === label);
                   return item ? `${WEEKDAYS_SHORT[item.dow]} · ${item.count} dia(s)` : label;
