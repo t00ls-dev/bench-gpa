@@ -141,7 +141,7 @@ export function DashboardCharts({
                     tick={{ fontSize: 11 }}
                     tickFormatter={(v) => `${Math.round(v / 1000)}k`}
                   />
-                  <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                  <Tooltip formatter={(v) => fmtBRL(Number(v))} />
                   <Bar dataKey="val" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
