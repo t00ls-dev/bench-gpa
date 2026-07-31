@@ -1,6 +1,5 @@
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
-import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -45,7 +44,11 @@ export function UploadDropzone({
   return (
     <label
       htmlFor="files"
-      className="kpi-card flex cursor-pointer flex-col items-center justify-center border-2 border-dashed border-border bg-muted/30 py-10 text-center transition hover:border-primary/50 hover:bg-primary/5"
+      className={`kpi-card flex flex-col items-center justify-center border-2 border-dashed border-border bg-muted/30 py-10 text-center transition ${
+        disabled
+          ? "cursor-not-allowed opacity-50"
+          : "cursor-pointer hover:border-primary/50 hover:bg-primary/5"
+      }`}
     >
       <Upload className="mb-3 size-8 text-muted-foreground" />
       <div className="font-medium">Arraste arquivos ou clique para selecionar</div>
@@ -57,6 +60,7 @@ export function UploadDropzone({
         type="file"
         multiple
         accept=".xlsx,.xls"
+        disabled={disabled}
         className="sr-only"
         onChange={async (e) => {
           const selected = Array.from(e.target.files ?? []);

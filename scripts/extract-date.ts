@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { parseAnyWorkbook } from "../src/lib/xlsx-parser";
 
-export function isValidDate(y: string, m: string, d: string): boolean {
+function isValidDate(y: string, m: string, d: string): boolean {
   const year = parseInt(y, 10);
   const month = parseInt(m, 10);
   const day = parseInt(d, 10);
@@ -13,7 +13,7 @@ export function isValidDate(y: string, m: string, d: string): boolean {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
-export function extractDateFromFilename(filename: string): string | null {
+function extractDateFromFilename(filename: string): string | null {
   const base = filename.replace(/\.xlsx?$/i, "");
 
   // YYYY-MM-DD anywhere in name
@@ -37,7 +37,7 @@ export function extractDateFromFilename(filename: string): string | null {
   return null;
 }
 
-export function extractDateFromXLSX(filePath: string): string | null {
+function extractDateFromXLSX(filePath: string): string | null {
   try {
     const buffer = readFileSync(filePath).buffer;
     const parsed = parseAnyWorkbook(buffer);

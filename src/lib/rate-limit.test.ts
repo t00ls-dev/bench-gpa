@@ -53,7 +53,7 @@ describe("RateLimiter", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    limiter = new RateLimiter(60_000, 5, 20, "test");
+    limiter = new RateLimiter(60_000, 5, 20);
   });
 
   afterEach(() => {
@@ -93,7 +93,7 @@ describe("RateLimiter", () => {
   });
 
   it("blocks on global limit", () => {
-    const smallLimiter = new RateLimiter(60_000, 100, 3, "small");
+    const smallLimiter = new RateLimiter(60_000, 100, 3);
 
     smallLimiter.check("1.1.1.1"); // allowed
     smallLimiter.check("2.2.2.2"); // allowed
@@ -116,7 +116,7 @@ describe("RateLimiter — orçamento global não é armável por um IP só", () 
   afterEach(() => vi.useRealTimers());
 
   it("requisição já barrada por IP não consome o orçamento global", () => {
-    const l = new RateLimiter(60_000, 5, 20, "test");
+    const l = new RateLimiter(60_000, 5, 20);
 
     // Atacante dispara 25x; só as 5 primeiras passam pelo limite por IP.
     for (let i = 0; i < 25; i++) l.check("6.6.6.6");
@@ -130,7 +130,7 @@ describe("RateLimiter — orçamento global não é armável por um IP só", () 
   });
 
   it("um IP consome no máximo maxPerIp do orçamento global", () => {
-    const l = new RateLimiter(60_000, 5, 20, "test");
+    const l = new RateLimiter(60_000, 5, 20);
 
     for (let i = 0; i < 100; i++) l.check("6.6.6.6");
 
@@ -143,7 +143,7 @@ describe("RateLimiter — orçamento global não é armável por um IP só", () 
   });
 
   it("ainda dispara o disjuntor quando a carga é de fato distribuída", () => {
-    const l = new RateLimiter(60_000, 5, 20, "test");
+    const l = new RateLimiter(60_000, 5, 20);
 
     // 20 IPs distintos, 1 requisição cada → esgota o teto global legitimamente.
     for (let i = 1; i <= 20; i++) {
@@ -155,7 +155,7 @@ describe("RateLimiter — orçamento global não é armável por um IP só", () 
   });
 
   it("o orçamento global se recupera quando a janela expira", () => {
-    const l = new RateLimiter(60_000, 5, 20, "test");
+    const l = new RateLimiter(60_000, 5, 20);
 
     for (let i = 1; i <= 20; i++) l.check(`10.0.1.${i}`);
     expect(l.check("10.0.2.1").allowed).toBe(false);
