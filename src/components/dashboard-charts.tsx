@@ -29,7 +29,6 @@ interface ChartRow {
   date: string;
   Atual: number;
   Anterior: number | null;
-  ma7: number | null;
 }
 
 export function DashboardCharts({
@@ -70,18 +69,11 @@ export function DashboardCharts({
         return [dt.toISOString().slice(0, 10), d.val];
       }),
     );
-    const result: ChartRow[] = raw.map((d) => ({
+    return raw.map((d) => ({
       date: d.date,
       Atual: d.val,
       Anterior: prevByDate.get(d.date) ?? null,
-      ma7: null,
     }));
-    for (let i = 6; i < result.length; i++) {
-      let sum = 0;
-      for (let j = i - 6; j <= i; j++) sum += result[j].Atual;
-      result[i].ma7 = sum / 7;
-    }
-    return result;
   }, [data, shiftDays]);
 
   const vals = chartData.map((d) => d.Atual);
@@ -201,16 +193,6 @@ export function DashboardCharts({
                     opacity={0.5}
                   />
                 )}
-                <Line
-                  type="monotone"
-                  dataKey="ma7"
-                  stroke="var(--chart-3)"
-                  strokeWidth={1.5}
-                  strokeDasharray="2 3"
-                  dot={false}
-                  opacity={0.7}
-                  connectNulls
-                />
                 {hasComparison && <Customized component={FillBetween} />}
               </LineChart>
             </ResponsiveContainer>
@@ -226,10 +208,6 @@ export function DashboardCharts({
               Anterior
             </span>
           )}
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block size-2.5 rounded-sm border-2 border-dotted border-[var(--chart-3)] opacity-70" />{" "}
-            Média 7d
-          </span>
         </div>
       </div>
 
