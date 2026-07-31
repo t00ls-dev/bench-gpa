@@ -9,7 +9,7 @@ import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
 import { QUERY_STALE_CORE, QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import { fmtBRShort } from "@/lib/utils";
-import { openPdfBlob } from "@/lib/export-pdf";
+import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AreaTable } from "@/components/area-table";
 import { AreaKpiCards } from "@/components/area-kpi-cards";
@@ -408,7 +408,8 @@ function AreaPage() {
         },
       });
 
-      openPdfBlob(doc);
+      const filename = `analise-area-${slugifyFilename(area)}-${dateFrom}-a-${dateTo}.pdf`;
+      openPdfBlob(doc, filename);
     } finally {
       setPdfLoading(false);
     }
