@@ -23,7 +23,7 @@ export const beginImport = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context, "upload.assertAdmin");
+    await assertAdmin(context);
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
 
     await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [data.sale_date]);
@@ -55,7 +55,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context, "upload.assertAdmin");
+    await assertAdmin(context);
 
     // Layout e defaults vêm de staging-row.ts, o mesmo módulo que o import via
     // CLI usa. Esta função mantinha uma cópia própria da lista de colunas — foi
@@ -111,7 +111,7 @@ export const finalizeImport = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context, "upload.assertAdmin");
+    await assertAdmin(context);
 
     await db.query("CALL finalize_import(?, ?, ?, ?)", [
       data.batch_id,

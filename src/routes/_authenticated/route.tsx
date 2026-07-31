@@ -23,7 +23,6 @@ import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useGotoHotkey, useHotkey } from "@/lib/use-hotkey";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";

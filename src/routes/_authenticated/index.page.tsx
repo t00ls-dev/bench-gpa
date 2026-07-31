@@ -13,7 +13,6 @@ import { lazy, Suspense } from "react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutDashboard } from "lucide-react";
-import { Route } from "./index";
 
 const DashboardCharts = lazy(() =>
   import("@/components/dashboard-charts").then((m) => ({ default: m.DashboardCharts })),

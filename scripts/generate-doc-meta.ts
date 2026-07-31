@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { execSync } from "child_process";
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 type Meta = Record<string, number | null>;

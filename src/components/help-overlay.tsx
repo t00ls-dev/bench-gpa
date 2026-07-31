@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { Keyboard } from "lucide-react";
 

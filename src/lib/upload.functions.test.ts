@@ -91,7 +91,7 @@ describe("beginImport", () => {
   it("limpa o staging da data, upserta lojas e produtos, retorna ok", async () => {
     const result = await (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput);
     expect(result).toEqual({ ok: true, batch_id: "b1" });
-    expect(assertAdmin).toHaveBeenCalledWith(expect.anything(), "upload.assertAdmin");
+    expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
     expect(db.query).toHaveBeenNthCalledWith(1, "DELETE FROM staging_sales WHERE sale_date = ?", [
       "2026-07-20",
     ]);
@@ -233,7 +233,7 @@ describe("finalizeImport", () => {
     )({ sale_date: "2026-07-20", batch_id: "b1", row_count: 500 });
 
     expect(result).toEqual({ ok: true });
-    expect(assertAdmin).toHaveBeenCalledWith(expect.anything(), "upload.assertAdmin");
+    expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
     expect(db.query).toHaveBeenCalledWith("CALL finalize_import(?, ?, ?, ?)", [
       "b1",
       "2026-07-20",

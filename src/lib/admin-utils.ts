@@ -1,4 +1,3 @@
-import { safeError } from "./safe-error";
 import { asArray, asRecord } from "./api-types";
 import db from "./db";
 import { CACHE_TTL_LONG } from "./cache";
@@ -36,7 +35,7 @@ export function invalidateAdminCache(userId: string): void {
   adminCache.delete(userId);
 }
 
-export async function assertAdmin(ctx: { userId: string }, label = "assertAdmin") {
+export async function assertAdmin(ctx: { userId: string }) {
   const cached = isCachedAdmin(ctx.userId);
   if (cached === true) return;
   if (cached === false) throw new Error("Apenas administradores podem realizar esta ação.");

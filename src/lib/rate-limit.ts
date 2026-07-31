@@ -12,7 +12,6 @@ export class RateLimiter {
     private windowMs: number,
     private maxPerIp: number,
     private maxGlobal: number,
-    private label: string,
   ) {
     this.cleanupTimer = setInterval(() => this.cleanup(), 60_000);
     if (this.cleanupTimer.unref) this.cleanupTimer.unref();
@@ -129,7 +128,7 @@ export function getClientIp(request?: Request): string {
  * repetido literal em cada construção, dando a impressão de serem ajustáveis
  * separadamente quando na prática nunca divergiram.
  */
-export const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
 
 /**
  * Tetos por tier: `[porIp, global]`.
@@ -142,14 +141,36 @@ export const RATE_LIMIT_WINDOW_MS = 60_000;
  * contribuição máxima de um IP para ele é o próprio teto por IP, graças ao
  * curto-circuito documentado em `check()`.
  */
-export const RATE_LIMITS = {
+const RATE_LIMITS = {
   api: [300, 1000],
   auth: [10, 40],
   upload: [200, 500],
   ssr: [300, 1500],
 } as const;
 
-export const apiLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.api, "api");
-export const authLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.auth, "auth");
-export const uploadLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.upload, "upload");
-export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.ssr, "ssr");
+export const apiLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.api);
+export const authLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.auth);
+export const uploadLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.upload);
+export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.ssr);
+
+/**
+ * Balde por conta, independente do `authLimiter` acima (que é por IP). Cobre
+ * o caso em que um ataque de credential stuffing distribui as tentativas
+ * contra UMA conta por vários IPs — cada IP isolado nunca estoura o teto de
+ * 10/min do authLimiter, mas a conta-alvo continua recebendo tentativa atrás
+ * de tentativa.
+ *
+ * Janela deliberadamente mais longa (15min) que os outros tiers: o objetivo
+ * aqui não é o throughput agregado da VPS — isso já é papel do authLimiter —
+ * é conter quem já sabe qual conta está mirando, mesmo trocando de IP a cada
+ * request. `maxGlobal` como `Number.MAX_SAFE_INTEGER` desliga de propósito o
+ * segundo tier da classe (o disjuntor de carga agregada já existe no
+ * authLimiter); este balde só precisa do teto por chave (e-mail).
+ */
+const AUTH_ACCOUNT_WINDOW_MS = 15 * 60_000;
+const AUTH_ACCOUNT_MAX_PER_EMAIL = 5;
+export const authAccountLimiter = new RateLimiter(
+  AUTH_ACCOUNT_WINDOW_MS,
+  AUTH_ACCOUNT_MAX_PER_EMAIL,
+  Number.MAX_SAFE_INTEGER,
+);
