@@ -190,15 +190,6 @@ export function AreaTable({
               {pdfLoading ? `Gerando… ${pdfElapsed}s` : "PDF"}
             </Button>
           </div>
-          {pdfLoading && pdfElapsed >= 5 && (
-            <span
-              role="status"
-              aria-live="polite"
-              className="hidden text-xs text-muted-foreground sm:inline"
-            >
-              Áreas grandes podem levar até ~20s
-            </span>
-          )}
         </div>
       </div>
 
