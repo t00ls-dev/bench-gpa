@@ -20,7 +20,7 @@ export type Filters = z.infer<typeof FilterSchema>;
  * onde a lista existe — o estado do seletor (`useState<25 | 50 | 100 | 250>`)
  * e as opções do dropdown a derivam, em vez de repetir os quatro números.
  */
-export const AREA_PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const;
+export const PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const;
 
 /**
  * Tamanho de página usado pelo export (PDF), que precisa da listagem inteira.
