@@ -103,7 +103,7 @@ function NavContent({ nav }: { nav: readonly NavItem[] }) {
               : n.exact
                 ? loc.pathname === n.to || loc.pathname === n.to + "/"
                 : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
-          const isNavigating = isNavPendingTo(pendingPath, n.to);
+          const isNavigating = isNavPendingTo(pendingPath, n.to, n.exact);
           return (
             <SidebarMenuItem key={n.to}>
               <SidebarMenuButton asChild isActive={isActive}>
