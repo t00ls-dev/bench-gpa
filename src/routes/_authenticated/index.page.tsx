@@ -27,7 +27,6 @@ const initial: Filters = {
   secoes: [],
   grupos: [],
   subgrupos: [],
-  compare: "prev_period",
 };
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
@@ -111,9 +110,6 @@ function Dashboard() {
     placeholderData: (prev) => prev,
   });
 
-  const delta = (cur: number, prev: number | undefined) =>
-    prev && prev > 0 ? (cur - prev) / prev : null;
-
   const hideStores = filters.stores.length === 1;
   const hideDepto = filters.deptos.length === 1;
   const hideSecao = filters.secoes.length === 1;
@@ -145,19 +141,14 @@ function Dashboard() {
             <Skeleton className="mt-2 h-8 w-40" />
             <Skeleton className="mt-2 h-3 w-32" />
           </div>
-        ) : data && data.current.total === 0 ? (
+        ) : data && data.total === 0 ? (
           <div className="kpi-card text-center py-10">
             <p className="text-sm text-muted-foreground">
               Nenhuma venda encontrada para o período e filtros selecionados.
             </p>
           </div>
         ) : (
-          <KpiCard
-            label="Venda total"
-            value={fmtBRL(data?.current.total ?? 0)}
-            delta={data?.previous ? delta(data.current.total, data.previous.total) : null}
-            hint={data?.previous ? `Anterior: ${fmtBRL(data.previous.total)}` : undefined}
-          />
+          <KpiCard label="Venda total" value={fmtBRL(data?.total ?? 0)} />
         )}
       </section>
 
@@ -174,14 +165,7 @@ function Dashboard() {
         }
       >
         <ErrorBoundary>
-          <DashboardCharts
-            data={data}
-            isLoading={isLoading}
-            hideStores={hideStores}
-            dateFrom={filters.dateFrom}
-            dateTo={filters.dateTo}
-            compare={filters.compare}
-          />
+          <DashboardCharts data={data} isLoading={isLoading} hideStores={hideStores} />
         </ErrorBoundary>
       </Suspense>
 
