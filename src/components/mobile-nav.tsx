@@ -107,7 +107,7 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
                         : "text-foreground hover:bg-muted"
                     }`}
                   >
-                    {isNavPendingTo(pendingPath, item.to) ? (
+                    {isNavPendingTo(pendingPath, item.to, item.to === "/admin") ? (
                       <Loader2 className="size-5 shrink-0 animate-spin" />
                     ) : (
                       <item.icon className="size-5 shrink-0" />
