@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type jsPDF from "jspdf";
-import { openPdfBlob } from "./export-pdf";
+import { openPdfBlob, slugifyFilename } from "./export-pdf";
 
 function createMockDoc(): jsPDF {
   return {
@@ -59,5 +59,36 @@ describe("openPdfBlob", () => {
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     vi.advanceTimersByTime(10000);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock");
+  });
+
+  // Sem nome, mantém o comportamento antigo (abre em nova aba) — `download`
+  // faria o browser baixar direto em vez de abrir o preview.
+  it("does not set download when no filename is given", () => {
+    openPdfBlob(mockDoc);
+    expect(anchorEl.download).toBe("");
+    expect(anchorEl.target).toBe("_blank");
+  });
+
+  it("sets the download attribute when a filename is given", () => {
+    openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
+    expect(anchorEl.download).toBe("analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
+  });
+});
+
+describe("slugifyFilename", () => {
+  it("lowercases and replaces spaces with hyphens", () => {
+    expect(slugifyFilename("Loja 1516 - LEBLON")).toBe("loja-1516-leblon");
+  });
+
+  it("removes accents", () => {
+    expect(slugifyFilename("AÇÚCAR E PADARIA")).toBe("acucar-e-padaria");
+  });
+
+  it("collapses separators like › into a single hyphen", () => {
+    expect(slugifyFilename("Loja 1516 - LEBLON › Mercearia")).toBe("loja-1516-leblon-mercearia");
+  });
+
+  it("trims leading/trailing hyphens", () => {
+    expect(slugifyFilename("  Todas as lojas  ")).toBe("todas-as-lojas");
   });
 });
