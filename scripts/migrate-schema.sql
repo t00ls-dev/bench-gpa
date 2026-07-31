@@ -1022,6 +1022,18 @@ END//
 CREATE PROCEDURE purge_old_aggs(p_days INT)
 BEGIN
   DECLARE v_deleted INT DEFAULT 0;
+  -- Sem isto até 31/07/2026, as 4 DELETEs abaixo faziam autocommit cada uma
+  -- por conta própria (sem START TRANSACTION, toda instrução isolada já é sua
+  -- própria transação implícita) — uma falha na 3ª, por exemplo, deixava os
+  -- agregados purgados mas products/import_log intactos, sem rollback e sem
+  -- v_deleted refletindo o que realmente aconteceu. Mesmo padrão de
+  -- finalize_import, que já tinha essa proteção.
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+
   -- O 180 é só fallback: toda chamada real (purgeOldAggs em
   -- admin-system.functions.ts, scripts/purge-aggs.ts) passa p_days
   -- explicitamente a partir de RETENTION_DAYS (src/lib/retention.ts). SQL não
@@ -1029,6 +1041,8 @@ BEGIN
   -- direto no banco — mas se RETENTION_DAYS mudar, mude aqui também, para o
   -- fallback não ficar defasado do valor praticado.
   SET @cutoff = DATE_SUB(CURRENT_DATE, INTERVAL COALESCE(p_days, 180) DAY);
+
+  START TRANSACTION;
 
   DELETE FROM sales_daily_agg WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
@@ -1050,6 +1064,8 @@ BEGIN
 
   DELETE FROM import_log WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
+
+  COMMIT;
 
   -- Até 30/07/2026, chamava refresh_product_universe()/refresh_filter_hierarchy()
   -- aqui (condicionado a v_deleted > 0) — as duas tabelas derivadas precisam
@@ -1094,8 +1110,25 @@ END//
 -- barato pelo que compra: além da visibilidade, o DELETE é transacional, então
 -- uma falha no meio do refresh volta ao estado anterior em vez de deixar a
 -- tabela truncada. Ver a nota de atomicidade no finalize_import.
+--
+-- Correção em 31/07/2026: a garantia acima só é real com o DELETE e o INSERT
+-- na MESMA transação — sem START TRANSACTION explícito, cada instrução já é
+-- sua própria transação implícita (autocommit) e o leitor via a tabela
+-- momentaneamente vazia entre as duas, exatamente o sintoma que o DELETE
+-- devia evitar. Era inofensivo enquanto esta proc só era chamada de dentro de
+-- finalize_import (que já envolvia tudo numa transação); deixou de ser
+-- verdade quando virou uma chamada standalone do cron dedicado
+-- (scripts/refresh-universe.ts — item 5 de docs/continuar.md).
 CREATE PROCEDURE refresh_filter_hierarchy()
 BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+
+  START TRANSACTION;
+
   DELETE FROM filter_hierarchy;
 
   INSERT INTO filter_hierarchy (store_code, store_name, depto, secao, grupo, subgrupo)
@@ -1109,6 +1142,8 @@ BEGIN
   FROM sales_prod_daily_agg a
   LEFT JOIN stores s ON s.store_code = a.store_code
   WHERE a.depto IS NOT NULL OR a.secao IS NOT NULL OR a.grupo IS NOT NULL OR a.subgrupo IS NOT NULL;
+
+  COMMIT;
 END//
 
 -- 15/16: refresh_product_universe
@@ -1124,8 +1159,20 @@ END//
 --
 -- DELETE em vez de TRUNCATE pelo mesmo motivo da refresh_filter_hierarchy: com
 -- TRUNCATE a tabela fica visivelmente vazia para quem lê durante o refresh.
+-- Mesma correção de 31/07/2026 documentada lá: DELETE + INSERT precisam estar
+-- na mesma transação para a garantia de visibilidade valer de verdade,
+-- especialmente aqui — area_analysis faz LEFT JOIN do período sobre esta
+-- tabela para decidir quais produtos existem.
 CREATE PROCEDURE refresh_product_universe()
 BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+
+  START TRANSACTION;
+
   DELETE FROM product_universe;
 
   INSERT INTO product_universe
@@ -1140,6 +1187,8 @@ BEGIN
     ON m.prod_code = a.prod_code
    AND m.store_code = a.store_code
    AND m.ult = a.sale_date;
+
+  COMMIT;
 END//
 
 -- 16/16: has_role

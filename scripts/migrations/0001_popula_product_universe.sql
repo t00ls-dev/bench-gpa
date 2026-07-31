@@ -7,5 +7,7 @@
 -- "dias sem vender" viria NULL.
 --
 -- O baseline roda ANTES das migrations versionadas, então a procedure já
--- existe aqui. Idempotente por construção: a procedure faz TRUNCATE + INSERT.
+-- existe aqui. Idempotente por construção: a procedure faz DELETE + INSERT
+-- (não TRUNCATE — ver comentário em migrate-schema.sql sobre visibilidade
+-- MVCC para leitores concorrentes).
 CALL refresh_product_universe();
