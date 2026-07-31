@@ -136,15 +136,15 @@ export function AreaTable({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="font-display text-lg font-semibold">Produtos da área</h2>
         {isFetching && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border bg-background px-2 h-9">
+        <div className="ml-auto flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex h-9 items-center gap-1 rounded-md border bg-background px-2">
             <Search className="size-3.5 text-muted-foreground shrink-0" />
             <Input
               placeholder="Buscar PLU ou descrição…"
               aria-label="Buscar PLU ou descrição"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="h-7 w-40 sm:w-56 border-0 px-1 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-7 w-full border-0 px-1 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring sm:w-56"
             />
             {search && (
               <button
@@ -157,25 +157,30 @@ export function AreaTable({
               </button>
             )}
           </div>
-          <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
-            <SelectTrigger className="h-9 w-[110px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {AREA_PAGE_SIZE_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n} / página
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Seletor de página e botão de PDF agrupados, pra sempre quebrarem
+              juntos — sem isso o PDF ficava sozinho numa linha própria no
+              celular, com bastante espaço vazio ao lado. */}
           <div className="flex items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+              <SelectTrigger className="h-9 flex-1 sm:w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AREA_PAGE_SIZE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / página
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
               onClick={onExportPDF}
-              className="h-9"
+              className="h-9 shrink-0"
               disabled={pdfLoading}
+              title="Exporta a lista de produtos filtrada em PDF"
+              aria-label="Exportar lista de produtos filtrada em PDF"
             >
               {pdfLoading ? (
                 <Loader2 className="mr-1.5 size-4 animate-spin" />
@@ -184,16 +189,16 @@ export function AreaTable({
               )}{" "}
               {pdfLoading ? `Gerando… ${pdfElapsed}s` : "PDF"}
             </Button>
-            {pdfLoading && pdfElapsed >= 5 && (
-              <span
-                role="status"
-                aria-live="polite"
-                className="hidden text-xs text-muted-foreground sm:inline"
-              >
-                Áreas grandes podem levar até ~20s
-              </span>
-            )}
           </div>
+          {pdfLoading && pdfElapsed >= 5 && (
+            <span
+              role="status"
+              aria-live="polite"
+              className="hidden text-xs text-muted-foreground sm:inline"
+            >
+              Áreas grandes podem levar até ~20s
+            </span>
+          )}
         </div>
       </div>
 
