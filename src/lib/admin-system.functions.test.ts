@@ -23,8 +23,7 @@ vi.mock("@tanstack/react-start", () => {
             let ctx = { userId: "admin-u1", userEmail: "admin@gpabr.com" };
             for (const m of chain.middlewares) {
               const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
-                | { context?: unknown }
-                | undefined;
+                { context?: unknown } | undefined;
               if (r?.context) ctx = r.context as typeof ctx;
             }
             return fn({ data: input, context: ctx });
@@ -34,8 +33,7 @@ vi.mock("@tanstack/react-start", () => {
           let ctx = { userId: "admin-u1", userEmail: "admin@gpabr.com" };
           for (const m of chain.middlewares) {
             const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
-              | { context?: unknown }
-              | undefined;
+              { context?: unknown } | undefined;
             if (r?.context) ctx = r.context as typeof ctx;
           }
           return fn({ data: input, context: ctx });

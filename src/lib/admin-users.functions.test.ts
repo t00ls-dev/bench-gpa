@@ -25,8 +25,7 @@ vi.mock("@tanstack/react-start", () => {
             let ctx = {};
             for (const m of chain.middlewares) {
               const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
-                | { context?: unknown }
-                | undefined;
+                { context?: unknown } | undefined;
               if (r?.context) ctx = r.context;
             }
             return fn({ data: input, context: ctx });
@@ -36,8 +35,7 @@ vi.mock("@tanstack/react-start", () => {
           let ctx = {};
           for (const m of chain.middlewares) {
             const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
-              | { context?: unknown }
-              | undefined;
+              { context?: unknown } | undefined;
             if (r?.context) ctx = r.context;
           }
           return fn({ data: input, context: ctx });
