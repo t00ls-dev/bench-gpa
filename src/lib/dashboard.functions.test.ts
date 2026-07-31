@@ -238,47 +238,10 @@ describe("getDashboard", () => {
     subgrupos: [],
   };
 
-  it('compare "none": só busca o período atual, previous fica null', async () => {
+  it("busca só o período pedido, uma vez", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(METRICS_RESULT as never);
-    const result = await (getDashboard as (d: object) => Promise<{ previous: unknown }>)({
-      ...BASE,
-      compare: "none",
-    });
-    expect(result.previous).toBeNull();
-    expect(db.query).toHaveBeenCalledTimes(1);
-  });
-
-  it('compare "prev_period": busca o atual e o anterior deslocado pelo tamanho do período', async () => {
-    vi.mocked(db.query).mockResolvedValue(METRICS_RESULT as never);
-    await (getDashboard as (d: object) => Promise<unknown>)({ ...BASE, compare: "prev_period" });
-
-    expect(db.query).toHaveBeenCalledTimes(2);
-    const calls = vi.mocked(db.query).mock.calls as unknown as [string, unknown[]][];
-    // 2026-07-14..2026-07-20 são 7 dias; prev_period desloca por esse tamanho.
-    expect(calls[1][1]).toEqual(expect.arrayContaining(["2026-07-07", "2026-07-13"]));
-  });
-
-  it('compare "prev_week": desloca sempre 7 dias, independente do tamanho do período', async () => {
-    vi.mocked(db.query).mockResolvedValue(METRICS_RESULT as never);
-    await (getDashboard as (d: object) => Promise<unknown>)({
-      ...BASE,
-      dateFrom: "2026-07-01",
-      dateTo: "2026-07-20",
-      compare: "prev_week",
-    });
-    const calls = vi.mocked(db.query).mock.calls as unknown as [string, unknown[]][];
-    expect(calls[1][1]).toEqual(expect.arrayContaining(["2026-06-24", "2026-07-13"]));
-  });
-
-  it("compare ativo mas sem dateFrom/dateTo: previous continua null", async () => {
-    vi.mocked(db.query).mockResolvedValueOnce(METRICS_RESULT as never);
-    const result = await (getDashboard as (d: object) => Promise<{ previous: unknown }>)({
-      ...BASE,
-      dateFrom: "",
-      dateTo: "",
-      compare: "prev_period",
-    });
-    expect(result.previous).toBeNull();
+    const result = await (getDashboard as (d: object) => Promise<{ total: number }>)(BASE);
+    expect(result.total).toBe(1000);
     expect(db.query).toHaveBeenCalledTimes(1);
   });
 });

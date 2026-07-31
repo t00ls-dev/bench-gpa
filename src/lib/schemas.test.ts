@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  FilterSchema,
-  DashboardSchema,
-  AreaAnalysisSchema,
-  EmailSchema,
-  PasswordSchema,
-} from "./schemas";
+import { FilterSchema, AreaAnalysisSchema, EmailSchema, PasswordSchema } from "./schemas";
 
 describe("FilterSchema", () => {
   it("parses valid input with defaults", () => {
@@ -34,28 +28,6 @@ describe("FilterSchema", () => {
     const result = FilterSchema.parse({ dateFrom: null, dateTo: null });
     expect(result.dateFrom).toBeNull();
     expect(result.dateTo).toBeNull();
-  });
-});
-
-describe("DashboardSchema", () => {
-  it("defaults compare to prev_period", () => {
-    const result = DashboardSchema.parse({ dateFrom: "2024-01-01", dateTo: "2024-01-31" });
-    expect(result.compare).toBe("prev_period");
-  });
-
-  it("accepts explicit compare", () => {
-    const result = DashboardSchema.parse({
-      dateFrom: "2024-01-01",
-      dateTo: "2024-01-31",
-      compare: "prev_week",
-    });
-    expect(result.compare).toBe("prev_week");
-  });
-
-  it("rejects invalid compare value", () => {
-    expect(() =>
-      DashboardSchema.parse({ dateFrom: "2024-01-01", dateTo: "2024-01-31", compare: "invalid" }),
-    ).toThrow();
   });
 });
 

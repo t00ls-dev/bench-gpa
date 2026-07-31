@@ -3,20 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { X } from "lucide-react";
 import { getFilterOptions } from "@/lib/dashboard.functions";
-import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
 import { FilterField } from "@/components/filter-field";
 import { defaultDateWindow } from "@/lib/date-window";
 import { QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import { cascadePatch } from "@/lib/filter-cascade";
-
-const COMPARE_LABELS: Record<Filters["compare"], string> = {
-  prev_period: "Período anterior",
-  prev_week: "Semana anterior",
-  prev_month: "Mês anterior",
-  none: "Sem comparação",
-};
 
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
@@ -40,7 +32,6 @@ export interface Filters {
   secoes: string[];
   grupos: string[];
   subgrupos: string[];
-  compare: "prev_period" | "prev_week" | "prev_month" | "none";
 }
 
 interface Props {
@@ -124,8 +115,7 @@ export function FilterBar({ value, onChange }: Props) {
     value.deptos.length > 0 ||
     value.secoes.length > 0 ||
     value.grupos.length > 0 ||
-    value.subgrupos.length > 0 ||
-    value.compare !== "prev_period";
+    value.subgrupos.length > 0;
 
   return (
     <div className="kpi-card mb-6">
@@ -190,26 +180,6 @@ export function FilterBar({ value, onChange }: Props) {
           />
         </FilterField>
       </div>
-      <FilterField label="Comparar com" className="mt-3">
-        <div className="mt-1 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Comparar com">
-          {(Object.entries(COMPARE_LABELS) as [Filters["compare"], string][]).map(([v, l]) => (
-            <button
-              key={v}
-              role="radio"
-              aria-checked={value.compare === v}
-              onClick={() => setF({ compare: v })}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium transition",
-                value.compare === v
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/50",
-              )}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
-      </FilterField>
 
       {hasActiveChips && (
         <div className="mt-3 flex flex-wrap gap-1.5 border-t pt-3">
@@ -251,12 +221,6 @@ export function FilterBar({ value, onChange }: Props) {
               onRemove={() => setF({ subgrupos: value.subgrupos.filter((v) => v !== sg) })}
             />
           ))}
-          {value.compare !== "prev_period" && (
-            <FilterChip
-              label={`Comparação: ${COMPARE_LABELS[value.compare]}`}
-              onRemove={() => setF({ compare: "prev_period" })}
-            />
-          )}
         </div>
       )}
     </div>

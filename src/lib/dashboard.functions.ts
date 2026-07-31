@@ -8,7 +8,6 @@ import {
   DashboardMetricsResult,
   DashboardRankingsResult,
   callMetrics,
-  shiftPeriod,
   asArray,
   str,
   strOrNull,
@@ -18,7 +17,7 @@ import {
   parseCodeNameVal,
   dateTimeStr,
 } from "./api-types";
-import { FilterSchema, DashboardSchema, DashboardRankingsSchema } from "./schemas";
+import { FilterSchema, DashboardRankingsSchema } from "./schemas";
 import { CACHE_TTL_SHORT, CACHE_TTL_LONG } from "./cache";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
@@ -76,17 +75,8 @@ export const getStores = createServerFn({ method: "GET" })
 
 export const getDashboard = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
-  .inputValidator((d: unknown) => DashboardSchema.parse(d))
-  .handler(async ({ data }) => {
-    const currentPromise = callMetrics(data);
-    let previousPromise: Promise<DashboardMetricsResult | null> = Promise.resolve(null);
-    if (data.compare !== "none" && data.dateFrom && data.dateTo) {
-      const prev = shiftPeriod(data.dateFrom, data.dateTo, data.compare);
-      previousPromise = callMetrics({ ...data, dateFrom: prev.dateFrom, dateTo: prev.dateTo });
-    }
-    const [current, previous] = await Promise.all([currentPromise, previousPromise]);
-    return { current, previous };
-  });
+  .inputValidator((d: unknown) => FilterSchema.parse(d))
+  .handler(async ({ data }): Promise<DashboardMetricsResult> => callMetrics(data));
 
 export const getLatestSaleInfo = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit()])

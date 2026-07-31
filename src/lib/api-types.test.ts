@@ -11,7 +11,6 @@ vi.mock("./cache", () => ({
 }));
 
 import {
-  shiftPeriod,
   parseNameVal,
   parseCodeNameVal,
   parseDateVal,
@@ -26,28 +25,6 @@ import {
 import db from "./db";
 
 const mockQuery = db.query as ReturnType<typeof vi.fn>;
-
-describe("shiftPeriod", () => {
-  it("shifts by exact period length", () => {
-    const r = shiftPeriod("2024-01-08", "2024-01-14", "prev_period");
-    expect(r).toEqual({ dateFrom: "2024-01-01", dateTo: "2024-01-07" });
-  });
-
-  it("shifts by 7 days for prev_week", () => {
-    const r = shiftPeriod("2024-01-15", "2024-01-21", "prev_week");
-    expect(r).toEqual({ dateFrom: "2024-01-08", dateTo: "2024-01-14" });
-  });
-
-  it("shifts by 30 days for prev_month", () => {
-    const r = shiftPeriod("2024-02-01", "2024-02-28", "prev_month");
-    expect(r).toEqual({ dateFrom: "2024-01-02", dateTo: "2024-01-29" });
-  });
-
-  it("handles single day period", () => {
-    const r = shiftPeriod("2024-06-15", "2024-06-15", "prev_period");
-    expect(r).toEqual({ dateFrom: "2024-06-14", dateTo: "2024-06-14" });
-  });
-});
 
 describe("parseNameVal", () => {
   it("parses valid array", () => {
