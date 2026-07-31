@@ -36,6 +36,7 @@ vi.mock("jsonwebtoken", () => ({ default: { sign: vi.fn(), verify: vi.fn() } }))
 vi.mock("./turnstile", () => ({ verifyTurnstile: vi.fn(), isTurnstileEnabled: vi.fn() }));
 vi.mock("./rate-limit", () => ({
   authLimiter: { check: vi.fn() },
+  authAccountLimiter: { check: vi.fn() },
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
@@ -45,11 +46,16 @@ import db from "./db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
-import { authLimiter } from "./rate-limit";
+import { authLimiter, authAccountLimiter } from "./rate-limit";
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(authLimiter.check).mockReturnValue({
+    allowed: true,
+    remaining: 4,
+    resetAt: Date.now() + 60000,
+  });
+  vi.mocked(authAccountLimiter.check).mockReturnValue({
     allowed: true,
     remaining: 4,
     resetAt: Date.now() + 60000,
@@ -174,6 +180,17 @@ describe("login", () => {
     });
     await expect(login({ email: "test@gpabr.com", password: "x" } as never)).rejects.toThrow(
       "Muitas tentativas",
+    );
+  });
+
+  it("throws when account-level rate limit exceeded (por conta, não por IP)", async () => {
+    vi.mocked(authAccountLimiter.check).mockReturnValue({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 900000,
+    });
+    await expect(login({ email: "test@gpabr.com", password: "x" } as never)).rejects.toThrow(
+      "Muitas tentativas de login para esta conta",
     );
   });
 
