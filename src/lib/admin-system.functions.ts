@@ -41,11 +41,14 @@ export const diagnoseData = createServerFn({ method: "GET" })
       "filter_hierarchy",
       "import_log",
     ];
+    const [countsList, datesInSales] = await Promise.all([
+      Promise.all(tables.map((t) => countRows(t))),
+      fetchDistinctDates("staging_sales", "sale_date") as Promise<string[]>,
+    ]);
     const counts: Record<string, number> = {};
-    for (const t of tables) {
-      counts[t] = await countRows(t);
-    }
-    const datesInSales = (await fetchDistinctDates("staging_sales", "sale_date")) as string[];
+    tables.forEach((t, i) => {
+      counts[t] = countsList[i];
+    });
     return { ...counts, dates_in_sales: datesInSales };
   });
 
@@ -85,7 +88,10 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const [rs] = await db.query("CALL db_health_check()");
+    const [[rs], [connRows]] = await Promise.all([
+      db.query("CALL db_health_check()"),
+      db.query("SELECT COUNT(*) AS cnt FROM information_schema.PROCESSLIST"),
+    ]);
     const [versionRows, sizeRows, tableRows] = rs as unknown[];
     const version = String(asRecord(asArray(versionRows)[0]).version ?? "");
     const dbSizeMb = num(asRecord(asArray(sizeRows)[0]).db_size_mb);
@@ -100,7 +106,6 @@ export const dbHealthCheck = createServerFn({ method: "GET" })
         row_estimate: num(rec.row_estimate),
       };
     });
-    const [connRows] = await db.query("SELECT COUNT(*) AS cnt FROM information_schema.PROCESSLIST");
     const activeConnections = num(asRecord(asArray(connRows)[0]).cnt);
     return {
       db_size: Math.round(dbSizeMb * 1024 * 1024),
@@ -136,12 +141,14 @@ export const getAuditLog = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const limit = data.limit ?? 50;
     const offset = data.offset ?? 0;
-    const [rows] = await db.query(
-      `SELECT id, created_at, actor_email, action, target_type, target_id, detail, ip
-         FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?`,
-      [limit, offset],
-    );
-    const [countRows] = await db.query("SELECT COUNT(*) AS total FROM audit_log");
+    const [[rows], [countRows]] = await Promise.all([
+      db.query(
+        `SELECT id, created_at, actor_email, action, target_type, target_id, detail, ip
+           FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?`,
+        [limit, offset],
+      ),
+      db.query("SELECT COUNT(*) AS total FROM audit_log"),
+    ]);
     const total = num(asRecord(asArray(countRows)[0]).total);
     const events: AuditRow[] = asArray(rows).map((r) => {
       const rec = asRecord(r);
