@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useResetOnChange } from "@/hooks/use-reset-on-change";
 
 export interface MSOption {
   value: string;
@@ -57,15 +58,18 @@ export function MultiSelect({
   const allSelected = !single && options.length > 0 && value.length === options.length;
 
   useEffect(() => {
+    if (open && searchable && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [open, searchable, options]);
+
+  useResetOnChange([open, searchable, options], () => {
     if (!open) {
       setFocusedIdx(-1);
       return;
     }
-    if (searchable && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
     if (!searchable) setFocusedIdx(0);
-  }, [open, searchable, options]);
+  });
 
   const handleToggle = useCallback(
     (v: string) => {

@@ -5,6 +5,7 @@ import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/prod
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
 import { ProductSearch } from "@/components/product-search";
@@ -67,11 +68,11 @@ function ProdutoPage() {
     staleTime: QUERY_STALE_REFERENCE,
   });
 
-  useEffect(() => {
+  useResetOnChange([plu, productByCode, fetchingProductByCode], () => {
     if (plu && productByCode) setSelected(productByCode);
     else if (plu && !fetchingProductByCode && !productByCode)
       setSelected({ prod_code: plu, prod_name: plu });
-  }, [plu, productByCode, fetchingProductByCode]);
+  });
 
   useEffect(() => {
     if (tRef.current) window.clearTimeout(tRef.current);

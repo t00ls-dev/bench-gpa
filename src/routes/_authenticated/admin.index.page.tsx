@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listUsers } from "@/lib/admin-users.functions";
@@ -20,17 +20,12 @@ export default function AdminPage() {
   const health = useServerFn(dbHealthCheck);
   const heartbeats = useServerFn(getHeartbeats);
   const audit = useServerFn(getAuditLog);
-  const [err, setErr] = useState<string | null>(null);
-
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => list(),
     retry: false,
   });
-
-  useEffect(() => {
-    if (error) setErr((error as Error).message);
-  }, [error]);
+  const err = error ? (error as Error).message : null;
 
   const [tab, setTab] = useState<"usuarios" | "sistema" | "auditoria">("usuarios");
 

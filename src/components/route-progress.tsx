@@ -37,7 +37,11 @@ export function RouteProgress() {
       );
     } else {
       clearAll();
-      // Completa e some — só quando de fato estava visível.
+      // Completa e some — só quando de fato estava visível. Fica no efeito de
+      // propósito (não dá pra mover pra render): é parte da coreografia
+      // imperativa do timer que a linha seguinte agenda, não estado derivado
+      // de uma prop.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProgress((p) => (p > 0 ? 100 : 0));
       timers.current.push(setTimeout(() => setProgress(0), 200));
     }
