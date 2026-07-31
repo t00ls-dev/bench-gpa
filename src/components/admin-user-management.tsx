@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -83,10 +83,14 @@ export function AdminUserManagement({
     }
   };
 
-  const filtered = (data ?? []).filter(
-    (u) =>
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.name.toLowerCase().includes(search.toLowerCase()),
+  const filtered = useMemo(
+    () =>
+      (data ?? []).filter(
+        (u) =>
+          u.email.toLowerCase().includes(search.toLowerCase()) ||
+          u.name.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [data, search],
   );
 
   // Busca/tamanho de página novos podem deixar a página atual fora do range
@@ -96,7 +100,10 @@ export function AdminUserManagement({
   const totalRows = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const pageClamped = Math.min(page, totalPages);
-  const paged = filtered.slice((pageClamped - 1) * pageSize, pageClamped * pageSize);
+  const paged = useMemo(
+    () => filtered.slice((pageClamped - 1) * pageSize, pageClamped * pageSize),
+    [filtered, pageClamped, pageSize],
+  );
 
   return (
     <div className="kpi-card p-0">
