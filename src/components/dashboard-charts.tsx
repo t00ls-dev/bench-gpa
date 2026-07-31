@@ -9,96 +9,40 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Customized,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtBRL } from "@/lib/utils";
 import { fmtBRShort } from "@/lib/utils";
 
 interface DashboardData {
-  current: {
-    byDate: { date: string; val: number }[];
-    byStore: { code: string; name: string; val: number }[];
-  };
-  previous?: {
-    byDate: { date: string; val: number }[];
-  } | null;
+  byDate: { date: string; val: number }[];
+  byStore: { code: string; name: string; val: number }[];
 }
 
 interface ChartRow {
   date: string;
   Atual: number;
-  Anterior: number | null;
 }
 
 export function DashboardCharts({
   data,
   isLoading,
   hideStores,
-  dateFrom,
-  dateTo,
-  compare,
 }: {
   data: DashboardData | undefined;
   isLoading: boolean;
   hideStores?: boolean;
-  dateFrom?: string;
-  dateTo?: string;
-  compare?: "none" | "prev_period" | "prev_week" | "prev_month";
 }) {
-  // O período anterior vem com datas de calendário reais (ex.: 28 dias antes),
-  // não as mesmas datas do período atual — replica o deslocamento de
-  // shiftPeriod() (src/lib/api-types.ts) para "trazer" cada data do anterior
-  // para o dia correspondente do atual antes de casar no Map. Sem isso o
-  // lookup por data literal nunca batia e "Anterior" ficava sempre null.
-  const shiftDays = useMemo(() => {
-    if (compare === "prev_week") return 7;
-    if (compare === "prev_month") return 30;
-    if (!dateFrom || !dateTo) return 0;
-    const f = new Date(dateFrom + "T00:00:00Z");
-    const t = new Date(dateTo + "T00:00:00Z");
-    return Math.round((t.getTime() - f.getTime()) / 86400000) + 1;
-  }, [compare, dateFrom, dateTo]);
-
-  const chartData: ChartRow[] = useMemo(() => {
-    const raw = data?.current.byDate ?? [];
-    const prevByDate = new Map(
-      (data?.previous?.byDate ?? []).map((d) => {
-        const dt = new Date(d.date + "T00:00:00Z");
-        dt.setUTCDate(dt.getUTCDate() + shiftDays);
-        return [dt.toISOString().slice(0, 10), d.val];
-      }),
-    );
-    return raw.map((d) => ({
-      date: d.date,
-      Atual: d.val,
-      Anterior: prevByDate.get(d.date) ?? null,
-    }));
-  }, [data, shiftDays]);
+  const chartData: ChartRow[] = useMemo(
+    () => (data?.byDate ?? []).map((d) => ({ date: d.date, Atual: d.val })),
+    [data],
+  );
 
   const vals = chartData.map((d) => d.Atual);
   const maxVal = vals.length ? Math.max(...vals) : 0;
   const minVal = vals.length ? Math.min(...vals) : 0;
   const maxIndex = vals.indexOf(maxVal);
   const minIndex = vals.indexOf(minVal);
-  const hasComparison = chartData.some((d) => d.Anterior !== null);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function FillBetween({ formattedGraphicalItems }: any) {
-    if (!formattedGraphicalItems?.[0] || !formattedGraphicalItems?.[1]) return null;
-    const pts1 = formattedGraphicalItems[0].props.points as { x: number; y: number }[];
-    const pts2 = formattedGraphicalItems[1].props.points as { x: number; y: number }[];
-    if (!pts1?.length || !pts2?.length) return null;
-    const d =
-      pts1.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ") +
-      " " +
-      [...pts2]
-        .reverse()
-        .map((p) => `L${p.x},${p.y}`)
-        .join(" ") +
-      " Z";
-    return <path d={d} fill="url(#deltaGrad)" />;
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function CustomDot(props: any) {
@@ -122,28 +66,13 @@ export function DashboardCharts({
   function ChartTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     const atual = payload.find((p: { dataKey: string; value: number }) => p.dataKey === "Atual");
-    const anterior = payload.find(
-      (p: { dataKey: string; value: number }) => p.dataKey === "Anterior",
-    );
     if (!atual) return null;
-    const diff = atual.value - (anterior?.value ?? 0);
-    const pct = anterior?.value ? (diff / anterior.value) * 100 : null;
     return (
       <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
         <p className="font-medium">{fmtBRShort(String(label))}</p>
         <p>
           Atual: <span className="font-medium">{fmtBRL(atual.value)}</span>
         </p>
-        {anterior?.value != null && (
-          <>
-            <p>Anterior: {fmtBRL(anterior.value)}</p>
-            <p className={diff >= 0 ? "text-green-600" : "text-red-600"}>
-              {diff >= 0 ? "▲ " : "▼ "}
-              {fmtBRL(Math.abs(diff))}
-              {pct != null ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%)` : ""}
-            </p>
-          </>
-        )}
       </div>
     );
   }
@@ -161,12 +90,6 @@ export function DashboardCharts({
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <defs>
-                  <linearGradient id="deltaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.04} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="date"
@@ -182,31 +105,8 @@ export function DashboardCharts({
                   strokeWidth={2.5}
                   dot={<CustomDot />}
                 />
-                {hasComparison && (
-                  <Line
-                    type="monotone"
-                    dataKey="Anterior"
-                    stroke="var(--chart-1)"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 4"
-                    dot={false}
-                    opacity={0.5}
-                  />
-                )}
-                {hasComparison && <Customized component={FillBetween} />}
               </LineChart>
             </ResponsiveContainer>
-          )}
-        </div>
-        <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block size-2.5 rounded-full bg-[var(--chart-1)]" /> Atual
-          </span>
-          {hasComparison && (
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block size-2.5 rounded-sm border-2 border-dashed border-[var(--chart-1)] opacity-50" />{" "}
-              Anterior
-            </span>
           )}
         </div>
       </div>
@@ -221,7 +121,7 @@ export function DashboardCharts({
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={(data?.current.byStore ?? []).slice(0, 10)}
+                  data={(data?.byStore ?? []).slice(0, 10)}
                   margin={{ left: 8, right: 8, bottom: 24 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

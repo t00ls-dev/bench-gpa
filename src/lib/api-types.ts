@@ -149,23 +149,6 @@ export function parseDateVal(xs: unknown): DateVal[] {
   });
 }
 
-export function shiftPeriod(
-  from: string,
-  to: string,
-  mode: "prev_period" | "prev_week" | "prev_month",
-) {
-  const f = new Date(from + "T00:00:00Z");
-  const t = new Date(to + "T00:00:00Z");
-  const days = Math.round((t.getTime() - f.getTime()) / 86400000) + 1;
-  let shift = days;
-  if (mode === "prev_week") shift = 7;
-  if (mode === "prev_month") shift = 30;
-  const nf = new Date(f.getTime() - shift * 86400000);
-  const nt = new Date(t.getTime() - shift * 86400000);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  return { dateFrom: iso(nf), dateTo: iso(nt) };
-}
-
 function metricsCacheKey(f: Filters): string {
   return `metrics:${f.dateFrom ?? ""}:${f.dateTo ?? ""}:${(f.stores ?? []).join(",")}:${(f.deptos ?? []).join(",")}:${(f.secoes ?? []).join(",")}:${(f.grupos ?? []).join(",")}:${(f.subgrupos ?? []).join(",")}`;
 }

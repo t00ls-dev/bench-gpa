@@ -57,12 +57,6 @@ export const AreaAnalysisSchema = z.object({
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
-export const CompareEnum = z.enum(["prev_period", "prev_week", "prev_month", "none"]);
-
-export const DashboardSchema = FilterSchema.extend({
-  compare: CompareEnum.optional().default("prev_period"),
-});
-
 export const DashboardRankingsSchema = FilterSchema.extend({
   limit: z.number().int().min(1).max(50).optional().default(10),
 });
