@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { setUserRole, setUserActive } from "@/lib/admin-users.functions";
@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +24,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldOff, KeyRound, Loader2, Search } from "lucide-react";
-import { fmtBRShort } from "@/lib/utils";
+import {
+  ShieldCheck,
+  ShieldOff,
+  KeyRound,
+  Loader2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { fmtBRShort, fmtInt } from "@/lib/utils";
+import { AREA_PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { CreateUserDialog } from "@/components/create-user-dialog";
 import { ResetPasswordDialog } from "@/components/reset-password-dialog";
 
@@ -44,6 +60,8 @@ export function AdminUserManagement({
 
   const [resetTarget, setResetTarget] = useState<{ id: string; email: string } | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof AREA_PAGE_SIZE_OPTIONS)[number]>(25);
   const [pending, setPending] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{
     type: "role" | "active";
@@ -70,6 +88,17 @@ export function AdminUserManagement({
       u.name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  // Busca/tamanho de página novos podem deixar a página atual fora do range
+  // (ex.: filtrar de 3 páginas pra 1) — volta pra 1 em vez de mostrar vazio.
+  useEffect(() => {
+    setPage(1);
+  }, [search, pageSize]);
+
+  const totalRows = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const pageClamped = Math.min(page, totalPages);
+  const paged = filtered.slice((pageClamped - 1) * pageSize, pageClamped * pageSize);
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -83,7 +112,24 @@ export function AdminUserManagement({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <CreateUserDialog onCreated={() => qc.invalidateQueries({ queryKey: ["admin-users"] })} />
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => setPageSize(Number(v) as (typeof AREA_PAGE_SIZE_OPTIONS)[number])}
+          >
+            <SelectTrigger className="h-9 w-[110px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {AREA_PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n} / página
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <CreateUserDialog onCreated={() => qc.invalidateQueries({ queryKey: ["admin-users"] })} />
+        </div>
       </div>
 
       <div className="kpi-card overflow-x-auto p-0">
@@ -106,7 +152,7 @@ export function AdminUserManagement({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => {
+              {paged.map((u) => {
                 const isAdmin = u.role === "admin";
                 return (
                   <tr key={u.id} className="border-b border-border/60">
@@ -180,6 +226,38 @@ export function AdminUserManagement({
           </table>
         )}
       </div>
+
+      {!isLoading && totalRows > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div>
+            Exibindo {(pageClamped - 1) * pageSize + 1}–
+            {Math.min(pageClamped * pageSize, totalRows)} de {fmtInt(totalRows)} usuários
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pageClamped <= 1}
+              aria-label="Página anterior"
+              onClick={() => setPage(pageClamped - 1)}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span>
+              Página {pageClamped} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pageClamped >= totalPages}
+              aria-label="Próxima página"
+              onClick={() => setPage(pageClamped + 1)}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
         {confirm && (
