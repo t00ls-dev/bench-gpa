@@ -20,7 +20,7 @@ vi.mock("jsonwebtoken", () => ({
   default: { verify: vi.fn(), sign: vi.fn(() => "reissued-jwt") },
 }));
 vi.mock("cookie", () => ({
-  parse: vi.fn(() => ({ session: "valid-jwt" })),
+  parseCookie: vi.fn(() => ({ session: "valid-jwt" })),
 }));
 
 import { requireAuth } from "./auth-middleware";
