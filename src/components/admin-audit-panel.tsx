@@ -3,7 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { AuditRow, HeartbeatRow } from "@/lib/admin-system.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Activity,
   Loader2,
@@ -77,13 +77,11 @@ export function HeartbeatSection({
       ) : isError ? (
         <ErrorRow msg={error instanceof Error ? error.message : "Erro ao carregar heartbeat"} />
       ) : (
-        <TooltipProvider delayDuration={200}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {data?.map((hb) => (
-              <HeartbeatCard key={hb.job} hb={hb} />
-            ))}
-          </div>
-        </TooltipProvider>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {data?.map((hb) => (
+            <HeartbeatCard key={hb.job} hb={hb} />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -101,14 +99,19 @@ function HeartbeatCard({ hb }: { hb: HeartbeatRow }) {
         <span className="font-medium text-sm flex items-center gap-1.5 min-w-0">
           <Clock className="size-4 text-muted-foreground shrink-0" />
           {hb.hint ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-help underline decoration-dotted underline-offset-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="cursor-pointer border-0 bg-transparent p-0 text-left font-medium text-sm underline decoration-dotted underline-offset-2"
+                >
                   {hb.label}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{hb.hint}</TooltipContent>
-            </Tooltip>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 text-xs" side="top" align="start">
+                {hb.hint}
+              </PopoverContent>
+            </Popover>
           ) : (
             hb.label
           )}
