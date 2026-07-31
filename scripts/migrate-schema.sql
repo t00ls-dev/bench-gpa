@@ -23,6 +23,15 @@ DROP PROCEDURE IF EXISTS has_role;
 -- TABLES
 -- =============================================
 
+-- Sem FOREIGN KEY em nenhuma tabela — decisão deliberada, não esquecimento.
+-- staging_sales/sales_daily_agg/sales_prod_daily_agg/products são reescritas
+-- em bulk (upsert_products_bulk, finalize_import, refresh_product_universe,
+-- purge_old_aggs fazem INSERT...ON DUPLICATE KEY e DELETE de milhares de
+-- linhas de uma vez); FK forçaria checagem referencial linha a linha nesses
+-- caminhos, sem ganho real — a integridade de prod_code/store_code já é
+-- garantida pelo próprio pipeline de import (staging → agregação na mesma
+-- transação), não por constraint de banco.
+
 -- token_version: contador que invalida sessões já emitidas. O JWT é stateless e
 -- vale 7 dias, então sem isto redefinir a senha de uma conta comprometida não
 -- derrubava quem já estava logado. O token carrega a versão vigente na emissão;
@@ -38,7 +47,6 @@ CREATE TABLE IF NOT EXISTS users (
   token_version INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_users_email (email),
   INDEX idx_users_role (role),
   INDEX idx_users_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -53,8 +61,7 @@ CREATE TABLE IF NOT EXISTS products (
   prod_code VARCHAR(20) NOT NULL,
   prod_name VARCHAR(255) NOT NULL,
   sale_date DATE NOT NULL,
-  PRIMARY KEY (prod_code, sale_date),
-  INDEX idx_products_prod_code (prod_code)
+  PRIMARY KEY (prod_code, sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS staging_sales (
@@ -112,7 +119,6 @@ CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   subgrupo    VARCHAR(100),
   val_vda     DECIMAL(15,2) NOT NULL DEFAULT 0,
   PRIMARY KEY (sale_date, store_code, prod_code),
-  INDEX idx_prod_daily_sale_date (sale_date),
   INDEX idx_prod_daily_prod_code (prod_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -122,8 +128,7 @@ CREATE TABLE IF NOT EXISTS import_log (
   row_count   INT NOT NULL DEFAULT 0,
   imported_by VARCHAR(36),
   imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  batch_id    VARCHAR(36) NOT NULL,
-  INDEX idx_import_sale_date (sale_date)
+  batch_id    VARCHAR(36) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS filter_hierarchy (
