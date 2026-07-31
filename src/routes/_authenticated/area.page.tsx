@@ -18,6 +18,7 @@ import { Layers, Loader2 } from "lucide-react";
 import { Route } from "./area";
 import { defaultDateWindow } from "@/lib/date-window";
 import { cascadePatch } from "@/lib/filter-cascade";
+import { useResetOnChange } from "@/hooks/use-reset-on-change";
 
 type Product = {
   prod_code: string;
@@ -175,21 +176,22 @@ function AreaPage() {
   const [page, setPage] = useState(1);
   const sortDir = sortAsc ? "asc" : "desc";
 
-  useEffect(() => {
-    setPage(1);
-  }, [
-    search,
-    sortKey,
-    sortAsc,
-    pageSize,
-    dateFrom,
-    dateTo,
-    fStores,
-    fDeptos,
-    fSecoes,
-    fGrupos,
-    fSubgrupos,
-  ]);
+  useResetOnChange(
+    [
+      search,
+      sortKey,
+      sortAsc,
+      pageSize,
+      dateFrom,
+      dateTo,
+      fStores,
+      fDeptos,
+      fSecoes,
+      fGrupos,
+      fSubgrupos,
+    ],
+    () => setPage(1),
+  );
 
   const { data, isFetching, isLoading, isError, error, refetch } = useQuery({
     queryKey: [
