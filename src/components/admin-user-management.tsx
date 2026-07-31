@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { setUserRole, setUserActive } from "@/lib/admin-users.functions";
@@ -90,9 +91,7 @@ export function AdminUserManagement({
 
   // Busca/tamanho de página novos podem deixar a página atual fora do range
   // (ex.: filtrar de 3 páginas pra 1) — volta pra 1 em vez de mostrar vazio.
-  useEffect(() => {
-    setPage(1);
-  }, [search, pageSize]);
+  useResetOnChange([search, pageSize], () => setPage(1));
 
   const totalRows = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));

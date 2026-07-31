@@ -24,6 +24,43 @@ interface ChartRow {
   Atual: number;
 }
 
+// Hoisted para fora de DashboardCharts (não pode ser recriado a cada render):
+// maxIndex/minIndex chegam como props extras no elemento passado a `dot`, que
+// o Recharts mescla com as próprias props internas (cx, cy, index...) via
+// cloneElement.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomDot(props: any) {
+  const { cx, cy, index, maxIndex, minIndex } = props;
+  if (cx == null || cy == null) return null;
+  if (index !== maxIndex && index !== minIndex) return null;
+  const isMax = index === maxIndex;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={isMax ? "var(--success)" : "var(--destructive)"}
+      stroke="var(--card)"
+      strokeWidth={2}
+    />
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const atual = payload.find((p: { dataKey: string; value: number }) => p.dataKey === "Atual");
+  if (!atual) return null;
+  return (
+    <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
+      <p className="font-medium">{fmtBRShort(String(label))}</p>
+      <p>
+        Atual: <span className="font-medium">{fmtBRL(atual.value)}</span>
+      </p>
+    </div>
+  );
+}
+
 export function DashboardCharts({
   data,
   isLoading,
@@ -43,39 +80,6 @@ export function DashboardCharts({
   const minVal = vals.length ? Math.min(...vals) : 0;
   const maxIndex = vals.indexOf(maxVal);
   const minIndex = vals.indexOf(minVal);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function CustomDot(props: any) {
-    const { cx, cy, index } = props;
-    if (cx == null || cy == null) return null;
-    if (index !== maxIndex && index !== minIndex) return null;
-    const isMax = index === maxIndex;
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={4}
-        fill={isMax ? "var(--success)" : "var(--destructive)"}
-        stroke="var(--card)"
-        strokeWidth={2}
-      />
-    );
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function ChartTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
-    const atual = payload.find((p: { dataKey: string; value: number }) => p.dataKey === "Atual");
-    if (!atual) return null;
-    return (
-      <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
-        <p className="font-medium">{fmtBRShort(String(label))}</p>
-        <p>
-          Atual: <span className="font-medium">{fmtBRL(atual.value)}</span>
-        </p>
-      </div>
-    );
-  }
 
   return (
     <section className={`mt-6 grid gap-4 ${hideStores ? "" : "lg:grid-cols-2"}`}>
@@ -103,7 +107,7 @@ export function DashboardCharts({
                   dataKey="Atual"
                   stroke="var(--chart-1)"
                   strokeWidth={2.5}
-                  dot={<CustomDot />}
+                  dot={<CustomDot maxIndex={maxIndex} minIndex={minIndex} />}
                 />
               </LineChart>
             </ResponsiveContainer>
