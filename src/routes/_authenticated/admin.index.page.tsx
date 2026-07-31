@@ -12,7 +12,6 @@ import { AdminUserManagement } from "@/components/admin-user-management";
 import { DataCountSection, DbHealthSection } from "@/components/admin-system-panel";
 import { HeartbeatSection, AuditLogSection } from "@/components/admin-audit-panel";
 import { Users, Server, Shield, Database, HardDrive, ScrollText, HeartPulse } from "lucide-react";
-import { Route } from "./admin.index";
 
 export default function AdminPage() {
   const list = useServerFn(listUsers);

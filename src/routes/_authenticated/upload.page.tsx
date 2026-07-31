@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   beginImport,
@@ -64,7 +64,6 @@ const IDLE_STATE: ProcessingState = {
 };
 
 export default function UploadPage() {
-  const queryClient = useQueryClient();
   const getImported = useServerFn(getImportedDates);
   const doBeginImport = useServerFn(beginImport);
   const doInsertChunk = useServerFn(insertSalesChunk);
