@@ -348,8 +348,43 @@ function AreaPage() {
       doc.text("Período: " + fmtBRShort(dateFrom) + " - " + fmtBRShort(dateTo), mX, 22.5);
       doc.text("Produtos listados: " + filtered.length, mX, 27);
 
+      // Experimental (item 6 do backlog de UX) — mesmos 5 números do
+      // AreaKpiCards no topo da tela, só que impressos no PDF.
       autoTable(doc, {
         startY: 31,
+        margin: { left: mX, right: mX },
+        head: [["VENDA TOTAL", "PLUS (ÁREA)", "PLUS C/ VENDA", "PLUS S/ VENDA", "VENDA MÉDIA/PLU"]],
+        body: [
+          [
+            fmtBRL(total),
+            fmtInt(data?.plusTotal ?? 0),
+            fmtInt(data?.plusWithSale ?? 0),
+            fmtInt(noSale),
+            fmtBRL(data?.avgPerPlu ?? 0),
+          ],
+        ],
+        theme: "grid",
+        styles: {
+          font: "helvetica",
+          fontSize: 8,
+          cellPadding: 2,
+          halign: "center",
+          lineColor: [153, 153, 153],
+          lineWidth: 0.1,
+          textColor: [17, 17, 17],
+        },
+        headStyles: {
+          fillColor: [238, 238, 255],
+          textColor: [17, 17, 17],
+          fontStyle: "bold",
+          fontSize: 7,
+        },
+      });
+      const kpiEndY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY;
+
+      autoTable(doc, {
+        startY: kpiEndY + 4,
         margin: { left: mX, right: mX },
         head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
         body: filtered.length
