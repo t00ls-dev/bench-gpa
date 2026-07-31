@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { AuditRow, HeartbeatRow } from "@/lib/admin-system.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Activity,
   Loader2,
@@ -76,11 +77,13 @@ export function HeartbeatSection({
       ) : isError ? (
         <ErrorRow msg={error instanceof Error ? error.message : "Erro ao carregar heartbeat"} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {data?.map((hb) => (
-            <HeartbeatCard key={hb.job} hb={hb} />
-          ))}
-        </div>
+        <TooltipProvider delayDuration={200}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {data?.map((hb) => (
+              <HeartbeatCard key={hb.job} hb={hb} />
+            ))}
+          </div>
+        </TooltipProvider>
       )}
     </div>
   );
@@ -94,16 +97,28 @@ function HeartbeatCard({ hb }: { hb: HeartbeatRow }) {
 
   return (
     <div className={`rounded-lg border p-3 space-y-2 ${tone}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-sm flex items-center gap-1.5">
-          <Clock className="size-4 text-muted-foreground" /> {hb.label}
+      <div className="flex items-start justify-between gap-2">
+        <span className="font-medium text-sm flex items-center gap-1.5 min-w-0">
+          <Clock className="size-4 text-muted-foreground shrink-0" />
+          {hb.hint ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">
+                  {hb.label}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{hb.hint}</TooltipContent>
+            </Tooltip>
+          ) : (
+            hb.label
+          )}
         </span>
         {hb.overdue ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-medium text-destructive">
+          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-medium text-destructive">
             <AlertTriangle className="size-3" /> {never ? "Nunca executou" : "Atrasado"}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
+          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
             <CheckCircle2 className="size-3" /> Em dia
           </span>
         )}
