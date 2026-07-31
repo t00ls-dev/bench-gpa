@@ -38,19 +38,10 @@ export function ProductCharts({
   analysisData: ProductChartsData;
   hideStoreComp?: boolean;
 }) {
-  // Média móvel de 7 pontos (não necessariamente 7 dias corridos, se houver
-  // data sem venda — a proc não preenche zero, então "7 pontos" é o que dá
-  // pra calcular sem inventar dado). Mesmo cálculo de dashboard-charts.tsx.
-  const evolutionWithMa = useMemo(() => {
-    const ev = (analysisData.evolution as SeriesPoint[] | undefined) ?? [];
-    const result = ev.map((d) => ({ ...d, ma7: null as number | null }));
-    for (let i = 6; i < result.length; i++) {
-      let sum = 0;
-      for (let j = i - 6; j <= i; j++) sum += result[j].val;
-      result[i].ma7 = sum / 7;
-    }
-    return result;
-  }, [analysisData.evolution]);
+  const evolution = useMemo(
+    () => (analysisData.evolution as SeriesPoint[] | undefined) ?? [],
+    [analysisData.evolution],
+  );
 
   const dowData = useMemo(() => {
     const ev = analysisData.evolution as SeriesPoint[] | undefined;
@@ -72,7 +63,7 @@ export function ProductCharts({
 
   const maxAvg = Math.max(...dowData.map((d) => d.avg), 0);
 
-  const evolutionVals = evolutionWithMa.map((d) => d.val);
+  const evolutionVals = evolution.map((d) => d.val);
   const evolutionMaxVal = evolutionVals.length ? Math.max(...evolutionVals) : 0;
   const evolutionMinVal = evolutionVals.length ? Math.min(...evolutionVals) : 0;
   const evolutionMaxIndex = evolutionVals.indexOf(evolutionMaxVal);
@@ -139,7 +130,7 @@ export function ProductCharts({
         <p className="text-xs text-muted-foreground">Histórico de datas com venda registrada.</p>
         <div className="mt-4 h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={evolutionWithMa}>
+            <LineChart data={evolution}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="date"
@@ -158,27 +149,8 @@ export function ProductCharts({
                 strokeWidth={2.5}
                 dot={<EvolutionDot />}
               />
-              <Line
-                type="monotone"
-                dataKey="ma7"
-                stroke="var(--chart-3)"
-                strokeWidth={1.5}
-                strokeDasharray="2 3"
-                dot={false}
-                opacity={0.7}
-                connectNulls
-              />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-        <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block size-2.5 rounded-full bg-[var(--chart-2)]" /> Venda
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block size-2.5 rounded-sm border-2 border-dotted border-[var(--chart-3)] opacity-70" />{" "}
-            Média 7d
-          </span>
         </div>
       </div>
 
