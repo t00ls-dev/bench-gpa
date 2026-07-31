@@ -4,9 +4,26 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      # Pacotes do "clã" ESLint costumam exigir versões compatíveis entre si
+      # (eslint + @eslint/js + plugins). Em PRs separadas, cada uma conflita
+      # em bun.lock com as outras e precisa de resolução manual — agrupadas,
+      # sobem juntas, testadas juntas, num CI só.
+      eslint:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "typescript-eslint"
+      # Patch/minor de tudo o mais: baixo risco, não precisa de uma PR por
+      # pacote — reduz o volume sem esconder majors (que continuam
+      # aparecendo à parte, exigindo revisão individual de propósito).
+      patch-and-minor:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
