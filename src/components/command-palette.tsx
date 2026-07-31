@@ -5,6 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
 import { useServerFn } from "@tanstack/react-start";
 import { searchProducts } from "@/lib/product.functions";
+import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import {
   LayoutDashboard,
   Package,
@@ -48,18 +49,22 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", cb);
   }, []);
 
-  useEffect(() => {
+  useResetOnChange([open], () => {
     if (!open) {
       setSearch("");
       setProducts([]);
     }
-  }, [open]);
+  });
+
+  useResetOnChange([search.length < 2], () => {
+    if (search.length < 2) setProducts([]);
+  });
 
   useEffect(() => {
-    if (search.length < 2) {
-      setProducts([]);
-      return;
-    }
+    if (search.length < 2) return;
+    // Sinaliza "buscando" antes de agendar o debounce — parte da coreografia
+    // do fetch assíncrono deste efeito, não estado derivado de uma prop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     window.clearTimeout(debounceRef.current ?? undefined);
     debounceRef.current = window.setTimeout(async () => {

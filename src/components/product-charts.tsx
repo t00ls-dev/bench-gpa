@@ -31,6 +31,28 @@ interface ProductChartsData {
   evolution?: SeriesPoint[];
 }
 
+// Hoisted para fora de ProductCharts (não pode ser recriado a cada render):
+// evolutionMaxIndex/evolutionMinIndex chegam como props extras no elemento
+// passado a `dot`, que o Recharts mescla com as próprias props internas
+// (cx, cy, index...) via cloneElement.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function EvolutionDot(props: any) {
+  const { cx, cy, index, evolutionMaxIndex, evolutionMinIndex } = props;
+  if (cx == null || cy == null) return null;
+  if (index !== evolutionMaxIndex && index !== evolutionMinIndex) return null;
+  const isMax = index === evolutionMaxIndex;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={isMax ? "var(--success)" : "var(--destructive)"}
+      stroke="var(--card)"
+      strokeWidth={2}
+    />
+  );
+}
+
 export function ProductCharts({
   analysisData,
   hideStoreComp,
@@ -68,24 +90,6 @@ export function ProductCharts({
   const evolutionMinVal = evolutionVals.length ? Math.min(...evolutionVals) : 0;
   const evolutionMaxIndex = evolutionVals.indexOf(evolutionMaxVal);
   const evolutionMinIndex = evolutionVals.indexOf(evolutionMinVal);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function EvolutionDot(props: any) {
-    const { cx, cy, index } = props;
-    if (cx == null || cy == null) return null;
-    if (index !== evolutionMaxIndex && index !== evolutionMinIndex) return null;
-    const isMax = index === evolutionMaxIndex;
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={4}
-        fill={isMax ? "var(--success)" : "var(--destructive)"}
-        stroke="var(--card)"
-        strokeWidth={2}
-      />
-    );
-  }
 
   return (
     <section className={`mt-6 grid gap-4 ${hideStoreComp ? "" : "lg:grid-cols-2"}`}>
@@ -147,7 +151,12 @@ export function ProductCharts({
                 dataKey="val"
                 stroke="var(--chart-2)"
                 strokeWidth={2.5}
-                dot={<EvolutionDot />}
+                dot={
+                  <EvolutionDot
+                    evolutionMaxIndex={evolutionMaxIndex}
+                    evolutionMinIndex={evolutionMinIndex}
+                  />
+                }
               />
             </LineChart>
           </ResponsiveContainer>
