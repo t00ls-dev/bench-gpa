@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { parse } from "cookie";
+import { parseCookie } from "cookie";
 import { SESSION_COOKIE } from "./auth-config";
 import { resolveSession } from "./session";
 
@@ -15,7 +15,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
 
   const request = getRequest();
   const cookieHeader = request?.headers?.get("cookie") || "";
-  const parsed = parse(cookieHeader);
+  const parsed = parseCookie(cookieHeader);
   const token = parsed[SESSION_COOKIE];
 
   try {
