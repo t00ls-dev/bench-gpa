@@ -262,15 +262,27 @@ Produto ganhou comparação de subconjunto de lojas (`product_analysis` trocou
 retry automático — no nível do **arquivo inteiro**, não do chunk
 (`insertSalesChunk` não é idempotente — ver commit do PR #36 pro porquê).
 
+**Feitos em 30-31/07/2026** (PRs #56-#67, um item por PR): Dashboard/Produto
+perderam a exportação em PDF (mantida só na Área); Dashboard ganhou
+click-through nos rankings pra `/area`/`/produto` (com o nível clicado — e a
+loja, se filtrada numa loja só — pré-selecionados no destino) e chips de
+filtros ativos removíveis; Área ganhou nome de arquivo descritivo no PDF
+(`slugifyFilename` + `a.download`, PR #62), bloco com os KPIs do topo no PDF
+(PR #63, **experimental — confirmado pelo usuário que fica**, reaproveita o
+`data` já carregado na tela, sem custo extra de servidor ou de geração) e
+toolbar responsivo (busca em linha própria, seletor+PDF agrupados no celular,
+`title`/`aria-label` no botão — PR #66); Admin ganhou paginação client-side
+na lista de usuários, mesmo padrão visual da Área (`AREA_PAGE_SIZE_OPTIONS`,
+PR #67). De passagem, o card de heartbeat do `refresh-universe` (item 7 do
+histórico anterior, não desta lista) foi corrigido — rótulo longo quebrava o
+badge de status ao lado; virou rótulo curto + popover com o detalhe (PRs
+#64/#65 — Tooltip não funciona em toque, só em hover/foco).
+
 O que sobrou genuinamente aberto:
 
-- **Dashboard**: exportação só em PDF (falta XLSX); rankings sem click-through
-  pra `/area`/`/produto`; sem filtros ativos exibidos como chips.
-- **Produto**: exportação só em PDF (falta XLSX).
-- **Área**: PDF exporta só a tabela, sem os cards de KPI; nome do arquivo não
-  é descritivo (`openPdfBlob` abre em nova aba sem `download=` customizado).
+- **Dashboard**: exportação em XLSX (só tem PDF, e o PDF foi removido).
+- **Produto**: exportação em XLSX (mesma situação).
 - **Upload**: sem remover/reordenar arquivo na fila antes de importar.
-- **Admin**: sem paginação de usuários (relevante quando a lista crescer).
 - **Auth**: sem fluxo de "esqueci minha senha" — o único item alto-esforço
   desta lista (endpoint + envio de email + UI completos).
 
