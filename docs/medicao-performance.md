@@ -421,3 +421,16 @@ Suposição confirmada: `product_analysis` custa 3-4 ordens de magnitude menos
 que `area_analysis`/`dashboard_metrics`/`dashboard_rankings` (ms contra
 segundos). Filtrar por `prod_code` de fato elimina o problema de varredura
 completa que afeta as outras procs. Item fechado sem mudança de proc.
+
+## 2026-07-31 — build do Vite, fora do escopo das procs (PR #93)
+
+Não é medição de proc/SQL como o resto deste documento, mas é uma medição de
+performance que só existiu no chat até agora — registrando aqui pra não se
+perder.
+
+Migração `vite@7.3.2` → `8.2.0` (+ `@vitejs/plugin-react` `5.2.0` → `6.0.4`):
+`bun run build` caiu de **25-35s para ~2s**. Não foi medido com harness formal
+(sem N amostras/dispersão) — é o tempo de parede observado em algumas
+execuções antes/depois, não uma medição rigorosa. Zero mudança de código
+necessária; resto da stack (nitro, `@tanstack/react-start`, router-plugin,
+`vite-tsconfig-paths`, `@tailwindcss/vite`, vitest) já suportava `vite@^8`.
