@@ -153,3 +153,26 @@ export const apiLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.a
 export const authLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.auth, "auth");
 export const uploadLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.upload, "upload");
 export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.ssr, "ssr");
+
+/**
+ * Balde por conta, independente do `authLimiter` acima (que é por IP). Cobre
+ * o caso em que um ataque de credential stuffing distribui as tentativas
+ * contra UMA conta por vários IPs — cada IP isolado nunca estoura o teto de
+ * 10/min do authLimiter, mas a conta-alvo continua recebendo tentativa atrás
+ * de tentativa.
+ *
+ * Janela deliberadamente mais longa (15min) que os outros tiers: o objetivo
+ * aqui não é o throughput agregado da VPS — isso já é papel do authLimiter —
+ * é conter quem já sabe qual conta está mirando, mesmo trocando de IP a cada
+ * request. `maxGlobal` como `Number.MAX_SAFE_INTEGER` desliga de propósito o
+ * segundo tier da classe (o disjuntor de carga agregada já existe no
+ * authLimiter); este balde só precisa do teto por chave (e-mail).
+ */
+export const AUTH_ACCOUNT_WINDOW_MS = 15 * 60_000;
+export const AUTH_ACCOUNT_MAX_PER_EMAIL = 5;
+export const authAccountLimiter = new RateLimiter(
+  AUTH_ACCOUNT_WINDOW_MS,
+  AUTH_ACCOUNT_MAX_PER_EMAIL,
+  Number.MAX_SAFE_INTEGER,
+  "auth-account",
+);
