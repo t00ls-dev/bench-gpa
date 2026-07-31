@@ -1,9 +1,11 @@
 import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { COVERAGE_THRESHOLDS } from "./scripts/coverage-thresholds";
 
 export default defineConfig({
-  plugins: [tsconfigPaths({ projects: ["./tsconfig.json"] })],
+  resolve: {
+    alias: { "@": new URL("./src", import.meta.url).pathname },
+    tsconfigPaths: true,
+  },
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
