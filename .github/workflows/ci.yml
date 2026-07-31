@@ -25,6 +25,15 @@ jobs:
         with:
           bun-version: "1.3.14"
       - run: bun install --frozen-lockfile
+      # Relatório completo é sempre impresso (visibilidade), mas só falha o
+      # build em severidade crítica — moderate/high de hoje são só toolchain
+      # de build/lint (vite/postcss/js-yaml/babel), não caminho de request.
+      # Isso é o que teria pego a regressão do seroval (GHSA-mv8w-475r-vwqw)
+      # automaticamente, em vez de precisar de uma auditoria manual.
+      - name: Auditoria de dependências (bun audit)
+        run: |
+          bun audit || true
+          bun audit --audit-level=critical
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
