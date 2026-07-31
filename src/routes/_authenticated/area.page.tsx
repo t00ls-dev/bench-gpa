@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AreaTable } from "@/components/area-table";
 import { AreaKpiCards } from "@/components/area-kpi-cards";
 import { AreaFilters } from "@/components/area-filters";
-import { Layers, Loader2 } from "lucide-react";
+import { Layers } from "lucide-react";
 import { Route } from "./area";
 import { defaultDateWindow } from "@/lib/date-window";
 import { cascadePatch } from "@/lib/filter-cascade";

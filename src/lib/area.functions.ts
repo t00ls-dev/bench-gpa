@@ -10,11 +10,10 @@ import {
   str,
   strOrNull,
   num,
-  numOrNull,
   parseDateVal,
 } from "./api-types";
 import { AreaAnalysisSchema } from "./schemas";
-import { CACHE_TTL_LONG } from "./cache";
+import { CACHE_TTL_LONG, CACHE_TTL_SHORT } from "./cache";
 
 /**
  * Acima deste tamanho de página a resposta não entra no cache — é o caminho do
@@ -105,7 +104,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     if ((data.pageSize ?? 0) > CACHE_BYPASS_PAGE_SIZE) return query();
 
     const key = `area:${data.dateFrom}:${data.dateTo}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.page ?? ""}:${data.pageSize}:${data.search}:${sortBy}:${sortDir}`;
-    return cache.wrap(key, query);
+    return cache.wrap(key, query, CACHE_TTL_SHORT);
   });
 
 export const getAreaFilterHierarchy = createServerFn({ method: "POST" })

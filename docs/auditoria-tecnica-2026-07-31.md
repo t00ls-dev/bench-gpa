@@ -198,18 +198,18 @@ centrais.
 
 ## Ações priorizadas
 
-1. Rotacionar segredos de produção e purgar `.env` do histórico do git — crítico, esforço baixo.
-2. Corrigir CVE crítica de `seroval` nas cópias transitivas do TanStack — crítico, esforço baixo.
-3. Adicionar `bun audit`/Dependabot ao CI — alto, esforço baixo, previne recorrência dos itens 1-2.
-4. Atualizar `@tanstack/start-server-core` além do patch de CVE moderada — alto, esforço baixo.
-5. Logout revogar `token_version` — alto, esforço baixo.
-6. Restaurar transação em `refresh_product_universe`/`refresh_filter_hierarchy` e `purge_old_aggs` — médio, esforço baixo.
-7. Rate limit de login por conta, não só por IP — médio, esforço médio.
-8. Instalar `pm2-logrotate` e rotacionar `logs/*.log` de cron — médio, esforço baixo.
-9. Corrigir TTL implícito de `getAreaAnalysis` — médio, esforço trivial.
-10. Religar `noUnusedLocals`/`no-unused-vars` e triar o backlog resultante — médio, esforço médio.
-11. Corrigir README e regenerar `coverage-summary.md` — baixo, esforço trivial.
-12. Remover `toggle.tsx`/`@radix-ui/react-toggle`, `pnpm.overrides` morto, scripts de debug obsoletos — baixo, esforço trivial.
+1. ✅ 31/07 — Rotacionar segredos de produção e purgar `.env` do histórico do git — crítico, esforço baixo.
+2. ✅ 31/07 — Corrigir CVE crítica de `seroval` nas cópias transitivas do TanStack — crítico, esforço baixo.
+3. ✅ 31/07 — Adicionar `bun audit`/Dependabot ao CI — alto, esforço baixo, previne recorrência dos itens 1-2.
+4. ✅ 31/07 — `@tanstack/react-start` está em 1.168.33 (bem além do patch 1.167.30 da CVE moderada) via bumps de rotina — sem ação isolada necessária.
+5. ✅ 31/07 — Logout revogar `token_version` — alto, esforço baixo.
+6. ✅ 31/07 — Restaurar transação em `refresh_product_universe`/`refresh_filter_hierarchy` e `purge_old_aggs` — médio, esforço baixo.
+7. ✅ 31/07 — Rate limit de login por conta (5/15min por e-mail, balde independente do por-IP) — médio, esforço médio.
+8. ✅ 31/07 — `pm2-logrotate` instalado (10M/rotação, retém 14, comprimido) para os logs do PM2; `logrotate.d` do sistema adicionado para `purge.log`/`refresh-universe.log` (cron puro, fora do PM2) — médio, esforço baixo.
+9. ✅ 31/07 — TTL explícito (`CACHE_TTL_SHORT`) em `getAreaAnalysis`; `diagnoseData`/`dbHealthCheck`/`getAuditLog` paralelizados com `Promise.all` — médio, esforço trivial.
+10. ✅ 31/07 — `noUnusedLocals`/`no-unused-vars`/`noUnusedParameters` religados; 17 erros triados (2 eram bugs reais — `disabled` do dropzone e log sem URL em `start.ts` — corrigidos de verdade, não só silenciados) — médio, esforço médio.
+11. ✅ 31/07 — README corrigido (contradição 5min/10min no tier Auth, cron `import-watch` removida trocada por `refresh-universe`) e `coverage-summary.md` regenerado — baixo, esforço trivial.
+12. ✅ 31/07 — `toggle.tsx`/`@radix-ui/react-toggle`, `safe-error.ts` (órfão), `assertAdmin(label)`, 5 scripts de debug e ~10 exports sem consumidor externo removidos. `pnpm.overrides` já não existia (resolvido em sessão anterior). `backfill-null-categories.ts` mantido — risco médio de remoção, prioridade baixa, não confirmado se já rodou em produção — baixo, esforço trivial.
 
 ## Plano de refatoração em 5 fases
 

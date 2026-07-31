@@ -58,5 +58,3 @@ export function useGotoHotkey(letter: string, handler: () => void, enabled = tru
     };
   }, [letter, handler, enabled]);
 }
-
-export { useHotkey as default };

@@ -11,9 +11,9 @@
 // zerar os níveis dependentes (trocar de loja não deixa filtro de subgrupo
 // órfão apontando pra uma combinação que não existe mais).
 
-export const CASCADE_LEVELS = ["stores", "deptos", "secoes", "grupos", "subgrupos"] as const;
-export type CascadeLevel = (typeof CASCADE_LEVELS)[number];
-export type CascadeFilters = Record<CascadeLevel, string[]>;
+const CASCADE_LEVELS = ["stores", "deptos", "secoes", "grupos", "subgrupos"] as const;
+type CascadeLevel = (typeof CASCADE_LEVELS)[number];
+type CascadeFilters = Record<CascadeLevel, string[]>;
 
 /** Ao setar `level`, devolve o patch que zera todo nível abaixo dele na cascata. */
 export function cascadePatch(level: CascadeLevel, value: string[]): Partial<CascadeFilters> {
@@ -34,7 +34,7 @@ export interface HierarchyItem {
   subgrupo: string | null;
 }
 
-export interface AreaCascadeOptions {
+interface AreaCascadeOptions {
   stores: HierarchyItem[];
   deptosOpts: string[];
   secoesOpts: string[];

@@ -5,7 +5,7 @@ import { getRequest, getCookie, deleteCookie } from "@tanstack/react-start/serve
 import db from "./db";
 import { z } from "zod";
 import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
-import { authLimiter, getClientIp } from "./rate-limit";
+import { authLimiter, authAccountLimiter, getClientIp } from "./rate-limit";
 import { recordAudit } from "./audit";
 import { SESSION_COOKIE } from "./auth-config";
 import { issueSession, resolveSession } from "./session";
@@ -60,6 +60,14 @@ export const login = createServerFn({ method: "POST" })
     if (!rl.allowed) {
       await auditFail("excesso de tentativas (rate limit)");
       throw new Error("Muitas tentativas de login. Aguarde um minuto.");
+    }
+
+    // Balde por conta, além do balde por IP acima — protege contra
+    // credential stuffing distribuído por vários IPs contra a mesma conta.
+    const rlAccount = authAccountLimiter.check(data.email);
+    if (!rlAccount.allowed) {
+      await auditFail("excesso de tentativas na conta (rate limit)");
+      throw new Error("Muitas tentativas de login para esta conta. Aguarde alguns minutos.");
     }
 
     // Fail-closed: quando o Turnstile está ativo, o token é obrigatório —

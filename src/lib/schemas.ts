@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const DateRangeSchema = z.object({
+const DateRangeSchema = z.object({
   dateFrom: z.string().optional().nullable(),
   dateTo: z.string().optional().nullable(),
 });
