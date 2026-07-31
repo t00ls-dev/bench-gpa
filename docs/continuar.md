@@ -4,6 +4,16 @@ Estado em **2026-07-30**. Este documento existe para a próxima sessão não ter
 reconstruir contexto a partir do histórico do git. Para o "como chegamos até
 aqui" (Lovable → Supabase → self-hosted), ver `docs/historia-do-projeto.md`.
 
+**A partir daqui o conteúdo é histórico (parou em ~PR #67).** Entre 30/07 e
+31/07/2026 houve uma auditoria técnica completa do repositório
+(`docs/auditoria-tecnica-2026-07-31.md`), que tem sua própria lista de ações
+priorizadas — já toda resolvida — cobrindo segredos no git, CVEs de
+dependência, rate limit por conta, transações ausentes em procs, TTL de
+cache, código morto, `noUnusedLocals`/`no-unused-vars`, e a limpeza de
+índices redundantes/mortos que segue o item 2 abaixo. Consulte aquele
+documento para o estado mais recente antes de assumir que algo listado
+como "aberto" aqui ainda está aberto.
+
 ## Como trabalhar aqui
 
 - **Branch + PR, nunca commit direto na `main`.** Push na `main` dispara deploy em
