@@ -238,11 +238,7 @@ function AreaPage() {
       const bD = daysSinceNum(b.lastSaleDate);
       const aN = aD === null;
       const bN = bD === null;
-      let cmp = 0;
-      if (aN && bN) cmp = 0;
-      else if (aN) cmp = 1;
-      else if (bN) cmp = -1;
-      else cmp = aD - bD;
+      const cmp = aN && bN ? 0 : aN ? 1 : bN ? -1 : aD - bD;
       return sortAsc ? cmp : -cmp;
     });
   }, [data, sortKey, sortAsc, daysSinceNum]);

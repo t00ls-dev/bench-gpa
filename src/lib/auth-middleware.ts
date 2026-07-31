@@ -39,6 +39,6 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     if (err instanceof Error && err.message.startsWith("Unauthorized")) {
       throw err;
     }
-    throw new Error("Unauthorized: invalid token");
+    throw new Error("Unauthorized: invalid token", { cause: err });
   }
 });
