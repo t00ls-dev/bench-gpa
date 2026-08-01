@@ -16,7 +16,7 @@ const root = resolve(import.meta.dir, "..");
 const summaryPath = join(root, "coverage/coverage-summary.json");
 
 if (!existsSync(summaryPath)) {
-  console.error("coverage/coverage-summary.json not found — run `bun run coverage` first");
+  console.error("coverage/coverage-summary.json not found: run `bun run coverage` first");
   process.exit(1);
 }
 
@@ -24,7 +24,7 @@ const summary: CoverageSummary = JSON.parse(readFileSync(summaryPath, "utf-8"));
 const { total, ...files } = summary;
 
 function pctBadge(pct: number, threshold: number): string {
-  return pct >= threshold ? "✅" : "⚠️";
+  return pct >= threshold ? "ok" : "abaixo do threshold";
 }
 
 function row(label: string, m: FileSummary): string {
@@ -45,7 +45,7 @@ const fileRows = Object.entries(files)
 const lines = [
   "# Cobertura de testes",
   "",
-  `_Gerado em ${new Date().toISOString()} — thresholds: lines ${THRESHOLDS.lines}%, statements ${THRESHOLDS.statements}%, functions ${THRESHOLDS.functions}%, branches ${THRESHOLDS.branches}%_`,
+  `_Gerado em ${new Date().toISOString()}, thresholds: lines ${THRESHOLDS.lines}%, statements ${THRESHOLDS.statements}%, functions ${THRESHOLDS.functions}%, branches ${THRESHOLDS.branches}%_`,
   "",
   "## Total",
   "",
@@ -64,5 +64,5 @@ const lines = [
 const outPath = join(root, "docs/coverage-summary.md");
 writeFileSync(outPath, lines.join("\n"));
 console.error(
-  `✅ docs/coverage-summary.md generated (${fileRows.length} files, total lines: ${total.lines.pct.toFixed(1)}%)`,
+  `docs/coverage-summary.md generated (${fileRows.length} files, total lines: ${total.lines.pct.toFixed(1)}%)`,
 );

@@ -1,4 +1,4 @@
-# Auditoria Técnica Completa — bench-gpa (31/07/2026)
+# Auditoria Técnica Completa: bench-gpa (31/07/2026)
 
 Due diligence técnica completa do repositório, no mesmo rigor de uma auditoria
 pré-aquisição: arquitetura, código morto, dependências, performance, banco de
@@ -9,7 +9,7 @@ severidade e barras de nota) publicada como artifact separado na mesma
 sessão.
 
 Ver também: `docs/continuar.md` (histórico de decisões) e
-`docs/medicao-performance.md` (benchmarks de banco já medidos — não
+`docs/medicao-performance.md` (benchmarks de banco já medidos, não
 repetidos aqui).
 
 ## Notas por categoria (0-10)
@@ -19,23 +19,23 @@ repetidos aqui).
 | Arquitetura | 7.5 | Padrão único confirmado em banco/validação/auth/cache; perde ponto por um arquivo de 571 linhas com 4 responsabilidades e duplicação pequena de paginação |
 | Performance | 7.5 | Procs caras já cacheadas e medidas, bundle já dividido por rota, tabela grande já virtualizada; achados restantes são todos de baixo esforço |
 | **Segurança** | **4.5** | Nenhuma vulnerabilidade clássica de app (SQLi/XSS/CSRF/SSRF), mas segredo de produção exposto no histórico do git domina a nota |
-| Escalabilidade | 5.0 | Teto estrutural de infraestrutura (1 núcleo, 1,9GB compartilhado, PM2 fork único, cache em memória de processo) — decisão de custo consciente, não falha de engenharia |
+| Escalabilidade | 5.0 | Teto estrutural de infraestrutura (1 núcleo, 1,9GB compartilhado, PM2 fork único, cache em memória de processo): decisão de custo consciente, não falha de engenharia |
 | Organização | 7.5 | Sem fragmentação de padrão nos eixos centrais; ruído cosmético localizado (config morta, scripts de debug obsoletos) |
 | Legibilidade | 7.5 | Comentários explicam o não-óbvio de forma consistente; exceções pontuais (FK sem nota, funções de data sem nota cruzada) |
 | Manutenibilidade | 7.0 | Cobertura de teste real (74,2%) concentrada no risco certo; mas `noUnusedLocals`/`no-unused-vars` desligados sem explicação já deixaram passar código morto |
 | Infraestrutura | 6.5 | Deploy com rollback automático real e migrations antes do swap; mas zero auditoria de dependência no CI e zero rotação de log |
 | Documentação | 7.0 | `continuar.md`/`medicao-performance.md` são um diferencial real; drift pontual (README contraditório, feature removida ainda listada) |
-| **Qualidade geral** | **6.8** | Julgamento ponderado, não média aritmética — pesa o achado crítico de segurança e a ausência de rede de segurança automatizada para dependências |
+| **Qualidade geral** | **6.8** | Julgamento ponderado, não média aritmética: pesa o achado crítico de segurança e a ausência de rede de segurança automatizada para dependências |
 
 ---
 
-## Achado crítico — tratar antes de qualquer outro item
+## Achado crítico: tratar antes de qualquer outro item
 
 **Segredos de produção no histórico do git.** O commit `411ef7d`
 (21/07/2026) tem um `.env` versionado em texto puro com `JWT_SECRET`,
 `DB_PASS` e `TURNSTILE_SECRET_KEY` reais. O arquivo foi removido do
 tracking 8 commits depois (`67fb11d`), mas o histórico **nunca foi
-reescrito** para ele — só os `.xlsx` passaram pelo `git filter-repo`
+reescrito** para ele: só os `.xlsx` passaram pelo `git filter-repo`
 (item 6 de `continuar.md`). Recuperável hoje via `git show
 411ef7d:.env`. Repo é privado, o que reduz mas não elimina o risco.
 Commits ainda mais antigos também expõem uma `SUPABASE_SERVICE_ROLE_KEY`
@@ -52,9 +52,9 @@ para os XLSX).
 
 - Deploy com **rollback automático real**: healthcheck HTTP após o
   swap; se falhar, restaura `.output.old` e reaplica o PM2 antigo
-  (`ci.yml:188-219`) — código que executa, não script de sorte.
+  (`ci.yml:188-219`): código que executa, não script de sorte.
 - Migrations aplicadas **antes** do swap de código, com o pipeline
-  parando se falharem — schema nunca fica dessincronizado.
+  parando se falharem: schema nunca fica dessincronizado.
 - Cobertura de teste real em 74,2%, concentrada nas server functions
   de maior risco (upload, dashboard, admin).
 - Cultura de medir antes de mudar: toda decisão de performance no
@@ -63,14 +63,14 @@ para os XLSX).
 - Nenhuma vulnerabilidade clássica de aplicação web (SQLi, XSS, CSRF,
   SSRF, path traversal, command injection) em nenhuma rota auditada.
 - Bundle já dividido corretamente por rota; libs pesadas (jsPDF,
-  Recharts, parser XLSX) carregadas sob demanda — confirmado com
+  Recharts, parser XLSX) carregadas sob demanda, confirmado com
   números reais de build, não hipótese.
 
 ## Pontos fracos
 
 - Segredo de produção plausivelmente ativo, exposto há 10 dias, nunca
   rotacionado nem purgado (ver achado crítico acima).
-- Zero auditoria automatizada de dependências no CI — as duas CVEs já
+- Zero auditoria automatizada de dependências no CI: as duas CVEs já
   corrigidas (`seroval`, `xlsx`) foram achadas manualmente, e uma
   delas (`seroval`) **voltou** via cópias transitivas sem ninguém notar.
 - Duas stored procedures (`refresh_product_universe`,
@@ -101,15 +101,15 @@ para os XLSX).
 
 **Vulnerabilidades ativas no caminho de produção:**
 
-- **`seroval` (crítico)** — pin de `^1.5.6` no topo do `package.json`,
+- **`seroval` (crítico)**: pin de `^1.5.6` no topo do `package.json`,
   mas `@tanstack/router-core`/`start-client-core`/`start-plugin-core`/
   `start-server-core` carregam cada um sua própria cópia aninhada de
-  `seroval@1.5.2` (vulnerável), sem dedupe — exatamente a superfície
+  `seroval@1.5.2` (vulnerável), sem dedupe: exatamente a superfície
   de deserialização de resposta de server function da CVE. Correção:
   atualizar o TanStack Start/Router para a série que já embute
   `seroval>=1.5.3`, e mover o pin para `overrides` real (não
   `pnpm.overrides`, que o bun ignora).
-- **`@tanstack/start-server-core` (alto)** — `@tanstack/react-start@
+- **`@tanstack/start-server-core` (alto)**: `@tanstack/react-start@
   1.167.50` fixa `start-server-core@1.167.22`, abaixo do patch
   `1.167.30` que corrige uma CVE moderada de deserialização de
   request. Correção: bump para a série 1.168–1.170.
@@ -165,7 +165,7 @@ já content-hashed.
 ## Arquitetura & organização
 
 Confirmado: padrão único para acesso a banco, validação, autorização
-admin e split cache-servidor/cliente — sem fragmentação nos eixos
+admin e split cache-servidor/cliente, sem fragmentação nos eixos
 centrais.
 
 | Achado | Local | Correção |
@@ -179,8 +179,8 @@ centrais.
 
 | Achado | Local | Risco | Correção |
 | --- | --- | --- | --- |
-| `refresh_product_universe`/`refresh_filter_hierarchy` sem transação — garantia do comentário é falsa desde que saíram de `finalize_import` | `migrate-schema.sql:1097-1143` | Médio | `START TRANSACTION`/`COMMIT` no molde de `finalize_import` |
-| `purge_old_aggs` sem transação/handler — purge parcial possível | `migrate-schema.sql:1022-1063` | Médio | Mesmo padrão |
+| `refresh_product_universe`/`refresh_filter_hierarchy` sem transação: garantia do comentário é falsa desde que saíram de `finalize_import` | `migrate-schema.sql:1097-1143` | Médio | `START TRANSACTION`/`COMMIT` no molde de `finalize_import` |
+| `purge_old_aggs` sem transação/handler: purge parcial possível | `migrate-schema.sql:1022-1063` | Médio | Mesmo padrão |
 | `idx_prod_daily_sale_date` provavelmente morto (63MB), mesmo padrão dos 4 índices já removidos | `migrate-schema.sql:115` | Baixo | Medir com `bench-procs.sh`, formalizar migration `0005` |
 | 3 índices redundantes com PK/UNIQUE | `idx_products_prod_code`, `idx_import_sale_date`, `idx_users_email` | Baixo | `DROP INDEX` |
 | Ausência de FK sem comentário explicando (única decisão não documentada do schema) | schema todo | Nenhum | Comentário de 1-2 linhas |
@@ -198,34 +198,34 @@ centrais.
 
 ## Ações priorizadas
 
-1. ✅ 31/07 — Rotacionar segredos de produção e purgar `.env` do histórico do git — crítico, esforço baixo.
-2. ✅ 31/07 — Corrigir CVE crítica de `seroval` nas cópias transitivas do TanStack — crítico, esforço baixo.
-3. ✅ 31/07 — Adicionar `bun audit`/Dependabot ao CI — alto, esforço baixo, previne recorrência dos itens 1-2.
-4. ✅ 31/07 — `@tanstack/react-start` está em 1.168.33 (bem além do patch 1.167.30 da CVE moderada) via bumps de rotina — sem ação isolada necessária.
-5. ✅ 31/07 — Logout revogar `token_version` — alto, esforço baixo.
-6. ✅ 31/07 — Restaurar transação em `refresh_product_universe`/`refresh_filter_hierarchy` e `purge_old_aggs` — médio, esforço baixo.
-7. ✅ 31/07 — Rate limit de login por conta (5/15min por e-mail, balde independente do por-IP) — médio, esforço médio.
-8. ✅ 31/07 — `pm2-logrotate` instalado (10M/rotação, retém 14, comprimido) para os logs do PM2; `logrotate.d` do sistema adicionado para `purge.log`/`refresh-universe.log` (cron puro, fora do PM2) — médio, esforço baixo.
-9. ✅ 31/07 — TTL explícito (`CACHE_TTL_SHORT`) em `getAreaAnalysis`; `diagnoseData`/`dbHealthCheck`/`getAuditLog` paralelizados com `Promise.all` — médio, esforço trivial.
-10. ✅ 31/07 — `noUnusedLocals`/`no-unused-vars`/`noUnusedParameters` religados; 17 erros triados (2 eram bugs reais — `disabled` do dropzone e log sem URL em `start.ts` — corrigidos de verdade, não só silenciados) — médio, esforço médio.
-11. ✅ 31/07 — README corrigido (contradição 5min/10min no tier Auth, cron `import-watch` removida trocada por `refresh-universe`) e `coverage-summary.md` regenerado — baixo, esforço trivial.
-12. ✅ 31/07 — `toggle.tsx`/`@radix-ui/react-toggle`, `safe-error.ts` (órfão), `assertAdmin(label)`, 5 scripts de debug e ~10 exports sem consumidor externo removidos. `pnpm.overrides` já não existia (resolvido em sessão anterior). `backfill-null-categories.ts` mantido — risco médio de remoção, prioridade baixa, não confirmado se já rodou em produção — baixo, esforço trivial.
+1. Concluído em 31/07: rotacionar segredos de produção e purgar `.env` do histórico do git (crítico, esforço baixo).
+2. Concluído em 31/07: corrigir CVE crítica de `seroval` nas cópias transitivas do TanStack (crítico, esforço baixo).
+3. Concluído em 31/07: adicionar `bun audit`/Dependabot ao CI (alto, esforço baixo, previne recorrência dos itens 1-2).
+4. Concluído em 31/07: `@tanstack/react-start` está em 1.168.33 (bem além do patch 1.167.30 da CVE moderada) via bumps de rotina, sem ação isolada necessária.
+5. Concluído em 31/07: logout revogar `token_version` (alto, esforço baixo).
+6. Concluído em 31/07: restaurar transação em `refresh_product_universe`/`refresh_filter_hierarchy` e `purge_old_aggs` (médio, esforço baixo).
+7. Concluído em 31/07: rate limit de login por conta (5/15min por e-mail, balde independente do por-IP), médio, esforço médio.
+8. Concluído em 31/07: `pm2-logrotate` instalado (10M/rotação, retém 14, comprimido) para os logs do PM2; `logrotate.d` do sistema adicionado para `purge.log`/`refresh-universe.log` (cron puro, fora do PM2), médio, esforço baixo.
+9. Concluído em 31/07: TTL explícito (`CACHE_TTL_SHORT`) em `getAreaAnalysis`; `diagnoseData`/`dbHealthCheck`/`getAuditLog` paralelizados com `Promise.all`, médio, esforço trivial.
+10. Concluído em 31/07: `noUnusedLocals`/`no-unused-vars`/`noUnusedParameters` religados; 17 erros triados (2 eram bugs reais: `disabled` do dropzone e log sem URL em `start.ts`; corrigidos de verdade, não só silenciados), médio, esforço médio.
+11. Concluído em 31/07: README corrigido (contradição 5min/10min no tier Auth, cron `import-watch` removida trocada por `refresh-universe`) e `coverage-summary.md` regenerado, baixo, esforço trivial.
+12. Concluído em 31/07: `toggle.tsx`/`@radix-ui/react-toggle`, `safe-error.ts` (órfão), `assertAdmin(label)`, 5 scripts de debug e ~10 exports sem consumidor externo removidos. `pnpm.overrides` já não existia (resolvido em sessão anterior). `backfill-null-categories.ts` mantido: risco médio de remoção, prioridade baixa, não confirmado se já rodou em produção, baixo, esforço trivial.
 
 ## Plano de refatoração em 5 fases
 
-**Fase 1 — Correções críticas**: segredos no histórico do git;
+**Fase 1: Correções críticas**: segredos no histórico do git;
 `seroval`/`start-server-core` desatualizados.
 
-**Fase 2 — Performance**: TTL implícito de `getAreaAnalysis`;
+**Fase 2: Performance**: TTL implícito de `getAreaAnalysis`;
 round-trips sequenciais em rotas admin.
 
-**Fase 3 — Simplificação**: código morto e dependências órfãs;
+**Fase 3: Simplificação**: código morto e dependências órfãs;
 documentação desatualizada.
 
-**Fase 4 — Arquitetura**: transações ausentes nas duas procs de
+**Fase 4: Arquitetura**: transações ausentes nas duas procs de
 manutenção; `area.page.tsx` com 4 responsabilidades.
 
-**Fase 5 — Otimizações finais**: índices redundantes com PK/UNIQUE;
+**Fase 5: Otimizações finais**: índices redundantes com PK/UNIQUE;
 `idx_prod_daily_sale_date` possivelmente morto.
 
 Detalhe de problema/causa/impacto/solução/dificuldade/risco/ganho por

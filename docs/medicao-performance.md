@@ -11,7 +11,7 @@ mais rápido" é opinião.
 São um par, e nenhuma das duas basta sozinha. Tempo sem correção não vale nada:
 uma proc mais rápida que devolve outro número é um bug mais rápido.
 
-### `scripts/bench-procs.sh` — quanto custa
+### `scripts/bench-procs.sh`: quanto custa
 
 Mede em produção, com o cronômetro dentro da sessão SQL. O critério de validade é
 a **dispersão** (`max/min`): acima de ~1,3 a medição se declara inválida. Somente
@@ -22,7 +22,7 @@ ssh -i ~/.ssh/gpa-key -p 9767 debian@sv1.t00ls.dev \
   'sudo -u admin bash -s -- --out /tmp/bench-depois' < scripts/bench-procs.sh
 ```
 
-### `scripts/validate-procs.sh` — se o resultado mudou
+### `scripts/validate-procs.sh`: se o resultado mudou
 
 37 cenários sobre as três procs, cada um com dois hashes. Roda no banco local.
 
@@ -34,7 +34,7 @@ diff /tmp/antes.txt /tmp/depois.txt               # vazio = aprovado
 ```
 
 Os cenários não são "alguns casos": cada um cobre um caminho que já quebrou ou
-que a reescrita de 26/07 tocou — datas nulas, período vazio, as quatro
+que a reescrita de 26/07 tocou: datas nulas, período vazio, as quatro
 ordenações mais um `p_sort_by` inválido, e busca com e sem match, que exercita os
 **dois ramos do PREPARE** de `area_analysis` (contagens de placeholder
 diferentes, e contagem de placeholder é erro de execução, não de compilação).
@@ -45,7 +45,7 @@ diferente, e isso é sério.
 
 ### Como testar uma variante de proc
 
-**Não** comparar SQL avulso que imita a proc — foi exatamente esse atalho que
+**Não** comparar SQL avulso que imita a proc: foi exatamente esse atalho que
 levou à regressão de 26/07 (ver adiante). O caminho certo:
 
 1. criar a proc candidata com **outro nome**, com o corpo completo;
@@ -55,7 +55,7 @@ levou à regressão de 26/07 (ver adiante). O caminho certo:
 
 ---
 
-## Baseline — 2026-07-26, 10:20 UTC
+## Baseline: 2026-07-26, 10:20 UTC
 
 Domingo de manhã, `load` 0,00 antes de começar. Dataset: 56 datas
 (27/05 a 21/07/2026), 2.750.601 linhas em `sales_prod_daily_agg`.
@@ -72,7 +72,7 @@ Domingo de manhã, `load` 0,00 antes de começar. Dataset: 56 datas
 | `metrics_28d` | **46.342 ms** | 1,11x |
 | `filtros_28d` | 222 ms | 1,13x |
 
-Todas as dispersões abaixo de 1,2 — a bateria é válida.
+Todas as dispersões abaixo de 1,2: a bateria é válida.
 
 ### O que estes números dizem
 
@@ -80,7 +80,7 @@ Todas as dispersões abaixo de 1,2 — a bateria é válida.
 28 dias. Os docs registravam `getDashboardRankings` como "3,8s"; esse valor era
 da janela padrão de 7 dias. Em 28 dias são 32s.
 
-**2. Filtrar não alivia — às vezes piora.** Filtrar por departamento custa
+**2. Filtrar não alivia, às vezes piora.** Filtrar por departamento custa
 *mais* (24,0s) do que não filtrar (23,0s). O padrão
 `NOT EXISTS (...) OR col IN (...)`, que aparece 75 vezes no schema, nunca reduz o
 conjunto varrido: só acrescenta uma subconsulta por dimensão. O usuário que
@@ -96,14 +96,14 @@ vezes o dado, onze vezes o tempo.
 schema: `dashboard_metrics` faz 4 varreduras de `sales_prod_daily_agg` por
 chamada, `dashboard_rankings` faz 5 (uma por agrupamento: depto, seção, grupo,
 subgrupo, produto) e `area_analysis` faz 3. Dividindo, dá ~6,5s a ~11,6s por
-varredura — consistente entre as três procs.
+varredura, consistente entre as três procs.
 
 ### O ambiente por trás dos números
 
 | | |
 | --- | ---: |
-| `sales_prod_daily_agg` — dados | 538 MB |
-| `sales_prod_daily_agg` — índices | 714 MB |
+| `sales_prod_daily_agg`: dados | 538 MB |
+| `sales_prod_daily_agg`: índices | 714 MB |
 | `innodb_buffer_pool_size` | **128 MB** |
 | RAM total da VPS | 1.931 MB |
 | Swap em uso | 379 MB |
@@ -114,17 +114,17 @@ Duas coisas saltam:
   1,25 GB.** Razão de 10:1. É a explicação mais provável do item 3: a janela de 7
   dias cabe na memória, a de 28 não, e a partir daí cada varredura volta ao
   disco. `innodb_buffer_pool_size` é ajustável a quente no MariaDB 11.4, mas a
-  VPS já tem 379 MB em swap — não é memória livre esperando ser usada.
+  VPS já tem 379 MB em swap. Não é memória livre esperando ser usada.
 - **Os índices custam mais que a tabela** (714 contra 538 MB). Quatro deles são
   de categoria (`depto`, `secao`, `grupo`, `subgrupo`), e o item 2 mostra que
-  eles não estão sendo usados para filtrar. Vale investigar removê-los — mas
+  eles não estão sendo usados para filtrar. Vale investigar removê-los, mas
   atenção: derrubar índice secundário **não** acelera varredura da chave
   primária. O ganho esperado é indireto (menos disputa pelo buffer pool, import
   mais rápido, backup menor), e portanto precisa ser medido, não presumido.
 
 ---
 
-## Experimento 1 — uma varredura em vez de cinco (`dashboard_rankings`)
+## Experimento 1: uma varredura em vez de cinco (`dashboard_rankings`)
 
 Feito em prod, somente com `TEMPORARY TABLE` (escopo de sessão, some ao
 desconectar): nada de proc alterada, índice criado ou escrita persistente. Três
@@ -132,23 +132,23 @@ variantes, três repetições cada, aquecimento descartado.
 
 | Variante | Mediana | Hash do conjunto |
 | --- | ---: | --- |
-| **A** — como a proc faz hoje: 5 varreduras, predicado `(? IS NULL OR ...)` | 30.677 ms | `6664a8c02aff` |
-| **B** — 5 varreduras, predicado de data direto | 31.849 ms | `6664a8c02aff` |
-| **C** — 1 varredura para uma temporária no grão fino + 5 rollups | **17.777 ms** | `6664a8c02aff` |
+| **A** (como a proc faz hoje): 5 varreduras, predicado `(? IS NULL OR ...)` | 30.677 ms | `6664a8c02aff` |
+| **B**: 5 varreduras, predicado de data direto | 31.849 ms | `6664a8c02aff` |
+| **C**: 1 varredura para uma temporária no grão fino + 5 rollups | **17.777 ms** | `6664a8c02aff` |
 
 Duas validações antes de ler o resultado: a variante A mediu 30,7s contra os
 32,4s da proc real, ou seja, o experimento reproduz o caminho de produção com 5%
 de erro; e os três hashes são iguais **ao hash que a proc real produziu no
-baseline** — as variantes entregam o mesmo resultado, não uma aproximação.
+baseline**: as variantes entregam o mesmo resultado, não uma aproximação.
 
 ### B não ganhou nada, e isso derruba uma hipótese
 
 O plano original supunha que `(p_date_from IS NULL OR a.sale_date >= p_date_from)`
 estivesse impedindo o uso do índice, e que tornar o predicado direto traria ganho.
-**Não trouxe** (31,8s contra 30,7s — dentro do ruído).
+**Não trouxe** (31,8s contra 30,7s, dentro do ruído).
 
 O motivo, olhando o dataset: 28 dias são metade das 56 datas armazenadas. Nenhum
-índice ajuda uma consulta que precisa de metade das linhas — varrer *é* o plano
+índice ajuda uma consulta que precisa de metade das linhas: varrer *é* o plano
 correto. O predicado nunca foi o problema.
 
 Corolário prático: **não adianta criar índice para acelerar a janela de 28 dias.**
@@ -177,7 +177,7 @@ disco.
 
 ---
 
-## Experimento 2 — o modelo de custo que fecha os números
+## Experimento 2: o modelo de custo que fecha os números
 
 O experimento 1 sugeria "menos varreduras, menos tempo". Testando mais variantes,
 essa regra se mostrou errada. O que fecha é **varreduras × largura da chave de
@@ -185,19 +185,19 @@ agrupamento**, mais o preço fixo de materializar cada temporária.
 
 | Variante | Varreduras | Chave do grão | Linhas na temporária | Mediana |
 | --- | ---: | --- | ---: | ---: |
-| `rankings` hoje | 5 | — | — | 30.677 ms |
-| `rankings` C — 1 temporária no grão fino | 1 | 6 colunas, inclui `prod_name` VARCHAR(255) | ~15k | **17.777 ms** |
-| `rankings` D — 2 temporárias mais baratas | 2 | 4 e 2 colunas | 1.523 e 15.270 | 31.783 ms |
-| `metrics` hoje | 4 | — | — | 45.832 ms |
-| `metrics` E — 1 temporária | 1 | 3 colunas estreitas | 2.415 | **9.341 ms** |
-| `area` hoje | 3 | — | — | 21.269 ms |
-| `area` F — temporária por produto | 2 | 1 coluna | ~15k | **13.352 ms** |
+| `rankings` hoje | 5 | - | - | 30.677 ms |
+| `rankings` C: 1 temporária no grão fino | 1 | 6 colunas, inclui `prod_name` VARCHAR(255) | ~15k | **17.777 ms** |
+| `rankings` D: 2 temporárias mais baratas | 2 | 4 e 2 colunas | 1.523 e 15.270 | 31.783 ms |
+| `metrics` hoje | 4 | - | - | 45.832 ms |
+| `metrics` E: 1 temporária | 1 | 3 colunas estreitas | 2.415 | **9.341 ms** |
+| `area` hoje | 3 | - | - | 21.269 ms |
+| `area` F: temporária por produto | 2 | 1 coluna | ~15k | **13.352 ms** |
 
 Todos os hashes idênticos aos das versões atuais.
 
 **D é a variante instrutiva:** duas temporárias *pequenas* custaram o mesmo que as
 cinco varreduras originais. Materializar tem preço por temporária, não por linha
-lida — trocar cinco leituras baratas por duas materializações não compra nada.
+lida: trocar cinco leituras baratas por duas materializações não compra nada.
 
 E é o oposto: `metrics` ganha 5x porque seu grão comum
 (`sale_date`, `store_code`, `depto`) tem 2.415 linhas e três colunas estreitas.
@@ -214,12 +214,12 @@ result sets. Faltando qualquer uma das três, meça antes.
 `sale_date`, e incluir a data na chave da temporária faria ela deixar de colapsar
 (~1,4M linhas em vez de ~15k). Custaria mais que a varredura economizada.
 
-`product_analysis` faz **7** varreduras e não está no baseline — mas ela filtra por
+`product_analysis` faz **7** varreduras e não está no baseline, mas ela filtra por
 um `prod_code` só, então usa índice e não sofre do mesmo problema. Fica anotado.
 
 ---
 
-## Pós-deploy — 2026-07-26, o experimento errou sobre a Área
+## Pós-deploy: 2026-07-26, o experimento errou sobre a Área
 
 Medição das procs de verdade em prod, depois do deploy. Todos os hashes idênticos
 aos do baseline: as três procs sempre devolveram o resultado certo.
@@ -233,7 +233,7 @@ aos do baseline: as três procs sempre devolveram o resultado certo.
 | `area_28d_loja` | 21.716 ms | 30.378 ms | **+40%** |
 | `area_28d_export` | 23.345 ms | 30.203 ms | **+29%** |
 | `area_28d_busca` | 23.278 ms | 30.676 ms | **+32%** |
-| `filtros_28d` | 222 ms | 215 ms | — |
+| `filtros_28d` | 222 ms | 215 ms | - |
 
 `metrics` e `rankings` entregaram o que o experimento previu (9,3s e 17,8s).
 **`area_analysis` fez o oposto**: o experimento previu 13,4s e a proc mediu 30,4s.
@@ -242,7 +242,7 @@ Revertida para a versão de 3 varreduras.
 ### O erro de método, que é o que importa
 
 No experimento, a variante F replicou a consulta **sem os cinco predicados
-`NOT EXISTS (...) OR col IN (...)`** — só o recorte de datas. A variante de
+`NOT EXISTS (...) OR col IN (...)`**, só o recorte de datas. A variante de
 controle (A) tinha a mesma omissão, mediu 21,3s contra os 23,0s da proc real, e eu
 tratei esses 7% como prova de que o experimento era fiel.
 
@@ -252,13 +252,13 @@ baratos numa subquery derivada que já vai ser materializada de qualquer jeito, 
 caros quando são a condição de uma `CREATE TEMPORARY TABLE ... AS SELECT`.
 
 O sintoma que denuncia isso nos números: depois da mudança, os cinco cenários da
-Área mediram entre 30,1s e 30,7s — praticamente idênticos, enquanto antes variavam
+Área mediram entre 30,1s e 30,7s, praticamente idênticos, enquanto antes variavam
 de 21,7s a 24,0s. Uniformidade assim é sinal de um custo fixo dominando tudo, que
 não responde a filtro, busca nem tamanho de página. Era a materialização.
 
 **Regra para a próxima:** o controle do experimento tem de reproduzir a consulta
 **inteira**, predicados de filtro incluídos. Se replicar a proc por completo for
-inviável, criar a proc candidata com outro nome e medi-la pelo harness — não
+inviável, criar a proc candidata com outro nome e medi-la pelo harness, não
 comparar SQL avulso com stored procedure.
 
 ### Estado final, depois do revert
@@ -275,7 +275,7 @@ Bateria de confirmação em prod, com todos os hashes idênticos aos do baseline
 | `area_28d_export` | 23.345 ms | 23.208 ms | revertido ao original |
 | `area_28d_busca` | 23.278 ms | 22.973 ms | revertido ao original |
 | `area_7d_sem_filtro` | 2.114 ms | 2.196 ms | revertido ao original |
-| `filtros_28d` | 222 ms | 220 ms | — |
+| `filtros_28d` | 222 ms | 220 ms | - |
 
 As duas procs que dominavam o custo da tela inicial saíram de 78,7s somados para
 29,3s. A tela Área ficou como estava.
@@ -290,12 +290,12 @@ As colunas de hash têm de ser idênticas. As de tempo são o resultado.
 
 ---
 
-## PR #23 — 2026-07-30, remoção de contagem duplicada em `area_analysis`
+## PR #23: 2026-07-30, remoção de contagem duplicada em `area_analysis`
 
-Não é uma reescrita — não repete o experimento de 1 varredura/temporária que
+Não é uma reescrita: não repete o experimento de 1 varredura/temporária que
 regrediu (ver seções acima). O profiling interno (`SET profiling=1` + `SHOW
 PROFILES`) mostrou que o Result Set 2 (`total_products`) rodava a mesma query,
-idêntica, que já populava `v_universe` (Result Set 1) linhas antes — mesma
+idêntica, que já populava `v_universe` (Result Set 1) linhas antes, mesma
 tabela (`product_universe`, não a tabela grande), mesmo `WHERE`, mesmo
 `COUNT(DISTINCT prod_code)`. Trocado por `SELECT v_universe AS total_products;`.
 
@@ -305,12 +305,12 @@ antes/depois). Timing confirmado com `bench-procs.sh` contra produção:
 | Cenário | Baseline (pós-revert, 26/07) | Depois do PR #23 | |
 | --- | ---: | ---: | --- |
 | `area_28d_sem_filtro` | 23.652 ms | **23.178 ms** | −2%, dispersão válida (1.08x) |
-| `area_7d_sem_filtro` | 2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras, 2 warmup) | ~−7 a −11%, dispersão 1.39x — **acima do limite de 1.3x**, repetido duas vezes com o mesmo padrão |
+| `area_7d_sem_filtro` | 2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras, 2 warmup) | ~−7 a −11%, dispersão 1.39x, **acima do limite de 1.3x**, repetido duas vezes com o mesmo padrão |
 
 Ganho real e correto, mas pequeno: a query removida só toca `product_universe`,
 fração pequena do tempo total no pior caso (28 dias). O cenário de 7 dias
 mostrou um sinal proporcionalmente maior, mas sem bater o critério de
-confiabilidade do próprio harness — não tratar como número confirmado.
+confiabilidade do próprio harness. Não tratar como número confirmado.
 
 **Armadilha nova, registrada em `docs/continuar.md` também**: medir com `time
 mariadb ... -e "CALL ..." > arquivo` seguido de `wc -l`/processamento do
@@ -318,24 +318,24 @@ arquivo infla o tempo com I/O de disco e formatação de texto do cliente `maria
 não custo de servidor. Uma medição inicial de `area_28d_sem_filtro` chegou a
 33,9s dessa forma; com o output redirecionado direto pro `/dev/null` (sem
 arquivo intermediário) e comparado contra `SHOW PROFILES` do mesmo cenário, o
-tempo real de servidor era ~23s — o resto era artefato do método de medição, não
+tempo real de servidor era ~23s, o resto era artefato do método de medição, não
 do banco. `bench-procs.sh` já evita esse problema por medir com `NOW(6)` dentro
 da própria sessão SQL; o erro só acontece em medição ad-hoc fora do harness.
 
 O teto de `area_analysis` (as 2-3 varreduras completas de `sales_prod_daily_agg`)
-continua o mesmo. Não há correção pendente óbvia — a via mais direta (reduzir
+continua o mesmo. Não há correção pendente óbvia: a via mais direta (reduzir
 varreduras) já foi tentada e não funciona para esta proc especificamente.
 
-## 2026-07-30 — remoção dos 4 índices de categoria em `sales_prod_daily_agg`
+## 2026-07-30: remoção dos 4 índices de categoria em `sales_prod_daily_agg`
 
 Item 2 da lista "Aberto" de `docs/continuar.md`. A hipótese já estava registrada
 antes de medir: os índices em `depto`/`secao`/`grupo`/`subgrupo` não aceleram
-nenhuma proc (filtrar por uma dessas colunas custa *mais* que não filtrar — o
+nenhuma proc (filtrar por uma dessas colunas custa *mais* que não filtrar, o
 plano de acesso real é sempre a varredura por `sale_date`), então só ocupam
 espaço. Faltava quantificar o espaço e provar que remover não regride nada.
 
 **Tamanho, via `mysql.innodb_index_stats`** (não dá para consultar por
-`information_schema.STATISTICS`/`TABLES` comum — não tem coluna de tamanho por
+`information_schema.STATISTICS`/`TABLES` comum, não tem coluna de tamanho por
 índice; precisou de acesso root local no servidor):
 
 | Índice | Tamanho |
@@ -348,7 +348,7 @@ espaço. Faltava quantificar o espaço e provar que remover não regride nada.
 | `idx_prod_daily_depto` | 99,28 MB |
 | `idx_prod_daily_sale_date` | 63,12 MB |
 
-Os 4 juntos: **532,81 MB — 74,7% de todo o índice da tabela**, quase do
+Os 4 juntos: **532,81 MB (74,7% de todo o índice da tabela)**, quase do
 tamanho dos dados reais, contra um `innodb_buffer_pool_size` de 128 MB (default
 de fábrica, ver item 1 de `continuar.md`).
 
@@ -366,12 +366,12 @@ de fábrica, ver item 1 de `continuar.md`).
 | `metrics_28d` | 9.873 ms | 10.756 ms | +9% (disp. 1.41x nas duas pontas, não confiar) |
 | `filtros_28d` | 228 ms | 250 ms | disp. alta nas duas pontas, não confiar |
 
-Hashes idênticos nos 9 cenários (`diff` vazio) — nenhuma proc mudou de
+Hashes idênticos nos 9 cenários (`diff` vazio). Nenhuma proc mudou de
 resultado. As medianas oscilam ±2-8% sem sinal consistente de ganho ou perda,
-dentro do ruído normal — **como esperado**, já que esses índices nunca
+dentro do ruído normal, **como esperado**, já que esses índices nunca
 ajudavam leitura; a hipótese não era "fica mais rápido", era "não fica mais
 lento, e libera espaço". `bp_pages_free` mal se moveu no instante da medição
-(843→895 páginas) — o ganho de buffer pool é de regime permanente (dias
+(843→895 páginas), o ganho de buffer pool é de regime permanente (dias
 reciclando cache sem 532 MB de índice morto competindo por espaço), não algo
 visível numa janela de minutos.
 
@@ -385,22 +385,22 @@ cenários depois da migration.
 
 **Achado lateral**: o MariaDB de dev local tinha índices `ix_cov_*` (cobertura)
 em `depto`/`secao`/`grupo`/`subgrupo`/`store_code`/`sale_date+prod_code` que
-não existem em nenhum lugar do `migrate-schema.sql` — sobra de um experimento
+não existem em nenhum lugar do `migrate-schema.sql`: sobra de um experimento
 anterior nunca revertida no ambiente local (bate com a armadilha #1 já
 registrada abaixo: "um índice de cobertura em `depto` não mudou nada"). Não
 afeta produção, mas o dev local não é mais um espelho fiel do schema
 versionado; considerar recriar o banco local do zero numa próxima sessão.
 
-## 2026-07-30 — `product_analysis` (item 3), dois cenários novos no harness
+## 2026-07-30: `product_analysis` (item 3), dois cenários novos no harness
 
 Nunca tinha entrado no baseline. A suposição registrada era que filtrar por um
 `prod_code` só reduz o custo a quase nada, por usar
-`idx_prod_daily_prod_code` — mas isso nunca foi medido, e a proc faz 7
+`idx_prod_daily_prod_code`, mas isso nunca foi medido, e a proc faz 7
 referências a `sales_prod_daily_agg`, das quais duas (`lastFourSameWeekday`,
 `lastFourAll`) não têm limite de data além de `v_ref_date`: varrem o
 histórico inteiro daquele produto.
 
-Dois cenários novos em `bench-procs.sh` — `produto_alto_volume` e
+Dois cenários novos em `bench-procs.sh`: `produto_alto_volume` e
 `produto_baixo_volume`, o produto com mais e o com menos linhas em toda a
 tabela (não só na janela de 28 dias, porque é o volume total do produto que
 limita o custo dessas duas varreduras sem fim de data):
@@ -411,7 +411,7 @@ limita o custo dessas duas varreduras sem fim de data):
 | `produto_baixo_volume` | 2 ms | 2-3 ms | 4 |
 
 A dispersão (`max/min`) desses dois cenários fica acima de 1,3x mesmo com 20
-amostras (1,62x e 1,50x) — o critério de validade do harness foi calibrado
+amostras (1,62x e 1,50x): o critério de validade do harness foi calibrado
 para procs de segundos, onde 30% de variação é sinal de instabilidade real.
 Em milissegundos, 4-5ms de diferença é ruído normal de agendamento do SO, não
 instabilidade do banco; a mediana ficou estável nas duas rodadas (5 e 20
@@ -422,15 +422,15 @@ que `area_analysis`/`dashboard_metrics`/`dashboard_rankings` (ms contra
 segundos). Filtrar por `prod_code` de fato elimina o problema de varredura
 completa que afeta as outras procs. Item fechado sem mudança de proc.
 
-## 2026-07-31 — build do Vite, fora do escopo das procs (PR #93)
+## 2026-07-31: build do Vite, fora do escopo das procs (PR #93)
 
 Não é medição de proc/SQL como o resto deste documento, mas é uma medição de
-performance que só existiu no chat até agora — registrando aqui pra não se
+performance que só existiu no chat até agora, registrando aqui pra não se
 perder.
 
 Migração `vite@7.3.2` → `8.2.0` (+ `@vitejs/plugin-react` `5.2.0` → `6.0.4`):
 `bun run build` caiu de **25-35s para ~2s**. Não foi medido com harness formal
-(sem N amostras/dispersão) — é o tempo de parede observado em algumas
+(sem N amostras/dispersão), é o tempo de parede observado em algumas
 execuções antes/depois, não uma medição rigorosa. Zero mudança de código
 necessária; resto da stack (nitro, `@tanstack/react-start`, router-plugin,
 `vite-tsconfig-paths`, `@tailwindcss/vite`, vitest) já suportava `vite@^8`.
