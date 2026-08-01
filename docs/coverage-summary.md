@@ -1,6 +1,6 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T16:38:20.158Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-01T16:52:13.043Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
@@ -80,8 +80,8 @@ _Gerado em 2026-08-01T16:38:20.158Z — thresholds: lines 20%, statements 20%, f
 | `src/lib/area.functions.ts` | 66.7% ✅ | 67.8% ✅ | 37.5% ✅ | 47.6% ✅ |
 | `src/lib/admin-users.functions.ts` | 76.9% ✅ | 76.9% ✅ | 50.0% ✅ | 40.0% ✅ |
 | `src/lib/product.functions.ts` | 81.3% ✅ | 81.3% ✅ | 50.0% ✅ | 92.8% ✅ |
-| `src/hooks/use-area-pdf-export.ts` | 82.5% ✅ | 77.3% ✅ | 71.4% ✅ | 47.7% ✅ |
 | `src/lib/utils.ts` | 82.5% ✅ | 72.9% ✅ | 100.0% ✅ | 68.4% ✅ |
+| `src/hooks/use-area-pdf-export.ts` | 82.8% ✅ | 77.6% ✅ | 71.4% ✅ | 47.7% ✅ |
 | `src/components/admin-user-management.tsx` | 85.4% ✅ | 84.0% ✅ | 71.4% ✅ | 81.0% ✅ |
 | `src/lib/audit.ts` | 88.9% ✅ | 88.9% ✅ | 100.0% ✅ | 75.0% ✅ |
 | `src/lib/cache.ts` | 89.3% ✅ | 84.8% ✅ | 77.8% ✅ | 80.0% ✅ |

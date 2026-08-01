@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { format } from "date-fns";
 import { getAreaAnalysis } from "@/lib/area.functions";
 import { EXPORT_PAGE_SIZE } from "@/lib/schemas";
 import { fmtBRL, fmtInt, fmtBRShort } from "@/lib/utils";
@@ -219,7 +220,11 @@ export function useAreaPdfExport({
         },
       });
 
-      const filename = `analise-area-${slugifyFilename(area)}-${dateFrom}-a-${dateTo}.pdf`;
+      // Timestamp no fim: sem ele, exportar o mesmo período duas vezes gera o
+      // mesmo nome de arquivo, e o navegador/visualizador reaproveita a
+      // versão antiga em vez de mostrar o PDF recém-gerado.
+      const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+      const filename = `analise-area-${slugifyFilename(area)}-${dateFrom}-a-${dateTo}-${timestamp}.pdf`;
       await openPdfBlob(doc, filename);
     } finally {
       setPdfLoading(false);
