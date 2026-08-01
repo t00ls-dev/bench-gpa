@@ -46,6 +46,85 @@ describe("xlsx-parser", () => {
     expect(result.sales[0].prod_code).toBe("99999");
   });
 
+  // O teste acima ("skips total rows...") prova que rótulos de Total FORA de
+  // formato (ex.: "Total do Depto" por extenso) são ignorados com segurança,
+  // mas nunca dispara os 4 branches reais de atribuição — o gatilho exige o
+  // rótulo "Total" adjacente EXATO (ver `isVal`/checks em xlsx-parser.ts).
+  // Este bloco cobre o caminho que a categorização de produto realmente usa.
+  it("atribui depto/seção/grupo/subgrupo reais quando o rótulo 'Total' vem exatamente adjacente", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/07/2024"],
+      ["MERCEARIA", "Total"],
+      [null, "BEBIDAS", "Total"],
+      [null, null, "REFRIGERANTES", "Total"],
+      [null, null, null, "COLA", "Total"],
+      [null, null, null, null, "123-COCA-COLA 2L", 99.9],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sales).toHaveLength(1);
+    expect(result.sales[0]).toMatchObject({
+      depto: "MERCEARIA",
+      secao: "BEBIDAS",
+      grupo: "REFRIGERANTES",
+      subgrupo: "COLA",
+    });
+  });
+
+  it("reseta seção/grupo/subgrupo ao entrar num novo depto", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/07/2024"],
+      ["MERCEARIA", "Total"],
+      [null, "BEBIDAS", "Total"],
+      [null, null, "REFRIGERANTES", "Total"],
+      [null, null, null, "COLA", "Total"],
+      [null, null, null, null, "111-ITEM DA COLA", 10],
+      // Novo depto sem nenhuma seção/grupo/subgrupo declarada abaixo dele —
+      // o produto seguinte não pode herdar BEBIDAS/REFRIGERANTES/COLA.
+      ["LIMPEZA", "Total"],
+      [null, null, null, null, "222-ITEM SEM SUBHIERARQUIA", 20],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sales).toHaveLength(2);
+    const item1 = result.sales.find((s) => s.prod_code === "111")!;
+    expect(item1).toMatchObject({
+      depto: "MERCEARIA",
+      secao: "BEBIDAS",
+      grupo: "REFRIGERANTES",
+      subgrupo: "COLA",
+    });
+    const item2 = result.sales.find((s) => s.prod_code === "222")!;
+    expect(item2.depto).toBe("LIMPEZA");
+    expect(item2.secao).toBeNull();
+    expect(item2.grupo).toBeNull();
+    expect(item2.subgrupo).toBeNull();
+  });
+
+  it("reseta só grupo/subgrupo ao entrar numa nova seção, mantendo o depto", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/07/2024"],
+      ["MERCEARIA", "Total"],
+      [null, "BEBIDAS", "Total"],
+      [null, null, "REFRIGERANTES", "Total"],
+      [null, null, null, "COLA", "Total"],
+      [null, null, null, null, "111-ITEM DA COLA", 10],
+      // Nova seção do MESMO depto — grupo/subgrupo da seção anterior não
+      // podem vazar pro item desta seção nova.
+      [null, "LATICÍNIOS", "Total"],
+      [null, null, null, null, "333-ITEM DE LATICÍNIOS", 20],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    const item2 = result.sales.find((s) => s.prod_code === "333")!;
+    expect(item2).toMatchObject({
+      depto: "MERCEARIA",
+      secao: "LATICÍNIOS",
+      grupo: null,
+      subgrupo: null,
+    });
+  });
+
   it("extracts store list", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO", "002 - SUL"],

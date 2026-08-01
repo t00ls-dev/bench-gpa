@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T12:28:21.839Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
+_Gerado em 2026-08-01T12:36:02.613Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 83.4% ✅ | 82.0% ✅ | 74.1% ✅ | 75.1% ✅ |
+| **Total** | 84.8% ✅ | 83.1% ✅ | 74.1% ✅ | 76.0% ✅ |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -29,7 +29,6 @@ _Gerado em 2026-08-01T12:28:21.839Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/product.functions.ts` | 81.3% ✅ | 81.3% ✅ | 50.0% ✅ | 92.8% ✅ |
 | `src/hooks/use-area-pdf-export.ts` | 82.5% ✅ | 77.3% ✅ | 71.4% ✅ | 47.7% ✅ |
 | `src/lib/utils.ts` | 82.5% ✅ | 72.9% ✅ | 100.0% ✅ | 68.4% ✅ |
-| `src/lib/xlsx-parser.ts` | 84.3% ✅ | 80.0% ✅ | 100.0% ✅ | 75.0% ✅ |
 | `src/lib/audit.ts` | 88.9% ✅ | 88.9% ✅ | 100.0% ✅ | 75.0% ✅ |
 | `src/lib/cache.ts` | 89.3% ✅ | 84.8% ✅ | 77.8% ✅ | 80.0% ✅ |
 | `src/lib/upload.functions.ts` | 90.9% ✅ | 92.1% ✅ | 78.6% ✅ | 100.0% ✅ |
@@ -60,3 +59,4 @@ _Gerado em 2026-08-01T12:28:21.839Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/session.ts` | 100.0% ✅ | 96.4% ✅ | 100.0% ✅ | 95.8% ✅ |
 | `src/lib/staging-row.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/turnstile.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
+| `src/lib/xlsx-parser.ts` | 100.0% ✅ | 93.3% ✅ | 100.0% ✅ | 86.1% ✅ |
