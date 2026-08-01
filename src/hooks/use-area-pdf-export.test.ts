@@ -163,13 +163,18 @@ describe("useAreaPdfExport", () => {
     expect(openPdfBlob).not.toHaveBeenCalled();
   });
 
-  it("builds a filename from the breadcrumb and date range via slugifyFilename", async () => {
+  it("builds a filename from the breadcrumb, date range and a timestamp via slugifyFilename", async () => {
     const { result } = renderHook(() => useAreaPdfExport(makeParams()));
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
-    const expectedFilename = `analise-area-${slugifyFilename("Loja 1 - LEBLON › MERC")}-2026-07-14-a-2026-07-20.pdf`;
-    expect(openPdfBlob).toHaveBeenCalledWith(expect.anything(), expectedFilename);
+    const expectedPrefix = `analise-area-${slugifyFilename("Loja 1 - LEBLON › MERC")}-2026-07-14-a-2026-07-20-`;
+    // Timestamp no fim garante nome único a cada export (evita reaproveitar
+    // PDF antigo em cache quando o mesmo período é exportado de novo).
+    expect(openPdfBlob).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringMatching(new RegExp(`^${expectedPrefix}\\d{8}-\\d{6}\\.pdf$`)),
+    );
   });
 
   it("prints the same 5 KPI numbers shown on screen", async () => {
