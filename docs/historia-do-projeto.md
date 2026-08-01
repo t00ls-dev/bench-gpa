@@ -107,15 +107,16 @@ Detalhe completo e o que continua em aberto: `docs/continuar.md`.
 
 ## O que isso explica sobre os docs antigos
 
-Os arquivos que hoje vivem em `docs/improvements/` com o aviso
+Os arquivos que viviam em `docs/improvements/` com o aviso
 "⚠️ DOCUMENTO HISTÓRICO" (`estado-atual.md`, `discrepancias.md`,
-`arquitetura.md`) são fotografias da **Era 1** (código ainda em Supabase,
-escrito por Lovable) — datam de antes da Era 3. Cada "problema" que
+`arquitetura.md`) eram fotografias da **Era 1** (código ainda em Supabase,
+escrito por Lovable) — datavam de antes da Era 3. Cada "problema" que
 descreviam (dark mode inativo, `assertAdmin` duplicado, ausência de rate
 limit, sessão em localStorage) foi endereçado durante ou depois da migração,
 e está registrado como resolvido em `docs/improvements/analise-completa.md`
-(seção "✅ Resolvido") — não há mais valor de referência técnica neles além
-do que este documento já resume.
+(seção "✅ Resolvido"). Os três foram removidos no mesmo commit que criou
+este documento (`a4a19e8`, 30/07/2026) — não havia mais valor de referência
+técnica neles além do que este documento já resume.
 
 `docs/improvements/melhorias-pendentes.md` também nasceu na Era 1, mas
 misturava itens já resolvidos com itens genuinamente ainda abertos — os
