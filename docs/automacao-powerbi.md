@@ -59,13 +59,13 @@ Precisamos destas respostas antes de escolher a abordagem:
 
 1. **Tier/licença do Power BI.** É Power BI Pro, Premium (PPU/capacidade) ou
    Fabric? Isso define quais APIs estão disponíveis (ex.: `exportToFile` de
-   *paginated reports* exige Premium/capacidade).
-2. **Acesso à fonte a montante (upstream).** A planilha vem de um *dataset*
+   _paginated reports_ exige Premium/capacidade).
+2. **Acesso à fonte a montante (upstream).** A planilha vem de um _dataset_
    dentro do Power BI, ou o Power BI apenas visualiza uma fonte que também
    poderíamos acessar direto (SQL, SharePoint, API do ERP)? Se der para pular o
    Power BI e ir na fonte, a automação fica muito mais simples e robusta.
-3. **Service principal.** Temos como criar um *app registration* no Entra ID
-   (Azure AD) com *service principal* e liberar acesso à API do Power BI? É o
+3. **Service principal.** Temos como criar um _app registration_ no Entra ID
+   (Azure AD) com _service principal_ e liberar acesso à API do Power BI? É o
    caminho recomendado para automação sem senha de usuário. Se não, sobra
    ROPC/senha de conta de serviço (frágil, e MFA quebra).
 4. **Dataset vs. paginated report.** O que exportamos hoje é um **dataset**
@@ -75,12 +75,12 @@ Precisamos destas respostas antes de escolher a abordagem:
 
 ## Abordagens possíveis (a decidir após as respostas)
 
-| # | Abordagem | Requer | Prós | Contras |
-|---|-----------|--------|------|---------|
-| A | **Pular o Power BI**: ler a fonte upstream direto (SQL/API do ERP) e gerar o XLSX | Acesso à fonte | Mais simples, sem dependência do Power BI, sem licença extra | Só viável se tivermos acesso à fonte |
-| B | **Power BI REST: `executeQueries`** (dataset via DAX) | Service principal + dataset | Oficial, retorna JSON/tabela; convertemos p/ XLSX | Limite de linhas/tamanho por chamada; exige montar a query DAX |
-| C | **Power BI REST: `exportToFile`** (paginated report → XLSX) | Premium/capacidade + paginated report | Gera o XLSX pronto no layout do relatório | Exige tier Premium; assíncrono (poll de status) |
-| D | **Automação de UI headless** (Playwright logando no Power BI e clicando em Export) | Só credenciais | Funciona sem API/licença especial | Frágil, quebra com mudança de UI/MFA; não recomendado |
+| #   | Abordagem                                                                          | Requer                                | Prós                                                         | Contras                                                        |
+| --- | ---------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| A   | **Pular o Power BI**: ler a fonte upstream direto (SQL/API do ERP) e gerar o XLSX  | Acesso à fonte                        | Mais simples, sem dependência do Power BI, sem licença extra | Só viável se tivermos acesso à fonte                           |
+| B   | **Power BI REST: `executeQueries`** (dataset via DAX)                              | Service principal + dataset           | Oficial, retorna JSON/tabela; convertemos p/ XLSX            | Limite de linhas/tamanho por chamada; exige montar a query DAX |
+| C   | **Power BI REST: `exportToFile`** (paginated report → XLSX)                        | Premium/capacidade + paginated report | Gera o XLSX pronto no layout do relatório                    | Exige tier Premium; assíncrono (poll de status)                |
+| D   | **Automação de UI headless** (Playwright logando no Power BI e clicando em Export) | Só credenciais                        | Funciona sem API/licença especial                            | Frágil, quebra com mudança de UI/MFA; não recomendado          |
 
 Ordem de preferência provável: **A > B > C > D**. Confirmar com as respostas.
 

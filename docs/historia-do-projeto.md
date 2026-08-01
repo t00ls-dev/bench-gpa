@@ -49,16 +49,16 @@ depois (ver Era 4).
 sair do Supabase (Postgres gerenciado + Auth gerenciado) para uma VPS Hestia
 CP própria com MariaDB e autenticação própria. Passos principais, em ordem:
 
-| Data | Commit | O quê |
-| --- | --- | --- |
-| 16/07 | `fc29fed` | Plano de migração VPS (MariaDB + JWT + Hestia) |
-| 17/07 | `67e0ada` | Plano de deploy Hestia (template node-ssr, `gpa.t00ls.dev`) |
-| 18/07 | `22bcded` | Config de build pra VPS (Nitro `node-server`, PM2) |
-| 19/07 | `2a3aff3` | Pool `mysql2` + schema MariaDB com 15 stored procedures |
-| 19/07 | `827086f` | Troca Supabase Auth por JWT + bcrypt (`auth-middleware`, `auth-api`) |
+| Data  | Commit    | O quê                                                                               |
+| ----- | --------- | ----------------------------------------------------------------------------------- |
+| 16/07 | `fc29fed` | Plano de migração VPS (MariaDB + JWT + Hestia)                                      |
+| 17/07 | `67e0ada` | Plano de deploy Hestia (template node-ssr, `gpa.t00ls.dev`)                         |
+| 18/07 | `22bcded` | Config de build pra VPS (Nitro `node-server`, PM2)                                  |
+| 19/07 | `2a3aff3` | Pool `mysql2` + schema MariaDB com 15 stored procedures                             |
+| 19/07 | `827086f` | Troca Supabase Auth por JWT + bcrypt (`auth-middleware`, `auth-api`)                |
 | 21/07 | `9c0092d` | Destructuring de multi-result-set das procs; pipeline de import migrado pra MariaDB |
-| 21/07 | `8fef562` | **"Migração Supabase concluída"**, limpeza e testes |
-| 21/07 | `31aae28` | `supabase/` removido do repo; +43 testes (27%→46% cobertura) |
+| 21/07 | `8fef562` | **"Migração Supabase concluída"**, limpeza e testes                                 |
+| 21/07 | `31aae28` | `supabase/` removido do repo; +43 testes (27%→46% cobertura)                        |
 
 Menos de uma semana entre o plano (`fc29fed`) e a conclusão (`8fef562`):
 migração rápida porque o escopo (dashboard analítico interno, sem
@@ -124,7 +124,7 @@ abertos foram migrados para `docs/continuar.md` (ver commit que acompanha
 esta reorganização) antes do arquivo ser removido.
 
 `docs/improvements/novas-analises.md` é diferente dos outros três: é uma
-lista de *ideias de feature* (dashboard por loja, sazonalidade, previsão,
+lista de _ideias de feature_ (dashboard por loja, sazonalidade, previsão,
 gap de sortimento, relatórios agendados), não um diagnóstico de código:
 o próprio arquivo já dizia "independente da migração", e continua válido como
 backlog. Foi desmarcado como histórico.

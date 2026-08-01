@@ -60,17 +60,17 @@ levou à regressão de 26/07 (ver adiante). O caminho certo:
 Domingo de manhã, `load` 0,00 antes de começar. Dataset: 56 datas
 (27/05 a 21/07/2026), 2.750.601 linhas em `sales_prod_daily_agg`.
 
-| Cenário | Mediana | Dispersão |
-| --- | ---: | ---: |
-| `area_7d_sem_filtro` | 2.114 ms | 1,08x |
-| `area_28d_sem_filtro` | 23.011 ms | 1,04x |
-| `area_28d_depto` | 24.025 ms | 1,14x |
-| `area_28d_loja` | 21.716 ms | 1,03x |
-| `area_28d_export` | 23.345 ms | 1,16x |
-| `area_28d_busca` | 23.278 ms | 1,07x |
-| `rankings_28d` | 32.373 ms | 1,07x |
-| `metrics_28d` | **46.342 ms** | 1,11x |
-| `filtros_28d` | 222 ms | 1,13x |
+| Cenário               |       Mediana | Dispersão |
+| --------------------- | ------------: | --------: |
+| `area_7d_sem_filtro`  |      2.114 ms |     1,08x |
+| `area_28d_sem_filtro` |     23.011 ms |     1,04x |
+| `area_28d_depto`      |     24.025 ms |     1,14x |
+| `area_28d_loja`       |     21.716 ms |     1,03x |
+| `area_28d_export`     |     23.345 ms |     1,16x |
+| `area_28d_busca`      |     23.278 ms |     1,07x |
+| `rankings_28d`        |     32.373 ms |     1,07x |
+| `metrics_28d`         | **46.342 ms** |     1,11x |
+| `filtros_28d`         |        222 ms |     1,13x |
 
 Todas as dispersões abaixo de 1,2: a bateria é válida.
 
@@ -81,7 +81,7 @@ Todas as dispersões abaixo de 1,2: a bateria é válida.
 da janela padrão de 7 dias. Em 28 dias são 32s.
 
 **2. Filtrar não alivia, às vezes piora.** Filtrar por departamento custa
-*mais* (24,0s) do que não filtrar (23,0s). O padrão
+_mais_ (24,0s) do que não filtrar (23,0s). O padrão
 `NOT EXISTS (...) OR col IN (...)`, que aparece 75 vezes no schema, nunca reduz o
 conjunto varrido: só acrescenta uma subconsulta por dimensão. O usuário que
 restringe a busca esperando alívio paga mais caro.
@@ -100,13 +100,13 @@ varredura, consistente entre as três procs.
 
 ### O ambiente por trás dos números
 
-| | |
-| --- | ---: |
-| `sales_prod_daily_agg`: dados | 538 MB |
-| `sales_prod_daily_agg`: índices | 714 MB |
-| `innodb_buffer_pool_size` | **128 MB** |
-| RAM total da VPS | 1.931 MB |
-| Swap em uso | 379 MB |
+|                                 |            |
+| ------------------------------- | ---------: |
+| `sales_prod_daily_agg`: dados   |     538 MB |
+| `sales_prod_daily_agg`: índices |     714 MB |
+| `innodb_buffer_pool_size`       | **128 MB** |
+| RAM total da VPS                |   1.931 MB |
+| Swap em uso                     |     379 MB |
 
 Duas coisas saltam:
 
@@ -130,11 +130,11 @@ Feito em prod, somente com `TEMPORARY TABLE` (escopo de sessão, some ao
 desconectar): nada de proc alterada, índice criado ou escrita persistente. Três
 variantes, três repetições cada, aquecimento descartado.
 
-| Variante | Mediana | Hash do conjunto |
-| --- | ---: | --- |
-| **A** (como a proc faz hoje): 5 varreduras, predicado `(? IS NULL OR ...)` | 30.677 ms | `6664a8c02aff` |
-| **B**: 5 varreduras, predicado de data direto | 31.849 ms | `6664a8c02aff` |
-| **C**: 1 varredura para uma temporária no grão fino + 5 rollups | **17.777 ms** | `6664a8c02aff` |
+| Variante                                                                   |       Mediana | Hash do conjunto |
+| -------------------------------------------------------------------------- | ------------: | ---------------- |
+| **A** (como a proc faz hoje): 5 varreduras, predicado `(? IS NULL OR ...)` |     30.677 ms | `6664a8c02aff`   |
+| **B**: 5 varreduras, predicado de data direto                              |     31.849 ms | `6664a8c02aff`   |
+| **C**: 1 varredura para uma temporária no grão fino + 5 rollups            | **17.777 ms** | `6664a8c02aff`   |
 
 Duas validações antes de ler o resultado: a variante A mediu 30,7s contra os
 32,4s da proc real, ou seja, o experimento reproduz o caminho de produção com 5%
@@ -148,7 +148,7 @@ estivesse impedindo o uso do índice, e que tornar o predicado direto traria gan
 **Não trouxe** (31,8s contra 30,7s, dentro do ruído).
 
 O motivo, olhando o dataset: 28 dias são metade das 56 datas armazenadas. Nenhum
-índice ajuda uma consulta que precisa de metade das linhas: varrer *é* o plano
+índice ajuda uma consulta que precisa de metade das linhas: varrer _é_ o plano
 correto. O predicado nunca foi o problema.
 
 Corolário prático: **não adianta criar índice para acelerar a janela de 28 dias.**
@@ -165,10 +165,10 @@ se sustenta.
 
 Custo por linha varrida, derivado do baseline:
 
-| Janela | Linhas por varredura | Tempo por varredura | Por linha |
-| --- | ---: | ---: | ---: |
-| 7 dias | ~344k | ~700 ms | 2,0 µs |
-| 28 dias | ~1,4M | ~7.670 ms | 5,5 µs |
+| Janela  | Linhas por varredura | Tempo por varredura | Por linha |
+| ------- | -------------------: | ------------------: | --------: |
+| 7 dias  |                ~344k |             ~700 ms |    2,0 µs |
+| 28 dias |                ~1,4M |           ~7.670 ms |    5,5 µs |
 
 A mesma operação fica **2,75x mais cara por linha** só por a janela ser maior.
 Isso não é a query: é o conjunto deixando de caber nos 128 MB de buffer pool.
@@ -183,19 +183,19 @@ O experimento 1 sugeria "menos varreduras, menos tempo". Testando mais variantes
 essa regra se mostrou errada. O que fecha é **varreduras × largura da chave de
 agrupamento**, mais o preço fixo de materializar cada temporária.
 
-| Variante | Varreduras | Chave do grão | Linhas na temporária | Mediana |
-| --- | ---: | --- | ---: | ---: |
-| `rankings` hoje | 5 | - | - | 30.677 ms |
-| `rankings` C: 1 temporária no grão fino | 1 | 6 colunas, inclui `prod_name` VARCHAR(255) | ~15k | **17.777 ms** |
-| `rankings` D: 2 temporárias mais baratas | 2 | 4 e 2 colunas | 1.523 e 15.270 | 31.783 ms |
-| `metrics` hoje | 4 | - | - | 45.832 ms |
-| `metrics` E: 1 temporária | 1 | 3 colunas estreitas | 2.415 | **9.341 ms** |
-| `area` hoje | 3 | - | - | 21.269 ms |
-| `area` F: temporária por produto | 2 | 1 coluna | ~15k | **13.352 ms** |
+| Variante                                 | Varreduras | Chave do grão                              | Linhas na temporária |       Mediana |
+| ---------------------------------------- | ---------: | ------------------------------------------ | -------------------: | ------------: |
+| `rankings` hoje                          |          5 | -                                          |                    - |     30.677 ms |
+| `rankings` C: 1 temporária no grão fino  |          1 | 6 colunas, inclui `prod_name` VARCHAR(255) |                 ~15k | **17.777 ms** |
+| `rankings` D: 2 temporárias mais baratas |          2 | 4 e 2 colunas                              |       1.523 e 15.270 |     31.783 ms |
+| `metrics` hoje                           |          4 | -                                          |                    - |     45.832 ms |
+| `metrics` E: 1 temporária                |          1 | 3 colunas estreitas                        |                2.415 |  **9.341 ms** |
+| `area` hoje                              |          3 | -                                          |                    - |     21.269 ms |
+| `area` F: temporária por produto         |          2 | 1 coluna                                   |                 ~15k | **13.352 ms** |
 
 Todos os hashes idênticos aos das versões atuais.
 
-**D é a variante instrutiva:** duas temporárias *pequenas* custaram o mesmo que as
+**D é a variante instrutiva:** duas temporárias _pequenas_ custaram o mesmo que as
 cinco varreduras originais. Materializar tem preço por temporária, não por linha
 lida: trocar cinco leituras baratas por duas materializações não compra nada.
 
@@ -224,16 +224,16 @@ um `prod_code` só, então usa índice e não sofre do mesmo problema. Fica anot
 Medição das procs de verdade em prod, depois do deploy. Todos os hashes idênticos
 aos do baseline: as três procs sempre devolveram o resultado certo.
 
-| Cenário | Baseline | Depois | |
-| --- | ---: | ---: | --- |
-| `metrics_28d` | 46.342 ms | **10.064 ms** | −78% |
-| `rankings_28d` | 32.373 ms | **18.963 ms** | −41% |
-| `area_28d_sem_filtro` | 23.011 ms | 30.567 ms | **+33%** |
-| `area_28d_depto` | 24.025 ms | 30.104 ms | **+25%** |
-| `area_28d_loja` | 21.716 ms | 30.378 ms | **+40%** |
-| `area_28d_export` | 23.345 ms | 30.203 ms | **+29%** |
-| `area_28d_busca` | 23.278 ms | 30.676 ms | **+32%** |
-| `filtros_28d` | 222 ms | 215 ms | - |
+| Cenário               |  Baseline |        Depois |          |
+| --------------------- | --------: | ------------: | -------- |
+| `metrics_28d`         | 46.342 ms | **10.064 ms** | −78%     |
+| `rankings_28d`        | 32.373 ms | **18.963 ms** | −41%     |
+| `area_28d_sem_filtro` | 23.011 ms |     30.567 ms | **+33%** |
+| `area_28d_depto`      | 24.025 ms |     30.104 ms | **+25%** |
+| `area_28d_loja`       | 21.716 ms |     30.378 ms | **+40%** |
+| `area_28d_export`     | 23.345 ms |     30.203 ms | **+29%** |
+| `area_28d_busca`      | 23.278 ms |     30.676 ms | **+32%** |
+| `filtros_28d`         |    222 ms |        215 ms | -        |
 
 `metrics` e `rankings` entregaram o que o experimento previu (9,3s e 17,8s).
 **`area_analysis` fez o oposto**: o experimento previu 13,4s e a proc mediu 30,4s.
@@ -265,17 +265,17 @@ comparar SQL avulso com stored procedure.
 
 Bateria de confirmação em prod, com todos os hashes idênticos aos do baseline:
 
-| Cenário | Baseline | Final | |
-| --- | ---: | ---: | --- |
-| `metrics_28d` | 46.342 ms | **9.582 ms** | −79% |
-| `rankings_28d` | 32.373 ms | **19.672 ms** | −39% |
-| `area_28d_sem_filtro` | 23.011 ms | 23.652 ms | revertido ao original |
-| `area_28d_depto` | 24.025 ms | 23.800 ms | revertido ao original |
-| `area_28d_loja` | 21.716 ms | 22.223 ms | revertido ao original |
-| `area_28d_export` | 23.345 ms | 23.208 ms | revertido ao original |
-| `area_28d_busca` | 23.278 ms | 22.973 ms | revertido ao original |
-| `area_7d_sem_filtro` | 2.114 ms | 2.196 ms | revertido ao original |
-| `filtros_28d` | 222 ms | 220 ms | - |
+| Cenário               |  Baseline |         Final |                       |
+| --------------------- | --------: | ------------: | --------------------- |
+| `metrics_28d`         | 46.342 ms |  **9.582 ms** | −79%                  |
+| `rankings_28d`        | 32.373 ms | **19.672 ms** | −39%                  |
+| `area_28d_sem_filtro` | 23.011 ms |     23.652 ms | revertido ao original |
+| `area_28d_depto`      | 24.025 ms |     23.800 ms | revertido ao original |
+| `area_28d_loja`       | 21.716 ms |     22.223 ms | revertido ao original |
+| `area_28d_export`     | 23.345 ms |     23.208 ms | revertido ao original |
+| `area_28d_busca`      | 23.278 ms |     22.973 ms | revertido ao original |
+| `area_7d_sem_filtro`  |  2.114 ms |      2.196 ms | revertido ao original |
+| `filtros_28d`         |    222 ms |        220 ms | -                     |
 
 As duas procs que dominavam o custo da tela inicial saíram de 78,7s somados para
 29,3s. A tela Área ficou como estava.
@@ -302,10 +302,10 @@ tabela (`product_universe`, não a tabela grande), mesmo `WHERE`, mesmo
 Correção provada com `validate-procs.sh` (37 cenários, hash idêntico
 antes/depois). Timing confirmado com `bench-procs.sh` contra produção:
 
-| Cenário | Baseline (pós-revert, 26/07) | Depois do PR #23 | |
-| --- | ---: | ---: | --- |
-| `area_28d_sem_filtro` | 23.652 ms | **23.178 ms** | −2%, dispersão válida (1.08x) |
-| `area_7d_sem_filtro` | 2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras, 2 warmup) | ~−7 a −11%, dispersão 1.39x, **acima do limite de 1.3x**, repetido duas vezes com o mesmo padrão |
+| Cenário               | Baseline (pós-revert, 26/07) |                               Depois do PR #23 |                                                                                                  |
+| --------------------- | ---------------------------: | ---------------------------------------------: | ------------------------------------------------------------------------------------------------ |
+| `area_28d_sem_filtro` |                    23.652 ms |                                  **23.178 ms** | −2%, dispersão válida (1.08x)                                                                    |
+| `area_7d_sem_filtro`  |               2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras, 2 warmup) | ~−7 a −11%, dispersão 1.39x, **acima do limite de 1.3x**, repetido duas vezes com o mesmo padrão |
 
 Ganho real e correto, mas pequeno: a query removida só toca `product_universe`,
 fração pequena do tempo total no pior caso (28 dias). O cenário de 7 dias
@@ -330,7 +330,7 @@ varreduras) já foi tentada e não funciona para esta proc especificamente.
 
 Item 2 da lista "Aberto" de `docs/continuar.md`. A hipótese já estava registrada
 antes de medir: os índices em `depto`/`secao`/`grupo`/`subgrupo` não aceleram
-nenhuma proc (filtrar por uma dessas colunas custa *mais* que não filtrar, o
+nenhuma proc (filtrar por uma dessas colunas custa _mais_ que não filtrar, o
 plano de acesso real é sempre a varredura por `sale_date`), então só ocupam
 espaço. Faltava quantificar o espaço e provar que remover não regride nada.
 
@@ -338,15 +338,15 @@ espaço. Faltava quantificar o espaço e provar que remover não regride nada.
 `information_schema.STATISTICS`/`TABLES` comum, não tem coluna de tamanho por
 índice; precisou de acesso root local no servidor):
 
-| Índice | Tamanho |
-| --- | ---: |
-| PRIMARY (dados) | 538,41 MB |
-| `idx_prod_daily_subgrupo` | 169,56 MB |
-| `idx_prod_daily_grupo` | 142,55 MB |
-| `idx_prod_daily_secao` | 121,42 MB |
+| Índice                     |   Tamanho |
+| -------------------------- | --------: |
+| PRIMARY (dados)            | 538,41 MB |
+| `idx_prod_daily_subgrupo`  | 169,56 MB |
+| `idx_prod_daily_grupo`     | 142,55 MB |
+| `idx_prod_daily_secao`     | 121,42 MB |
 | `idx_prod_daily_prod_code` | 117,67 MB |
-| `idx_prod_daily_depto` | 99,28 MB |
-| `idx_prod_daily_sale_date` | 63,12 MB |
+| `idx_prod_daily_depto`     |  99,28 MB |
+| `idx_prod_daily_sale_date` |  63,12 MB |
 
 Os 4 juntos: **532,81 MB (74,7% de todo o índice da tabela)**, quase do
 tamanho dos dados reais, contra um `innodb_buffer_pool_size` de 128 MB (default
@@ -354,17 +354,17 @@ de fábrica, ver item 1 de `continuar.md`).
 
 **Antes/depois com `bench-procs.sh`** (9 cenários, produção):
 
-| Cenário | Antes | Depois | Δ |
-| --- | ---: | ---: | ---: |
-| `area_7d_sem_filtro` | 2.153 ms | 1.986 ms | −8% |
-| `area_28d_sem_filtro` | 24.022 ms | 23.430 ms | −2% |
-| `area_28d_depto` | 23.744 ms | 24.394 ms | +3% |
-| `area_28d_loja` | 21.822 ms | 22.939 ms | +5% |
-| `area_28d_export` | 23.681 ms | 24.300 ms | +3% |
-| `area_28d_busca` | 24.012 ms | 23.134 ms | −4% |
-| `rankings_28d` | 19.303 ms | 19.171 ms | −1% |
-| `metrics_28d` | 9.873 ms | 10.756 ms | +9% (disp. 1.41x nas duas pontas, não confiar) |
-| `filtros_28d` | 228 ms | 250 ms | disp. alta nas duas pontas, não confiar |
+| Cenário               |     Antes |    Depois |                                              Δ |
+| --------------------- | --------: | --------: | ---------------------------------------------: |
+| `area_7d_sem_filtro`  |  2.153 ms |  1.986 ms |                                            −8% |
+| `area_28d_sem_filtro` | 24.022 ms | 23.430 ms |                                            −2% |
+| `area_28d_depto`      | 23.744 ms | 24.394 ms |                                            +3% |
+| `area_28d_loja`       | 21.822 ms | 22.939 ms |                                            +5% |
+| `area_28d_export`     | 23.681 ms | 24.300 ms |                                            +3% |
+| `area_28d_busca`      | 24.012 ms | 23.134 ms |                                            −4% |
+| `rankings_28d`        | 19.303 ms | 19.171 ms |                                            −1% |
+| `metrics_28d`         |  9.873 ms | 10.756 ms | +9% (disp. 1.41x nas duas pontas, não confiar) |
+| `filtros_28d`         |    228 ms |    250 ms |        disp. alta nas duas pontas, não confiar |
 
 Hashes idênticos nos 9 cenários (`diff` vazio). Nenhuma proc mudou de
 resultado. As medianas oscilam ±2-8% sem sinal consistente de ganho ou perda,
@@ -405,10 +405,10 @@ Dois cenários novos em `bench-procs.sh`: `produto_alto_volume` e
 tabela (não só na janela de 28 dias, porque é o volume total do produto que
 limita o custo dessas duas varreduras sem fim de data):
 
-| Cenário | Mediana | Faixa (20 amostras) | Linhas de resultado |
-| --- | ---: | --- | ---: |
-| `produto_alto_volume` | 9 ms | 8-13 ms | 56 |
-| `produto_baixo_volume` | 2 ms | 2-3 ms | 4 |
+| Cenário                | Mediana | Faixa (20 amostras) | Linhas de resultado |
+| ---------------------- | ------: | ------------------- | ------------------: |
+| `produto_alto_volume`  |    9 ms | 8-13 ms             |                  56 |
+| `produto_baixo_volume` |    2 ms | 2-3 ms              |                   4 |
 
 A dispersão (`max/min`) desses dois cenários fica acima de 1,3x mesmo com 20
 amostras (1,62x e 1,50x): o critério de validade do harness foi calibrado

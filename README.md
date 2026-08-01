@@ -17,7 +17,7 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 | Virtualização      | @tanstack/react-virtual                                                      |
 | Drawer (mobile)    | vaul                                                                         |
 | Paleta de comandos | cmdk                                                                         |
-| Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                               |
+| Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                                |
 | CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
 | Segurança          | CSP nonce, HSTS, rate limiting sliding window (4 tiers por IP + 1 por conta) |
 
