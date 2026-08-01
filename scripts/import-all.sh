@@ -21,4 +21,4 @@ for f in "$DIR"/*.xlsx; do
 done
 
 echo ""
-echo "✅ Todos os arquivos importados!"
+echo "Todos os arquivos importados."

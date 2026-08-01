@@ -1,5 +1,5 @@
 -- =============================================
--- Bench GPA — Schema + Stored Procedures (MariaDB 11.4)
+-- Bench GPA: Schema + Stored Procedures (MariaDB 11.4)
 -- =============================================
 
 DROP PROCEDURE IF EXISTS dashboard_metrics;
@@ -23,12 +23,12 @@ DROP PROCEDURE IF EXISTS has_role;
 -- TABLES
 -- =============================================
 
--- Sem FOREIGN KEY em nenhuma tabela — decisão deliberada, não esquecimento.
+-- Sem FOREIGN KEY em nenhuma tabela: decisão deliberada, não esquecimento.
 -- staging_sales/sales_daily_agg/sales_prod_daily_agg/products são reescritas
 -- em bulk (upsert_products_bulk, finalize_import, refresh_product_universe,
 -- purge_old_aggs fazem INSERT...ON DUPLICATE KEY e DELETE de milhares de
 -- linhas de uma vez); FK forçaria checagem referencial linha a linha nesses
--- caminhos, sem ganho real — a integridade de prod_code/store_code já é
+-- caminhos, sem ganho real: a integridade de prod_code/store_code já é
 -- garantida pelo próprio pipeline de import (staging → agregação na mesma
 -- transação), não por constraint de banco.
 
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS staging_sales (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- VAL_VDA é a ÚNICA medida que existe. Não procure quantidade, custo,
--- devolução ou margem — o export do GPA não traz nada disso.
+-- devolução ou margem: o export do GPA não traz nada disso.
 --
 -- Verificado em 2026-07-23 nas 68 planilhas de data/ (maio a julho/2026), todas
 -- com 24 colunas e o mesmo cabeçalho:
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS staging_sales (
 -- Estas tabelas carregavam qty_vda, val_cus, val_dev, val_sld e per_mrg (e mais
 -- sete variantes no staging), todas estruturalmente zero por falta de fonte.
 -- Removidas na migration 0002. Se um dia o export passar a trazer as medidas,
--- reintroduza as colunas junto com o parser que as preenche — e não antes.
+-- reintroduza as colunas junto com o parser que as preenche, e não antes.
 CREATE TABLE IF NOT EXISTS sales_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
@@ -103,10 +103,10 @@ CREATE TABLE IF NOT EXISTS sales_daily_agg (
 
 -- Sem índice em depto/secao/grupo/subgrupo de propósito: nenhuma proc de
 -- análise se beneficia deles (filtrar por qualquer um custava mais que não
--- filtrar — o plano de acesso real é sempre a varredura por sale_date). Os 4
+-- filtrar, já que o plano de acesso real é sempre a varredura por sale_date). Os 4
 -- juntos chegaram a ocupar 532,81 MB, 74,7% do índice da tabela. Removidos em
 -- produção e medidos em 2026-07-30 (ver scripts/migrations/0004_drop_indices_
--- categoria_sales_prod_daily_agg.sql e docs/medicao-performance.md) — hash
+-- categoria_sales_prod_daily_agg.sql e docs/medicao-performance.md): hash
 -- idêntico nas procs, sem regressão de leitura. Não recrie sem medir de novo.
 CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   sale_date   DATE NOT NULL,
@@ -152,12 +152,12 @@ CREATE TABLE IF NOT EXISTS filter_hierarchy (
 --
 -- Derivada de sales_prod_daily_agg (como a filter_hierarchy), regenerada por
 -- refresh_product_universe() num cron diário (scripts/refresh-universe.ts),
--- não mais ao fim de cada import/purge — ver comentário em finalize_import
--- sobre por quê (item 5 de docs/continuar.md).
+-- não mais ao fim de cada import/purge (ver comentário em finalize_import
+-- sobre por quê, item 5 de docs/continuar.md).
 --
 -- Existe por performance. O KPI "PLUs sem venda" precisa comparar o período
 -- contra todo o histórico; fazer isso direto no sales_prod_daily_agg custa um
--- COUNT(DISTINCT) sobre ~3,4M linhas — medido em 4,6s contra 0,4s da consulta
+-- COUNT(DISTINCT) sobre ~3,4M linhas: medido em 4,6s contra 0,4s da consulta
 -- só do período, numa tela que não tem cache. Aqui são ~176k linhas.
 CREATE TABLE IF NOT EXISTS product_universe (
   prod_code      VARCHAR(20)  NOT NULL,
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS product_universe (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Trilha de auditoria: ações sensíveis de auth e admin.
--- actor_email é desnormalizado de propósito — o registro precisa sobreviver
+-- actor_email é desnormalizado de propósito: o registro precisa sobreviver
 -- mesmo se o usuário for removido depois.
 CREATE TABLE IF NOT EXISTS audit_log (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -257,14 +257,14 @@ BEGIN
   --
   -- Os quatro result sets precisam de três grãos: sale_date (byDate), store_code
   -- (byStore) e depto (byDepto); o total é a soma de tudo. Antes cada um saía da
-  -- sua própria varredura da tabela inteira — os mesmos ~1,4M linhas relidos
+  -- sua própria varredura da tabela inteira: os mesmos ~1,4M linhas relidos
   -- quatro vezes para agrupar por uma coluna diferente. Medido em prod
   -- (docs/medicao-performance.md): 46,3s numa janela de 28 dias, a proc mais cara
   -- do sistema.
   --
   -- O grão comum (sale_date, store_code, depto) colapsa esses ~1,4M linhas em
   -- poucos milhares: 56 datas x ~10 lojas x ~20 departamentos. Somar de novo a
-  -- partir dele dá exatamente o mesmo número — SUM é associativo, e nenhum dos
+  -- partir dele dá exatamente o mesmo número: SUM é associativo, e nenhum dos
   -- quatro result sets precisa de grão mais fino que este. Se um dia algum
   -- precisar (por seção, por produto), o grão da temporária tem de crescer junto,
   -- ou o número sai errado sem nada acusar.
@@ -295,12 +295,12 @@ BEGIN
   -- descartava: três COUNT(DISTINCT prod_code) sobre a janela filtrada de
   -- sales_prod_daily_agg a cada chamada, sem nenhum leitor. Os KPIs equivalentes
   -- que existem de verdade ficam em area_analysis, que os entrega para a tela de
-  -- área — não confundir os dois.
+  -- área. Não confundir os dois.
   SELECT COALESCE(SUM(val), 0) AS total FROM tmp_period;
 
   -- Result set 2: byStore
   -- store_name é dependente funcional de store_code, então juntar depois de
-  -- agregar dá o mesmo que juntar antes — e junta contra alguns milhares de
+  -- agregar dá o mesmo que juntar antes, e junta contra alguns milhares de
   -- linhas em vez de milhões.
   SELECT p.store_code AS code, s.store_name AS name, SUM(p.val) AS val
   FROM tmp_period p
@@ -387,8 +387,8 @@ BEGIN
   -- Medido: 30,7s -> 17,8s (-42%). NÃO são os 80% que "cinco varreduras viram
   -- uma" sugere, e a razão importa para quem for mexer nisto depois: materializar
   -- a temporária custa caro por si só (~1,4M linhas colapsando em ~100k grupos,
-  -- escritos em disco). Uma variante com DUAS temporárias mais baratas — uma no
-  -- grão de categoria, outra no de produto — foi medida e ficou em 31,8s, ou
+  -- escritos em disco). Uma variante com DUAS temporárias mais baratas (uma no
+  -- grão de categoria, outra no de produto) foi medida e ficou em 31,8s, ou
   -- seja, igual ao original: o preço da materialização é por temporária, não por
   -- linha lida. Uma só compensa; duas não.
   DROP TEMPORARY TABLE IF EXISTS tmp_period;
@@ -407,7 +407,7 @@ BEGIN
 
   -- A coluna da temporária chama-se `v`, não `val`: os rollups devolvem
   -- `SUM(v) AS val` e ordenam por `val`. Se a coluna também se chamasse `val`, o
-  -- ORDER BY teria duas resoluções possíveis — o servidor prefere o alias, mas
+  -- ORDER BY teria duas resoluções possíveis: o servidor prefere o alias, mas
   -- não é o tipo de detalhe que deva estar sustentando a ordenação de um ranking.
   --
   -- O PREPARE fica por causa do LIMIT ?, que é a razão de ele existir aqui: as
@@ -452,7 +452,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 3/16: filter_options (uses filter_hierarchy — 21k rows instead of 942k)
+-- 3/16: filter_options (uses filter_hierarchy, 21k rows instead of 942k)
 CREATE PROCEDURE filter_options(
   p_date_from DATE,
   p_date_to DATE,
@@ -499,7 +499,7 @@ BEGIN
 
   SELECT MAX(sale_date) AS latest_date FROM import_log;
 
-  -- All queries use filter_hierarchy (21k rows) — no date filtering on options
+  -- All queries use filter_hierarchy (21k rows): no date filtering on options
   -- Stores: filter by depto/secao/grupo selections
   SELECT DISTINCT f.store_code, COALESCE(s.store_name, f.store_code) AS store_name
   FROM filter_hierarchy f
@@ -556,7 +556,7 @@ END//
 -- NÃO reescrever esta proc no modelo de "uma varredura + temporária" sem medir a
 -- proc inteira. Já foi tentado (PR #9) e REGREDIU em produção: 23,0s -> 30,6s na
 -- janela de 28 dias, revertido no PR seguinte. O experimento que aprovou a
--- mudança replicou a consulta sem os cinco predicados NOT EXISTS/OR de filtro —
+-- mudança replicou a consulta sem os cinco predicados NOT EXISTS/OR de filtro:
 -- eles são baratos numa subquery derivada e caros como condição de um
 -- CREATE TEMPORARY TABLE ... AS SELECT. Ver docs/medicao-performance.md.
 --
@@ -617,7 +617,7 @@ BEGIN
   -- Result set 1: aggregate KPIs
   --
   -- Venda e "PLUs com venda" saem do PERÍODO; o universo sai da
-  -- product_universe, que não tem recorte de data — é todo PLU que já vendeu
+  -- product_universe, que não tem recorte de data: é todo PLU que já vendeu
   -- dentro da retenção, sob os mesmos filtros de loja/categoria.
   --
   -- Antes as três contagens saíam da mesma varredura do período, e como o
@@ -646,7 +646,7 @@ BEGIN
 
   -- GREATEST protege dois casos em que o universo pode ficar momentaneamente
   -- menor que o período: a product_universe desatualizada (import gravou o agg
-  -- mas o refresh falhou) e o PLU reclassificado — o universo guarda a
+  -- mas o refresh falhou) e o PLU reclassificado: o universo guarda a
   -- categoria da última venda, então sob filtro de categoria ele pode aparecer
   -- no período e não no universo. Nenhum dos dois pode virar KPI negativo.
   SELECT
@@ -659,11 +659,11 @@ BEGIN
   -- Conta o mesmo conjunto que a listagem (result set 4) devolve: o universo
   -- sob os filtros, não só quem vendeu no período. Se contasse o período, a
   -- paginação prometeria menos páginas do que a lista realmente tem.
-  -- (Como antes, não considera p_search — a busca reduz a lista mas não este
+  -- (Como antes, não considera p_search: a busca reduz a lista mas não este
   -- total. Limitação pré-existente, mantida para não mudar duas coisas de uma
   -- vez.)
   --
-  -- v_universe (result set 1) já é exatamente esta contagem — mesma tabela,
+  -- v_universe (result set 1) já é exatamente esta contagem: mesma tabela,
   -- mesmo WHERE, calculada linhas acima. Reaproveita em vez de escanear
   -- product_universe de novo. NÃO confundir com a regressão documentada em
   -- docs/medicao-performance.md: aquela mexia em sales_prod_daily_agg via
@@ -686,10 +686,10 @@ BEGIN
   -- Result set 4: paginated products
   --
   -- A listagem parte do UNIVERSO (product_universe) e traz as vendas do período
-  -- por LEFT JOIN — então o PLU sem venda no recorte aparece, com val = 0. É o
+  -- por LEFT JOIN, então o PLU sem venda no recorte aparece, com val = 0. É o
   -- que a UI sempre esperou: area-table.tsx pinta de amarelo a linha com
   -- `p.val === 0` e a legenda promete "produtos sem venda no período". Enquanto
-  -- a lista saía direto do sales_prod_daily_agg, essa linha era impossível —
+  -- a lista saía direto do sales_prod_daily_agg, essa linha era impossível:
   -- o parser descarta valor zero, então só entrava quem vendeu.
   --
   -- De quebra sai mais barato: agregar sobre a product_universe (~176k linhas)
@@ -701,14 +701,14 @@ BEGIN
   -- classificação é uma só, a da última venda.
 
   -- Ordenação por whitelist. Diferente das datas e da busca, que viajam como
-  -- placeholders do PREPARE, a coluna do ORDER BY não pode ser parametrizada —
+  -- placeholders do PREPARE, a coluna do ORDER BY não pode ser parametrizada:
   -- ela É estrutura da consulta, então entra concatenada. Antes o valor de
   -- p_sort_by ia direto para o CONCAT: qualquer texto que chegasse virava SQL.
   --
   -- A borda em TypeScript já restringe a um enum Zod (AreaAnalysisSchema), e é
   -- por isso que nunca houve exploração possível pela aplicação. Mas a proc é
-  -- chamável por qualquer cliente do banco — CLI, console, uma integração
-  -- futura — e não pode depender de quem chama ter validado antes.
+  -- chamável por qualquer cliente do banco (CLI, console, uma integração
+  -- futura) e não pode depender de quem chama ter validado antes.
   --
   -- Os quatro valores são os que a aplicação realmente envia: três vêm do enum
   -- e `last_sale_date` é a tradução de "daysSince" feita em area.functions.ts
@@ -762,7 +762,7 @@ BEGIN
   );
 
   -- Ordem dos placeholders: o filtro de busca agora vive na subquery do
-  -- universo, que vem ANTES da subquery do período — por isso @search_param
+  -- universo, que vem ANTES da subquery do período, por isso @search_param
   -- precede as datas aqui.
   IF p_search IS NOT NULL AND p_search != '' THEN
     SET @search_param = CONCAT('%', p_search, '%');
@@ -811,13 +811,13 @@ END//
 
 -- 8/16: product_analysis
 --
--- p_store_codes é JSON (array de códigos de loja), não mais VARCHAR único —
+-- p_store_codes é JSON (array de códigos de loja), não mais VARCHAR único:
 -- suporta comparar um subconjunto específico de lojas, não só "uma loja" ou
 -- "todas". Array vazio = todas (mesmo comportamento de p_store_code IS NULL
 -- de antes). Diferente da regressão de area_analysis
 -- (docs/medicao-performance.md): aqui o filtro por prod_code já é altamente
 -- seletivo (um produto tem poucas dezenas/centenas de linhas no total em
--- sales_prod_daily_agg), então o custo do JSON_CONTAINS é irrelevante — não
+-- sales_prod_daily_agg), então o custo do JSON_CONTAINS é irrelevante: não
 -- é o mesmo padrão de predicado repetido sobre uma tabela inteira sem
 -- filtro seletivo antes dele.
 CREATE PROCEDURE product_analysis(
@@ -850,7 +850,7 @@ BEGIN
     AND sale_date = v_ref_date
     AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(store_code)));
 
-  -- Result set 3: byStore — sempre TODAS as lojas, sem filtro de p_store_codes.
+  -- Result set 3: byStore, sempre TODAS as lojas, sem filtro de p_store_codes.
   -- O cliente decide se mostra e para quais códigos filtrar (comparação de
   -- um subconjunto não precisa de outra ida ao banco).
   SELECT a.store_code AS code, COALESCE(s.store_name, a.store_code) AS name, SUM(a.val_vda) AS val
@@ -865,7 +865,7 @@ BEGIN
   --
   -- INTERVAL 27, não 28: os dois extremos são inclusivos, então `ref - 27` até
   -- `ref` são 28 datas. Com 28 vinham 29, contradizendo o rótulo "últimos 28
-  -- dias" da tela e do PDF — e 28 aqui não é número redondo qualquer, são 4
+  -- dias" da tela e do PDF, e 28 aqui não é número redondo qualquer, são 4
   -- semanas exatas, o que importa porque a análise ao lado compara o mesmo dia
   -- da semana. Com 29 dias a janela pegava um dia da semana repetido.
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
@@ -983,11 +983,11 @@ BEGIN
 
   -- v_staging_count, não p_row_count: o valor que o cliente manda é só o que
   -- ele PRETENDIA importar (parsed.sales.length, calculado antes de qualquer
-  -- chunk ser de fato inserido) — nunca é cruzado contra o que realmente
+  -- chunk ser de fato inserido): nunca é cruzado contra o que realmente
   -- chegou no staging. Um chunk perdido silenciosamente gravaria o número
   -- errado em import_log sem detecção nenhuma (ver
   -- docs/auditoria-qa-2026-08-01.md, item 8). v_staging_count já foi contado
-  -- e verificado > 0 acima nesta mesma procedure — é a única fonte confiável.
+  -- e verificado > 0 acima nesta mesma procedure: é a única fonte confiável.
   INSERT INTO import_log (sale_date, row_count, imported_by, batch_id)
   VALUES (p_sale_date, v_staging_count, p_imported_by, p_batch_id)
   ON DUPLICATE KEY UPDATE
@@ -997,12 +997,12 @@ BEGIN
     batch_id = VALUES(batch_id);
 
   -- Até 30/07/2026, chamava refresh_filter_hierarchy()/refresh_product_universe()
-  -- aqui dentro — cada import pagava ~30-36s de regeneração completa das duas
+  -- aqui dentro: cada import pagava ~30-36s de regeneração completa das duas
   -- tabelas (varrem sales_prod_daily_agg inteira, não só a data importada; ver
   -- comentário nas procs). Item 5 de docs/continuar.md: PLU/categoria novos são
   -- raros o bastante para não justificar esse custo síncrono em toda importação.
   -- As duas passaram a rodar num cron diário (scripts/refresh-universe.ts, 03h30,
-  -- depois do purge das 03h) — um PLU vendido pela primeira vez hoje só aparece
+  -- depois do purge das 03h): um PLU vendido pela primeira vez hoje só aparece
   -- na Área após o refresh seguinte, não no mesmo dia. Aceito conscientemente:
   -- ver a troca completa na decisão registrada em docs/continuar.md item 5.
   COMMIT;
@@ -1020,7 +1020,7 @@ END//
 --
 -- Outra ponta da invariante de retenção; o lado JS está em
 -- src/lib/retention.ts (isWithinRetention), usado pelo import-watch para não
--- importar o que este purge apagaria — senão vira um loop diário de
+-- importar o que este purge apagaria, senão vira um loop diário de
 -- importar -> purgar -> reimportar.
 --
 -- A comparação é ESTRITA (`< @cutoff`), logo a data exatamente na borda
@@ -1028,7 +1028,7 @@ END//
 -- isso. Mexeu em um, revise o outro.
 --
 -- DEPENDÊNCIA DE FUSO: os dois lados só coincidem porque o host e o MariaDB
--- estão em UTC (`time_zone = SYSTEM`, TZ do host `Etc/UTC`) — aí CURRENT_DATE é
+-- estão em UTC (`time_zone = SYSTEM`, TZ do host `Etc/UTC`): aí CURRENT_DATE é
 -- o mesmo dia que o JS calcula em UTC. Trocar o fuso para America/Sao_Paulo faz
 -- CURRENT_DATE virar 3h antes do dia UTC e desalinha a borda em um dia.
 CREATE PROCEDURE purge_old_aggs(p_days INT)
@@ -1036,7 +1036,7 @@ BEGIN
   DECLARE v_deleted INT DEFAULT 0;
   -- Sem isto até 31/07/2026, as 4 DELETEs abaixo faziam autocommit cada uma
   -- por conta própria (sem START TRANSACTION, toda instrução isolada já é sua
-  -- própria transação implícita) — uma falha na 3ª, por exemplo, deixava os
+  -- própria transação implícita): uma falha na 3ª, por exemplo, deixava os
   -- agregados purgados mas products/import_log intactos, sem rollback e sem
   -- v_deleted refletindo o que realmente aconteceu. Mesmo padrão de
   -- finalize_import, que já tinha essa proteção.
@@ -1050,7 +1050,7 @@ BEGIN
   -- admin-system.functions.ts, scripts/purge-aggs.ts) passa p_days
   -- explicitamente a partir de RETENTION_DAYS (src/lib/retention.ts). SQL não
   -- importa TS, então este literal só é exercitado por uma chamada manual
-  -- direto no banco — mas se RETENTION_DAYS mudar, mude aqui também, para o
+  -- direto no banco, mas se RETENTION_DAYS mudar, mude aqui também, para o
   -- fallback não ficar defasado do valor praticado.
   SET @cutoff = DATE_SUB(CURRENT_DATE, INTERVAL COALESCE(p_days, 180) DAY);
 
@@ -1080,11 +1080,11 @@ BEGIN
   COMMIT;
 
   -- Até 30/07/2026, chamava refresh_product_universe()/refresh_filter_hierarchy()
-  -- aqui (condicionado a v_deleted > 0) — as duas tabelas derivadas precisam
+  -- aqui (condicionado a v_deleted > 0): as duas tabelas derivadas precisam
   -- refletir o agg que acabou de encolher, senão um PLU cuja última venda saiu
   -- na poda nunca sai do universo, e os filtros seguem oferecendo combinações
   -- que já não existem. Isso agora é responsabilidade do cron dedicado
-  -- (scripts/refresh-universe.ts, 03h30 — depois do purge das 03h, então já
+  -- (scripts/refresh-universe.ts, 03h30: depois do purge das 03h, então já
   -- enxerga o agg pós-poda), não mais desta proc. Ver item 5 de
   -- docs/continuar.md e o comentário equivalente em finalize_import.
   SELECT v_deleted AS deleted;
@@ -1114,7 +1114,7 @@ END//
 -- DELETE, não TRUNCATE. Os dois esvaziam a tabela, mas TRUNCATE é DDL: provoca
 -- commit implícito e não respeita MVCC. Mediu-se em 2026-07-25, com 164k linhas
 -- na product_universe: durante os ~33s do refresh, um leitor concorrente via
--- ZERO linha na tabela — e a tela Área parte do universo, então ela ficava
+-- ZERO linha na tabela, e a tela Área parte do universo, então ela ficava
 -- vazia a cada import, em pleno horário comercial (o cron roda 10h–22h). Com
 -- DELETE, o leitor continua enxergando a versão anterior até o COMMIT.
 --
@@ -1124,13 +1124,13 @@ END//
 -- tabela truncada. Ver a nota de atomicidade no finalize_import.
 --
 -- Correção em 31/07/2026: a garantia acima só é real com o DELETE e o INSERT
--- na MESMA transação — sem START TRANSACTION explícito, cada instrução já é
+-- na MESMA transação: sem START TRANSACTION explícito, cada instrução já é
 -- sua própria transação implícita (autocommit) e o leitor via a tabela
 -- momentaneamente vazia entre as duas, exatamente o sintoma que o DELETE
 -- devia evitar. Era inofensivo enquanto esta proc só era chamada de dentro de
 -- finalize_import (que já envolvia tudo numa transação); deixou de ser
 -- verdade quando virou uma chamada standalone do cron dedicado
--- (scripts/refresh-universe.ts — item 5 de docs/continuar.md).
+-- (scripts/refresh-universe.ts, item 5 de docs/continuar.md).
 CREATE PROCEDURE refresh_filter_hierarchy()
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -1164,7 +1164,7 @@ END//
 --
 -- O JOIN com o MAX(sale_date) por (prod_code, store_code) serve a dois
 -- propósitos de uma vez: `a.sale_date` já É a última venda, e nome/categoria
--- saem da linha mais recente — um PLU reclassificado fica com a categoria
+-- saem da linha mais recente: um PLU reclassificado fica com a categoria
 -- atual, não com a primeira que teve. Como a PK do agg é
 -- (sale_date, store_code, prod_code), o JOIN devolve exatamente uma linha por
 -- par.
@@ -1173,7 +1173,7 @@ END//
 -- TRUNCATE a tabela fica visivelmente vazia para quem lê durante o refresh.
 -- Mesma correção de 31/07/2026 documentada lá: DELETE + INSERT precisam estar
 -- na mesma transação para a garantia de visibilidade valer de verdade,
--- especialmente aqui — area_analysis faz LEFT JOIN do período sobre esta
+-- especialmente aqui: area_analysis faz LEFT JOIN do período sobre esta
 -- tabela para decidir quais produtos existem.
 CREATE PROCEDURE refresh_product_universe()
 BEGIN

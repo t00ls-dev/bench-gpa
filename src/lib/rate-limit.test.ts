@@ -111,7 +111,7 @@ describe("RateLimiter", () => {
   });
 });
 
-describe("RateLimiter — orçamento global não é armável por um IP só", () => {
+describe("RateLimiter: orçamento global não é armável por um IP só", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
@@ -123,7 +123,7 @@ describe("RateLimiter — orçamento global não é armável por um IP só", () 
 
     // Vítima na primeira requisição da vida dela: tem que passar. Antes, as 20
     // rejeições do atacante também incrementavam o contador global e estouravam
-    // o teto de 20 — um curl em loop derrubava o login de todo mundo.
+    // o teto de 20, um curl em loop derrubava o login de todo mundo.
     expect(l.check("10.0.0.1").allowed).toBe(true);
 
     l.destroy();

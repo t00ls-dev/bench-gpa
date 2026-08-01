@@ -20,6 +20,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("❌ Erro:", err instanceof Error ? err.message : String(err));
+  console.error("Erro:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

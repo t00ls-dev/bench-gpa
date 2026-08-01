@@ -26,7 +26,7 @@ export function RouteProgress() {
 
     if (pending) {
       clearAll();
-      // Só mostra se a navegação passar de ~80ms — instantâneas nem aparecem.
+      // Só mostra se a navegação passar de ~80ms: instantâneas nem aparecem.
       timers.current.push(
         setTimeout(() => {
           setProgress(12);
@@ -37,7 +37,7 @@ export function RouteProgress() {
       );
     } else {
       clearAll();
-      // Completa e some — só quando de fato estava visível. Fica no efeito de
+      // Completa e some, só quando de fato estava visível. Fica no efeito de
       // propósito (não dá pra mover pra render): é parte da coreografia
       // imperativa do timer que a linha seguinte agenda, não estado derivado
       // de uma prop.

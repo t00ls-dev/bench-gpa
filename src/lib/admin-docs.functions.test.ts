@@ -47,7 +47,7 @@ import { listDocs, getDocContent } from "./admin-docs.functions";
 import { assertAdmin } from "./admin-utils";
 
 // import.meta.glob roda de verdade (é transform do Vite, não dá pra mockar
-// como db.query) — os testes usam a pasta docs/ real do repo em vez de um
+// como db.query), os testes usam a pasta docs/ real do repo em vez de um
 // fixture, com asserções estruturais (não conteúdo exato) pra não acoplar
 // nos textos dos docs, que mudam.
 

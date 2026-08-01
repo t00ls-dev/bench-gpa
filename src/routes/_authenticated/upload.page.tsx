@@ -49,7 +49,7 @@ interface ProcessingState {
 }
 
 // Tentativas extras além da original (3 no total), reiniciando o arquivo do
-// zero a cada uma — ver comentário em processOne sobre por que não é retry
+// zero a cada uma. Ver comentário em processOne sobre por que não é retry
 // por chunk.
 const MAX_FILE_RETRIES = 2;
 const FILE_RETRY_DELAY_MS = 1500;
@@ -161,13 +161,13 @@ export default function UploadPage() {
 
     // Retry no nível do arquivo inteiro, não do chunk. insertSalesChunk faz um
     // INSERT simples sem proteção contra duplicata (sem ON DUPLICATE KEY, sem
-    // coluna de sequência de chunk) — reenviar só o chunk que falhou arrisca
+    // coluna de sequência de chunk): reenviar só o chunk que falhou arrisca
     // duplicar linhas na staging_sales se o INSERT já tiver sido gravado no
     // servidor e só a resposta tiver se perdido na rede. finalize_import agrega
     // via GROUP BY/SUM direto da staging (não valida contagem de linhas), então
     // duplicata vira venda inflada silenciosamente, não um erro visível.
     // Reiniciar o arquivo é seguro porque beginImport começa com
-    // DELETE FROM staging_sales WHERE sale_date = ? — cada tentativa parte de
+    // DELETE FROM staging_sales WHERE sale_date = ?: cada tentativa parte de
     // uma staging limpa para aquela data, sem risco de duplicata.
     let lastError: unknown;
     for (let attempt = 0; attempt <= MAX_FILE_RETRIES; attempt++) {

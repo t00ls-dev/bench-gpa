@@ -41,8 +41,8 @@ function getServerSnapshot(): EffectiveTheme {
 /**
  * Resolve o tema efetivo (light/dark) a partir da preferência salva e da
  * configuração do sistema, mantendo a classe `dark` no <html> sincronizada.
- * Use em qualquer página que precise honrar o tema — inclusive as que não têm
- * o toggle (login) — para que a preferência seja respeitada.
+ * Use em qualquer página que precise honrar o tema, inclusive as que não têm
+ * o toggle (login), para que a preferência seja respeitada.
  */
 export function useEffectiveTheme(): EffectiveTheme {
   const effective = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

@@ -5,7 +5,7 @@ import { getLatestSaleInfo } from "@/lib/dashboard.functions";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 
 function fmtDate(iso: string) {
-  if (typeof iso !== "string") return "—";
+  if (typeof iso !== "string") return "-";
   const parts = iso.split("-");
   if (parts.length < 3) return iso;
   const [y, m, d] = parts;
@@ -35,7 +35,7 @@ export function AppFooter() {
     <div className="kpi-card mt-8 flex items-center gap-x-3 overflow-x-auto whitespace-nowrap text-xs text-muted-foreground">
       <span className="flex items-center gap-1.5">
         <CalendarCheck className="size-3.5" />
-        Última venda: {data ? fmtDate(data.sale_date) : "—"}
+        Última venda: {data ? fmtDate(data.sale_date) : "-"}
       </span>
       <span className="hidden sm:inline">·</span>
       <span className="flex items-center gap-1.5">

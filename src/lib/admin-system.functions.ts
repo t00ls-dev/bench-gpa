@@ -79,7 +79,7 @@ export const purgeOldAggs = createServerFn({ method: "POST" })
       actorId: context.userId,
       actorEmail: context.userEmail,
       targetType: "data",
-      detail: `purge manual (${RETENTION_DAYS} dias) — ${deleted} registros removidos`,
+      detail: `purge manual (${RETENTION_DAYS} dias), ${deleted} registros removidos`,
     });
     return { deleted };
   });
@@ -170,16 +170,16 @@ export const getAuditLog = createServerFn({ method: "POST" })
  * Jobs de cron conhecidos + prazo (horas) além do qual são considerados atrasados.
  *
  * O rótulo da purga interpola RETENTION_DAYS em vez de trazer o número escrito.
- * Antes era a string fixa "Purga (180 dias)" — no MESMO arquivo que já importa a
+ * Antes era a string fixa "Purga (180 dias)", no MESMO arquivo que já importa a
  * constante e a usa corretamente em purgeOldAggs. Bastava mudar a retenção para
  * o painel admin passar a exibir um prazo que não é o praticado. `schedule` e
  * `maxHours` seguem o mesmo raciocínio, agora como PURGE_CRON_LABEL e
- * PURGE_MAX_HOURS_OVERDUE em retention.ts — ver lá o porquê de cada valor.
+ * PURGE_MAX_HOURS_OVERDUE em retention.ts: ver lá o porquê de cada valor.
  *
  * `import-watch` saiu desta lista em 2026-07-26, quando o cron dele foi
  * desligado (a importação passou a ser pela tela /upload ou sob demanda no
  * servidor). Um job SEM cron aqui fica com o último heartbeat parado no tempo e
- * é exibido como ATRASADO para sempre — alarme falso permanente, o oposto do que
+ * é exibido como ATRASADO para sempre: alarme falso permanente, o oposto do que
  * este painel serve. A linha antiga continua na tabela cron_heartbeat como
  * registro histórico, apenas não é mais lida. Ao reativar o cron, reintroduzir o
  * job aqui E a linha em scripts/setup-crons.sh.
@@ -187,14 +187,14 @@ export const getAuditLog = createServerFn({ method: "POST" })
 const KNOWN_JOBS: {
   job: string;
   label: string;
-  /** Texto completo pro tooltip, quando o label abrevia — ver HeartbeatCard. */
+  /** Texto completo pro tooltip, quando o label abrevia (ver HeartbeatCard). */
   hint?: string;
   maxHours: number;
   schedule: string;
 }[] = [
   {
     job: "purge",
-    // Curto de propósito — o rótulo completo (no hint) quebrava o badge de
+    // Curto de propósito: o rótulo completo (no hint) quebrava o badge de
     // status ao lado no card (ver admin-audit-panel.tsx).
     label: "Limpeza de dados antigos",
     hint: `Remove agregados de vendas (diários e por produto) e logs de importação com mais de ${RETENTION_DAYS} dias, mantendo o banco otimizado sem afetar dados recentes.`,

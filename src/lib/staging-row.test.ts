@@ -41,7 +41,7 @@ describe("staging-row", () => {
   });
 
   it("preserva valor 0 explícito da origem", () => {
-    // `?? default` só troca null/undefined — um 0 de verdade passa direto.
+    // `?? default` só troca null/undefined: um 0 de verdade passa direto.
     const out = toStagingRow({ val_vda: 0 }, "b", "2024-01-01");
     expect(out[idx("val_vda")]).toBe(0);
   });

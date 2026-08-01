@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { RETENTION_DAYS, daysSinceUtc, isWithinRetention } from "./retention";
 
 // Referência fixa: 2026-07-23 20:00 UTC. Usar um horário no meio do dia é de
-// propósito — daysSinceUtc conta dias de calendário, então o resultado não pode
+// propósito: daysSinceUtc conta dias de calendário, então o resultado não pode
 // depender da hora em que a cron roda.
 const NOW = Date.parse("2026-07-23T20:00:00Z");
 
@@ -29,10 +29,10 @@ describe("daysSinceUtc", () => {
   });
 });
 
-describe("isWithinRetention — borda casada com o purge_old_aggs", () => {
+describe("isWithinRetention: borda casada com o purge_old_aggs", () => {
   // O purge apaga `sale_date < CURRENT_DATE - RETENTION_DAYS` (estrito), então
   // a data exatamente na borda é PRESERVADA. Se algum dia isto virar `<`, o
-  // import-watch passa a pular um dia que o purge ainda guarda — ou, pior no
+  // import-watch passa a pular um dia que o purge ainda guarda, ou, pior no
   // sentido inverso, a importar um dia que o purge apaga de madrugada,
   // reabrindo o loop importar -> purgar -> reimportar.
 
@@ -62,7 +62,7 @@ describe("isWithinRetention — borda casada com o purge_old_aggs", () => {
   it("não há dia em que importar e purgar discordem", () => {
     // Varre a vizinhança da borda: para todo dia, "import-watch importa" tem que
     // ser exatamente "purge preserva". O purge preserva quando
-    // daysSinceUtc <= RETENTION_DAYS — a mesma conta, escrita à mão aqui de
+    // daysSinceUtc <= RETENTION_DAYS: a mesma conta, escrita à mão aqui de
     // propósito, para o teste falhar se a implementação mudar de critério.
     for (let d = RETENTION_DAYS - 5; d <= RETENTION_DAYS + 5; d++) {
       const date = daysAgo(d);

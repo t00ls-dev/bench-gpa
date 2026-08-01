@@ -3,7 +3,7 @@ import db from "./db";
 import { getClientIp } from "./rate-limit";
 
 /**
- * Limite do campo `detail`. Espelha `VARCHAR(500)` no schema — tanto em
+ * Limite do campo `detail`. Espelha `VARCHAR(500)` no schema, tanto em
  * `audit_log` quanto em `cron_heartbeat`, que truncavam com o mesmo 500 escrito
  * à mão em arquivos diferentes. Truncar aqui evita que um detalhe longo derrube
  * a gravação inteira por "Data too long".
@@ -24,7 +24,7 @@ export interface AuditEntry {
 }
 
 /**
- * Grava um evento na trilha de auditoria. É best-effort: NUNCA lança —
+ * Grava um evento na trilha de auditoria. É best-effort: NUNCA lança.
  * uma falha ao auditar não pode derrubar a operação real que a originou.
  */
 export async function recordAudit(entry: AuditEntry): Promise<void> {
@@ -51,7 +51,7 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
       ],
     );
   } catch (err) {
-    // Só loga — auditoria não deve interromper o fluxo principal.
+    // Só loga: auditoria não deve interromper o fluxo principal.
     console.error("[audit] falha ao registrar evento:", err instanceof Error ? err.message : err);
   }
 }

@@ -11,7 +11,7 @@ export function useElapsedSeconds(active: boolean): number {
   useEffect(() => {
     if (!active) return;
     const start = Date.now();
-    // Zera antes de iniciar a contagem — parte da coreografia do timer que a
+    // Zera antes de iniciar a contagem: parte da coreografia do timer que a
     // linha seguinte agenda, não estado derivado de uma prop.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeconds(0);

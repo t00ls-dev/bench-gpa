@@ -1,17 +1,17 @@
 /**
  * Guarda os bytes de um PDF por pouco tempo, entre o POST que os envia e o GET
- * que os baixa de volta — a ponte que faz `/api/pdf-download` (server.ts)
+ * que os baixa de volta: a ponte que faz `/api/pdf-download` (server.ts)
  * devolver um `Content-Disposition: attachment; filename=...` de verdade, em
  * vez de depender do atributo `download` numa blob URL do lado do cliente
- * (Firefox não confia nesse atributo pra blob: em vários casos — o
+ * (Firefox não confia nesse atributo pra blob: em vários casos, o
  * gerenciador de download cai pro UUID da própria blob URL como nome. Ver
  * Mozilla Bugzilla #1282407).
  *
- * NÃO é uso único, de propósito — já foi (bug real, corrigido em 01/08/2026):
+ * NÃO é uso único, de propósito: já foi (bug real, corrigido em 01/08/2026):
  * o Firefox faz mais de uma requisição pra URL de download antes de salvar o
  * arquivo (confirmado com um caso real: a segunda leitura vinha com o token
- * já apagado pela primeira, e o Firefox salvava o corpo do 404 — "Not found",
- * 9 bytes — como se fosse o PDF). TTL curto (60s) + isolamento por usuário já
+ * já apagado pela primeira, e o Firefox salvava o corpo do 404 ("Not found",
+ * 9 bytes) como se fosse o PDF). TTL curto (60s) + isolamento por usuário já
  * bastam como proteção; um token só vale pra quem gerou e só por pouco tempo,
  * não precisa também morrer na primeira leitura.
  */

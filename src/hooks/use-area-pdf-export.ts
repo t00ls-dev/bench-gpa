@@ -25,7 +25,7 @@ interface Params {
 }
 
 /**
- * Export de PDF da tela de Área — extraído de `area.page.tsx` (auditoria
+ * Export de PDF da tela de Área, extraído de `area.page.tsx` (auditoria
  * técnica de 31/07, item "4 responsabilidades"). Busca a listagem inteira
  * (não a página exibida) direto do servidor, monta as duas tabelas
  * (KPIs + produtos) e abre o blob numa aba nova.
@@ -125,7 +125,7 @@ export function useAreaPdfExport({
       doc.text("Período: " + fmtBRShort(dateFrom) + " - " + fmtBRShort(dateTo), mX, 22.5);
       doc.text("Produtos listados: " + filtered.length, mX, 27);
 
-      // Experimental (item 6 do backlog de UX) — mesmos 5 números do
+      // Experimental (item 6 do backlog de UX): mesmos 5 números do
       // AreaKpiCards no topo da tela, só que impressos no PDF.
       autoTable(doc, {
         startY: 31,

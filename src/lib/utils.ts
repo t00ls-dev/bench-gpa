@@ -15,7 +15,7 @@ export function fmtInt(n: number): string {
 
 /**
  * Humaniza um tamanho em bytes com unidades binárias (1024), escalando até a
- * maior unidade em que o valor fica >= 1 — logo 1024 MB = 1 GB (GiB, rotulado
+ * maior unidade em que o valor fica >= 1, logo 1024 MB = 1 GB (GiB, rotulado
  * "GB" pela convenção de ferramentas de banco). Casas decimais crescem com a
  * unidade: 0 para B/kB, 1 para MB, 2 para GB/TB.
  */

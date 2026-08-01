@@ -9,7 +9,7 @@ function makeWorkbook(rows: unknown[][]): ArrayBuffer {
   return XLSX.write(wb, { type: "array", bookType: "xlsx" });
 }
 
-// .xls (binário legado, BIFF8) — o dropzone aceita a extensão
+// .xls (binário legado, BIFF8): o dropzone aceita a extensão
 // (upload-dropzone.tsx: accept=".xlsx,.xls"), mas nada testava esse formato.
 function makeWorkbookXls(rows: unknown[][]): ArrayBuffer {
   const wb = XLSX.utils.book_new();
@@ -46,7 +46,7 @@ describe("xlsx-parser", () => {
 
   it("não lança para um arquivo com o marcador de data mas zero linhas de produto", () => {
     // Diferença importante do caso "arquivo corrompido": aqui o arquivo é
-    // válido e o marcador existe — só não há nenhum produto depois dele.
+    // válido e o marcador existe: só não há nenhum produto depois dele.
     // O parser devolve listas vazias em vez de lançar; quem decide se isso é
     // um erro de negócio é o chamador (beginImport.total_rows===0 no caminho
     // web; scripts/import.ts precisa do mesmo guard, ver teste abaixo).
@@ -78,7 +78,7 @@ describe("xlsx-parser", () => {
 
   // O teste acima ("skips total rows...") prova que rótulos de Total FORA de
   // formato (ex.: "Total do Depto" por extenso) são ignorados com segurança,
-  // mas nunca dispara os 4 branches reais de atribuição — o gatilho exige o
+  // mas nunca dispara os 4 branches reais de atribuição: o gatilho exige o
   // rótulo "Total" adjacente EXATO (ver `isVal`/checks em xlsx-parser.ts).
   // Este bloco cobre o caminho que a categorização de produto realmente usa.
   it("atribui depto/seção/grupo/subgrupo reais quando o rótulo 'Total' vem exatamente adjacente", () => {
@@ -110,7 +110,7 @@ describe("xlsx-parser", () => {
       [null, null, "REFRIGERANTES", "Total"],
       [null, null, null, "COLA", "Total"],
       [null, null, null, null, "111-ITEM DA COLA", 10],
-      // Novo depto sem nenhuma seção/grupo/subgrupo declarada abaixo dele —
+      // Novo depto sem nenhuma seção/grupo/subgrupo declarada abaixo dele:
       // o produto seguinte não pode herdar BEBIDAS/REFRIGERANTES/COLA.
       ["LIMPEZA", "Total"],
       [null, null, null, null, "222-ITEM SEM SUBHIERARQUIA", 20],
@@ -140,7 +140,7 @@ describe("xlsx-parser", () => {
       [null, null, "REFRIGERANTES", "Total"],
       [null, null, null, "COLA", "Total"],
       [null, null, null, null, "111-ITEM DA COLA", 10],
-      // Nova seção do MESMO depto — grupo/subgrupo da seção anterior não
+      // Nova seção do MESMO depto: grupo/subgrupo da seção anterior não
       // podem vazar pro item desta seção nova.
       [null, "LATICÍNIOS", "Total"],
       [null, null, null, null, "333-ITEM DE LATICÍNIOS", 20],
@@ -211,7 +211,7 @@ describe("xlsx-parser", () => {
 
   it("emite categorias nulas quando não há hierarquia (gatilho do bug do staging '0')", () => {
     // Produto sem nenhuma linha de Total de hierarquia acima dele: depto/secao/
-    // grupo/subgrupo devem sair NULL — nunca "" nem 0.
+    // grupo/subgrupo devem sair NULL, nunca "" nem 0.
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
       ["DTA_VENDA é 01/01/2024"],
@@ -239,7 +239,7 @@ describe("xlsx-parser", () => {
 
   it("lê corretamente um arquivo .xls legado (binário BIFF8), não só .xlsx", () => {
     // O dropzone aceita a extensão (upload-dropzone.tsx: accept=".xlsx,.xls"),
-    // mas nada testava esse formato — parseAnyWorkbook usa o mesmo XLSX.read()
+    // mas nada testava esse formato: parseAnyWorkbook usa o mesmo XLSX.read()
     // pros dois, que detecta o formato pelo conteúdo do buffer, não pela
     // extensão do nome de arquivo (que o parser nem recebe).
     const buf = makeWorkbookXls([
@@ -287,7 +287,7 @@ describe("xlsx-parser", () => {
     expect(result.products.map((p) => p.prod_code)).not.toContain("222");
   });
 
-  it("não funde linhas duplicadas do mesmo produto/loja — cada linha vira uma venda", () => {
+  it("não funde linhas duplicadas do mesmo produto/loja, cada linha vira uma venda", () => {
     // finalize_import (migrate-schema.sql) que soma via GROUP BY/SUM no
     // banco; o parser em si não deduplica nem funde nada, só repassa cada
     // linha como uma venda separada.
@@ -300,7 +300,7 @@ describe("xlsx-parser", () => {
     const result = parseAnyWorkbook(buf);
     expect(result.sales).toHaveLength(2);
     expect(result.sales.map((s) => s.val_vda)).toEqual([10, 25]);
-    // productMap é um Map por código — a segunda ocorrência não duplica a
+    // productMap é um Map por código: a segunda ocorrência não duplica a
     // entrada, só "ganha" se o nome mudar (não muda aqui).
     expect(result.products).toHaveLength(1);
   });

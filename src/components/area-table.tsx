@@ -158,7 +158,7 @@ export function AreaTable({
             )}
           </div>
           {/* Seletor de página e botão de PDF agrupados, pra sempre quebrarem
-              juntos — sem isso o PDF ficava sozinho numa linha própria no
+              juntos: sem isso o PDF ficava sozinho numa linha própria no
               celular, com bastante espaço vazio ao lado. */}
           <div className="flex items-center gap-2">
             <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
@@ -229,7 +229,7 @@ export function AreaTable({
               sortAsc={sortAsc}
               toggle={onSortToggle}
               align="right"
-              hint={`Referência: ${baseDateIso ?? "—"}`}
+              hint={`Referência: ${baseDateIso ?? "-"}`}
             />
           </div>
           <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>

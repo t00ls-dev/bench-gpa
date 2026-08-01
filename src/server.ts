@@ -42,7 +42,7 @@ async function getServerEntry(): Promise<ServerEntry> {
 
 /**
  * Ponte pra `Content-Disposition: attachment` de verdade (ver
- * src/lib/pdf-download-store.ts pro porquê) — o cliente gera o PDF
+ * src/lib/pdf-download-store.ts pro porquê): o cliente gera o PDF
  * (jsPDF, área.page) e passa por aqui só pra pegar o header de download
  * confiável; a montagem do PDF em si continua inteiramente no navegador.
  *
@@ -73,13 +73,13 @@ async function handlePdfDownload(request: Request, url: URL): Promise<Response> 
         "content-disposition": contentDispositionHeader(entry.filename),
         // no-transform: instrui proxy/CDN no meio do caminho (Nginx, Cloudflare)
         // a não recomprimir/reescrever o corpo. Um PDF já é internamente
-        // comprimido (streams FlateDecode) — uma recompressão gzip/brotli por
+        // comprimido (streams FlateDecode): uma recompressão gzip/brotli por
         // um proxy no meio do caminho, se mal aplicada de volta pro cliente,
         // corrompe os bytes internos sem quebrar o tamanho total nem disparar
         // erro nenhum: o arquivo abre, mas o conteúdo sai ilegível/preto.
         "cache-control": "no-store, no-transform",
         "x-content-type-options": "nosniff",
-        // Explícito em vez de deixar o proxy calcular sozinho — outra fonte
+        // Explícito em vez de deixar o proxy calcular sozinho: outra fonte
         // documentada de corrupção é um Content-Length que não bate com o
         // corpo real depois de alguma etapa no meio do caminho recalcular
         // errado.
@@ -106,8 +106,8 @@ function applySecurityHeaders(
     // Tooltip, DropdownMenu) e Recharts injetam `style` inline via JS em tempo de
     // execução pra posicionamento/renderização, sem suportar nonce de CSP. Nonce
     // aqui quebraria posicionamento desses componentes. Risco residual é baixo:
-    // diferente de script-src, unsafe-inline em style-src não permite executar JS
-    // — só CSS. Ver auditoria MDN Observatory de 30/07/2026 (nota A+/115).
+    // diferente de script-src, unsafe-inline em style-src não permite executar JS,
+    // só CSS. Ver auditoria MDN Observatory de 30/07/2026 (nota A+/115).
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://challenges.cloudflare.com",
     "font-src 'self'",

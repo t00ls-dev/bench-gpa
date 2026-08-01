@@ -6,7 +6,7 @@ vi.hoisted(() => {
 
 type Handler = (opts: { data?: unknown; context: unknown }) => unknown;
 
-// inputValidator vira um passthrough — o parser Zod real passado a
+// inputValidator vira um passthrough: o parser Zod real passado a
 // `.inputValidator(...)` nunca é chamado. Isso inclui os `.default(...)`
 // do schema: quem chama `login(...)` nos testes precisa passar o valor já
 // "pós-parse" explicitamente (ex.: `rememberMe: false`), porque a ausência do
@@ -88,7 +88,7 @@ beforeEach(() => {
 describe("login", () => {
   it("sets an httpOnly session cookie and returns ok, never exposing the token to the caller", async () => {
     // rememberMe: false explícito porque este mock de createServerFn nunca
-    // invoca o parser Zod real (ver comentário no topo do arquivo) — em
+    // invoca o parser Zod real (ver comentário no topo do arquivo), em
     // produção o default do schema cobriria a ausência do campo.
     const result = await login({
       email: "test@gpabr.com",
@@ -98,9 +98,9 @@ describe("login", () => {
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
     // tokenVersion vai no payload para que resetPassword consiga invalidar esta
-    // sessão depois — ver auth-middleware.test.ts. Sem "manter conectado", a
+    // sessão depois, ver auth-middleware.test.ts. Sem "manter conectado", a
     // sessão nasce como "normal" (não persistente, expira em 1h de
-    // inatividade) — ver src/lib/auth-config.ts.
+    // inatividade), ver src/lib/auth-config.ts.
     expect(jwt.sign).toHaveBeenCalledWith(
       {
         userId: "u1",
@@ -217,7 +217,7 @@ describe("getMe", () => {
     expect(user).toEqual({ id: "u1", email: "test@gpabr.com", name: "Teste", role: "admin" });
   });
 
-  // getMe roda a cada navegação (cacheado 60s no guard de rotas) — não pode
+  // getMe roda a cada navegação (cacheado 60s no guard de rotas), não pode
   // ter o efeito colateral de reemitir a sessão a cada chamada. Quem desliza
   // a sessão por atividade é o requireAuth, chamado pelas funções que de fato
   // buscam dados (ver auth-middleware.test.ts).
@@ -241,7 +241,7 @@ describe("getMe", () => {
     expect(user).toBeNull();
   });
 
-  // O guard das rotas (_authenticated/route.tsx) decide por este retorno — se
+  // O guard das rotas (_authenticated/route.tsx) decide por este retorno: se
   // ele não checasse token_version, um token anterior ao reset de senha ainda
   // entraria na aplicação mesmo com o requireAuth barrando as server functions.
   it("returns null quando a senha foi redefinida depois da emissão do token", async () => {

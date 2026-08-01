@@ -6,13 +6,13 @@ const CHECK_INTERVAL_MS = 15 * 60_000;
 
 /**
  * Detects when the client is running a JS bundle older than what's deployed
- * on the server — happens because SPA route changes never reload the page,
+ * on the server: happens because SPA route changes never reload the page,
  * so a tab left open (or, on mobile, backgrounded and resumed) across a
  * deploy keeps running stale code indefinitely, even after the bug it hit
  * has been fixed and shipped. Reloads automatically once detected, instead
  * of relying on the user to know to hard-refresh.
  *
- * Skipped on /upload — an in-progress import is a multi-step client-driven
+ * Skipped on /upload: an in-progress import is a multi-step client-driven
  * process; an unexpected reload there would lose progress.
  */
 export function useVersionCheck() {
@@ -30,7 +30,7 @@ export function useVersionCheck() {
           window.location.reload();
         }
       } catch {
-        // network hiccup or logged out — ignore, next check will retry
+        // network hiccup or logged out: ignore, next check will retry
       }
     };
 

@@ -1,10 +1,10 @@
 /**
  * Checagens que devem impedir o processo de subir, não só logar um aviso.
- * `TURNSTILE_BYPASS=true` desliga o CAPTCHA do login inteiro — é uma flag de
+ * `TURNSTILE_BYPASS=true` desliga o CAPTCHA do login inteiro: é uma flag de
  * dev/teste (ver .claude/skills/run) que nunca deveria vazar pra produção,
  * mas hoje passa direto do `.env` pro processo do PM2
  * (`ecosystem.config.cjs`) sem nenhuma validação. Chamado uma vez, no
- * carregamento do módulo de entrada do servidor (`src/server.ts`) — se
+ * carregamento do módulo de entrada do servidor (`src/server.ts`): se
  * lançar, o processo nem chega a subir, em vez de rodar em produção com o
  * CAPTCHA desligado silenciosamente.
  */

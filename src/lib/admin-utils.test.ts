@@ -45,7 +45,7 @@ describe("invalidateAdminCache", () => {
     expect(mockQuery).toHaveBeenCalledTimes(1); // 2ª veio do cache negativo
 
     // Promovido no banco. Sem invalidar, o `false` cacheado seguiria negando
-    // acesso por até 5 minutos — o sintoma que mais aparecia no uso diário.
+    // acesso por até 5 minutos: o sintoma que mais aparecia no uso diário.
     mockQuery.mockResolvedValue([[[{ has_role: 1 }]]]);
     invalidateAdminCache("u-promovido");
     await expect(assertAdmin({ userId: "u-promovido" })).resolves.toBeUndefined();

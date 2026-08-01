@@ -58,7 +58,7 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
     await assertAdmin(context);
 
     // Layout e defaults vêm de staging-row.ts, o mesmo módulo que o import via
-    // CLI usa. Esta função mantinha uma cópia própria da lista de colunas — foi
+    // CLI usa. Esta função mantinha uma cópia própria da lista de colunas: foi
     // exatamente essa duplicação que deixou os dois caminhos divergirem antes
     // (o CLI com `?? 0`, este com `?? null`), e o `?? 0` transformava categoria
     // nula na string "0". Uma fonte só elimina a classe do problema.
