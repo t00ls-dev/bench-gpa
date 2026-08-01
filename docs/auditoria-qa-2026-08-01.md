@@ -202,10 +202,18 @@ quais entram em execução e em que ordem.
    componente), esforço trivial (mudança de 2 globs), mas exige checar que
    nenhum `.tsx` existente quebra o coverage threshold ao entrar de
    surpresa em 0%.
-3. ⬜ **Teste de rejeição real para `assertAdmin`/`requireAuth`** (ao menos
-   1 função por arquivo, sem mockar os guards) — **alto**, esforço médio;
-   é o gap de IDOR mais concreto: hoje nenhum teste prova que um não-admin
-   é de fato barrado.
+3. ✅ 01/08 — **Teste de rejeição real para `assertAdmin`** (1 função por
+   arquivo — `diagnoseData`, `listDocs`, `listUsers`, `beginImport` —, sem
+   mockar o guard) — **alto**, esforço médio. 4 arquivos novos
+   (`*.guards.test.ts`), cada um prova que um não-admin é rejeitado _e_ que
+   nenhuma consulta de negócio roda antes disso (só a checagem `CALL
+has_role` acontece). Sanidade verificada manualmente: forçar
+   `has_role: 1` faz o teste falhar, confirmando que a asserção é real, não
+   tautológica. Escopo consciente: `requireAuth` ficou de fora — sua lógica
+   de rejeição (JWT expirado/adulterado, `token_version`, usuário inativo)
+   já é extensivamente testada em `auth-middleware.test.ts` (11 casos);
+   repetir isso 4x nesses arquivos seria esforço alto por sinal baixo,
+   dado que a montagem de JWT/cookie mockados não muda entre eles.
 4. ⬜ **Teste de `rate-limit.middleware.ts`** (`requireRateLimit()`) — hoje
    0% e mockado como no-op em todo lugar — **alto**, esforço médio; é o
    ponto de aplicação real do rate limit em toda função não-auth.
