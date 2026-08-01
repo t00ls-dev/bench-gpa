@@ -71,8 +71,19 @@ async function handlePdfDownload(request: Request, url: URL): Promise<Response> 
       headers: {
         "content-type": "application/pdf",
         "content-disposition": contentDispositionHeader(entry.filename),
-        "cache-control": "no-store",
+        // no-transform: instrui proxy/CDN no meio do caminho (Nginx, Cloudflare)
+        // a não recomprimir/reescrever o corpo. Um PDF já é internamente
+        // comprimido (streams FlateDecode) — uma recompressão gzip/brotli por
+        // um proxy no meio do caminho, se mal aplicada de volta pro cliente,
+        // corrompe os bytes internos sem quebrar o tamanho total nem disparar
+        // erro nenhum: o arquivo abre, mas o conteúdo sai ilegível/preto.
+        "cache-control": "no-store, no-transform",
         "x-content-type-options": "nosniff",
+        // Explícito em vez de deixar o proxy calcular sozinho — outra fonte
+        // documentada de corrupção é um Content-Length que não bate com o
+        // corpo real depois de alguma etapa no meio do caminho recalcular
+        // errado.
+        "content-length": String(entry.bytes.byteLength),
       },
     });
   }
