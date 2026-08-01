@@ -326,11 +326,34 @@ finalize_import`) era o que o CLIENTE afirmava (`parsed.sales.length`,
     banco e falha se a segunda vez não reportar "nenhuma migration nova"
     (`grep` na saída) — **baixo**, esforço médio, feito junto do item 10
     por já estar rodando o mesmo banco/schema.
-12. ⬜ **Testes de edge case adicionais do parser XLSX** (múltiplas
-    planilhas, unicode/emoji, datas em formato serial, `.xls` legado,
-    linhas duplicadas) — **baixo**, esforço baixo cada, mas em conjunto é
-    esforço médio-alto; nenhum desses cenários tem evidência de já ter
-    causado um bug real em produção, ao contrário dos itens 5 e 8.
+12. ✅ 01/08 — **Edge cases adicionais do parser XLSX** — 4 testes novos:
+    `.xls` legado (binário BIFF8, `XLSX.read()` detecta pelo conteúdo do
+    buffer, não pela extensão — o mesmo caminho de código do `.xlsx`
+    funciona sem alteração); acentos/emoji/CJK em nome de loja e produto
+    (`AÇAÍ 🎉 SHOPPING`, `日本語`) preservados sem corromper; múltiplas
+    planilhas — confirma o comportamento já documentado (só a primeira aba
+    é lida, a segunda é silenciosamente ignorada, sem erro nem aviso ao
+    usuário — continua assim, não virou bug fix, só passou a estar
+    provado); linhas duplicadas do mesmo produto/loja — o parser NÃO funde
+    nem soma, cada linha vira uma venda separada (a soma é
+    `finalize_import`'s `GROUP BY`/`SUM`, no banco). Escopo consciente:
+    **"datas em formato serial" não se aplica a este formato de arquivo** —
+    não existe uma coluna de data por linha, só o marcador de texto único
+    no topo da planilha (`DTA_VENDA é DD/MM/AAAA`), então não há célula de
+    data alternativa pra testar — **baixo**, esforço baixo. Nenhum desses
+    cenários tinha evidência de já ter causado bug real em produção, ao
+    contrário dos itens 5 e 8.
+
+**Os 12 itens priorizados estão todos ✅ em 01/08/2026.** Achados reais ao
+longo da execução, além do achado crítico original: open redirect
+corrigido (item 1), 2 bugs de instalação nova em migrations nunca testadas
+antes (item 10), e reconciliação de contagem corrigida na procedure de
+import (item 8) — nenhum desses era hipotético, todos verificados/validados
+antes de subir. Cobertura de linhas foi de 82,5% (início) a 46,5% — a queda
+é esperada e correta: `.tsx` entrou no denominador pela primeira vez (item
+2), triplicando o número de arquivos contados; ver
+`scripts/coverage-thresholds.ts` para o raciocínio da recalibração dos
+pisos.
 
 Itens **não** incluídos nesta lista por decisão consciente: testes de
 constraint/rollback transacional contra banco real (dependem do item 10 já
