@@ -199,11 +199,16 @@ quais entram em execução e em que ordem.
    pelo parser em vez de prefixo de string (fecha também um segundo
    bypass da mesma classe, via tab/newline). 10 testes — **crítico**,
    esforço baixo.
-2. ⬜ **Corrigir `vitest.config.ts` pra incluir `.tsx`** (`test.include` e
-   `coverage.include`) — **crítico** (bloqueia toda a frente de teste de
-   componente), esforço trivial (mudança de 2 globs), mas exige checar que
-   nenhum `.tsx` existente quebra o coverage threshold ao entrar de
-   surpresa em 0%.
+2. ✅ 01/08 — **Corrigir `vitest.config.ts` pra incluir `.tsx`**
+   (`test.include`/`coverage.include`) — feito junto com o item 9 (a
+   validação do próprio item). O denominador de cobertura praticamente
+   dobrou (117 arquivos fonte contra ~49 antes), então os pisos de
+   `scripts/coverage-thresholds.ts` foram recalibrados (40/40/30/25 →
+   20/20/15/12) — não é regressão real, é o relatório passando a contar
+   `.tsx` honestamente pela primeira vez. Também faltava
+   `@testing-library/jest-dom` conectado (nenhum `.test.tsx` existia até
+   agora pra precisar): criado `vitest.setup.ts` (`setupFiles` +
+   `afterEach(cleanup)` global) — **crítico**, esforço baixo.
 3. ✅ 01/08 — **Teste de rejeição real para `assertAdmin`** (1 função por
    arquivo — `diagnoseData`, `listDocs`, `listUsers`, `beginImport` —, sem
    mockar o guard) — **alto**, esforço médio. 4 arquivos novos
@@ -253,11 +258,17 @@ entry: "server" }` do `vite.config.ts`): lança se
 8. ⬜ **Teste de reconciliação de contagem** (linhas no arquivo vs.
    inseridas vs. `finalize_import.p_row_count`) — **médio**, esforço médio;
    decide também se vale adicionar a checagem que falta na procedure.
-9. ⬜ **1 teste de componente real** (`render()`, não `renderHook`) para
-   validar que o item 2 realmente desbloqueou a frente — sugestão:
-   `admin-user-management.tsx` (maior superfície + já alimenta um path sem
-   teste) — **médio**, esforço médio; primeiro caso serve de modelo para os
-   demais 16 componentes listados em A.1.
+9. ✅ 01/08 — **1 teste de componente real** — `admin-user-management.test.tsx`
+   (7 testes, `render()`+`fireEvent`, não `renderHook`): skeleton de
+   carregamento, lista vazia, renderização de email/nome/papel/status,
+   busca por email/nome, paginação (25/página, botões prev/next, contagem
+   de página), e os dois fluxos de confirmação-então-mutação (promover a
+   admin chama `setUserRole` e invalida `["admin-users"]`; inativar chama
+   `setUserActive`) — provando que o item 2 desbloqueou a frente de
+   verdade, com interação real, não só render estático. `CreateUserDialog`/
+   `ResetPasswordDialog` mockados como stub (escopo do próprio arquivo) —
+   **médio**, esforço médio. Serve de modelo para os demais 16 componentes
+   listados em A.1.
 10. ⬜ **Teste de aplicação limpa do schema contra MariaDB real** (CI ou
     local — `migrate-schema.sql` + `scripts/migrations/*.sql` em sequência
     a partir de banco vazio) — **médio**, esforço alto (exige banco de

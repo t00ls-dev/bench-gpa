@@ -8,11 +8,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    setupFiles: ["./vitest.setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov", "json-summary"],
-      include: ["src/**/*.ts"],
+      include: ["src/**/*.ts", "src/**/*.tsx"],
       exclude: [
         "src/**/*.test.ts",
         "src/**/*.page.tsx",
