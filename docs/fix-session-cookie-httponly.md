@@ -25,7 +25,7 @@ import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server
 
 ### `src/lib/auth-api.ts`
 
-- `sessionCookie()`/`clearSession()` (que retornavam uma *string* de cookie, nunca aplicada) foram substituídas por `setSessionCookie()`/`clearSessionCookie()`, que chamam `setCookie()`/`deleteCookie()` diretamente: efeito colateral real no header da resposta, não um valor de retorno para o caller aplicar.
+- `sessionCookie()`/`clearSession()` (que retornavam uma _string_ de cookie, nunca aplicada) foram substituídas por `setSessionCookie()`/`clearSessionCookie()`, que chamam `setCookie()`/`deleteCookie()` diretamente: efeito colateral real no header da resposta, não um valor de retorno para o caller aplicar.
 - `login()` agora chama `setSessionCookie(token)` dentro do handler e **retorna só `{ ok: true }`**. O token JWT não é mais devolvido ao client em nenhum momento. O navegador recebe o cookie via `Set-Cookie` (já `httpOnly`, `sameSite: "lax"`, `secure` em produção) automaticamente, sem o client precisar tocar nele.
 - `getMe()` passou a ler o cookie via `getCookie("session")` em vez de fazer parse manual do header `cookie` com a lib `cookie`. Também removi os 5 `console.log` que vazavam cookie header (100 chars), e-mails e erros de verificação de JWT para o log de produção (`logs/pm2-out.log`). Esse vazamento ficaria ainda mais sem sentido depois do cookie virar `httpOnly`.
 - `logout()` chama `clearSessionCookie()` (que faz `deleteCookie("session", { path: "/" })`) e retorna `{ ok: true }`.
@@ -58,15 +58,15 @@ Não rodei `bun run build`/teste manual em navegador nesta sessão: o ambiente n
 
 ## Arquivos alterados
 
-| Arquivo | Mudança |
-|---|---|
-| `src/lib/auth-api.ts` | Cookie setado/limpo via `setCookie`/`deleteCookie` no server; `login` não retorna mais o token; `getMe` lê via `getCookie`; `console.log` de debug removidos |
-| `src/routes/auth.page.tsx` | Removida escrita manual de `document.cookie` após login |
-| `src/router.tsx` | Sessão expirada agora chama `logout()` real em vez de tentar limpar `document.cookie` |
-| `src/routes/_authenticated/route.tsx` | `signOut()` agora chama `logout()` real em vez de tentar limpar `document.cookie` |
-| `src/lib/auth-api.test.ts` | Mocks/asserts atualizados para o novo contrato (`setCookie`/`getCookie`/`deleteCookie`) |
-| `docs/improvements/analise-completa.md` | Análise completa do código (item separado, já entregue antes deste fix) |
-| `docs/improvements/README.md` | Sinaliza quais docs de análise estão desatualizados |
+| Arquivo                                 | Mudança                                                                                                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/lib/auth-api.ts`                   | Cookie setado/limpo via `setCookie`/`deleteCookie` no server; `login` não retorna mais o token; `getMe` lê via `getCookie`; `console.log` de debug removidos |
+| `src/routes/auth.page.tsx`              | Removida escrita manual de `document.cookie` após login                                                                                                      |
+| `src/router.tsx`                        | Sessão expirada agora chama `logout()` real em vez de tentar limpar `document.cookie`                                                                        |
+| `src/routes/_authenticated/route.tsx`   | `signOut()` agora chama `logout()` real em vez de tentar limpar `document.cookie`                                                                            |
+| `src/lib/auth-api.test.ts`              | Mocks/asserts atualizados para o novo contrato (`setCookie`/`getCookie`/`deleteCookie`)                                                                      |
+| `docs/improvements/analise-completa.md` | Análise completa do código (item separado, já entregue antes deste fix)                                                                                      |
+| `docs/improvements/README.md`           | Sinaliza quais docs de análise estão desatualizados                                                                                                          |
 
 ## O que **não** foi feito (fora do escopo deste fix, listado para não parecer esquecido)
 

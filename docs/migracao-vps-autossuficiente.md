@@ -32,15 +32,15 @@
 
 ## 1. Resumo Executivo
 
-| Hoje                                      | Amanhã                                         |
-| ----------------------------------------- | ---------------------------------------------- |
-| Supabase Postgres (500 MB limit)          | **MariaDB 11.4 no VPS (8 GB livres)**          |
-| Supabase Auth (14 chamadas auth)          | **JWT + bcrypt próprio**                       |
-| Supabase RPCs (15 stored procedures)      | **Stored Procedures MariaDB**                  |
-| Vercel (SSR)                              | **VPS (Bun + PM2, proxy nginx)**               |
+| Hoje                                      | Amanhã                                        |
+| ----------------------------------------- | --------------------------------------------- |
+| Supabase Postgres (500 MB limit)          | **MariaDB 11.4 no VPS (8 GB livres)**         |
+| Supabase Auth (14 chamadas auth)          | **JWT + bcrypt próprio**                      |
+| Supabase RPCs (15 stored procedures)      | **Stored Procedures MariaDB**                 |
+| Vercel (SSR)                              | **VPS (Bun + PM2, proxy nginx)**              |
 | Supabase Admin (service role key exposta) | **Nada, queries diretas com permissão admin** |
-| Dependência: `@supabase/supabase-js`      | **Dependência removida**                       |
-| Custo DB extra se estourar: $25/mês       | **$0 extra**                                   |
+| Dependência: `@supabase/supabase-js`      | **Dependência removida**                      |
+| Custo DB extra se estourar: $25/mês       | **$0 extra**                                  |
 
 ### Arquivos a modificar/criar/remover
 
@@ -164,7 +164,7 @@ server {
 ```
 
 > **Nota**: IP real do usuário atrás do Cloudflare. Com `X-Real-IP $remote_addr`,
-> o app veria o IP da *edge* do Cloudflare, não o do usuário, e o primeiro
+> o app veria o IP da _edge_ do Cloudflare, não o do usuário, e o primeiro
 > salto do `X-Forwarded-For` é falsificável. O `getClientIp` já prioriza o
 > `CF-Connecting-IP`, mas para esse header ser **confiável** a origem precisa
 > aceitar tráfego só do Cloudflare. Passo a passo (allowlist de faixas do CF +

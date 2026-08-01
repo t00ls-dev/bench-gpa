@@ -17,18 +17,18 @@ o restante não tem um problema concreto que o justifique.
 
 ## Estado atual vs. proposta (verificado, não assumido)
 
-| Camada | Proposta | Realidade no Bench GPA hoje |
-|---|---|---|
-| Infra | Debian, Nginx, PM2 | Já é isso: Debian 12 (bookworm), Nginx, PM2, self-hosted na VPS Hestia (`docs/migracao-vps-autossuficiente.md`, `docs/analise-servidor-producao-2026-07-31.md`) |
-| Backend framework | Fastify | TanStack Start (`createServerFn` mais middleware `requireAuth`/`requireRateLimit`), 8 arquivos `*.functions.ts`, 20 rotas |
-| ORM | Drizzle | Não existe ORM hoje: `mysql2/promise` puro, SQL escrito à mão, stored procedures com transação e rollback (`refresh_product_universe`, `purge_old_aggs`) |
-| Validação | Zod | Já é Zod v4, centralizado em `src/lib/schemas.ts`. A proposta já é a realidade |
-| Auth | JWT com bcrypt ou Argon2 | JWT com bcrypt v6. A proposta já aceita bcrypt como opção válida |
-| Banco | MariaDB com portabilidade Postgres | MariaDB 11.4, com stored procedures em sintaxe MariaDB (não portam para PL/pgSQL sem reescrita) |
-| Frontend | React Router, React Hook Form, Tailwind, Recharts | Tailwind e Recharts já são a stack. React Router substituiria TanStack Router (roteamento file-based, 20 rotas, SSR integrado) |
-| Remoção TanStack | Router, Query, Table | Query usado em só 12 arquivos. Table: uso zero no projeto. `@tanstack/react-virtual` está em uso ativo (`src/components/area-table.tsx`) e não foi mencionado na proposta |
-| Build | (não avaliado na proposta) | Já otimizado: migração Vite 7 para 8 (PR #93) derrubou o build de 25-35s para cerca de 2s, medido e registrado em `docs/medicao-performance.md` |
-| Manutenção | (não avaliado na proposta) | Mantenedor único humano (`git log` mostra 1 pessoa mais bots: Dependabot, GitHub Actions, o antigo Lovable/gpt-engineer da Era 1) |
+| Camada            | Proposta                                          | Realidade no Bench GPA hoje                                                                                                                                               |
+| ----------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Infra             | Debian, Nginx, PM2                                | Já é isso: Debian 12 (bookworm), Nginx, PM2, self-hosted na VPS Hestia (`docs/migracao-vps-autossuficiente.md`, `docs/analise-servidor-producao-2026-07-31.md`)           |
+| Backend framework | Fastify                                           | TanStack Start (`createServerFn` mais middleware `requireAuth`/`requireRateLimit`), 8 arquivos `*.functions.ts`, 20 rotas                                                 |
+| ORM               | Drizzle                                           | Não existe ORM hoje: `mysql2/promise` puro, SQL escrito à mão, stored procedures com transação e rollback (`refresh_product_universe`, `purge_old_aggs`)                  |
+| Validação         | Zod                                               | Já é Zod v4, centralizado em `src/lib/schemas.ts`. A proposta já é a realidade                                                                                            |
+| Auth              | JWT com bcrypt ou Argon2                          | JWT com bcrypt v6. A proposta já aceita bcrypt como opção válida                                                                                                          |
+| Banco             | MariaDB com portabilidade Postgres                | MariaDB 11.4, com stored procedures em sintaxe MariaDB (não portam para PL/pgSQL sem reescrita)                                                                           |
+| Frontend          | React Router, React Hook Form, Tailwind, Recharts | Tailwind e Recharts já são a stack. React Router substituiria TanStack Router (roteamento file-based, 20 rotas, SSR integrado)                                            |
+| Remoção TanStack  | Router, Query, Table                              | Query usado em só 12 arquivos. Table: uso zero no projeto. `@tanstack/react-virtual` está em uso ativo (`src/components/area-table.tsx`) e não foi mencionado na proposta |
+| Build             | (não avaliado na proposta)                        | Já otimizado: migração Vite 7 para 8 (PR #93) derrubou o build de 25-35s para cerca de 2s, medido e registrado em `docs/medicao-performance.md`                           |
+| Manutenção        | (não avaliado na proposta)                        | Mantenedor único humano (`git log` mostra 1 pessoa mais bots: Dependabot, GitHub Actions, o antigo Lovable/gpt-engineer da Era 1)                                         |
 
 ---
 
@@ -103,13 +103,13 @@ manutenção ou segurança do TanStack em si.
 
 ## Ordem de fases proposta, ajustada à realidade
 
-| Fase proposta | Status real |
-|---|---|
-| 1. Fundação | Já em dia: TS strict, lint, testes, CI cobrindo isso |
-| 2. Infraestrutura | Já é a realidade em produção. Nada a migrar |
-| 3. Backend (Fastify/Drizzle) | Não recomendado como fase. Drizzle isolado vira item de backlog opcional, não migração |
-| 4. Frontend (remover TanStack) | Não recomendado. Sem problema real que justifique |
-| 5. Melhorias avançadas | Só quando um problema real e medido aparecer. Não antecipar |
+| Fase proposta                  | Status real                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| 1. Fundação                    | Já em dia: TS strict, lint, testes, CI cobrindo isso                                   |
+| 2. Infraestrutura              | Já é a realidade em produção. Nada a migrar                                            |
+| 3. Backend (Fastify/Drizzle)   | Não recomendado como fase. Drizzle isolado vira item de backlog opcional, não migração |
+| 4. Frontend (remover TanStack) | Não recomendado. Sem problema real que justifique                                      |
+| 5. Melhorias avançadas         | Só quando um problema real e medido aparecer. Não antecipar                            |
 
 ---
 
