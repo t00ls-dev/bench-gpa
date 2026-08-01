@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-07-31T20:22:56.754Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
+_Gerado em 2026-08-01T09:38:52.706Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 75.5% ✅ | 73.5% ✅ | 64.8% ✅ | 68.7% ✅ |
+| **Total** | 64.5% ✅ | 62.0% ✅ | 56.5% ✅ | 56.2% ✅ |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -15,8 +15,9 @@ _Gerado em 2026-07-31T20:22:56.754Z — thresholds: lines 40%, statements 40%, f
 | `src/global.d.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/routeTree.gen.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 100.0% ✅ |
 | `src/start.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
+| `src/hooks/use-area-pdf-export.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
+| `src/hooks/use-area-products-view.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/hooks/use-elapsed-seconds.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
-| `src/hooks/use-nav-pending.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/hooks/use-persistent-state.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/hooks/use-reset-on-change.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/hooks/use-theme.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
@@ -29,6 +30,7 @@ _Gerado em 2026-07-31T20:22:56.754Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/version.functions.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 100.0% ✅ |
 | `src/lib/xlsx-worker.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/lib/error-capture.ts` | 23.1% ⚠️ | 26.7% ⚠️ | 25.0% ⚠️ | 25.0% ✅ |
+| `src/hooks/use-nav-pending.ts` | 66.7% ✅ | 77.8% ✅ | 33.3% ✅ | 84.6% ✅ |
 | `src/lib/area.functions.ts` | 66.7% ✅ | 67.8% ✅ | 37.5% ✅ | 47.6% ✅ |
 | `src/lib/admin-users.functions.ts` | 74.3% ✅ | 74.3% ✅ | 40.0% ✅ | 40.0% ✅ |
 | `src/lib/product.functions.ts` | 81.3% ✅ | 81.3% ✅ | 50.0% ✅ | 92.8% ✅ |
@@ -38,7 +40,7 @@ _Gerado em 2026-07-31T20:22:56.754Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/cache.ts` | 89.3% ✅ | 84.8% ✅ | 77.8% ✅ | 80.0% ✅ |
 | `src/lib/upload.functions.ts` | 90.9% ✅ | 92.1% ✅ | 78.6% ✅ | 100.0% ✅ |
 | `src/lib/dashboard.functions.ts` | 91.4% ✅ | 91.7% ✅ | 81.3% ✅ | 68.3% ✅ |
-| `src/lib/admin-docs.functions.ts` | 93.3% ✅ | 88.9% ✅ | 62.5% ✅ | 75.0% ✅ |
+| `src/lib/admin-docs.functions.ts` | 93.3% ✅ | 88.9% ✅ | 62.5% ✅ | 80.0% ✅ |
 | `src/lib/use-hotkey.ts` | 94.1% ✅ | 92.1% ✅ | 77.8% ✅ | 90.0% ✅ |
 | `src/lib/auth-api.ts` | 96.4% ✅ | 96.4% ✅ | 71.4% ✅ | 95.5% ✅ |
 | `src/lib/admin-system.functions.ts` | 98.3% ✅ | 98.3% ✅ | 92.8% ✅ | 77.8% ✅ |
