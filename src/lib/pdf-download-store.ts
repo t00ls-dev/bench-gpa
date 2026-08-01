@@ -7,10 +7,13 @@
  * gerenciador de download cai pro UUID da própria blob URL como nome. Ver
  * Mozilla Bugzilla #1282407).
  *
- * Uso único (o GET apaga a entrada) + TTL curto — a pegada de memória é
- * limitada por quantas pessoas exportam PDF ao mesmo tempo, não por quanto
- * tempo o processo fica no ar. Isolado por usuário: só quem gerou pode
- * baixar, mesmo com o token.
+ * NÃO é uso único, de propósito — já foi (bug real, corrigido em 01/08/2026):
+ * o Firefox faz mais de uma requisição pra URL de download antes de salvar o
+ * arquivo (confirmado com um caso real: a segunda leitura vinha com o token
+ * já apagado pela primeira, e o Firefox salvava o corpo do 404 — "Not found",
+ * 9 bytes — como se fosse o PDF). TTL curto (60s) + isolamento por usuário já
+ * bastam como proteção; um token só vale pra quem gerou e só por pouco tempo,
+ * não precisa também morrer na primeira leitura.
  */
 
 interface Entry {
@@ -37,14 +40,11 @@ export function storePdf(userId: string, bytes: Uint8Array, filename: string): s
   return token;
 }
 
-/** Uso único: a entrada some do Map na primeira leitura, exista ela ainda
- * dentro do TTL ou não. */
 export function takePdf(
   token: string,
   userId: string,
 ): { bytes: Uint8Array; filename: string } | undefined {
   const entry = store.get(token);
-  store.delete(token);
   if (!entry || entry.userId !== userId || Date.now() > entry.expiresAt) return undefined;
   return { bytes: entry.bytes, filename: entry.filename };
 }

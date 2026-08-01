@@ -1,6 +1,6 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T15:48:31.747Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-01T16:38:20.158Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
@@ -111,7 +111,7 @@ _Gerado em 2026-08-01T15:48:31.747Z — thresholds: lines 20%, statements 20%, f
 | `src/lib/error-page.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/export-pdf.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/filter-cascade.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
-| `src/lib/pdf-download-store.ts` | 100.0% ✅ | 93.3% ✅ | 100.0% ✅ | 85.7% ✅ |
+| `src/lib/pdf-download-store.ts` | 100.0% ✅ | 92.8% ✅ | 100.0% ✅ | 85.7% ✅ |
 | `src/lib/query-config.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/rate-limit.middleware.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/rate-limit.ts` | 100.0% ✅ | 94.6% ✅ | 100.0% ✅ | 86.1% ✅ |
