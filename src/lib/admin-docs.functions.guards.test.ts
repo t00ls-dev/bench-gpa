@@ -1,0 +1,71 @@
+// Complementa admin-docs.functions.test.ts, que mocka `assertAdmin` como
+// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade — prova
+// que um não-admin é de fato *bloqueado* antes de ler qualquer doc (ver
+// docs/auditoria-qa-2026-08-01.md, item 3).
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+type Middleware = (opts: {
+  next: (ctx: unknown) => unknown;
+  context: unknown;
+  data: unknown;
+}) => unknown;
+type Handler = (opts: { data?: unknown; context: unknown }) => unknown;
+
+vi.mock("@tanstack/react-start", () => {
+  const buildChain = () => {
+    const chain: { middlewares: Middleware[] } = { middlewares: [] };
+    const run = (fn: Handler) => async (input: unknown) => {
+      let ctx: unknown = { userId: "user-nao-admin" };
+      for (const m of chain.middlewares) {
+        const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
+          { context?: unknown } | undefined;
+        if (r?.context) ctx = r.context;
+      }
+      return fn({ data: input, context: ctx });
+    };
+    return {
+      middleware: (mw: Middleware[]) => {
+        chain.middlewares = mw;
+        return {
+          inputValidator: () => ({ handler: (fn: Handler) => run(fn) }),
+          handler: (fn: Handler) => run(fn),
+        };
+      },
+    };
+  };
+  return { createServerFn: buildChain };
+});
+
+vi.mock("./auth-middleware", () => ({
+  requireAuth: vi.fn(({ next, context }: { next: (ctx: unknown) => unknown; context: unknown }) =>
+    next({ context }),
+  ),
+}));
+vi.mock("./rate-limit.middleware", () => ({
+  requireRateLimit: vi.fn(
+    () =>
+      ({ next, context }: { next: (ctx: unknown) => unknown; context: unknown }) =>
+        next({ context }),
+  ),
+}));
+// admin-utils NÃO é mockado — é exatamente o que esta suíte prova de verdade.
+vi.mock("./db", () => ({ default: { query: vi.fn() } }));
+
+import { listDocs } from "./admin-docs.functions";
+import db from "./db";
+
+beforeEach(() => {
+  vi.mocked(db.query).mockReset();
+});
+
+describe("listDocs — guard de admin real (assertAdmin não mockado)", () => {
+  it("rejeita usuário não-admin sem devolver a lista de documentos", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([[[{ has_role: 0 }]]] as never); // CALL has_role
+
+    await expect((listDocs as () => Promise<unknown>)()).rejects.toThrow("Apenas administradores");
+    // listDocs nem usa banco pro corpo (lê docs/**/*.md via import.meta.glob) —
+    // a única chamada é a do próprio assertAdmin.
+    expect(db.query).toHaveBeenCalledTimes(1);
+    expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
+  });
+});
