@@ -1,11 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { lazy } from "react";
-
-function sanitizeNext(next: unknown): string {
-  if (typeof next !== "string") return "/";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/";
-  return next;
-}
+import { sanitizeNext } from "@/lib/sanitize-next";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -20,7 +15,7 @@ export const Route = createFileRoute("/auth")({
       const { getMe } = await import("@/lib/auth-api");
       const user = await getMe();
       if (user) {
-        const target = sanitizeNext(search.next);
+        const target = sanitizeNext(search.next, window.location.origin);
         if (target !== "/") {
           const u = new URL(target, window.location.origin);
           throw redirect({ to: u.pathname, search: Object.fromEntries(u.searchParams.entries()) });
