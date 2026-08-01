@@ -37,7 +37,7 @@ Ao gerar texto, código, commits, documentação ou qualquer conteúdo escrito,
 isso se aplica a:
 
 - Código e comentários
-- Documentação (README, docs internas, HISTORY.md)
+- Documentação (README, docs internas, `docs/historia-do-projeto.md`)
 - Mensagens de commit
 - TODOs, FIXMEs e anotações internas
 - Respostas e relatórios gerados durante auditoria, revisão ou migração
