@@ -223,6 +223,17 @@ describe("getImportedDates", () => {
 });
 
 describe("finalizeImport", () => {
+  // `row_count` aqui é só o parâmetro que o cliente MANDA (parsed.sales.length,
+  // calculado antes de qualquer chunk ser de fato inserido) — este teste prova
+  // que a função de servidor o repassa como veio, não que ele é confiável. A
+  // reconciliação real está dentro da procedure `finalize_import`
+  // (migrate-schema.sql): `import_log.row_count` grava `v_staging_count` (a
+  // contagem real da staging, já verificada > 0 na mesma procedure), não
+  // `p_row_count` — um `db.query` mockado não executa SQL de verdade, então
+  // essa parte foi validada manualmente contra MariaDB real (ver
+  // docs/auditoria-qa-2026-08-01.md, item 8): `CALL finalize_import(...,
+  // 999, ...)` com só 3 linhas reais na staging gravou `row_count = 3` em
+  // `import_log`, não 999.
   it("chama finalize_import com batch_id/sale_date/row_count/userId e retorna ok", async () => {
     const result = await (
       finalizeImport as (d: {
