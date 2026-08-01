@@ -24,6 +24,9 @@ com frequência ou pedem mais profundidade têm doc própria em `docs/`:
 - `docs/avaliacao-arquitetural-2026-08-01.md`: avaliação de propostas de
   mudança estrutural (framework, ORM, banco), com o motivo de cada decisão
   mantida
+- `docs/plano-migracao-tanstack-2026-08-01.md`: plano de saída do
+  ecossistema TanStack, decisão do usuário por preferência, não por
+  problema técnico medido
 
 ---
 
