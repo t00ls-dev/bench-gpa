@@ -226,11 +226,15 @@ has_role` acontece). Sanidade verificada manualmente: forçar
    IP via `getClientIp` mesmo sem nenhum header — **alto**, esforço médio.
    Sanidade confirmada manualmente (baixar o contador do loop em 1 faz o
    teste falhar).
-5. ⬜ **Teste da atribuição de hierarquia no parser XLSX** (depto/seção/
-   grupo/subgrupo populados de verdade, não só o caminho nulo) — **alto**,
-   esforço baixo (ajustar fixtures existentes pra realmente disparar os 4
-   branches); categorização de produto rodando sem prova de que categoriza
-   certo é o maior risco silencioso desta auditoria.
+5. ✅ 01/08 — **Teste da atribuição de hierarquia no parser XLSX** — 3
+   testes novos em `xlsx-parser.test.ts`: os 4 branches (depto/seção/
+   grupo/subgrupo) disparando de verdade com o rótulo "Total" exatamente
+   adjacente (o teste antigo só provava que rótulos por extenso, tipo
+   "Total do Depto", são ignorados sem crashar — nunca disparava os
+   branches reais); reset de seção/grupo/subgrupo ao entrar num novo
+   depto; reset só de grupo/subgrupo ao entrar numa nova seção, mantendo o
+   depto — **alto**, esforço baixo. Sanidade confirmada manualmente
+   (zerar a atribuição de depto no código faz os 3 testes falharem).
 6. ⬜ **Guard de `TURNSTILE_BYPASS` em produção** (falha no boot se
    `NODE_ENV=production && TURNSTILE_BYPASS=true`) + teste — **alto**,
    esforço trivial; hoje é um interruptor sem trava que desliga o CAPTCHA
