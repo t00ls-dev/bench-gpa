@@ -1,6 +1,6 @@
 # Novas Análises Possíveis
 
-> Backlog de ideias de feature, não diagnóstico de código — por isso não foi
+> Backlog de ideias de feature, não diagnóstico de código, por isso não foi
 > invalidado pela migração Supabase → MariaDB (verificado 30/07/2026: nenhuma
 > das 5 ideias abaixo foi implementada desde que este documento foi escrito).
 > Escrito com base nos RPCs/stored procedures existentes no banco sem UI e nos

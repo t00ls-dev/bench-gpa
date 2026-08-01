@@ -1,4 +1,4 @@
-# Análise geral do servidor de produção — 31/07/2026
+# Análise geral do servidor de produção (31/07/2026)
 
 Levantamento do estado da VPS (`sv1.t00ls.dev`, 1 núcleo, 1,9GB RAM,
 compartilhada com `cepeg.t00ls.dev` e `t00ls.dev` via HestiaCP), pedido fora do
@@ -13,9 +13,9 @@ somente-leitura.
 | Load average                 | 0.06 / 0.02 / 0.00                                       | Ocioso                                                 |
 | Memória                      | 944Mi usado / 1.9Gi (987Mi disponível, 1.1Gi buff/cache) | Saudável                                               |
 | Swap                         | 426Mi / 2.0Gi em uso                                     | Normal para esta VPS, já documentado em `continuar.md` |
-| Disco (`/`)                  | 14G/20G usado (70%), 5.7G livres                         | Atenção — não crítico, sem muita folga                 |
-| Uptime                       | 10 dias (na data da coleta)                              | —                                                      |
-| Kernel/OS                    | Debian 12 (bookworm), `6.1.0-51-cloud-amd64`             | —                                                      |
+| Disco (`/`)                  | 14G/20G usado (70%), 5.7G livres                         | Atenção, não crítico, sem muita folga                 |
+| Uptime                       | 10 dias (na data da coleta)                              | N/A                                                      |
+| Kernel/OS                    | Debian 12 (bookworm), `6.1.0-51-cloud-amd64`             | N/A                                                      |
 | Atualizações de SO pendentes | 0 (inclusive segurança)                                  | Em dia                                                 |
 
 Maiores consumidores de disco: `/home/admin` 2.5G (837M são
@@ -25,12 +25,12 @@ Maiores consumidores de disco: `/home/admin` 2.5G (837M são
 ## Aplicação (bench-gpa)
 
 - PM2: `online`, ~95MB RAM, 0% CPU, sem crash loop (confirmado em sessão
-  anterior — ver `medicao-performance.md`/`continuar.md`).
+  anterior, ver `medicao-performance.md`/`continuar.md`).
 - MariaDB é o maior consumidor de RAM do servidor inteiro: 364MB (18,4% do
   total), 190min de CPU acumulados nos 10 dias de uptime. Esperado para o
   tamanho do banco (`admin_gpa` = 732,7MB).
 - `innodb_buffer_pool_size` continua em 128MB (default de fábrica) contra um
-  banco de 732MB. **Não é achado novo** — é a mesma questão do "piso de I/O"
+  banco de 732MB. **Não é achado novo**: é a mesma questão do "piso de I/O"
   já documentada em `continuar.md` (item 1, "decisão do usuário, não
   técnica"): a VPS não tem memória livre real para aumentar sem arriscar os
   outros dois sites.
@@ -41,10 +41,10 @@ Maiores consumidores de disco: `/home/admin` 2.5G (837M são
   (31/07, 05:12).
 - **Retenção de só 1 cópia** (`v-list-user admin` → `BACKUPS: 1/1`). Se o
   backup mais recente sair corrompido ou for feito durante um estado ruim do
-  banco, não há histórico para recuperar de um dia anterior — só existe
+  banco, não há histórico para recuperar de um dia anterior. Só existe
   "hoje". Considerar aumentar a retenção (config do Hestia, não deste repo).
 
-## Segurança — dois achados abertos
+## Segurança: dois achados abertos
 
 ### 1. Origem aceita tráfego direto, bypassando o Cloudflare
 
@@ -54,11 +54,11 @@ Cloudflare. `iptables`/CSF do Hestia liberam 80/443 para `0.0.0.0/0`, sem
 restringir às faixas de IP do Cloudflare.
 
 **Impacto real, não teórico**: `getClientIp()`
-(`src/lib/rate-limit.ts`) confia em `CF-Connecting-IP` — um atacante que
+(`src/lib/rate-limit.ts`) confia em `CF-Connecting-IP`. Um atacante que
 descubra o IP real do servidor pode bater direto na origem, pular o
 WAF/DDoS do Cloudflare **e** forjar esse header, contornando o rate limit
 por IP inteiro (inclusive o balde por conta adicionado em 31/07 continua
-válido, já que aquele é por e-mail, não por IP — mas o balde por IP vira
+válido, já que aquele é por e-mail, não por IP, mas o balde por IP vira
 decorativo). Esse risco já estava anotado em comentário no próprio código
 (`rate-limit.ts`, função `getClientIp`) desde antes desta sessão, nunca
 endereçado na infraestrutura.
@@ -74,7 +74,7 @@ IPs periodicamente (Cloudflare publica atualizações raras, mas publica).
 
 `systemctl is-active fail2ban` → `active`, mas
 `fail2ban-client status` → `Number of jail: 0`. O serviço roda, mas não
-bloqueia nada — nem SSH, nem tentativas de login na aplicação. Hoje não é
+bloqueia nada, nem SSH, nem tentativas de login na aplicação. Hoje não é
 urgente (só 1 tentativa de login SSH falha nos últimos 7 dias, sem sinal de
 brute-force ativo), mas é uma rede de segurança que existe só de nome.
 
@@ -85,20 +85,20 @@ habilitado) e considerar um jail para `/auth` da aplicação lendo
 
 ## Outros sites do VPS
 
-`sv1.t00ls.dev`, `cepeg.t00ls.dev`, `t00ls.dev` — todos ativos (`200`),
+`sv1.t00ls.dev`, `cepeg.t00ls.dev`, `t00ls.dev`: todos ativos (`200`),
 sem sinal de problema, disco pequeno (1-16 unidades Hestia cada, ordens de
 grandeza abaixo de `gpa.t00ls.dev`).
 
 ## Pendente para retomar
 
-Nenhum dos dois achados de segurança foi corrigido nesta sessão — ambos são
+Nenhum dos dois achados de segurança foi corrigido nesta sessão. Ambos são
 mudança de infraestrutura da VPS (firewall/Hestia), não de código do
 repositório, e o usuário pediu para só documentar por ora. Ordem sugerida
 para quando for retomar:
 
-1. Jail `sshd` do fail2ban — trivial, esforço baixo, zero risco de quebrar
+1. Jail `sshd` do fail2ban: trivial, esforço baixo, zero risco de quebrar
    acesso (SSH já usa chave, não senha).
-2. Restringir 80/443 às faixas de IP do Cloudflare — esforço baixo, risco
+2. Restringir 80/443 às faixas de IP do Cloudflare: esforço baixo, risco
    médio se a lista de IPs do Cloudflare mudar sem ninguém atualizar a regra
    (o site ficaria inacessível até corrigir); vale documentar um processo de
    revisão periódica junto com a mudança.

@@ -1,16 +1,16 @@
 ---
 name: run
-description: Launch Bench GPA (TanStack Start SSR app) locally — dev server or production build — with a real MariaDB-backed login, to visually confirm a change works. Use whenever asked to run, start, or screenshot the app, or to verify a change beyond lint/typecheck/test.
+description: Launch Bench GPA (TanStack Start SSR app) locally, dev server or production build, with a real MariaDB-backed login, to visually confirm a change works. Use whenever asked to run, start, or screenshot the app, or to verify a change beyond lint/typecheck/test.
 ---
 
 # Rodando o Bench GPA localmente
 
 TanStack Start (SSR) + React 19 + Vite 7 + MariaDB. Rodar de verdade
 exige runtime `bun`, um MariaDB com o schema carregado, e um `.env`
-preenchido — sem isso o server nem sobe (falha cedo em `src/lib/db.ts`
+preenchido: sem isso o server nem sobe (falha cedo em `src/lib/db.ts`
 / `JWT_SECRET` ausente).
 
-## 1. Runtime — bun
+## 1. Runtime (bun)
 
 O projeto roda em `bun`, não em `node`/`npm` puro (scripts como
 `scripts/create-test-admin.ts` usam `bun`-isms como `import.meta.dir`).
@@ -22,7 +22,7 @@ export PATH="$HOME/.bun/bin:$PATH"   # ou: source ~/.bashrc
 bun --version   # confirmar
 ```
 
-CI usa `bun-version: "1.3.14"` (`.github/workflows/ci.yml`) — qualquer
+CI usa `bun-version: "1.3.14"` (`.github/workflows/ci.yml`). Qualquer
 1.3.x recente serve para rodar local.
 
 ```bash
@@ -33,8 +33,7 @@ bun install --frozen-lockfile
 
 Precisa de um MariaDB acessível com o schema de
 `scripts/migrate-schema.sql` carregado. Neste ambiente o MariaDB já
-roda como serviço systemd (`systemctl status mariadb`) — se não
-estiver:
+roda como serviço systemd (`systemctl status mariadb`). Se não estiver:
 
 ```bash
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS bench_gpa_dev;"
@@ -44,7 +43,7 @@ mysql -u root -e "CREATE USER IF NOT EXISTS 'bench_gpa'@'localhost' IDENTIFIED B
 ```
 
 Se o schema/usuário já existirem de uma sessão anterior, é seguro
-reusar — só resetar a senha se ela for desconhecida:
+reusar. Só resetar a senha se ela for desconhecida:
 
 ```bash
 mysql -u root -e "ALTER USER 'bench_gpa'@'localhost' IDENTIFIED BY 'devpass123';"
@@ -53,7 +52,7 @@ mysql -u root -e "ALTER USER 'bench_gpa'@'localhost' IDENTIFIED BY 'devpass123';
 ## 3. `.env`
 
 Não existe `.env` versionado (está no `.gitignore`, corretamente).
-Criar a partir de `.env.example`, com Turnstile em modo bypass pra não
+Criar a partir de `.env.example`, com Turnstile em modo bypass para não
 depender de uma chave real:
 
 ```bash
@@ -77,18 +76,18 @@ TEST_APP_URL="http://localhost:3000"
 EOF
 ```
 
-**Apagar o `.env` ao terminar** (`rm .env`) — nunca deixar sobrar em
+**Apagar o `.env` ao terminar** (`rm .env`), nunca deixar sobrar em
 disco com segredos de teste, mesmo sendo dev-only.
 
 ## 4. Criar um usuário de teste
 
 `scripts/create-test-admin.ts` insere um admin usando as credenciais
-hardcoded no próprio script (`test@gpabr.com` / `Gpa@Test1970`) — lê
+hardcoded no próprio script (`test@gpabr.com` / `Gpa@Test1970`). Lê
 `DB_*` do `.env` carregado no processo `bun`:
 
 ```bash
 bun run scripts/create-test-admin.ts
-# idempotente? não — se já existir, apaga antes:
+# idempotente? não. Se já existir, apaga antes:
 # mysql -u bench_gpa -pdevpass123 bench_gpa_dev -e "DELETE FROM users WHERE email='test@gpabr.com';"
 ```
 
@@ -99,20 +98,20 @@ bun run dev
 ```
 
 - Porta default 3000; se ocupada, Vite sobe em 3001+ automaticamente
-  (log mostra `Port 3000 is in use, trying another one...`) — sempre
+  (log mostra `Port 3000 is in use, trying another one...`). Sempre
   ler a porta real no log, não assumir 3000.
 - **Cold-start gotcha:** a primeira navegação após o boot dispara
   `Re-optimizing dependencies` / `optimized dependencies changed,
   reloading` no Vite, que recarrega o bundle client no meio da
-  requisição — uma primeira tentativa de login pode travar no spinner
+  requisição. Uma primeira tentativa de login pode travar no spinner
   sem erro nenhum. Isso não é bug do app: espere a otimização assentar
-  (deixe o server rodando ~5-10s após o primeiro `curl`/`goto`, ou
+  (deixe o server rodando de 5 a 10s após o primeiro `curl`/`goto`, ou
   simplesmente tente de novo) antes de confiar em uma falha de login.
 
-## 6. Dirigir de verdade (login + screenshot)
+## 6. Dirigir de verdade (login e screenshot)
 
-O projeto já tem um script de referência em Puppeteer —
-`scripts/test-production.mjs` — que faz login e navega o dashboard.
+O projeto já tem um script de referência em Puppeteer,
+`scripts/test-production.mjs`, que faz login e navega o dashboard.
 `puppeteer` já é dependência do projeto e usa
 `executablePath: "/usr/bin/chromium"` (confirmar que existe:
 `which chromium`). Para uma checagem rápida sem rodar o script inteiro
@@ -139,18 +138,18 @@ await browser.close();
 
 **Importante:** salve esse script dentro de `scripts/` (ou rode via
 `bun run <arquivo>`) para que a resolução de módulos encontre
-`node_modules/puppeteer` — um `.mjs` solto em `/tmp` falha com
+`node_modules/puppeteer`. Um `.mjs` solto em `/tmp` falha com
 `ERR_MODULE_NOT_FOUND`. Apague o arquivo temporário depois (não
 commitar scripts de teste ad-hoc).
 
 Sinal de sucesso: `.kpi-card` aparece, `page.url()` muda de `/auth`
-para `/`, e o rodapé do dashboard mostra `commit <hash> (há N minutos)`
-— confirma que build info e dados reais do banco (mesmo vazios) estão
+para `/`, e o rodapé do dashboard mostra `commit <hash> (há N minutos)`,
+confirmando que build info e dados reais do banco (mesmo vazios) estão
 sendo lidos.
 
 Para dashboard com dados reais (não "Sem dados"), rodar
 `bun run cli:import` sobre um XLSX de exemplo antes do login (ver
-`docs/*` sobre o formato esperado — fora do escopo deste skill).
+`docs/*` sobre o formato esperado, fora do escopo deste skill).
 
 ## 7. Alternativa: build de produção local
 
@@ -172,6 +171,6 @@ rm -f .env                   # nunca deixar segredos de teste em disco
 rm -f scripts/__*.mjs        # qualquer script de teste ad-hoc criado
 ```
 
-`git status` deve voltar limpo — nada deste fluxo deve sobrar staged
+`git status` deve voltar limpo: nada deste fluxo deve sobrar staged
 ou untracked além de artefatos esperados (`coverage/`, `.output/`, já
 no `.gitignore`).
