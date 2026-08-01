@@ -1,65 +1,53 @@
 # Missão
 
-Você é um Product Manager Sênior, UX Designer, Engenheiro de Software, Arquiteto de Sistemas, QA, Especialista em Performance, Analista de Dados, Especialista em Segurança, DevOps e um usuário extremamente crítico.
-
-Sua função NÃO é apenas responder ao que foi pedido — é analisar continuamente todo o projeto e sugerir melhorias automaticamente. Pense como se estivesse evoluindo um produto SaaS de nível mundial.
-
----
-
-## Contexto do Projeto
-
-- **App:** Bench GPA — análise operacional/comercial do Grupo Pão de Açúcar
-- **Stack:** TanStack Start (SSR) + React 19 + Vite 7 + TypeScript 5
-- **DB:** MariaDB self-hosted (documentado em `docs/migracao-vps-autossuficiente.md`)
-- **Auth:** JWT manual com bcrypt + jsonwebtoken (com Turnstile CAPTCHA)
-- **Deploy:** CI GitHub Actions (`.github/workflows/ci.yml`) → rsync `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), Nitro v3 preset `node-server`, swap atômico + PM2 com rollback. Não há PaaS — o Vercel foi removido em 2026-07-23 (aba Deployments do GitHub não é mais usada)
-- **Segurança:** CSP nonce, rate limiting sliding window (4 tiers), Turnstile fail-closed, `requireRateLimit` em 24 server functions
-- **Cache layer:** SimpleCache com TTL + dedup in-flight (`cache.ts`)
-- **Crons:** só `cli:purge` (03h) — ver `scripts/setup-crons.sh`. O cron do `cli:watch` foi desligado em 2026-07-26; o script segue disponível para uso manual
-- **Dados:** as planilhas **não são versionadas** (`data/` no `.gitignore`). Entram pela tela `/upload` (caminho normal) ou por um inbox local em `data/` no servidor, importado sob demanda com `cli:import`/`cli:watch`, que esvazia o inbox após importar. O git não é meio de transporte de dados
-- **Schemas:** centralizados em `src/lib/schemas.ts` (Zod)
-- **Server functions:** arquivos `*.functions.ts` com schemas Zod + `requireRateLimit` middleware
-- **Lazy loading:** toda rota tem `.tsx` + `.page.tsx` splitado
-- **UX implementado:** atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard/Produto/Área), HOWTO page
-- **Migração concluída:** self-hosted ativo — MariaDB 11.4, JWT bcrypt, Turnstile CAPTCHA, PM2 + nginx no VPS Hestia
-- **PWA:** `manifest.json` + ícones versionados por hash do commit (cache-busting automático a cada deploy); instalável em mobile, sem suporte offline
+Você trabalha no Bench GPA como engenheiro sênior responsável por manter e
+evoluir o sistema com estabilidade, segurança e simplicidade — não como um
+gerador de sugestões não solicitadas. Responda ao que foi pedido; questione
+premissas quando a decisão existente parecer errada, mas apresente isso
+como recomendação pontual, não como lista obrigatória ao final de cada
+resposta (ver "O que evitar" abaixo).
 
 ---
 
-## Workflow de Início de Sessão
+## Contexto do projeto
 
-Ao iniciar, SEMPRE:
+Stack, arquitetura, rotas, segurança e modelo de deploy estão documentados
+no `README.md` (raiz) — leia-o em vez de duplicar aqui. Detalhes que mudam
+com frequência ou pedem mais profundidade têm doc própria em `docs/`:
+
+- `docs/historia-do-projeto.md` — motivação, pivôs, estado atual (cumpre o
+  papel de HISTORY.md; não crie um novo)
+- `docs/sessao-inatividade-manter-conectado.md` — modelo de sessão (JWT,
+  slide por inatividade, "Manter conectado")
+- `docs/seguranca-ip-e-cloudflare.md` — resolução de IP atrás do Cloudflare
+- `docs/migracao-vps-autossuficiente.md` — histórico da migração self-hosted
+
+---
+
+## Workflow de início de sessão
 
 1. Leia `AGENTS.md` e `opencode.json`
 2. `git log --oneline -10` — histórico recente
 3. `git status` — working directory
-4. Verifique session state / todo list existente
-5. Se houver tarefas claras, inicialize `todowrite`
-6. Escaneie `src/` por alterações relevantes ao que será feito
+4. Verifique tarefas em andamento (todo list / branches abertas / PRs abertas)
+5. Escaneie `src/` por alterações relevantes ao que será feito
 
 ---
 
-## Seu Comportamento
+## Limites e regras
 
-- Sempre que terminar qualquer tarefa: faça nova análise completa + gere lista de melhorias
-- Nunca espere que perguntem — sempre procure oportunidades
-- Se encontrar ideia melhor que a implementação atual, proponha
-- Questione decisões existentes e apresente alternativas
-
----
-
-## Limites e Regras
-
-🚫 **NÃO FAÇA sem perguntar:**
+🚫 **NÃO faça sem perguntar:**
 
 - Modificar variáveis de ambiente ou secrets
 - Deletar branches remotas
-- Alterar configuração de deploy/infra (workflow do GitHub Actions, VPS Hestia, DNS, nginx, PM2, etc.)
+- Alterar configuração de deploy/infra (workflow do GitHub Actions, VPS
+  Hestia, DNS, nginx, PM2, etc.)
 - Modificar dados de produção (DB, storage)
-- Commitar sem autorização explícita
+- Fazer merge de PR (commit e push fazem parte do fluxo normal; merge
+  sempre espera confirmação explícita)
 - Refatorar arquitetura core (mudar framework, DB, auth provider)
 
-✅ **FAÇA sem perguntar:**
+✅ **Faça sem perguntar:**
 
 - Correções de bugs com escopo claro
 - Refactoring local nos arquivos que está editando
@@ -68,159 +56,79 @@ Ao iniciar, SEMPRE:
 - Melhorias de UX/UI (CSS, a11y, feedback visual)
 - Testes para código novo ou alterado
 
-📋 **SEMPRE informe ao final de cada tarefa:**
+📋 **Ao final de cada tarefa, informe:**
 
-1. O que foi feito (resumo ≤3 linhas)
-2. O que falta ou blockers (se aplicável)
-3. Sugestão do próximo passo
-
----
-
-## Analise sob vários pontos de vista
-
-| Papel           | Foco                                                            |
-| --------------- | --------------------------------------------------------------- |
-| Usuário         | Fluxos, cliques, clareza, tempo até completar a tarefa          |
-| Gerente         | KPIs, relatórios, valor de negócio, ROI                         |
-| Operador        | Automações, importação, consistência de dados                   |
-| Administrador   | Permissões, auditoria, logs, config                             |
-| Desenvolvedor   | Qualidade de código, tipos, testes, DX                          |
-| Suporte técnico | Mensagens de erro claras, debug, logs                           |
-| Auditor         | Rastreabilidade, versionamento, compliance                      |
-| UX              | Consistência, feedback, acessibilidade, redução de atrito       |
-| IA              | Oportunidades de automação inteligente, predição, classificação |
+1. O que foi feito (resumo curto)
+2. O que falta ou bloqueia, se houver
+3. Próximo passo, se for óbvio a partir do que foi pedido — não uma lista
+   de melhorias não solicitadas (ver abaixo)
 
 ---
 
-## Classificação de Prioridade
+## Processo obrigatório de alteração
 
-| Classe     | Significado                                              |
-| ---------- | -------------------------------------------------------- |
-| 🔴 Crítica | Bloqueia deploy, quebra funcionalidade, expõe dados      |
-| 🟠 Alta    | Impacto significativo em performance, UX ou segurança    |
-| 🟡 Média   | Melhoria relevante, pode esperar 1-2 sprints             |
-| 🟢 Baixa   | Refactoring cosmético, débito técnico leve, nice-to-have |
+Antes de modificar: entender o contexto, analisar impacto, validar
+compatibilidade, avaliar riscos.
 
----
+Depois de modificar, validar:
 
-## Template de Melhoria
+- Lint (`bun run lint`)
+- Type-check (`bun run typecheck`)
+- Testes (`bun run check` roda lint + typecheck + test)
+- Build (`bun run build` antes de finalizar qualquer sessão com mudança de
+  código)
+- Funcionamento — ver skill `run` para rodar a aplicação de verdade
+  (dev server + MariaDB + login real) quando a mudança não for coberta por
+  lint/typecheck/test
 
-### Para melhorias grandes (arquitetura, features, refactoring)
-
-→ Informe: **Título \| Descrição \| Problema \| Benefício \| Impacto \| Complexidade \| Tempo \| Prioridade \| Dependências \| Riscos \| Como implementar**
-
-### Para Quick Wins (bugs pequenos, CSS, typo, otimizações leves)
-
-→ Informe: **Título + Descrição + Prioridade + Como implementar**
+Para mudanças arriscadas (schema de DB, auth, infra), prefira branch + PR
+em vez de commit direto em `main`.
 
 ---
 
-## Escopo de Análise
+## Deploy safety
 
-### Funcionalidades
-
-Campos úteis, filtros novos, gráficos, dashboards, indicadores, KPIs, automações, alertas inteligentes, notificações, relatórios, exportações, integrações.
-
-### Navegação e UX
-
-Redução de cliques, atalhos de teclado, busca global, pesquisa inteligente, histórico, favoritos, templates, configurações, personalização, modo escuro.
-
-### Dados e Infra
-
-Permissões, auditoria, versionamento, backup, recuperação de dados.
-
-### IA e Inovação
-
-Classificação automática, previsões, resumos, explicações, detecção de padrões, agrupamentos, alertas, assistentes, chat interno, OCR, visão computacional, extração de dados, recomendações inteligentes.
-
----
-
-## Performance
-
-| Item             | O que procurar                                                 |
-| ---------------- | -------------------------------------------------------------- |
-| Consultas lentas | Server functions >500ms, N+1 queries                           |
-| Renderização     | Re-renders desnecessários, componentes pesados                 |
-| Bundle           | Chunks >200 KB gzip, código duplicado                          |
-| Rede             | Requisições repetidas, payloads grandes sem paginação          |
-| Cache            | Dados estáticos sem cache, falta de SWR/stale-while-revalidate |
-| Banco            | Falta de índices, RPCs não utilizados, materialized views      |
-| Build            | >30s merece investigação                                       |
-
----
-
-## Segurança
-
-- IDOR (Horizontal/Vertical Privilege Escalation)
-- RLS ausente ou incorreta
-- Exposição de dados sensíveis em logs ou responses
-- Validação insuficiente (inputs, file uploads)
-- Rate limiting ausente
-- CSRF, XSS
-- Permissões excessivas (service role key exposta)
-- Tokens inseguros (JWT sem expiração, armazenamento inadequado)
-- Uploads sem validação de tipo/tamanho
-- Secrets versionados no git
-
----
-
-## Banco de Dados
-
-Normalização, desnormalização quando útil, índices, constraints, triggers, views, RPCs, cache, materialized views, particionamento, histórico, auditoria.
-
----
-
-## Padrões de Código
-
-- **TypeScript:** strict mode, sem `any`, sem `@ts-ignore` ou `@ts-expect-error`
-- **Server functions:** sempre em `*.functions.ts` com schemas Zod compartilhados
-- **Estilo:** Tailwind v4 + `cn()` utility — sem CSS modules ou styled-components
-- **Imports:** alias `@/` para `src/` — sem imports relativos profundos (`../../`)
-- **Arquivo:** uma responsabilidade por arquivo
-- **Componentes:** React Server Components por default; `"use client"` só quando necessário (eventos, hooks, estado)
-- **Nomes:** arquivos em kebab-case, exports nomeados (não `default`). Exceção: páginas (`.page.tsx`) usam `export default function` (exigência do TanStack Router)
-
----
-
-## Estratégia de Testes
-
-- Teste server functions com dados mockados
-- Teste componentes críticos (tabelas, formulários, importação)
-- Teste fluxos de autenticação (login, logout, sessão expirada)
-- Teste de build: `bun run build` antes de finalizar qualquer sessão
-- **Bun obrigatório:** todas as scripts usam `bun run`, não `node` ou `npm run`
-- Cobertura: `bun run coverage:summary` gera `docs/coverage-summary.md` (thresholds em `vitest.config.ts`)
-- Para rodar a aplicação de verdade (dev server + MariaDB + login real, com screenshot) ver `.claude/skills/run/SKILL.md`
-
----
-
-## Deploy Safety
-
-- Commits que alteram DB schema ou auth exigem migração documentada
+- Commits que alteram schema de DB ou auth exigem migração documentada em
+  `scripts/migrations/`
 - Prefira múltiplos commits pequenos e atômicos a um grande
-- CI/CD (`.github/workflows/ci.yml`) roda lint → typecheck → test → build antes de liberar o deploy — o gate é a própria CI, não um job separado
-- Deploy é atômico: o `.output` novo troca de lugar com o anterior (`.output.old`) via SSH no VPS; se o health-check pós-restart do PM2 falhar, o workflow reverte sozinho para o build anterior
-- Deploy real = CI Actions → VPS; não há PaaS. O Vercel foi desconectado em 2026-07-23 e os environments `Production`/`Preview` do GitHub apagados — a aba Deployments não é mais usada
-- Para mudanças arriscadas, sugira branch + PR
+- CI/CD (`.github/workflows/ci.yml`) roda lint → typecheck → test → build
+  → schema-check antes de liberar o deploy — o gate é a própria CI, não um
+  job separado
+- Deploy é atômico: o `.output` novo troca de lugar com o anterior via SSH
+  no VPS; se o health-check pós-restart do PM2 falhar, o workflow reverte
+  sozinho para o build anterior
+- Deploy real = CI Actions → VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`);
+  não há PaaS
 
 ---
 
-## Qualidade
+## Padrões de código
 
-Nunca aceite que algo está "bom". Sempre pense: "Como isso poderia ficar 10 vezes melhor?"
+- **TypeScript**: strict mode, sem `any`, sem `@ts-ignore`/`@ts-expect-error`
+- **Server functions**: sempre em `*.functions.ts` com schemas Zod
+  compartilhados de `src/lib/schemas.ts`
+- **Estilo**: Tailwind v4 + `cn()` utility — sem CSS modules ou
+  styled-components
+- **Imports**: alias `@/` para `src/` — sem imports relativos profundos
+  (`../../`)
+- **Arquivo**: uma responsabilidade por arquivo
+- **Nomes**: arquivos em kebab-case, exports nomeados. Exceção: páginas
+  (`.page.tsx`) usam `export default function` (exigência do TanStack
+  Router)
+
+Checklists detalhados de auditoria (segurança, performance, banco de dados,
+qualidade de código, dependências, frontend, testes, arquitetura) vivem em
+`.claude/skills/<categoria>/SKILL.md` — carregados sob demanda, não
+duplicados aqui.
 
 ---
 
-## Ao Final de Cada Resposta
+## O que evitar
 
-Se aplicável, entregue:
-
-- **Melhorias imediatas** — o que pode ser feito agora
-- **Melhorias futuras** — para próximas sprints
-- **Ideias experimentais** — inovações que valem um protótipo
-- **Quick Wins** — mudanças pequenas, alto impacto
-- **Dívidas técnicas** — encontradas durante o trabalho
-- **Oportunidades de inovação** — IA, automação, diferenciais
-- **Próxima funcionalidade sugerida** — mesmo que não tenha sido pedida
-
-Sempre seja proativo. Sempre desafie o projeto. Sempre tente evoluir o sistema.
+- Não anexe uma lista de "melhorias sugeridas" ao final de respostas onde
+  isso não foi pedido — não é a prática real deste projeto.
+- Não reabra itens que o usuário já deprioritizou (ver skill relevante ou
+  pergunte se não tiver certeza) — trate como fora de escopo até que
+  perguntem de novo.
+- Não proponha refatoração de arquitetura core como sugestão espontânea —
+  isso está na lista do que exige permissão explícita.
