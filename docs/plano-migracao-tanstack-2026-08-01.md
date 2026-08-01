@@ -1,14 +1,20 @@
-# Plano de migração: saída do ecossistema TanStack
+# Plano de migração: saída do ecossistema TanStack (referência, não ativo)
 
-Este documento parte de uma decisão já tomada pelo usuário, não de um problema
-técnico medido. A avaliação anterior (`docs/avaliacao-arquitetural-2026-08-01.md`)
-concluiu que nenhuma migração estrutural era necessária: essa conclusão continua
-tecnicamente válida, mas o usuário optou por migrar mesmo assim, por preferência
-declarada. Este plano assume essa decisão e foca em como sair com segurança, não
-em se deve sair.
+**Status em 01/08/2026: não é um próximo passo.** Depois de avaliar o
+conteúdo deste documento (seções 3 a 5), o usuário decidiu não sair do
+TanStack por enquanto. Este plano fica como referência para o caso de a
+decisão mudar no futuro, não como trabalho planejado para execução.
 
-Execução: fica a critério do usuário, fase a fase. Este documento não inicia
-nenhuma mudança de código.
+Este documento parte de uma decisão que havia sido tomada pelo usuário, não
+de um problema técnico medido. A avaliação anterior
+(`docs/avaliacao-arquitetural-2026-08-01.md`) concluiu que nenhuma migração
+estrutural era necessária: essa conclusão continua tecnicamente válida, e a
+decisão atual do usuário está alinhada a ela. Este plano existe caso a
+decisão de sair seja retomada mais adiante e foca em como sair com
+segurança, não em se deve sair.
+
+Execução: fica a critério do usuário, fase a fase, se e quando retomado.
+Este documento não inicia nenhuma mudança de código.
 
 As seções 3 a 5 avaliam, com dados reais (versões publicadas, maturidade,
 alternativas), as duas peças específicas que a proposta original citava sem
@@ -127,7 +133,8 @@ de arquivo de rota, etc.), algo que atualizar versão nenhuma resolve.
   contínuo e múltiplas major versions já estabilizadas. MIT.
 - **Comunidade**: grande e ativa, ecossistema extenso de plugins oficiais
   e de terceiros (`@fastify/*`), amplamente adotado em produção fora deste
-  projeto.
+  projeto. Downloads semanais no npm (medido via `api.npmjs.org` em
+  01/08/2026, não por estimativa de terceiros): Fastify 10,6 milhões.
 - **Estabilidade**: alta. Validação de schema embutida (JSON Schema/Ajv,
   com suporte a Zod via `fastify-type-provider-zod`), sistema de hooks
   (`onRequest`/`preHandler`) que cobre bem o que hoje é feito com
@@ -138,43 +145,60 @@ de arquivo de rota, etc.), algo que atualizar versão nenhuma resolve.
   parte do modelo de encapsulamento de plugins do Fastify é complexidade
   que este projeto não usaria.
 - **Alternativas**:
-  - **Express 5.x** (`5.2.1`): comunidade ainda maior, modelo mais simples,
+  - **Express 5.x** (`5.2.1`): maior adoção de todas (126,8 milhões de
+    downloads semanais, de longe o maior dos quatro), modelo mais simples,
     mas sem validação de schema embutida e sem os hooks tipados do Fastify.
-    Perde a maior vantagem prática do Fastify para este projeto.
+    Perde a maior vantagem prática do Fastify para este projeto, e a
+    comunidade trata o projeto como estável, não como em desenvolvimento
+    ativo de novas funcionalidades.
   - **Hono** (`4.12.33`): mais jovem que Fastify, mas já maduro (major 4,
-    lançamentos frequentes), MIT, e desenhado desde o início para rodar
-    nativamente rápido em Bun (e Deno, Cloudflare Workers), diferente do
-    Fastify, que trata Bun como alvo de compatibilidade. Para um projeto
-    que já roda 100% em Bun, Hono é arquiteturalmente mais alinhado ao
-    runtime atual do que Fastify. É mais leve, tem sintaxe de rota
-    semelhante, e integra bem com Zod (`@hono/zod-validator`).
+    lançamentos frequentes), MIT, e desenhado desde o início sobre Web
+    Standard APIs (`Request`/`Response`/`Headers` nativos), o que o torna
+    portável sem adaptação para Bun, Deno, Cloudflare Workers, Vercel Edge
+    e Node, ao contrário do Fastify, que trata tudo que não é Node como
+    alvo de compatibilidade. Para um projeto que já roda 100% em Bun, Hono
+    é arquiteturalmente mais alinhado ao runtime atual do que Fastify.
+    Downloads semanais: 54,3 milhões, mais que o dobro de Fastify e maior
+    do que se esperaria de uma ferramenta "mais jovem": no volume real de
+    instalação hoje, Hono já ultrapassa Fastify, não é mais a opção
+    arriscada. Integra bem com Zod via `@hono/zod-validator`.
   - Manter tudo em uma única aplicação (sem framework HTTP separado): dado
     que já existe `src/server.ts` como entry point customizado, seria
     possível expor a API sem framework nenhum, só `Bun.serve`. Mais
     trabalho manual (roteamento, parsing de corpo) sem ganho evidente
     sobre usar uma lib fina como Hono.
 
-Recomendação: reavaliar Hono como alternativa ao Fastify antes de comprometer
-a Fase 3 (Backend) a ele. A proposta original escolheu Fastify sem comparar
-com opções mais alinhadas ao runtime já usado no projeto (Bun).
+Recomendação: preferir Hono a Fastify se e quando a Fase 3 (Backend) for
+executada. A proposta original escolheu Fastify sem comparar com opções
+mais alinhadas ao runtime já usado no projeto (Bun), e os dados de adoção
+reais (downloads semanais no npm) não sustentam tratar Hono como a opção
+menos testada das duas.
 
 ## 5. Avaliação: Drizzle ORM
 
 - **Modelagem**: schema definido em TypeScript, próximo da sintaxe SQL
   (diferente do DSL próprio do Prisma). `drizzle-kit` gera migrações a
   partir de diffs de schema.
-- **Maturidade**: `drizzle-orm@0.45.2`, ainda em versão 0.x depois de
-  cerca de três anos de desenvolvimento público. Não é sinal de abandono
-  (releases frequentes), mas é sinal de que a API ainda pode ter mudanças
-  de breaking change fora do ritmo normal de semver 1.0+.
+- **Maturidade**: a tag `latest` publicada no npm ainda é `0.45.2`, mas o
+  projeto já tem release candidate de 1.0 em andamento (`1.0.0-rc.4`,
+  publicado em 21/07/2026, dez dias antes desta avaliação). Não é uma
+  ferramenta parada em 0.x indefinidamente, é uma que está no fim da
+  janela de estabilização antes do 1.0 estável, o que muda a leitura de
+  risco: breaking change de API author, sim, ainda pode acontecer até a
+  versão final, mas o projeto sinaliza estar perto de fechar o contrato
+  público, não no início dele. Downloads semanais no npm (medido em
+  01/08/2026): 17,6 milhões, à frente de Prisma (15,5 milhões).
 - **Migrações**: `drizzle-kit` cobre geração e aplicação de migração para
   tabelas comuns, mas não gerencia stored procedures. As 16 stored
   procedures que hoje concentram a maior parte da lógica de leitura/escrita
   (`scripts/migrate-schema.sql`) continuariam fora do alcance do ORM,
-  chamadas via SQL cru de qualquer forma (`sql` template do próprio
-  Drizzle, ou mantendo `mysql2/promise` como está). Na prática, adotar
-  Drizzle envolveria só as poucas consultas ad hoc fora das procedures,
-  não o núcleo do acesso a dado deste projeto.
+  chamadas via SQL cru de qualquer forma. Confirmado na documentação
+  oficial do Drizzle: `db.execute(sql\`...\`)` executa SQL parametrizado
+  cru, o mesmo mecanismo que uma chamada `CALL nome_da_procedure(?, ?)`
+  usaria, só que trocando o driver `mysql2/promise` direto pelo wrapper do
+  Drizzle por cima dele. Na prática, adotar Drizzle envolveria só as
+  poucas consultas ad hoc fora das procedures, não o núcleo do acesso a
+  dado deste projeto.
 - **Portabilidade MariaDB/PostgreSQL**: Drizzle suporta os dois dialetos,
   mas não de forma transparente. Trocar de dialeto MySQL/MariaDB para
   PostgreSQL no Drizzle ainda exige revisar schema e queries (tipos,
@@ -190,7 +214,11 @@ com opções mais alinhadas ao runtime já usado no projeto (Bun).
     (`prisma generate`) e um DSL de schema próprio, mais distante do SQL
     que o projeto já usa nas 16 procedures.
   - **Kysely** (`0.29.4`): mais minimalista que Drizzle, só query builder
-    tipado, sem gestão de migração própria robusta. Também pré-1.0.
+    tipado, sem gestão de migração própria robusta, também pré-1.0. Downloads
+    semanais medidos em 12,9 milhões, alto para uma ferramenta desse porte,
+    provavelmente inflado por outras libs que usam Kysely como dependência
+    interna (não é possível confirmar a fração de uso direto sem acesso aos
+    dados brutos do npm, então tratar esse número com ressalva).
   - **Manter `mysql2/promise` cru** (estado atual): sem dependência nova,
     já testado (347 testes cobrindo os retornos), mas sem tipagem
     automática do resultado de query, precisa de tipo manual por chamada.
@@ -201,6 +229,17 @@ for adotar Drizzle mesmo assim (por preferência, como a saída do TanStack),
 o footprint real seria pequeno: só as consultas fora das 16 procedures,
 não uma reescrita da camada de dados inteira. Trazer Drizzle não precisa
 estar amarrado à saída do TanStack, são decisões independentes.
+
+**Nota sobre a fonte dos números desta seção e da seção 4**: downloads
+semanais vêm direto de `api.npmjs.org/downloads/point/last-week/<pacote>`,
+consultado em 01/08/2026, não de blogs ou sites de comparação de terceiros
+(vários apareceram numa busca inicial com números de download divergentes
+e não confirmados, alguns até invertendo a ordem real entre Fastify e
+Hono: foram descartados como fonte por não ser possível verificar a
+origem dos números deles). Download semanal no npm é um proxy imperfeito
+de adoção (conta instalação em CI, dependência transitiva, etc.), mas é o
+dado verificável mais próximo disponível sem acesso a pesquisas pagas de
+mercado.
 
 ## 6. Fase 1: Fundação (não depende da opção A/B/C)
 
