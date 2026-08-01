@@ -194,9 +194,11 @@ Classificação por impacto (Crítico/Alto/Médio/Baixo) e esforço, na ordem
 recomendada de execução. Nenhuma foi iniciada — aguardando decisão sobre
 quais entram em execução e em que ordem.
 
-1. ⬜ **Corrigir o open redirect em `sanitizeNext`** (+ extrair a duplicação
-   `auth.tsx`/`auth.page.tsx` pra um único helper testado) — **crítico**,
-   esforço baixo (1 função pequena, 2 pontos de uso, fix é uma linha).
+1. ✅ 01/08 — **Corrigir o open redirect em `sanitizeNext`** — extraído
+   pra `src/lib/sanitize-next.ts`, agora comparando `.origin` resolvido
+   pelo parser em vez de prefixo de string (fecha também um segundo
+   bypass da mesma classe, via tab/newline). 10 testes — **crítico**,
+   esforço baixo.
 2. ⬜ **Corrigir `vitest.config.ts` pra incluir `.tsx`** (`test.include` e
    `coverage.include`) — **crítico** (bloqueia toda a frente de teste de
    componente), esforço trivial (mudança de 2 globs), mas exige checar que
@@ -214,9 +216,16 @@ has_role` acontece). Sanidade verificada manualmente: forçar
    já é extensivamente testada em `auth-middleware.test.ts` (11 casos);
    repetir isso 4x nesses arquivos seria esforço alto por sinal baixo,
    dado que a montagem de JWT/cookie mockados não muda entre eles.
-4. ⬜ **Teste de `rate-limit.middleware.ts`** (`requireRateLimit()`) — hoje
-   0% e mockado como no-op em todo lugar — **alto**, esforço médio; é o
-   ponto de aplicação real do rate limit em toda função não-auth.
+4. ✅ 01/08 — **Teste de `rate-limit.middleware.ts`** (`requireRateLimit()`)
+   — `rate-limit.middleware.test.ts` (7 casos) usa os singletons reais de
+   produção (`apiLimiter`/`uploadLimiter`, via `vi.resetModules()` +
+   import dinâmico pra isolar o orçamento global entre testes) e prova:
+   libera dentro do teto e propaga `next()`; bloqueia exatamente na 301ª
+   (api, 300/min) e na 201ª (upload, 200/min) requisição do mesmo IP;
+   tier default é "api"; orçamento é isolado por IP e por tier; resolve o
+   IP via `getClientIp` mesmo sem nenhum header — **alto**, esforço médio.
+   Sanidade confirmada manualmente (baixar o contador do loop em 1 faz o
+   teste falhar).
 5. ⬜ **Teste da atribuição de hierarquia no parser XLSX** (depto/seção/
    grupo/subgrupo populados de verdade, não só o caminho nulo) — **alto**,
    esforço baixo (ajustar fixtures existentes pra realmente disparar os 4
