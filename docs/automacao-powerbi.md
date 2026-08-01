@@ -1,6 +1,6 @@
 # Automação de download/import do Power BI
 
-> **Status:** 🟡 Planejamento — aguardando decisões (ver [Perguntas em aberto](#perguntas-em-aberto)).
+> **Status:** Planejamento: aguardando decisões (ver [Perguntas em aberto](#perguntas-em-aberto)).
 > Documento preparatório para retomarmos a implementação sem perder contexto.
 
 ## Objetivo
@@ -14,7 +14,7 @@ o pipeline de import já existente.
 > **Atualizado em 2026-07-26.** O desenho anterior deste documento descrevia as
 > planilhas versionadas em `data/YYYY-MM/` e um cron `cli:watch` a cada 3h, que
 > importava e dava commit/push sozinho. Isso mudou: os dados saíram do git (o
-> repositório não é meio de transporte de dados) e o cron foi desligado — a
+> repositório não é meio de transporte de dados) e o cron foi desligado. A
 > importação passou a ser um ato deliberado.
 
 ```
@@ -45,12 +45,12 @@ entregá-lo por um dos dois caminhos.
 1. **Autenticar** no Power BI de forma não-interativa (sem humano no loop).
 2. **Disparar/obter** o export do relatório de vendas do dia.
 3. **Baixar** o `.xlsx` (ou converter o resultado para o layout que o
-   `xlsx-parser` espera — ver "Compatibilidade de layout" abaixo).
+   `xlsx-parser` espera, ver "Compatibilidade de layout" abaixo).
 4. **Entregar** o arquivo: copiar para `data/` na VPS, ou enviá-lo pela mesma
-   rota que a tela `/upload` usa. O nome do arquivo é irrelevante — a data sai do
+   rota que a tela `/upload` usa. O nome do arquivo é irrelevante: a data sai do
    conteúdo (marcador `DTA_VENDA`).
 5. **Importar**: se usar o inbox, chamar `bun run cli:watch` ao final do
-   download. Não há mais cron de import para "esperar" — o que na verdade
+   download. Não há mais cron de import para "esperar", o que na verdade
    simplifica, porque o dado entra assim que chega, sem janela de até 3h.
 
 ## Perguntas em aberto
@@ -69,7 +69,7 @@ Precisamos destas respostas antes de escolher a abordagem:
    caminho recomendado para automação sem senha de usuário. Se não, sobra
    ROPC/senha de conta de serviço (frágil, e MFA quebra).
 4. **Dataset vs. paginated report.** O que exportamos hoje é um **dataset**
-   (dados tabulares — dá para consultar via API DAX/`executeQueries`) ou um
+   (dados tabulares, dá para consultar via API DAX/`executeQueries`) ou um
    **paginated report** (.rdl, renderizável para XLSX via `exportToFile`)? Os
    dois têm caminhos de API bem diferentes.
 
@@ -77,12 +77,12 @@ Precisamos destas respostas antes de escolher a abordagem:
 
 | # | Abordagem | Requer | Prós | Contras |
 |---|-----------|--------|------|---------|
-| A | **Pular o Power BI** — ler a fonte upstream direto (SQL/API do ERP) e gerar o XLSX | Acesso à fonte | Mais simples, sem dependência do Power BI, sem licença extra | Só viável se tivermos acesso à fonte |
-| B | **Power BI REST — `executeQueries`** (dataset via DAX) | Service principal + dataset | Oficial, retorna JSON/tabela; convertemos p/ XLSX | Limite de linhas/tamanho por chamada; exige montar a query DAX |
-| C | **Power BI REST — `exportToFile`** (paginated report → XLSX) | Premium/capacidade + paginated report | Gera o XLSX pronto no layout do relatório | Exige tier Premium; assíncrono (poll de status) |
+| A | **Pular o Power BI**: ler a fonte upstream direto (SQL/API do ERP) e gerar o XLSX | Acesso à fonte | Mais simples, sem dependência do Power BI, sem licença extra | Só viável se tivermos acesso à fonte |
+| B | **Power BI REST: `executeQueries`** (dataset via DAX) | Service principal + dataset | Oficial, retorna JSON/tabela; convertemos p/ XLSX | Limite de linhas/tamanho por chamada; exige montar a query DAX |
+| C | **Power BI REST: `exportToFile`** (paginated report → XLSX) | Premium/capacidade + paginated report | Gera o XLSX pronto no layout do relatório | Exige tier Premium; assíncrono (poll de status) |
 | D | **Automação de UI headless** (Playwright logando no Power BI e clicando em Export) | Só credenciais | Funciona sem API/licença especial | Frágil, quebra com mudança de UI/MFA; não recomendado |
 
-Ordem de preferência provável: **A > B > C > D** — confirmar com as respostas.
+Ordem de preferência provável: **A > B > C > D**. Confirmar com as respostas.
 
 ## Compatibilidade de layout
 
@@ -95,18 +95,18 @@ real antes de ligar o cron.
 ## Riscos e considerações
 
 - **Segredos:** credenciais/secret do service principal vão para o `.env` da VPS
-  (nunca versionar) — seguir o padrão já usado para `DB_PASS`/`JWT_SECRET`.
+  (nunca versionar). Seguir o padrão já usado para `DB_PASS`/`JWT_SECRET`.
 - **Idempotência:** já garantida pelo `import-watch` (checa `import_log` e o cap
   de 180 dias). A automação pode rodar/re-rodar sem duplicar.
 - **Falhas silenciosas:** o `import-watch` grava `cron_heartbeat`, mas hoje ele
-  **não roda em cron** — e, por isso, saiu do `KNOWN_JOBS` (um job sem cron
+  **não roda em cron**, e, por isso, saiu do `KNOWN_JOBS` (um job sem cron
   apareceria como atrasado para sempre). Se a automação for criada, ela deve ter
   heartbeat próprio (ex. `powerbi-download`) **e** ser adicionada ao `KNOWN_JOBS`
   em `src/lib/admin-system.functions.ts`, senão não aparece no painel `/admin` →
   Auditoria quando falhar.
 - **Fuso/horário:** o export precisa refletir o dia fechado. Confirmar a hora em
   que o dado do dia anterior fica completo no Power BI antes de escolher o
-  horário do cron de download — não há mais cron de import para se alinhar.
+  horário do cron de download. Não há mais cron de import para se alinhar.
 - **Data da venda:** deve ser a data de venda, não a de execução. O nome do
   arquivo é irrelevante: o parser lê o marcador `DTA_VENDA` de dentro da
   planilha, e o `extract-date` só usa o nome como atalho quando ele já traz uma

@@ -1,8 +1,8 @@
 # Plano de Migração: VPS Autossuficiente
 
-> ✅ **Migração concluída** — deploy ativo em `gpa.t00ls.dev` (Hestia CP 1.9.6). Documento mantido como referência histórica.
+> **Migração concluída**: deploy ativo em `gpa.t00ls.dev` (Hestia CP 1.9.6). Documento mantido como referência histórica.
 
-> Domínio: `gpa.t00ls.dev` — servidor `sv1.t00ls.dev` (Hestia CP 1.9.6)
+> Domínio: `gpa.t00ls.dev`, servidor `sv1.t00ls.dev` (Hestia CP 1.9.6)
 
 ---
 
@@ -14,14 +14,14 @@
 4. [Template nginx: `node-ssr`](#4-template-nginx-node-ssr)
 5. [Criar subdomínio no Hestia](#5-criar-subdomínio-no-hestia)
 6. [Schema MariaDB](#6-schema-mariadb)
-7. [Conexão — `src/lib/db.ts`](#7-conexão--srclibdbts)
+7. [Conexão: `src/lib/db.ts`](#7-conexão--srclibdbts)
 8. [Auth JWT](#8-auth-jwt)
 9. [Stored Procedures](#9-stored-procedures)
-10. [Server Functions — Antes/Depois](#10-server-functions)
-11. [Rotas — Antes/Depois](#11-rotas)
-12. [Componentes — Antes/Depois](#12-componentes)
-13. [Start / Router — Antes/Depois](#13-start--router)
-14. [Integrações Supabase — Remover](#14-integrações-supabase)
+10. [Server Functions: Antes/Depois](#10-server-functions)
+11. [Rotas: Antes/Depois](#11-rotas)
+12. [Componentes: Antes/Depois](#12-componentes)
+13. [Start / Router: Antes/Depois](#13-start--router)
+14. [Integrações Supabase: Remover](#14-integrações-supabase)
 15. [Instalar Bun + PM2](#15-instalar-bun--pm2)
 16. [Clonar e configurar o app](#16-clonar-e-configurar-o-app)
 17. [Migrar dados do Supabase para MariaDB](#17-migrar-dados)
@@ -38,7 +38,7 @@
 | Supabase Auth (14 chamadas auth)          | **JWT + bcrypt próprio**                       |
 | Supabase RPCs (15 stored procedures)      | **Stored Procedures MariaDB**                  |
 | Vercel (SSR)                              | **VPS (Bun + PM2, proxy nginx)**               |
-| Supabase Admin (service role key exposta) | **Nada — queries diretas com permissão admin** |
+| Supabase Admin (service role key exposta) | **Nada, queries diretas com permissão admin** |
 | Dependência: `@supabase/supabase-js`      | **Dependência removida**                       |
 | Custo DB extra se estourar: $25/mês       | **$0 extra**                                   |
 
@@ -163,8 +163,8 @@ server {
 }
 ```
 
-> 🔒 **IP real do usuário atrás do Cloudflare.** Com `X-Real-IP $remote_addr`,
-> o app veria o IP da *edge* do Cloudflare, não o do usuário — e o primeiro
+> **Nota**: IP real do usuário atrás do Cloudflare. Com `X-Real-IP $remote_addr`,
+> o app veria o IP da *edge* do Cloudflare, não o do usuário, e o primeiro
 > salto do `X-Forwarded-For` é falsificável. O `getClientIp` já prioriza o
 > `CF-Connecting-IP`, mas para esse header ser **confiável** a origem precisa
 > aceitar tráfego só do Cloudflare. Passo a passo (allowlist de faixas do CF +
@@ -321,7 +321,7 @@ CREATE TABLE filter_hierarchy (
 
 ---
 
-## 7. Conexão — `src/lib/db.ts`
+## 7. Conexão: `src/lib/db.ts`
 
 **Novo arquivo:**
 
@@ -344,11 +344,11 @@ const pool = createPool({
 export default pool;
 ```
 
-> MariaDB é local (localhost) — sem SSL necessário. Se no futuro o DB for externo, adicionar `ssl: { rejectUnauthorized: true }`.
+> MariaDB é local (localhost): sem SSL necessário. Se no futuro o DB for externo, adicionar `ssl: { rejectUnauthorized: true }`.
 
 ### .env
 
-> **Banco de produção: `admin_gpa`** — gerenciado pelo Hestia (usuário `admin`),
+> **Banco de produção: `admin_gpa`**, gerenciado pelo Hestia (usuário `admin`),
 > por isso entra no dump diário para o Backblaze. Um banco `bench_gpa` criado
 > manualmente existiu no início, mas ficava **fora** dos backups do Hestia; os
 > dados foram migrados para `admin_gpa` e o `bench_gpa` removido. Use sempre
@@ -387,7 +387,7 @@ VITE_TURNSTILE_SITE_KEY="<site_key>"
 }
 ```
 
-### 8.2 Middleware — `src/lib/auth-middleware.ts`
+### 8.2 Middleware: `src/lib/auth-middleware.ts`
 
 Substitui `src/integrations/supabase/auth-middleware.ts`:
 
@@ -448,7 +448,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
 });
 ```
 
-### 8.3 Rotas de Auth — `src/lib/auth-api.ts`
+### 8.3 Rotas de Auth: `src/lib/auth-api.ts`
 
 **Novo arquivo:**
 
@@ -648,7 +648,7 @@ DELIMITER ;
 
 ---
 
-## 10. Server Functions — Antes/Depois
+## 10. Server Functions: Antes/Depois
 
 ### 10.1 `dashboard.functions.ts`
 
@@ -716,7 +716,7 @@ if (!rows.length || rows[0].role !== "admin") {
 
 ---
 
-## 11. Rotas — Antes/Depois
+## 11. Rotas: Antes/Depois
 
 | Rota                           | Antes                                                                         | Depois                                            |
 | ------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------- |
@@ -732,7 +732,7 @@ if (!rows.length || rows[0].role !== "admin") {
 
 ---
 
-## 12. Componentes — Antes/Depois
+## 12. Componentes: Antes/Depois
 
 | Componente          | Antes                                         | Depois                              |
 | ------------------- | --------------------------------------------- | ----------------------------------- |
@@ -740,7 +740,7 @@ if (!rows.length || rows[0].role !== "admin") {
 
 ---
 
-## 13. Start / Router — Antes/Depois
+## 13. Start / Router: Antes/Depois
 
 ### `src/start.ts`
 
@@ -762,7 +762,7 @@ export const startInstance = createStart(() => ({
 ### `src/router.tsx`
 
 ```ts
-// queryCache onError — Antes
+// queryCache onError, antes
 const { supabase } = await import("@/integrations/supabase/client");
 await supabase.auth.signOut();
 
@@ -772,7 +772,7 @@ document.cookie = "session=; Path=/; Max-Age=0";
 
 ---
 
-## 14. Integrações Supabase — Remover
+## 14. Integrações Supabase: Remover
 
 Após a migração:
 
@@ -824,7 +824,7 @@ cd public_html
 
 bun install
 
-# .env — ver seção 7.1 para valores
+# .env: ver seção 7.1 para valores
 cat > .env << 'ENVEOF'
 DB_HOST="localhost"
 DB_PORT="3306"
@@ -885,7 +885,7 @@ git pull origin main
 bun install
 bun run build
 pm2 reload ecosystem.config.js
-echo "✅ Deploy complete!"
+echo "Deploy complete!"
 ```
 
 ---
@@ -969,11 +969,11 @@ VALUES ('$(uuidgen)', 'admin@gpabr.com', 'Administrador', '$HASH', 'admin', TRUE
 | `src/lib/db.ts`              | **Novo** (mysql2 pool)            |
 | `scripts/migrate-schema.sql` | **Novo** (schema + 15 procedures) |
 
-### Fase 3: Server Functions — Leitura (1 commit)
+### Fase 3: Server Functions, Leitura (1 commit)
 
 Arquivos: `dashboard.functions.ts`, `area.functions.ts`, `product.functions.ts`, `rpc-utils.ts`
 
-### Fase 4: Server Functions — Escrita (1 commit)
+### Fase 4: Server Functions, Escrita (1 commit)
 
 Arquivos: `upload.functions.ts`, `admin.functions.ts`, `admin-utils.ts`
 
@@ -999,7 +999,7 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 
 ## 19. Checklist Completão
 
-### Fase 0 — Infraestrutura
+### Fase 0: Infraestrutura
 
 - [ ] Template `node-ssr.tpl` + `node-ssr.stpl` no servidor
 - [ ] Subdomínio `gpa.t00ls.dev` criado com template
@@ -1009,7 +1009,7 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] MariaDB: banco + schema rodado
 - [ ] Dados migrados do Supabase
 
-### Fase 1 — Build Config
+### Fase 1: Build Config
 
 - [ ] `vite.config.ts` com preset `node-server`
 - [ ] `ecosystem.config.js` criado
@@ -1017,35 +1017,35 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] `bun run build` funciona
 - [ ] `pm2 start` + site acessível via nginx
 
-### Fase 2 — Conexão + Schema
+### Fase 2: Conexão + Schema
 
 - [ ] `src/lib/db.ts` criado
 - [ ] `scripts/migrate-schema.sql` com schema + 15 procedures
 - [ ] Schema executado no MariaDB
 
-### Fase 3 — Server Functions Leitura
+### Fase 3: Server Functions Leitura
 
 - [ ] Dashboard, Área, Produto funcionando com dados do MariaDB
 
-### Fase 4 — Server Functions Escrita
+### Fase 4: Server Functions Escrita
 
 - [ ] Upload, Admin CRUD funcionando
 
-### Fase 5 — Auth JWT
+### Fase 5: Auth JWT
 
 - [ ] Login funcionando (JWT → cookie HttpOnly)
 - [ ] Logout funcionando
 - [ ] Rotas autenticadas protegidas
 - [ ] Admin routes verificando role
 
-### Fase 6 — Cleanup
+### Fase 6: Cleanup
 
 - [ ] `src/integrations/supabase/` removido
 - [ ] `@supabase/supabase-js` removido
 - [ ] SUPABASE\_\* removido do `.env`
 - [ ] `bun run build` sem erros
 
-### Fase 7 — Deploy Final
+### Fase 7: Deploy Final
 
 - [ ] Repositório clonado em `/home/admin/web/gpa.t00ls.dev/public_html`
 - [ ] `.env` configurado
@@ -1056,5 +1056,5 @@ Arquivos: `auth-middleware.ts` (novo), `auth-api.ts` (novo), `routes/auth.tsx`, 
 - [ ] Login com Turnstile funcional
 - [ ] Dashboard com dados
 - [ ] CSP nonce funcionando (verificar console)
-- [ ] Cron jobs configurados (purge 03h — desde 2026-07-26 é a única cron; o
+- [ ] Cron jobs configurados (purge 03h, desde 2026-07-26 é a única cron; o
       import deixou de ser agendado e acontece pela tela `/upload` ou sob demanda)
