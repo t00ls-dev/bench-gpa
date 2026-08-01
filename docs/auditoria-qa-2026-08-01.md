@@ -235,10 +235,18 @@ has_role` acontece). Sanidade verificada manualmente: forçar
    depto; reset só de grupo/subgrupo ao entrar numa nova seção, mantendo o
    depto — **alto**, esforço baixo. Sanidade confirmada manualmente
    (zerar a atribuição de depto no código faz os 3 testes falharem).
-6. ⬜ **Guard de `TURNSTILE_BYPASS` em produção** (falha no boot se
-   `NODE_ENV=production && TURNSTILE_BYPASS=true`) + teste — **alto**,
-   esforço trivial; hoje é um interruptor sem trava que desliga o CAPTCHA
-   inteiro se vazar numa config errada.
+6. ✅ 01/08 — **Guard de `TURNSTILE_BYPASS` em produção** — nova função
+   pura `assertSafeBoot()` em `src/lib/boot-guards.ts`, chamada uma vez no
+   topo de `src/server.ts` (o entrypoint real do servidor, `server: {
+entry: "server" }` do `vite.config.ts`): lança se
+   `NODE_ENV=production && TURNSTILE_BYPASS=true`, o que impede o
+   processo de sequer subir (PM2 veria falha de boot, não um servidor
+   rodando silenciosamente com o CAPTCHA desligado). 5 testes cobrindo o
+   caso real e os "quase-sim" (dev/test com bypass ligado — legítimo;
+   valor não exatamente `"true"`) — **alto**, esforço trivial. Sanidade
+   confirmada manualmente. Escopo consciente: o flag de build
+   `VITE_TURNSTILE_BYPASS` (cliente, só esconde o widget) ficou de fora —
+   quem decide se o token é exigido de verdade é sempre o servidor.
 7. ⬜ **Teste de arquivo corrompido/zero-linhas no parser XLSX**, incluindo
    fechar o gap do `scripts/import.ts` (sem guard de `total_rows===0`, hoje
    estoura erro cru de banco) — **médio**, esforço baixo.

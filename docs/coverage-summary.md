@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T12:36:02.613Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
+_Gerado em 2026-08-01T12:45:57.879Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 84.8% ✅ | 83.1% ✅ | 74.1% ✅ | 76.0% ✅ |
+| **Total** | 84.8% ✅ | 83.2% ✅ | 74.2% ✅ | 76.2% ✅ |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -45,6 +45,7 @@ _Gerado em 2026-08-01T12:36:02.613Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/api-types.ts` | 100.0% ✅ | 93.5% ✅ | 100.0% ✅ | 94.0% ✅ |
 | `src/lib/auth-config.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/auth-middleware.ts` | 100.0% ✅ | 92.3% ✅ | 100.0% ✅ | 75.0% ✅ |
+| `src/lib/boot-guards.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/csp.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/date-window.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/error-page.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
