@@ -252,9 +252,15 @@ entry: "server" }` do `vite.config.ts`): lança se
    confirmada manualmente. Escopo consciente: o flag de build
    `VITE_TURNSTILE_BYPASS` (cliente, só esconde o widget) ficou de fora —
    quem decide se o token é exigido de verdade é sempre o servidor.
-7. ⬜ **Teste de arquivo corrompido/zero-linhas no parser XLSX**, incluindo
-   fechar o gap do `scripts/import.ts` (sem guard de `total_rows===0`, hoje
-   estoura erro cru de banco) — **médio**, esforço baixo.
+7. ✅ 01/08 — **Teste de arquivo corrompido/zero-linhas no parser XLSX** — 2
+   testes novos: buffer não-xlsx lança erro (não trava, não devolve lixo);
+   arquivo válido com marcador de data mas zero produtos devolve listas
+   vazias sem lançar (comportamento correto — quem decide se é erro de
+   negócio é o chamador). Fechado também o gap real do `scripts/import.ts`
+   apontado pelo item: guard de `totalRows===0` adicionado, mesma mensagem
+   de `upload.functions.ts:beginImport` — antes disso, o CLI seguia até
+   `finalize_import` e estourava `SIGNAL SQLSTATE '45000'` cru — **médio**,
+   esforço baixo.
 8. ⬜ **Teste de reconciliação de contagem** (linhas no arquivo vs.
    inseridas vs. `finalize_import.p_row_count`) — **médio**, esforço médio;
    decide também se vale adicionar a checagem que falta na procedure.
