@@ -119,7 +119,7 @@ console.log("Status:", resp?.status());
 
 // Wait for page to fully load
 await new Promise((r) => setTimeout(r, 3000));
-await page.screenshot({ path: "/tmp/opencode/prod-00-auth.png", fullPage: true });
+await page.screenshot({ path: "/tmp/test-production/prod-00-auth.png", fullPage: true });
 
 // Login
 console.log("\nLogging in...");
@@ -134,7 +134,7 @@ try {
   console.log("Dashboard loaded!");
 } catch (e) {
   console.log("Timeout waiting for dashboard. Current URL:", page.url());
-  await page.screenshot({ path: "/tmp/opencode/prod-01-login-error.png", fullPage: true });
+  await page.screenshot({ path: "/tmp/test-production/prod-01-login-error.png", fullPage: true });
   const html = await page.content();
   console.log("HTML snippet:", html.substring(0, 2000));
   await browser.close();
@@ -142,13 +142,13 @@ try {
 }
 
 await new Promise((r) => setTimeout(r, 3000));
-await page.screenshot({ path: "/tmp/opencode/prod-01-dashboard.png", fullPage: true });
+await page.screenshot({ path: "/tmp/test-production/prod-01-dashboard.png", fullPage: true });
 console.log("Page URL:", page.url());
 
 // List initial options
 console.log("\n--- Opening Subgrupo dropdown (no filters) ---");
 await openDropdownAndMeasure("Subgrupo");
-await page.screenshot({ path: "/tmp/opencode/prod-02-subgrupo-aberto.png", fullPage: true });
+await page.screenshot({ path: "/tmp/test-production/prod-02-subgrupo-aberto.png", fullPage: true });
 
 // Close the dropdown
 await page.evaluate(() => {
@@ -249,7 +249,7 @@ await new Promise((r) => setTimeout(r, 500));
 // Now do the full cascade
 await selectFilter("Departamento", "PERECIVEIS");
 await page.screenshot({
-  path: "/tmp/opencode/prod-03-selecionou-departamento.png",
+  path: "/tmp/test-production/prod-03-selecionou-departamento.png",
   fullPage: true,
 });
 
@@ -315,7 +315,10 @@ await new Promise((r) => setTimeout(r, 500));
 
 await selectFilter("Grupo", "FRIO DE AVE MANIPULADO +10");
 
-await page.screenshot({ path: "/tmp/opencode/prod-04-selecionou-grupo.png", fullPage: true });
+await page.screenshot({
+  path: "/tmp/test-production/prod-04-selecionou-grupo.png",
+  fullPage: true,
+});
 
 // Check subgrupos
 const subOpts = await page.evaluate(() => {
@@ -343,7 +346,7 @@ const subList = await page.evaluate(() => {
 console.log("\nSubgrupos:", JSON.stringify(subList));
 
 // Now measure the Subgrupo dropdown while open
-await page.screenshot({ path: "/tmp/opencode/prod-05-subgrupo-aberto.png", fullPage: true });
+await page.screenshot({ path: "/tmp/test-production/prod-05-subgrupo-aberto.png", fullPage: true });
 const m = await page.evaluate(() => {
   const wrapper = document.querySelector("[data-radix-popper-content-wrapper]");
   const dialog = document.querySelector('[role="dialog"]');

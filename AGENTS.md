@@ -102,7 +102,7 @@ Remova comentários que:
 
 ## Workflow de início de sessão
 
-1. Leia `AGENTS.md` e `opencode.json`
+1. Leia `AGENTS.md`
 2. `git log --oneline -10` para o histórico recente
 3. `git status` para o estado do working directory
 4. Verifique tarefas em andamento (todo list, branches abertas, PRs abertas)
