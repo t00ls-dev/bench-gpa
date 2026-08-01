@@ -1,6 +1,6 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T13:09:34.303Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-01T13:19:07.582Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
