@@ -27,11 +27,17 @@ describe("pdf-download-store", () => {
     expect(entry?.filename).toBe("relatorio.pdf");
   });
 
-  it("uso único: a segunda leitura do mesmo token não acha nada", async () => {
+  // Regressão de um bug real (01/08/2026): o token já foi uso único, e o
+  // Firefox faz mais de uma requisição pra URL de download antes de salvar —
+  // a segunda leitura vinha vazia (404 "Not found" salvo como se fosse o
+  // PDF). TTL curto + isolamento por usuário já bastam como proteção; não
+  // precisa também matar o token na primeira leitura.
+  it("permite ler o mesmo token mais de uma vez dentro do TTL", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     expect(takePdf(token, "user-1")).toBeDefined();
-    expect(takePdf(token, "user-1")).toBeUndefined();
+    expect(takePdf(token, "user-1")).toBeDefined();
+    expect(takePdf(token, "user-1")).toBeDefined();
   });
 
   it("token inexistente devolve undefined", async () => {
@@ -47,11 +53,11 @@ describe("pdf-download-store", () => {
     expect(takePdf(token, "user-2")).toBeUndefined();
   });
 
-  it("uma tentativa com userId errado também consome o token (não dá segunda chance)", async () => {
+  it("uma tentativa com userId errado não invalida o token pro usuário certo depois", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     expect(takePdf(token, "user-2")).toBeUndefined(); // errado
-    expect(takePdf(token, "user-1")).toBeUndefined(); // certo, mas já foi consumido
+    expect(takePdf(token, "user-1")).toBeDefined(); // certo, continua valendo
   });
 
   it("expira depois do TTL — token válido mas velho não devolve nada", async () => {
