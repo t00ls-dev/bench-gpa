@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useSearch } from "@tanstack/react-router";
 import { LogIn, Loader2 } from "lucide-react";
 import { useEffectiveTheme } from "@/hooks/use-theme";
+import { sanitizeNext } from "@/lib/sanitize-next";
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 const TURNSTILE_BYPASS = import.meta.env.VITE_TURNSTILE_BYPASS === "true";
@@ -21,12 +22,6 @@ function getTurnstile(): TurnstileWidget | undefined {
   return (window as unknown as { turnstile?: TurnstileWidget }).turnstile;
 }
 
-function sanitizeNext(next: unknown): string {
-  if (typeof next !== "string") return "/";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/";
-  return next;
-}
-
 function AuthPage() {
   const { next } = useSearch({ from: "/auth" });
   const effectiveTheme = useEffectiveTheme();
@@ -39,7 +34,7 @@ function AuthPage() {
   const widgetIdRef = useRef<string | undefined>(undefined);
 
   const goNext = () => {
-    const target = sanitizeNext(next);
+    const target = sanitizeNext(next, window.location.origin);
     window.location.href = target;
   };
 
