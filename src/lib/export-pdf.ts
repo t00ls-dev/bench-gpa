@@ -27,6 +27,13 @@ export function openPdfBlob(doc: jsPDF, filename?: string) {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
   }
+  // Firefox só respeita `download` se o <a> estiver na árvore do documento no
+  // momento do clique — fora do DOM, ele cai pro comportamento padrão de
+  // navegação e o arquivo salva com um nome genérico (hash/UUID) em vez de
+  // `filename`. Chrome tolera clicar num elemento solto; Firefox não. O
+  // clique é síncrono, então dá pra remover logo em seguida.
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
