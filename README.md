@@ -109,7 +109,7 @@ Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 - **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers por IP: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min) — mais um balde independente por conta no login (5/15min por e-mail), contra credential stuffing distribuído por vários IPs.
 - **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard e rankings (60s), hierarquia área e opções de filtro (5min), datas importadas (60s), role (5min/user).
 - **PWA**: `manifest.json` + ícones (favicon, apple-touch-icon, maskable) versionados com o hash do commit — cache-busting automático a cada deploy, independente do cache do Cloudflare. Instalável em mobile; não funciona offline (dados vêm sempre do servidor).
-- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile, rate limit em todas as 24 server functions (`requireRateLimit`).
+- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile, rate limit em todas as server functions autenticadas (`requireRateLimit`, hoje 27 usos em 8 arquivos `*.functions.ts`).
 - **Auditoria & monitoramento**: `audit_log` registra ações sensíveis (login ok/falho, logout, criação/alteração de usuário, reset de senha, purga); IP resolvido atrás do Cloudflare (`CF-Connecting-IP`). `cron_heartbeat` grava a última execução de cada cron (`purge`, `refresh-universe`) com status e duração, sinalizando atrasos. Ambos visíveis em `/admin` → aba **Auditoria**.
 - **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Import automático varre o mês corrente com cap de 180 dias.
 - **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). O import automático usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria — evita o loop importar→purgar→reimportar.
@@ -124,8 +124,7 @@ Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 ├── src/
 │   ├── components/   → Componentes React
 │   ├── hooks/        → Hooks customizados
-│   ├── integrations/ → Auth middleware, Turnstile, CSP
-│   ├── lib/          → Server functions, schemas Zod, cache, CSP, rate limit, Turnstile, PDF export
+│   ├── lib/          → Server functions, schemas Zod, cache, CSP, rate limit, Turnstile, auth/sessão, PDF export
 │   └── routes/       → Rotas TanStack Router (lazy loaded)
 ├── scripts/          → CLI de import (manual e automático)
 ├── data/             → Inbox local de planilhas XLSX (não versionado)
