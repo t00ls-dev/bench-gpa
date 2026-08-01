@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T11:05:06.529Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
+_Gerado em 2026-08-01T12:28:21.839Z — thresholds: lines 40%, statements 40%, functions 30%, branches 25%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 82.7% ✅ | 81.3% ✅ | 73.4% ✅ | 74.5% ✅ |
+| **Total** | 83.4% ✅ | 82.0% ✅ | 74.1% ✅ | 75.1% ✅ |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -20,7 +20,6 @@ _Gerado em 2026-08-01T11:05:06.529Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/db.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 100.0% ✅ | 0.0% ⚠️ |
 | `src/lib/heartbeat.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/lib/import-config.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 100.0% ✅ | 100.0% ✅ |
-| `src/lib/rate-limit.middleware.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/lib/version.functions.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 100.0% ✅ |
 | `src/lib/xlsx-worker.ts` | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ | 0.0% ⚠️ |
 | `src/lib/error-capture.ts` | 23.1% ⚠️ | 26.7% ⚠️ | 25.0% ⚠️ | 25.0% ✅ |
@@ -53,6 +52,7 @@ _Gerado em 2026-08-01T11:05:06.529Z — thresholds: lines 40%, statements 40%, f
 | `src/lib/export-pdf.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/filter-cascade.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/query-config.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
+| `src/lib/rate-limit.middleware.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/rate-limit.ts` | 100.0% ✅ | 94.6% ✅ | 100.0% ✅ | 86.1% ✅ |
 | `src/lib/retention.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/sanitize-next.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
