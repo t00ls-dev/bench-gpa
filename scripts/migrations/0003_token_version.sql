@@ -17,9 +17,18 @@
 -- O primeiro resetPassword de cada usuário leva a coluna para 1 e aí sim
 -- invalida tudo que é anterior.
 --
--- Não é idempotente (MariaDB não tem ADD COLUMN IF NOT EXISTS); o runner
--- garante execução única via schema_migrations. A tabela users tem poucas
--- linhas, então o custo do ALTER é irrelevante.
+-- A tabela users tem poucas linhas, então o custo do ALTER é irrelevante.
+--
+-- EDITADO em 01/08/2026 (auditoria de QA, item 10): o comentário original
+-- dizia "MariaDB não tem ADD COLUMN IF NOT EXISTS" — errado, suporta desde a
+-- série 10.x (extensão própria do MariaDB, ausente só no MySQL vanilla até
+-- 8.0.29). Sem o `IF NOT EXISTS`, instalação nova (banco vazio) sempre
+-- quebrava aqui: migrate-schema.sql já cria `users.token_version` na
+-- definição da tabela, então o ADD COLUMN duplicava a coluna. Mesma classe de
+-- bug do item 2/10 desta auditoria, e mesmo raciocínio de segurança pra
+-- editar uma migration "já aplicada": o runner identifica migrations
+-- concluídas pelo nome do arquivo, nunca reexecuta conteúdo já aplicado —
+-- produção não é afetada, só instalação nova passa a funcionar.
 
 ALTER TABLE users
-  ADD COLUMN token_version INT NOT NULL DEFAULT 0 AFTER is_active;
+  ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0 AFTER is_active;

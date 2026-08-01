@@ -48,9 +48,59 @@ jobs:
           retention-days: 1
           include-hidden-files: true
 
+  schema-check:
+    name: Schema (MariaDB real)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: schema-check-${{ github.ref }}
+      cancel-in-progress: true
+    # Prova que migrate-schema.sql + scripts/migrations/*.sql aplicam limpo
+    # numa instalação nova (banco vazio), e que rodar de novo é um no-op —
+    # antes deste job, isso nunca era testado (só ambientes já migrados, onde
+    # um ALTER quebrado nunca teria chance de aparecer). Descobriu 2 bugs
+    # reais na primeira execução: docs/auditoria-qa-2026-08-01.md, item 10.
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: bench_gpa_ci
+        ports:
+          - 3306:3306
+        # healthcheck.sh vem no próprio image oficial (mariadb.org), feito pra
+        # este entrypoint em duas fases (servidor temporário de init, depois o
+        # real) — `mysqladmin ping` tentado antes ficou "unhealthy" até
+        # estourar os 10 retries mesmo com o server já pronto (log mostrava
+        # "ready for connections" bem antes do timeout), pela troca de fase.
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Instala cliente mariadb
+        run: sudo apt-get update && sudo apt-get install -y mariadb-client
+      - name: Aplica o schema do zero e prova idempotência (roda 2x)
+        run: |
+          cat > /tmp/schema-check.env <<EOF
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_NAME=bench_gpa_ci
+          DB_USER=root
+          DB_PASS=root
+          EOF
+
+          echo "==> 1ª aplicação (banco vazio)"
+          bash scripts/run-migrations.sh /tmp/schema-check.env
+
+          echo "==> 2ª aplicação (idempotência — precisa ser no-op nas migrations versionadas)"
+          bash scripts/run-migrations.sh /tmp/schema-check.env | tee /tmp/second-run.log
+          grep -q "nenhuma migration nova" /tmp/second-run.log
+
   deploy:
     name: Deploy
-    needs: ci
+    needs: [ci, schema-check]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency:
