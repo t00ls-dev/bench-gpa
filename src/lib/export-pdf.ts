@@ -53,6 +53,14 @@ export function openPdfBlob(doc: jsPDF, filename?: string) {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
   }
-  a.click();
+  // `a.click()` (o método nativo) não é confiável no Firefox recente pra
+  // disparar o download programaticamente — mesmo com o anchor já anexado ao
+  // documento, o clique sintético às vezes não é tratado como um clique de
+  // verdade e o `download` acaba ignorado. Disparar um MouseEvent completo
+  // via dispatchEvent é o workaround documentado (jsPDF #3391, e a prática
+  // corrente pra download de blob cross-browser) — o comportamento padrão de
+  // ativação do link (baixar com o nome de `download`) dispara do mesmo jeito
+  // que um clique real do usuário dispararia.
+  a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
