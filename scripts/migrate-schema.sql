@@ -981,8 +981,15 @@ BEGIN
 
   DELETE FROM staging_sales WHERE batch_id = p_batch_id AND sale_date = p_sale_date;
 
+  -- v_staging_count, não p_row_count: o valor que o cliente manda é só o que
+  -- ele PRETENDIA importar (parsed.sales.length, calculado antes de qualquer
+  -- chunk ser de fato inserido) — nunca é cruzado contra o que realmente
+  -- chegou no staging. Um chunk perdido silenciosamente gravaria o número
+  -- errado em import_log sem detecção nenhuma (ver
+  -- docs/auditoria-qa-2026-08-01.md, item 8). v_staging_count já foi contado
+  -- e verificado > 0 acima nesta mesma procedure — é a única fonte confiável.
   INSERT INTO import_log (sale_date, row_count, imported_by, batch_id)
-  VALUES (p_sale_date, p_row_count, p_imported_by, p_batch_id)
+  VALUES (p_sale_date, v_staging_count, p_imported_by, p_batch_id)
   ON DUPLICATE KEY UPDATE
     row_count = VALUES(row_count),
     imported_by = VALUES(imported_by),

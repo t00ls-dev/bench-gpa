@@ -261,9 +261,27 @@ entry: "server" }` do `vite.config.ts`): lança se
    de `upload.functions.ts:beginImport` — antes disso, o CLI seguia até
    `finalize_import` e estourava `SIGNAL SQLSTATE '45000'` cru — **médio**,
    esforço baixo.
-8. ⬜ **Teste de reconciliação de contagem** (linhas no arquivo vs.
-   inseridas vs. `finalize_import.p_row_count`) — **médio**, esforço médio;
-   decide também se vale adicionar a checagem que falta na procedure.
+8. ✅ 01/08 — **Reconciliação de contagem** — decisão: valia, e foi corrigido
+   na procedure, não só testado. `p_row_count` (`migrate-schema.sql:
+finalize_import`) era o que o CLIENTE afirmava (`parsed.sales.length`,
+   calculado ANTES de qualquer chunk ser de fato inserido) — nunca cruzado
+   contra o que realmente chegou no staging. Fix de 1 linha:
+   `import_log.row_count` agora grava `v_staging_count` (a contagem real,
+   já verificada `> 0` duas linhas acima na mesma procedure) em vez de
+   `p_row_count`. Escopo consciente: fica no `migrate-schema.sql` (não
+   virou migration versionada — mudança de procedure re-sincroniza sozinha
+   a cada deploy, convenção documentada em
+   `scripts/migrations/README.md`); a assinatura da procedure manteve
+   `p_row_count` pra não mexer nos dois pontos de chamada
+   (`upload.functions.ts`, `scripts/import.ts`), agora só informativo.
+   **Validado manualmente contra MariaDB real** (schema aplicado do zero
+   num banco local): `CALL finalize_import('batch-teste', '2026-08-01',
+999, NULL)` com só 3 linhas reais na staging gravou `row_count = 3` em
+   `import_log`, não 999 — confirma o fix. Agregações (`sales_daily_agg`/
+   `sales_prod_daily_agg`) e limpeza do staging conferidas na mesma
+   passada. Comentário adicionado em `upload.functions.test.ts` apontando
+   pra essa validação, já que `db.query` mockado não executa SQL de
+   verdade — **médio**, esforço médio.
 9. ✅ 01/08 — **1 teste de componente real** — `admin-user-management.test.tsx`
    (7 testes, `render()`+`fireEvent`, não `renderHook`): skeleton de
    carregamento, lista vazia, renderização de email/nome/papel/status,
