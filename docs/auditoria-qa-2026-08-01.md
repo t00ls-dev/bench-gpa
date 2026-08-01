@@ -293,13 +293,39 @@ finalize_import`) era o que o CLIENTE afirmava (`parsed.sales.length`,
    `ResetPasswordDialog` mockados como stub (escopo do próprio arquivo) —
    **médio**, esforço médio. Serve de modelo para os demais 16 componentes
    listados em A.1.
-10. ⬜ **Teste de aplicação limpa do schema contra MariaDB real** (CI ou
-    local — `migrate-schema.sql` + `scripts/migrations/*.sql` em sequência
-    a partir de banco vazio) — **médio**, esforço alto (exige banco de
-    teste no CI, ex. serviço MySQL do GitHub Actions); é o único item desta
-    lista que muda a infraestrutura de CI, não só o código de teste.
-11. ⬜ **Teste de idempotência de `run-migrations.sh`** (rodar 2x, confirmar
-    no-op na segunda) — **baixo**, esforço médio, depende do item 10.
+10. ✅ 01/08 — **Teste de aplicação limpa do schema contra MariaDB real** —
+    novo job `schema-check` em `.github/workflows/ci.yml`, serviço
+    `mariadb:11.4` (a mesma versão de produção), aplica `migrate-schema.sql`
+    - `scripts/migrations/*.sql` num banco vazio via `scripts/run-migrations.sh`
+      de verdade (o mesmo script do deploy). `deploy` agora depende também
+      deste job (`needs: [ci, schema-check]`), não só de `ci` — **médio**,
+      esforço alto (única mudança de infraestrutura de CI desta lista).
+
+    **Achou 2 bugs reais na primeira execução** — instalação nova sempre
+    esteve quebrada, só nunca foi notado porque todo ambiente existente já
+    tinha rodado as migrations antes de a baseline mudar:
+    - `0002_remove_medidas_sem_fonte.sql`: `DROP COLUMN` sem `IF EXISTS`
+      falhava porque `migrate-schema.sql` já não cria essas colunas.
+    - `0003_token_version.sql`: `ADD COLUMN` sem `IF NOT EXISTS` falhava
+      porque `migrate-schema.sql` já cria `users.token_version` — duplicata.
+
+    Ambas corrigidas com `IF EXISTS`/`IF NOT EXISTS` nativos do MariaDB
+    (comentários antigos diziam que essa sintaxe não existia — errado, é
+    uma extensão do MariaDB desde a série 10.x, ausente só no MySQL vanilla
+    até 8.0.29; confirmado direto contra MariaDB 11.8 local). Editar uma
+    migration já aplicada normalmente é proibido
+    (`scripts/migrations/README.md`, forward-only) — seguro aqui porque o
+    runner identifica migrations concluídas pelo NOME DO ARQUIVO em
+    `schema_migrations`, nunca reexecuta conteúdo; produção não é afetada,
+    só instalação nova passa a funcionar. Validado manualmente contra
+    MariaDB real antes de subir pro CI (banco vazio → aplica limpo; rodado
+    de novo → no-op).
+
+11. ✅ 01/08 — **Teste de idempotência de `run-migrations.sh`** — coberto
+    pelo mesmo job `schema-check`: roda o script 2x seguidas contra o mesmo
+    banco e falha se a segunda vez não reportar "nenhuma migration nova"
+    (`grep` na saída) — **baixo**, esforço médio, feito junto do item 10
+    por já estar rodando o mesmo banco/schema.
 12. ⬜ **Testes de edge case adicionais do parser XLSX** (múltiplas
     planilhas, unicode/emoji, datas em formato serial, `.xls` legado,
     linhas duplicadas) — **baixo**, esforço baixo cada, mas em conjunto é
