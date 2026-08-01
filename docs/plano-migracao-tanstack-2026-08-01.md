@@ -10,6 +10,11 @@ em se deve sair.
 Execução: fica a critério do usuário, fase a fase. Este documento não inicia
 nenhuma mudança de código.
 
+As seções 3 a 5 avaliam, com dados reais (versões publicadas, maturidade,
+alternativas), as duas peças específicas que a proposta original citava sem
+detalhar (Fastify e Drizzle ORM) e checam se renovar o TanStack em vez de
+sair dele resolveria algo (não resolve: não há defasagem de versão).
+
 ## 1. Inventário real do que existe hoje
 
 Levantado no código em 01/08/2026, não por suposição:
@@ -50,7 +55,7 @@ Levantado no código em 01/08/2026, não por suposição:
 - Formulários: nenhum usa lib de formulário hoje. Login, upload e admin usam
   `useState` + `onSubmit` nativo.
 - Infra: Debian + Nginx + PM2, já é exatamente a proposta original de
-  infraestrutura. Nada muda na Fase 2 além de topologia de processo (seção 4).
+  infraestrutura. Nada muda na Fase 2 além de topologia de processo (seção 7).
 - Testes: 39 arquivos, 347 testes, `bun run check` (lint + test) e
   `bun run typecheck` já passam limpos.
 
@@ -90,7 +95,114 @@ Este plano segue estruturado para funcionar com qualquer uma das três, mas
 a Fase 3 e a Fase 4 abaixo assumem a Opção A como padrão (é a que o roteiro
 recomenda). Trocar de opção não invalida a Fase 1.
 
-## 3. Fase 1: Fundação (não depende da opção A/B/C)
+## 3. Alternativa avaliada: renovar o TanStack em vez de sair
+
+Antes de aprofundar Fastify e Drizzle, vale checar se "sair do TanStack"
+resolveria um problema de desatualização, porque nesse caso bastaria
+atualizar dependências, sem trocar de framework. Comparado o que está
+instalado (`package.json`) com a versão mais recente publicada no
+registro npm em 01/08/2026:
+
+| Pacote | Instalado | Mais recente | Defasagem |
+| --- | --- | --- | --- |
+| `@tanstack/react-query` | 5.101.4 | 5.101.4 | Nenhuma |
+| `@tanstack/react-router` | 1.170.18 | 1.170.18 | Nenhuma |
+| `@tanstack/react-start` | 1.168.33 | 1.168.34 | 1 patch |
+| `@tanstack/react-virtual` | 3.14.9 | 3.14.9 | Nenhuma |
+| `@tanstack/router-plugin` | 1.168.23 | 1.168.23 | Nenhuma |
+
+Não há defasagem real: o projeto já está, na prática, na versão mais
+recente de todo o ecossistema TanStack em uso, e os pacotes seguem
+recebendo releases ativas e frequentes (não é um projeto abandonado ou em
+manutenção mínima). "Renovar" não é um caminho disponível como alternativa
+à saída, porque não há nada desatualizado para renovar: a decisão de sair
+não é motivada por obsolescência, é por preferência sobre a forma da
+ferramenta (acoplamento de Router+Start+Query como pacote único, modelo
+de arquivo de rota, etc.), algo que atualizar versão nenhuma resolve.
+
+## 4. Avaliação: Fastify
+
+- **Maturidade**: versão 5.x (`fastify@5.11.0` no momento desta avaliação),
+  projeto iniciado em 2016, portanto quase 10 anos de desenvolvimento
+  contínuo e múltiplas major versions já estabilizadas. MIT.
+- **Comunidade**: grande e ativa, ecossistema extenso de plugins oficiais
+  e de terceiros (`@fastify/*`), amplamente adotado em produção fora deste
+  projeto.
+- **Estabilidade**: alta. Validação de schema embutida (JSON Schema/Ajv,
+  com suporte a Zod via `fastify-type-provider-zod`), sistema de hooks
+  (`onRequest`/`preHandler`) que cobre bem o que hoje é feito com
+  `createMiddleware` (`requireAuth`, rate limit).
+- **Limitações**: é uma ferramenta pensada primeiro para Node.js. Roda em
+  Bun via camada de compatibilidade, funciona, mas não é o alvo primário
+  de otimização do projeto Fastify. Para uma API pequena (35 endpoints),
+  parte do modelo de encapsulamento de plugins do Fastify é complexidade
+  que este projeto não usaria.
+- **Alternativas**:
+  - **Express 5.x** (`5.2.1`): comunidade ainda maior, modelo mais simples,
+    mas sem validação de schema embutida e sem os hooks tipados do Fastify.
+    Perde a maior vantagem prática do Fastify para este projeto.
+  - **Hono** (`4.12.33`): mais jovem que Fastify, mas já maduro (major 4,
+    lançamentos frequentes), MIT, e desenhado desde o início para rodar
+    nativamente rápido em Bun (e Deno, Cloudflare Workers), diferente do
+    Fastify, que trata Bun como alvo de compatibilidade. Para um projeto
+    que já roda 100% em Bun, Hono é arquiteturalmente mais alinhado ao
+    runtime atual do que Fastify. É mais leve, tem sintaxe de rota
+    semelhante, e integra bem com Zod (`@hono/zod-validator`).
+  - Manter tudo em uma única aplicação (sem framework HTTP separado): dado
+    que já existe `src/server.ts` como entry point customizado, seria
+    possível expor a API sem framework nenhum, só `Bun.serve`. Mais
+    trabalho manual (roteamento, parsing de corpo) sem ganho evidente
+    sobre usar uma lib fina como Hono.
+
+Recomendação: reavaliar Hono como alternativa ao Fastify antes de comprometer
+a Fase 3 (Backend) a ele. A proposta original escolheu Fastify sem comparar
+com opções mais alinhadas ao runtime já usado no projeto (Bun).
+
+## 5. Avaliação: Drizzle ORM
+
+- **Modelagem**: schema definido em TypeScript, próximo da sintaxe SQL
+  (diferente do DSL próprio do Prisma). `drizzle-kit` gera migrações a
+  partir de diffs de schema.
+- **Maturidade**: `drizzle-orm@0.45.2`, ainda em versão 0.x depois de
+  cerca de três anos de desenvolvimento público. Não é sinal de abandono
+  (releases frequentes), mas é sinal de que a API ainda pode ter mudanças
+  de breaking change fora do ritmo normal de semver 1.0+.
+- **Migrações**: `drizzle-kit` cobre geração e aplicação de migração para
+  tabelas comuns, mas não gerencia stored procedures. As 16 stored
+  procedures que hoje concentram a maior parte da lógica de leitura/escrita
+  (`scripts/migrate-schema.sql`) continuariam fora do alcance do ORM,
+  chamadas via SQL cru de qualquer forma (`sql` template do próprio
+  Drizzle, ou mantendo `mysql2/promise` como está). Na prática, adotar
+  Drizzle envolveria só as poucas consultas ad hoc fora das procedures,
+  não o núcleo do acesso a dado deste projeto.
+- **Portabilidade MariaDB/PostgreSQL**: Drizzle suporta os dois dialetos,
+  mas não de forma transparente. Trocar de dialeto MySQL/MariaDB para
+  PostgreSQL no Drizzle ainda exige revisar schema e queries (tipos,
+  funções específicas de cada banco): não é "escreve uma vez, roda nos
+  dois" como a proposta original sugere ao falar em "compatibilidade
+  arquitetural com PostgreSQL".
+- **Performance**: comparável a `mysql2/promise` cru para os casos que
+  cobre (é uma camada fina sobre o driver, não um ORM pesado como Prisma
+  com muitas camadas de abstração). Não é um fator de decisão aqui.
+- **Alternativas**:
+  - **Prisma** (`7.9.1`): muito mais maduro (major 7, anos de estabilidade
+    1.0+), mas mais pesado, com etapa de geração de código
+    (`prisma generate`) e um DSL de schema próprio, mais distante do SQL
+    que o projeto já usa nas 16 procedures.
+  - **Kysely** (`0.29.4`): mais minimalista que Drizzle, só query builder
+    tipado, sem gestão de migração própria robusta. Também pré-1.0.
+  - **Manter `mysql2/promise` cru** (estado atual): sem dependência nova,
+    já testado (347 testes cobrindo os retornos), mas sem tipagem
+    automática do resultado de query, precisa de tipo manual por chamada.
+
+Recomendação: mantém-se o que a avaliação anterior já dizia: não há dor
+medida hoje que justifique trocar de camada de acesso a dado. Se a decisão
+for adotar Drizzle mesmo assim (por preferência, como a saída do TanStack),
+o footprint real seria pequeno: só as consultas fora das 16 procedures,
+não uma reescrita da camada de dados inteira. Trazer Drizzle não precisa
+estar amarrado à saída do TanStack, são decisões independentes.
+
+## 6. Fase 1: Fundação (não depende da opção A/B/C)
 
 Trabalho que vale a pena fazer primeiro porque é reversível, não quebra nada
 em produção, e reduz o risco de todas as fases seguintes:
@@ -112,7 +224,7 @@ em produção, e reduz o risco de todas as fases seguintes:
 - [ ] Nenhuma mudança visual ou de comportamento nesta fase. Se um teste
   muda de resultado, é regressão, não refactor esperado.
 
-## 4. Fase 2: Infraestrutura
+## 7. Fase 2: Infraestrutura
 
 A proposta original (Debian + Nginx + PM2) já é a infraestrutura real de
 produção hoje: não há migração de máquina, sistema operacional ou processo
@@ -141,21 +253,25 @@ Itens a validar antes de qualquer swap de produção:
 - [ ] Logs e heartbeat de cron (`cron_heartbeat`, purge, refresh-universe)
   não dependem do Start, não são afetados por esta migração.
 
-## 5. Fase 3: Backend (Fastify)
+## 8. Fase 3: Backend (Fastify ou Hono, ver seção 4)
 
-Assumindo Opção A (Fastify como API separada):
+Assumindo Opção A (API separada). O texto abaixo usa "Fastify" como
+nome de referência, mas a avaliação da seção 4 recomenda decidir entre
+Fastify e Hono antes de começar esta fase; a estrutura do trabalho é a
+mesma nos dois casos, só a API de rota/hook muda:
 
-- [ ] Portar as 35 funções puras extraídas na Fase 1 para rotas Fastify.
-  A lógica não muda, só o transporte (de `createServerFn`/RPC para
-  rota HTTP normal).
-- [ ] `requireAuth` (hoje `createMiddleware`) vira hook `onRequest`/
-  `preHandler` do Fastify. Mesma chamada a `resolveSession`, mesmo
-  comportamento de slide por inatividade.
-- [ ] Rate limit (`rate-limit.middleware.ts`) vira hook Fastify equivalente,
+- [ ] Portar as 35 funções puras extraídas na Fase 1 para rotas do
+  framework escolhido. A lógica não muda, só o transporte (de
+  `createServerFn`/RPC para rota HTTP normal).
+- [ ] `requireAuth` (hoje `createMiddleware`) vira hook de requisição do
+  framework escolhido (`onRequest`/`preHandler` no Fastify, middleware de
+  rota no Hono). Mesma chamada a `resolveSession`, mesmo comportamento de
+  slide por inatividade.
+- [ ] Rate limit (`rate-limit.middleware.ts`) vira hook equivalente,
   mesmas 4 faixas por IP + balde por conta hoje documentadas no README.
 - [ ] `/api/pdf-download` (hoje fora do envelope RPC por precisar de
-  `Response` bruto) fica mais simples nesse mundo: no Fastify não existe
-  envelope RPC a evitar, vira uma rota normal.
+  `Response` bruto) fica mais simples nesse mundo: nem Fastify nem Hono
+  têm envelope RPC a evitar, vira uma rota normal.
 - [ ] `jsonwebtoken`, `bcrypt`, `zod`, `mysql2/promise`: nenhum muda. Não
   fazem parte do que está sendo removido.
 - [ ] CSP nonce: se a Opção A for confirmada (sem SSR), o nonce por
@@ -173,7 +289,7 @@ Assumindo Opção A (Fastify como API separada):
   a regra de "não reescrever tudo". Se um dia houver dor real com SQL cru,
   vira uma decisão isolada e independente desta migração.
 
-## 6. Fase 4: Frontend
+## 9. Fase 4: Frontend
 
 Assumindo Opção A:
 
@@ -202,13 +318,13 @@ Assumindo Opção A:
   troca uma rota da stack antiga para a nova mantendo as outras 19
   funcionando sem alteração.
 
-## 7. Fase 5: Melhorias avançadas
+## 10. Fase 5: Melhorias avançadas
 
 Fora de escopo deste plano. Só depois de Fases 1 a 4 estáveis em produção
 por tempo suficiente para confiar na base nova. Nenhuma otimização, reescrita
 ou funcionalidade nova entra antes disso.
 
-## 8. Regra do item mais complexo por último
+## 11. Regra do item mais complexo por último
 
 O item de maior risco é a troca do motor de SSR/build (Start para a opção
 escolhida), porque é o único ponto que toca autenticação (parsing de
@@ -219,7 +335,7 @@ cookie, CSP), build e deploy, e as 20 rotas ao mesmo tempo. Por isso:
 3. A troca de rota (Fase 4) é feita incrementalmente, uma de cada vez, nunca
    como um corte único das 20 rotas.
 
-## 9. Critérios de aceitação
+## 12. Critérios de aceitação
 
 - Os 347 testes (ou mais, com os novos da Fase 1) continuam passando.
 - Nenhuma regressão observável nas 20 rotas e nas 35 operações de servidor
@@ -231,7 +347,7 @@ cookie, CSP), build e deploy, e as 20 rotas ao mesmo tempo. Por isso:
 - MariaDB continua o banco. Nenhum dado migra. Camada de acesso (ORM ou não)
   é decisão fora deste plano.
 
-## 10. Riscos
+## 13. Riscos
 
 - Se a Opção A for escolhida, a perda de SSR muda a experiência percebida
   (flash de carregamento na primeira visita). Validar com uso real antes do
@@ -246,11 +362,14 @@ cookie, CSP), build e deploy, e as 20 rotas ao mesmo tempo. Por isso:
   desta seção existe para que parar em qualquer ponto intermediário deixe o
   sistema funcionando, não quebrado.
 
-## 11. Próximos passos
+## 14. Próximos passos
 
 1. Decidir entre Opção A, B ou C (seção 2). O restante do plano (Fases 3 e
    4) muda de conteúdo dependendo da escolha.
-2. Se Fase 1 for aprovada para começar, ela não depende dessa decisão e pode
-   iniciar de imediato, em PRs pequenas, uma função por vez.
-3. Nenhum código desta migração começa sem confirmação explícita, fase a
+2. Decidir entre Fastify e Hono para a Fase 3 (seção 4), e se Drizzle entra
+   ou não como camada opcional para as consultas fora das stored procedures
+   (seção 5, decisão independente da saída do TanStack).
+3. Se Fase 1 for aprovada para começar, ela não depende de nenhuma dessas
+   decisões e pode iniciar de imediato, em PRs pequenas, uma função por vez.
+4. Nenhum código desta migração começa sem confirmação explícita, fase a
    fase, como combinado.
