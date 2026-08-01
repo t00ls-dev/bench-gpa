@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type jsPDF from "jspdf";
-import { openPdfBlob, slugifyFilename } from "./export-pdf";
+import { slugifyFilename } from "./export-pdf";
 
 function createMockDoc(): jsPDF {
   return {
@@ -9,15 +9,27 @@ function createMockDoc(): jsPDF {
   } as unknown as jsPDF;
 }
 
+// openPdfBlob agora reusa um anchor único, criado uma vez no módulo (ver
+// export-pdf.ts) — vi.resetModules() + import dinâmico dá a cada teste um
+// módulo fresco, sem esse estado vazando de um teste pro outro.
+async function freshOpenPdfBlob() {
+  vi.resetModules();
+  const mod = await import("./export-pdf");
+  return mod.openPdfBlob;
+}
+
+function getAnchor(): HTMLAnchorElement {
+  const a = document.body.querySelector("a");
+  if (!a) throw new Error("nenhum <a> encontrado no documento");
+  return a;
+}
+
 describe("openPdfBlob", () => {
   let mockDoc: ReturnType<typeof createMockDoc>;
-  let anchorEl: HTMLAnchorElement;
 
   beforeEach(() => {
     mockDoc = createMockDoc();
-    anchorEl = document.createElement("a");
-    vi.spyOn(document, "createElement").mockReturnValue(anchorEl);
-    vi.spyOn(anchorEl, "click");
+    document.body.innerHTML = "";
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
     vi.spyOn(URL, "revokeObjectURL");
     vi.useFakeTimers();
@@ -28,61 +40,84 @@ describe("openPdfBlob", () => {
     vi.useRealTimers();
   });
 
-  it("calls doc.output with blob", () => {
+  it("calls doc.output with blob", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
     openPdfBlob(mockDoc);
     expect(mockDoc.output).toHaveBeenCalledWith("blob");
   });
 
-  it("creates an anchor element", () => {
+  it("creates a single anchor element, appended to the document", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
     openPdfBlob(mockDoc);
-    expect(document.createElement).toHaveBeenCalledWith("a");
+    expect(getAnchor().isConnected).toBe(true);
   });
 
-  it("sets anchor href to blob URL", () => {
+  it("sets anchor href to blob URL", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
     openPdfBlob(mockDoc);
-    expect(anchorEl.href).toBe("blob:mock");
+    expect(getAnchor().href).toBe("blob:mock");
   });
 
-  it("sets anchor target and rel", () => {
+  // Sem nome, mantém o comportamento antigo (abre em nova aba) — `download`
+  // faria o browser baixar direto em vez de abrir o preview.
+  it("sets anchor target and rel when no filename is given", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
     openPdfBlob(mockDoc);
-    expect(anchorEl.target).toBe("_blank");
-    expect(anchorEl.rel).toBe("noopener noreferrer");
+    const anchor = getAnchor();
+    expect(anchor.target).toBe("_blank");
+    expect(anchor.rel).toBe("noopener noreferrer");
+    expect(anchor.download).toBe("");
   });
 
-  it("clicks the anchor", () => {
-    openPdfBlob(mockDoc);
-    expect(anchorEl.click).toHaveBeenCalledTimes(1);
+  it("sets the download attribute when a filename is given, clearing target/rel", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
+    const anchor = getAnchor();
+    expect(anchor.download).toBe("analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
+    expect(anchor.hasAttribute("target")).toBe(false);
+    expect(anchor.hasAttribute("rel")).toBe(false);
   });
 
-  it("revokes blob URL after 10s", () => {
+  // O anchor é reusado entre chamadas (não recriado) — um atributo deixado
+  // por uma chamada anterior não pode vazar pra próxima.
+  it("clears the download attribute on a later call without filename", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc, "relatorio.pdf");
+    openPdfBlob(mockDoc);
+    const anchor = getAnchor();
+    expect(anchor.hasAttribute("download")).toBe(false);
+    expect(anchor.target).toBe("_blank");
+  });
+
+  it("clicks the anchor on every call", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc); // primeira chamada cria o anchor
+    const clickSpy = vi.spyOn(getAnchor(), "click");
+    openPdfBlob(mockDoc);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("revokes blob URL after 10s", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
     openPdfBlob(mockDoc);
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     vi.advanceTimersByTime(10000);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock");
   });
 
-  // Sem nome, mantém o comportamento antigo (abre em nova aba) — `download`
-  // faria o browser baixar direto em vez de abrir o preview.
-  it("does not set download when no filename is given", () => {
-    openPdfBlob(mockDoc);
-    expect(anchorEl.download).toBe("");
-    expect(anchorEl.target).toBe("_blank");
-  });
-
-  it("sets the download attribute when a filename is given", () => {
-    openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
-    expect(anchorEl.download).toBe("analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
-  });
-
-  // Firefox só respeita `download` se o <a> estiver anexado ao documento no
-  // momento do clique — fora do DOM, ele cai pro comportamento padrão de
-  // navegação e salva com um nome genérico (hash/UUID) em vez de `filename`.
-  // Chrome tolera clicar num elemento solto, por isso o bug passava
-  // despercebido nos dois testes acima (que só checam a chamada, não o DOM).
-  it("anexa o anchor ao documento antes de clicar (bug de nome de arquivo no Firefox)", () => {
+  // Regressão do bug de nome de arquivo genérico no Firefox: o Firefox só
+  // honra `download` se o <a> estiver conectado ao documento no momento do
+  // clique. Um anchor criado/anexado/removido na mesma chamada (a versão
+  // anterior deste fix) ainda falhava em alguns casos — o padrão persistente
+  // (criado uma vez, nunca removido) é o documentado como confiável entre
+  // navegadores para download programático.
+  it("o anchor está conectado ao documento no momento do clique", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc); // garante que o anchor já existe
+    const anchor = getAnchor();
     let connectedAtClickTime: boolean | undefined;
-    vi.spyOn(anchorEl, "click").mockImplementation(() => {
-      connectedAtClickTime = anchorEl.isConnected;
+    vi.spyOn(anchor, "click").mockImplementation(() => {
+      connectedAtClickTime = anchor.isConnected;
     });
 
     openPdfBlob(mockDoc, "relatorio.pdf");
@@ -90,9 +125,21 @@ describe("openPdfBlob", () => {
     expect(connectedAtClickTime).toBe(true);
   });
 
-  it("remove o anchor do documento logo depois do clique", () => {
-    openPdfBlob(mockDoc, "relatorio.pdf");
-    expect(anchorEl.isConnected).toBe(false);
+  it("mantém o anchor no documento depois do clique — não remove, reusa na próxima chamada", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc);
+    expect(getAnchor().isConnected).toBe(true);
+  });
+
+  it("reusa o mesmo elemento entre chamadas em vez de criar um novo a cada export", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc, "primeiro.pdf");
+    const first = getAnchor();
+
+    openPdfBlob(mockDoc, "segundo.pdf");
+
+    expect(document.body.querySelectorAll("a")).toHaveLength(1);
+    expect(getAnchor()).toBe(first);
   });
 });
 
