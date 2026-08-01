@@ -4,7 +4,10 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
 import { ssrLimiter, getClientIp } from "./lib/rate-limit";
+import { assertSafeBoot } from "./lib/boot-guards";
 import { ServerResponse } from "node:http";
+
+assertSafeBoot(process.env);
 
 const origWriteHead = ServerResponse.prototype.writeHead;
 ServerResponse.prototype.writeHead = function (...args: unknown[]) {
