@@ -5,6 +5,11 @@ import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
 import { ssrLimiter, getClientIp } from "./lib/rate-limit";
 import { assertSafeBoot } from "./lib/boot-guards";
+import { parseCookie } from "cookie";
+import { SESSION_COOKIE } from "./lib/auth-config";
+import { resolveSession } from "./lib/session";
+import { storePdf, takePdf } from "./lib/pdf-download-store";
+import { contentDispositionHeader } from "./lib/content-disposition";
 import { ServerResponse } from "node:http";
 
 assertSafeBoot(process.env);
@@ -33,6 +38,46 @@ async function getServerEntry(): Promise<ServerEntry> {
     );
   }
   return serverEntryPromise;
+}
+
+/**
+ * Ponte pra `Content-Disposition: attachment` de verdade (ver
+ * src/lib/pdf-download-store.ts pro porquê) — o cliente gera o PDF
+ * (jsPDF, área.page) e passa por aqui só pra pegar o header de download
+ * confiável; a montagem do PDF em si continua inteiramente no navegador.
+ *
+ * Fora do fluxo normal de server functions (`/_serverFn/`) de propósito:
+ * precisa de controle total do `Response` (corpo binário, header custom),
+ * que o envelope RPC de createServerFn não permite.
+ */
+async function handlePdfDownload(request: Request, url: URL): Promise<Response> {
+  const token = parseCookie(request.headers.get("cookie") ?? "")[SESSION_COOKIE];
+  const session = await resolveSession(token, { slide: false }).catch(() => null);
+  if (!session) return new Response("Unauthorized", { status: 401 });
+
+  if (request.method === "POST" && url.pathname === "/api/pdf-download") {
+    const filenameHeader = request.headers.get("x-filename");
+    if (!filenameHeader) return new Response("x-filename ausente", { status: 400 });
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    const downloadToken = storePdf(session.userId, bytes, decodeURIComponent(filenameHeader));
+    return Response.json({ url: `/api/pdf-download/${downloadToken}` });
+  }
+
+  if (request.method === "GET" && url.pathname.startsWith("/api/pdf-download/")) {
+    const downloadToken = url.pathname.slice("/api/pdf-download/".length);
+    const entry = takePdf(downloadToken, session.userId);
+    if (!entry) return new Response("Not found", { status: 404 });
+    return new Response(entry.bytes as BodyInit, {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": contentDispositionHeader(entry.filename),
+        "cache-control": "no-store",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
+
+  return new Response("Not found", { status: 404 });
 }
 
 function applySecurityHeaders(
@@ -101,6 +146,10 @@ export default {
       if (isServerFn) {
         const handler = await getServerEntry();
         return await handler.fetch(request, env, ctx);
+      }
+
+      if (url.pathname.startsWith("/api/pdf-download")) {
+        return await handlePdfDownload(request, url);
       }
 
       const nonce = crypto.randomUUID();

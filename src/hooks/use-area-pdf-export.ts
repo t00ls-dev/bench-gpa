@@ -220,7 +220,7 @@ export function useAreaPdfExport({
       });
 
       const filename = `analise-area-${slugifyFilename(area)}-${dateFrom}-a-${dateTo}.pdf`;
-      openPdfBlob(doc, filename);
+      await openPdfBlob(doc, filename);
     } finally {
       setPdfLoading(false);
     }

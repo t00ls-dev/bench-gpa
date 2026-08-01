@@ -5,11 +5,11 @@ import { slugifyFilename } from "./export-pdf";
 
 function createMockDoc(): jsPDF {
   return {
-    output: vi.fn(() => new Blob(["mock-pdf"])),
+    output: vi.fn(() => new Blob(["mock-pdf"], { type: "application/pdf" })),
   } as unknown as jsPDF;
 }
 
-// openPdfBlob agora reusa um anchor único, criado uma vez no módulo (ver
+// openPdfBlob reusa um anchor de preview único, criado uma vez no módulo (ver
 // export-pdf.ts) — vi.resetModules() + import dinâmico dá a cada teste um
 // módulo fresco, sem esse estado vazando de um teste pro outro.
 async function freshOpenPdfBlob() {
@@ -24,7 +24,7 @@ function getAnchor(): HTMLAnchorElement {
   return a;
 }
 
-describe("openPdfBlob", () => {
+describe("openPdfBlob — sem filename (preview numa aba nova)", () => {
   let mockDoc: ReturnType<typeof createMockDoc>;
 
   beforeEach(() => {
@@ -32,145 +32,133 @@ describe("openPdfBlob", () => {
     document.body.innerHTML = "";
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock");
     vi.spyOn(URL, "revokeObjectURL");
+    vi.stubGlobal("fetch", vi.fn());
     vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
-  it("calls doc.output with blob", async () => {
+  it("nunca chama fetch — preview fica só no cliente, sem passar pelo servidor", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc);
-    expect(mockDoc.output).toHaveBeenCalledWith("blob");
+    await openPdfBlob(mockDoc);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("creates a single anchor element, appended to the document", async () => {
+  it("cria um anchor com blob: URL, target=_blank, sem download", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc);
-    expect(getAnchor().isConnected).toBe(true);
-  });
-
-  it("sets anchor href to blob URL", async () => {
-    const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc);
-    expect(getAnchor().href).toBe("blob:mock");
-  });
-
-  // Sem nome, mantém o comportamento antigo (abre em nova aba) — `download`
-  // faria o browser baixar direto em vez de abrir o preview.
-  it("sets anchor target and rel when no filename is given", async () => {
-    const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc);
+    await openPdfBlob(mockDoc);
     const anchor = getAnchor();
+    expect(anchor.href).toBe("blob:mock");
     expect(anchor.target).toBe("_blank");
     expect(anchor.rel).toBe("noopener noreferrer");
-    expect(anchor.download).toBe("");
-  });
-
-  it("sets the download attribute when a filename is given, clearing target/rel", async () => {
-    const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
-    const anchor = getAnchor();
-    expect(anchor.download).toBe("analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
-    expect(anchor.hasAttribute("target")).toBe(false);
-    expect(anchor.hasAttribute("rel")).toBe(false);
-  });
-
-  // O anchor é reusado entre chamadas (não recriado) — um atributo deixado
-  // por uma chamada anterior não pode vazar pra próxima.
-  it("clears the download attribute on a later call without filename", async () => {
-    const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc, "relatorio.pdf");
-    openPdfBlob(mockDoc);
-    const anchor = getAnchor();
     expect(anchor.hasAttribute("download")).toBe(false);
-    expect(anchor.target).toBe("_blank");
   });
 
-  // `a.click()` (o método nativo) não é confiável no Firefox recente pra
-  // disparar o download — o fix dispara um MouseEvent completo via
-  // dispatchEvent, que ainda ativa o comportamento padrão do link (baixar
-  // com o `download`) igual um clique real dispararia. Testado via um
-  // listener de "click" de verdade, não espionando `.click()` (que não é
-  // mais chamado).
-  it("dispara um evento de click de verdade no anchor a cada chamada", async () => {
+  it("dispara um clique de verdade (dispatchEvent) com o anchor conectado ao documento", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc); // primeira chamada cria o anchor
+    await openPdfBlob(mockDoc); // primeira chamada cria o anchor
     const anchor = getAnchor();
-    let clickEvents = 0;
-    anchor.addEventListener("click", () => clickEvents++);
+    let connectedAtClickTime: boolean | undefined;
+    let receivedEvent: MouseEvent | undefined;
+    anchor.addEventListener("click", (e) => {
+      connectedAtClickTime = anchor.isConnected;
+      receivedEvent = e as MouseEvent;
+    });
 
-    openPdfBlob(mockDoc);
+    await openPdfBlob(mockDoc);
 
-    expect(clickEvents).toBe(1);
+    expect(connectedAtClickTime).toBe(true);
+    expect(receivedEvent).toBeInstanceOf(MouseEvent);
+  });
+
+  it("reusa o mesmo anchor entre chamadas em vez de criar um novo a cada preview", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    await openPdfBlob(mockDoc);
+    const first = getAnchor();
+    await openPdfBlob(mockDoc);
+    expect(document.body.querySelectorAll("a")).toHaveLength(1);
+    expect(getAnchor()).toBe(first);
   });
 
   it("revokes blob URL after 10s", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc);
+    await openPdfBlob(mockDoc);
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     vi.advanceTimersByTime(10000);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock");
   });
+});
 
-  // Regressão do bug de nome de arquivo genérico no Firefox: o Firefox só
-  // honra `download` se o <a> estiver conectado ao documento no momento do
-  // clique. Um anchor criado/anexado/removido na mesma chamada (a versão
-  // anterior deste fix) ainda falhava em alguns casos — o padrão persistente
-  // (criado uma vez, nunca removido) é o documentado como confiável entre
-  // navegadores para download programático.
-  it("o anchor está conectado ao documento no momento do clique", async () => {
-    const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc); // garante que o anchor já existe
-    const anchor = getAnchor();
-    let connectedAtClickTime: boolean | undefined;
-    anchor.addEventListener("click", () => {
-      connectedAtClickTime = anchor.isConnected;
+describe("openPdfBlob — com filename (download forçado via servidor)", () => {
+  let mockDoc: ReturnType<typeof createMockDoc>;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockDoc = createMockDoc();
+    document.body.innerHTML = "";
+    fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ url: "/api/pdf-download/tok-123" }),
     });
-
-    openPdfBlob(mockDoc, "relatorio.pdf");
-
-    expect(connectedAtClickTime).toBe(true);
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(URL, "createObjectURL");
+    // window.location.href não é navegável no jsdom — sobrescreve pra
+    // conseguir espionar sem o "Not implemented: navigation" do jsdom.
+    delete (window as unknown as { location?: unknown }).location;
+    (window as unknown as { location: { href: string } }).location = { href: "" };
   });
 
-  // Discrimina de verdade `.click()` de `dispatchEvent`: no jsdom, `.click()`
-  // NÃO passa pelo método `dispatchEvent` da instância (confirmado à parte,
-  // monkey-patchando o método antes de chamar `.click()` — não disparou), só
-  // um listener de "click" comum não seria capaz de distinguir os dois,
-  // porque `.click()` também dispara um evento observável por listener.
-  it("usa dispatchEvent (não `.click()`) — regressão que fica sem detecção só com listener", async () => {
-    const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc); // garante que o anchor já existe
-    const anchor = getAnchor();
-    const dispatchSpy = vi.spyOn(anchor, "dispatchEvent");
-
-    openPdfBlob(mockDoc);
-
-    expect(dispatchSpy).toHaveBeenCalledTimes(1);
-    const event = dispatchSpy.mock.calls[0][0] as MouseEvent;
-    expect(event).toBeInstanceOf(MouseEvent);
-    expect(event.type).toBe("click");
-    expect(event.bubbles).toBe(true);
-    expect(event.cancelable).toBe(true);
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  it("mantém o anchor no documento depois do clique — não remove, reusa na próxima chamada", async () => {
+  // Regressão do bug real: blob: URL + atributo `download` não é confiável
+  // no gerenciador de download do Firefox (cai pro UUID da própria blob URL
+  // como nome — Mozilla Bugzilla #1282407), mesmo com o anchor conectado ao
+  // DOM e um MouseEvent de verdade disparado (as duas correções anteriores).
+  // Por isso o caminho de filename não cria blob: URL nem anchor nenhum —
+  // vai inteiro via POST pro servidor, que devolve Content-Disposition real.
+  it("não cria nenhuma blob: URL nem anchor — vai direto pro servidor", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc);
-    expect(getAnchor().isConnected).toBe(true);
+    await openPdfBlob(mockDoc, "relatorio.pdf");
+    expect(document.body.querySelector("a")).toBeNull();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
-  it("reusa o mesmo elemento entre chamadas em vez de criar um novo a cada export", async () => {
+  it("faz POST pra /api/pdf-download com o blob no corpo e o filename no header", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    openPdfBlob(mockDoc, "primeiro.pdf");
-    const first = getAnchor();
+    await openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
 
-    openPdfBlob(mockDoc, "segundo.pdf");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/pdf-download",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "x-filename": encodeURIComponent("analise-area-mercearia-2026-07-14-a-2026-07-20.pdf"),
+        },
+        body: expect.any(Blob),
+      }),
+    );
+  });
 
-    expect(document.body.querySelectorAll("a")).toHaveLength(1);
-    expect(getAnchor()).toBe(first);
+  it("navega (window.location.href) pra URL de download devolvida pelo servidor", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    await openPdfBlob(mockDoc, "relatorio.pdf");
+    expect(window.location.href).toBe("/api/pdf-download/tok-123");
+  });
+
+  it("lança um erro claro se o POST falhar, sem navegar", async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: () => Promise.resolve({}) });
+    const openPdfBlob = await freshOpenPdfBlob();
+    await expect(openPdfBlob(mockDoc, "relatorio.pdf")).rejects.toThrow(
+      "Falha ao preparar o download do PDF.",
+    );
+    expect(window.location.href).toBe("");
   });
 });
 
