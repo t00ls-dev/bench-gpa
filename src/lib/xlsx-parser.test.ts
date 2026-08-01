@@ -9,6 +9,15 @@ function makeWorkbook(rows: unknown[][]): ArrayBuffer {
   return XLSX.write(wb, { type: "array", bookType: "xlsx" });
 }
 
+// .xls (binário legado, BIFF8) — o dropzone aceita a extensão
+// (upload-dropzone.tsx: accept=".xlsx,.xls"), mas nada testava esse formato.
+function makeWorkbookXls(rows: unknown[][]): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  return XLSX.write(wb, { type: "array", bookType: "xls" });
+}
+
 describe("xlsx-parser", () => {
   it("parses a minimal valid sales file", () => {
     const buf = makeWorkbook([
@@ -226,6 +235,74 @@ describe("xlsx-parser", () => {
     const result = parseAnyWorkbook(buf);
     expect(result.products).toHaveLength(2);
     expect(result.products.find((p) => p.prod_code === "001")?.prod_name).toBe("PROD A");
+  });
+
+  it("lê corretamente um arquivo .xls legado (binário BIFF8), não só .xlsx", () => {
+    // O dropzone aceita a extensão (upload-dropzone.tsx: accept=".xlsx,.xls"),
+    // mas nada testava esse formato — parseAnyWorkbook usa o mesmo XLSX.read()
+    // pros dois, que detecta o formato pelo conteúdo do buffer, não pela
+    // extensão do nome de arquivo (que o parser nem recebe).
+    const buf = makeWorkbookXls([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/01/2024"],
+      [null, null, null, null, "12345-PROD LEGADO", 42],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sale_date).toBe("2024-01-01");
+    expect(result.sales).toHaveLength(1);
+    expect(result.sales[0].prod_code).toBe("12345");
+    expect(result.sales[0].val_vda).toBe(42);
+  });
+
+  it("preserva acentos e emoji em nome de loja/produto sem corromper", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - AÇAÍ 🎉 SHOPPING"],
+      ["DTA_VENDA é 01/01/2024"],
+      [null, null, null, null, "12345-PÃO DE AÇÚCAR ñoño 日本語", 10],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.stores[0].store_name).toBe("AÇAÍ 🎉 SHOPPING");
+    expect(result.products[0].prod_name).toBe("PÃO DE AÇÚCAR ñoño 日本語");
+  });
+
+  it("lê só a primeira planilha quando o arquivo tem múltiplas abas", () => {
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.aoa_to_sheet([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/01/2024"],
+      [null, null, null, null, "111-PROD DA ABA 1", 10],
+    ]);
+    const ws2 = XLSX.utils.aoa_to_sheet([
+      [null, null, null, null, null, "002 - NORTE"],
+      ["DTA_VENDA é 02/01/2024"],
+      [null, null, null, null, "222-PROD DA ABA 2", 20],
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws1, "Aba1");
+    XLSX.utils.book_append_sheet(wb, ws2, "Aba2");
+    const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+
+    const result = parseAnyWorkbook(buf);
+    expect(result.sale_date).toBe("2024-01-01");
+    expect(result.products.map((p) => p.prod_code)).toEqual(["111"]);
+    expect(result.products.map((p) => p.prod_code)).not.toContain("222");
+  });
+
+  it("não funde linhas duplicadas do mesmo produto/loja — cada linha vira uma venda", () => {
+    // finalize_import (migrate-schema.sql) que soma via GROUP BY/SUM no
+    // banco; o parser em si não deduplica nem funde nada, só repassa cada
+    // linha como uma venda separada.
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/01/2024"],
+      [null, null, null, null, "111-PROD DUPLICADO", 10],
+      [null, null, null, null, "111-PROD DUPLICADO", 25],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sales).toHaveLength(2);
+    expect(result.sales.map((s) => s.val_vda)).toEqual([10, 25]);
+    // productMap é um Map por código — a segunda ocorrência não duplica a
+    // entrada, só "ganha" se o nome mudar (não muda aqui).
+    expect(result.products).toHaveLength(1);
   });
 });
 
