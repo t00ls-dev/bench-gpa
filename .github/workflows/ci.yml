@@ -67,8 +67,13 @@ jobs:
           MARIADB_DATABASE: bench_gpa_ci
         ports:
           - 3306:3306
+        # healthcheck.sh vem no próprio image oficial (mariadb.org), feito pra
+        # este entrypoint em duas fases (servidor temporário de init, depois o
+        # real) — `mysqladmin ping` tentado antes ficou "unhealthy" até
+        # estourar os 10 retries mesmo com o server já pronto (log mostrava
+        # "ready for connections" bem antes do timeout), pela troca de fase.
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
