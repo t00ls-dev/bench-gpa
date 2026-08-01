@@ -29,26 +29,74 @@ com frequência ou pedem mais profundidade têm doc própria em `docs/`:
 
 ## Estilo de escrita nas saídas geradas por IA
 
-Ao gerar texto, código, commits, documentação ou qualquer conteúdo escrito:
+O objetivo não é "humanizar" artificialmente o código ou a documentação, mas
+remover padrões genéricos, ornamentação desnecessária e elementos que
+prejudiquem a clareza e a manutenção.
 
-Evitar:
+Ao gerar texto, código, commits, documentação ou qualquer conteúdo escrito,
+isso se aplica a:
 
-- Travessões (—)
-- Emojis
+- Código e comentários
+- Documentação (README, docs internas, HISTORY.md)
+- Mensagens de commit
+- TODOs, FIXMEs e anotações internas
+- Respostas e relatórios gerados durante auditoria, revisão ou migração
 
-Usar no lugar de travessões:
+### Travessões
+
+Proibição total. Nenhum travessão (—) em nenhum contexto.
+
+Usar no lugar:
 
 - Vírgula
 - Dois-pontos
 - Ponto final com nova frase
 - Parênteses, quando fizer sentido
 
-Essa regra se aplica a:
+### Emojis
 
-- Código e comentários
-- Documentação (README, docs internas, HISTORY.md)
-- Mensagens de commit
-- Respostas e relatórios gerados durante auditoria, revisão ou migração
+Proibição total. Nenhum emoji em nenhum contexto, incluindo como indicador de
+status (✅ ❌ 🚀 🔥 ⚠️ ⭐ 💡 🎯 ✨ 📌 ou qualquer outro).
+
+Para representar algo feito ou não feito, usar checkbox:
+
+```text
+[x] Implementar autenticação JWT
+[ ] Melhorar desempenho da importação
+```
+
+- `[x]` representa tarefa concluída.
+- `[ ]` representa tarefa pendente.
+- TODO deve representar uma ação futura real; remova os antigos, resolvidos
+  ou sem contexto.
+
+Se nenhuma das duas notações servir, use a representação textual mais direta
+(ex.: "Resolvido", "Pendente", "Crítico"), nunca um símbolo decorativo.
+
+### Linguagem
+
+Evite linguagem promocional ou genérica ("solução poderosa", "experiência
+incrível", "plataforma robusta", "próxima geração", "revolucione",
+"inteligente", "transforme sua produtividade"). Prefira comunicação direta,
+linguagem técnica, clareza e contexto específico.
+
+### Comentários
+
+Não escreva comentários apenas para explicar código evidente.
+
+Preserve comentários que:
+
+- Justificam decisões arquiteturais.
+- Explicam regras de negócio.
+- Registram limitações técnicas.
+- Alertam sobre comportamentos importantes.
+
+Remova comentários que:
+
+- Apenas descrevem o que o código faz.
+- Parecem gerados automaticamente.
+- Repetem o nome de funções ou variáveis.
+- Não agregam contexto técnico.
 
 ---
 
