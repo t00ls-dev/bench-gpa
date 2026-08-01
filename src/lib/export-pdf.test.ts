@@ -89,12 +89,22 @@ describe("openPdfBlob", () => {
     expect(anchor.target).toBe("_blank");
   });
 
-  it("clicks the anchor on every call", async () => {
+  // `a.click()` (o método nativo) não é confiável no Firefox recente pra
+  // disparar o download — o fix dispara um MouseEvent completo via
+  // dispatchEvent, que ainda ativa o comportamento padrão do link (baixar
+  // com o `download`) igual um clique real dispararia. Testado via um
+  // listener de "click" de verdade, não espionando `.click()` (que não é
+  // mais chamado).
+  it("dispara um evento de click de verdade no anchor a cada chamada", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     openPdfBlob(mockDoc); // primeira chamada cria o anchor
-    const clickSpy = vi.spyOn(getAnchor(), "click");
+    const anchor = getAnchor();
+    let clickEvents = 0;
+    anchor.addEventListener("click", () => clickEvents++);
+
     openPdfBlob(mockDoc);
-    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    expect(clickEvents).toBe(1);
   });
 
   it("revokes blob URL after 10s", async () => {
@@ -116,13 +126,34 @@ describe("openPdfBlob", () => {
     openPdfBlob(mockDoc); // garante que o anchor já existe
     const anchor = getAnchor();
     let connectedAtClickTime: boolean | undefined;
-    vi.spyOn(anchor, "click").mockImplementation(() => {
+    anchor.addEventListener("click", () => {
       connectedAtClickTime = anchor.isConnected;
     });
 
     openPdfBlob(mockDoc, "relatorio.pdf");
 
     expect(connectedAtClickTime).toBe(true);
+  });
+
+  // Discrimina de verdade `.click()` de `dispatchEvent`: no jsdom, `.click()`
+  // NÃO passa pelo método `dispatchEvent` da instância (confirmado à parte,
+  // monkey-patchando o método antes de chamar `.click()` — não disparou), só
+  // um listener de "click" comum não seria capaz de distinguir os dois,
+  // porque `.click()` também dispara um evento observável por listener.
+  it("usa dispatchEvent (não `.click()`) — regressão que fica sem detecção só com listener", async () => {
+    const openPdfBlob = await freshOpenPdfBlob();
+    openPdfBlob(mockDoc); // garante que o anchor já existe
+    const anchor = getAnchor();
+    const dispatchSpy = vi.spyOn(anchor, "dispatchEvent");
+
+    openPdfBlob(mockDoc);
+
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    const event = dispatchSpy.mock.calls[0][0] as MouseEvent;
+    expect(event).toBeInstanceOf(MouseEvent);
+    expect(event.type).toBe("click");
+    expect(event.bubbles).toBe(true);
+    expect(event.cancelable).toBe(true);
   });
 
   it("mantém o anchor no documento depois do clique — não remove, reusa na próxima chamada", async () => {
