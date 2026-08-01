@@ -30,6 +30,27 @@ describe("xlsx-parser", () => {
     expect(() => parseAnyWorkbook(buf)).toThrow("DTA_VENDA");
   });
 
+  it("lança um erro (não trava, não devolve lixo) para um arquivo corrompido/não-xlsx", () => {
+    const garbage = new TextEncoder().encode("isto não é um arquivo xlsx válido").buffer;
+    expect(() => parseAnyWorkbook(garbage)).toThrow();
+  });
+
+  it("não lança para um arquivo com o marcador de data mas zero linhas de produto", () => {
+    // Diferença importante do caso "arquivo corrompido": aqui o arquivo é
+    // válido e o marcador existe — só não há nenhum produto depois dele.
+    // O parser devolve listas vazias em vez de lançar; quem decide se isso é
+    // um erro de negócio é o chamador (beginImport.total_rows===0 no caminho
+    // web; scripts/import.ts precisa do mesmo guard, ver teste abaixo).
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["DTA_VENDA é 01/01/2024"],
+    ]);
+    const result = parseAnyWorkbook(buf);
+    expect(result.sales).toEqual([]);
+    expect(result.stores).toHaveLength(1);
+    expect(result.products).toEqual([]);
+  });
+
   it("skips total rows and hierarchy totals", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
