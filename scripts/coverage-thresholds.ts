@@ -15,10 +15,20 @@
  * cobertura desejada. Subir só faz sentido depois que a cobertura real subiu e
  * se manteve — caso contrário o CI quebra em quem mexeu por último, não em quem
  * baixou a cobertura.
+ *
+ * Recalibrados em 01/08/2026 (auditoria de QA, item 2): `vitest.config.ts`
+ * passou a incluir `.tsx` em `test.include`/`coverage.include` — antes,
+ * `*.test.tsx` era silenciosamente ignorado (nunca rodava, nem dava erro), e
+ * cobertura de componente/página não aparecia nem a 0% no relatório. Isso
+ * praticamente dobrou o denominador (117 arquivos fonte contra ~49 antes) com
+ * dezenas de componentes ainda sem teste — não é regressão de cobertura real,
+ * é o relatório passando a contar honestamente o que sempre existiu. Os pisos
+ * antigos (40/40/30/25) mediam só `.ts`; os novos guardam a mesma folga
+ * relativa que os antigos tinham contra a cobertura real da época.
  */
 export const COVERAGE_THRESHOLDS = {
-  lines: 40,
-  statements: 40,
-  functions: 30,
-  branches: 25,
+  lines: 20,
+  statements: 20,
+  functions: 15,
+  branches: 12,
 };
