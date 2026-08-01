@@ -73,6 +73,27 @@ describe("openPdfBlob", () => {
     openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
     expect(anchorEl.download).toBe("analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
   });
+
+  // Firefox só respeita `download` se o <a> estiver anexado ao documento no
+  // momento do clique — fora do DOM, ele cai pro comportamento padrão de
+  // navegação e salva com um nome genérico (hash/UUID) em vez de `filename`.
+  // Chrome tolera clicar num elemento solto, por isso o bug passava
+  // despercebido nos dois testes acima (que só checam a chamada, não o DOM).
+  it("anexa o anchor ao documento antes de clicar (bug de nome de arquivo no Firefox)", () => {
+    let connectedAtClickTime: boolean | undefined;
+    vi.spyOn(anchorEl, "click").mockImplementation(() => {
+      connectedAtClickTime = anchorEl.isConnected;
+    });
+
+    openPdfBlob(mockDoc, "relatorio.pdf");
+
+    expect(connectedAtClickTime).toBe(true);
+  });
+
+  it("remove o anchor do documento logo depois do clique", () => {
+    openPdfBlob(mockDoc, "relatorio.pdf");
+    expect(anchorEl.isConnected).toBe(false);
+  });
 });
 
 describe("slugifyFilename", () => {
