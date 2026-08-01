@@ -8,7 +8,7 @@ description: Como avaliar mudanças de arquitetura no Bench GPA (framework, DB, 
 ## Objetivo
 
 Evoluir a arquitetura sem reescrever o que já funciona só por preferência
-ou tendência — toda mudança estrutural precisa de justificativa técnica
+ou tendência. Toda mudança estrutural precisa de justificativa técnica
 concreta, não "essa lib é mais popular" ou "eu faria diferente hoje".
 
 ## Quando usar
@@ -21,29 +21,29 @@ concreta, não "essa lib é mais popular" ou "eu faria diferente hoje".
 ## Regra base
 
 Mudar arquitetura core (framework, banco, auth provider) está na lista do
-`AGENTS.md` do que **não se faz sem perguntar** — isso vale tanto para
+`AGENTS.md` do que não se faz sem perguntar. Isso vale tanto para
 executar quanto para propor como se fosse óbvio. Avaliação e recomendação
 são bem-vindas; execução espontânea, não.
 
 ## Processo
 
-1. **Descreva o problema real primeiro, não a solução.** "TanStack Start é
-   grande" não é um problema — "o build demora X, o bundle pesa Y, ou um
+1. Descreva o problema real primeiro, não a solução. "TanStack Start é
+   grande" não é um problema. "O build demora X, o bundle pesa Y, ou um
    bug específico Z é causado pelo framework" é. Se não há um problema
    concreto e medido, não há caso para migração, só para observação.
-2. **Valide se a decisão atual ainda serve o contexto atual.** Muita
-   coisa na stack (self-hosted, MariaDB, JWT próprio) veio de uma migração
+2. Valide se a decisão atual ainda serve o contexto atual. Muita coisa na
+   stack (self-hosted, MariaDB, JWT próprio) veio de uma migração
    documentada em `docs/migracao-vps-autossuficiente.md` e
-   `docs/historia-do-projeto.md` — leia o porquê antes de propor reverter.
-3. **Meça o custo real da migração**, não só o custo da peça nova.
-   Reescrever autenticação, por exemplo, é risco de segurança
-   proporcional ao tamanho da mudança, não só tempo de desenvolvimento.
-4. **Prefira incremental e reversível.** Nenhuma migração estrutural deve
-   ser um PR único e grande — fatiar em passos que cada um sozinho deixa
-   o sistema funcionando.
-5. **Não transporte problema antigo pra solução nova.** Se algo é
-   dívida técnica hoje, a migração é a hora de resolver, não de replicar
-   com sintaxe diferente.
+   `docs/historia-do-projeto.md`. Leia o porquê antes de propor reverter.
+3. Meça o custo real da migração, não só o custo da peça nova. Reescrever
+   autenticação, por exemplo, é risco de segurança proporcional ao
+   tamanho da mudança, não só tempo de desenvolvimento.
+4. Prefira incremental e reversível. Nenhuma migração estrutural deve ser
+   um PR único e grande: fatiar em passos que cada um sozinho deixa o
+   sistema funcionando.
+5. Não transporte problema antigo para a solução nova. Se algo é dívida
+   técnica hoje, a migração é a hora de resolver, não de replicar com
+   sintaxe diferente.
 
 ## Sinais de que vale investigar uma mudança estrutural
 
@@ -54,20 +54,21 @@ são bem-vindas; execução espontânea, não.
 - Manutenção da peça atual (patches de segurança, compatibilidade) parou
   ou ficou claramente mais cara que a alternativa.
 
-## Sinais de que NÃO vale (ainda)
+## Sinais de que não vale (ainda)
 
-- A peça atual funciona e o motivo para trocar é preferência/tendência.
+- A peça atual funciona e o motivo para trocar é preferência ou
+  tendência.
 - Não há medição, só impressão.
 - O sistema tem um mantenedor só e a migração levaria a produção a ficar
   sem cobertura de rollback confiável durante a transição.
 
 ## Checklist antes de recomendar uma mudança estrutural
 
-- [ ] Problema concreto descrito e, se possível, medido
-- [ ] Decisão atual revisitada com o contexto documentado (não descartada
-      sem ler o porquê)
-- [ ] Plano fatiado em passos incrementais, cada um reversível
-- [ ] Risco de segurança/estabilidade durante a transição avaliado
-      explicitamente
-- [ ] Apresentado como recomendação para decisão do usuário, não
-      executado espontaneamente
+- Problema concreto descrito e, se possível, medido
+- Decisão atual revisitada com o contexto documentado (não descartada
+  sem ler o porquê)
+- Plano fatiado em passos incrementais, cada um reversível
+- Risco de segurança/estabilidade durante a transição avaliado
+  explicitamente
+- Apresentado como recomendação para decisão do usuário, não executado
+  espontaneamente

@@ -8,7 +8,7 @@ description: Checklist de banco de dados do Bench GPA (MariaDB, migrações, tra
 ## Objetivo
 
 Toda alteração de schema em produção precisa ser segura de reaplicar e
-reversível de investigar — este projeto não tem um ORM com migração
+reversível de investigar. Este projeto não tem um ORM com migração
 automática, então a disciplina manual é o que evita corromper dados reais.
 
 ## Quando usar
@@ -27,7 +27,7 @@ automática, então a disciplina manual é o que evita corromper dados reais.
   `scripts/run-migrations.sh`.
 - CI (`schema-check` em `.github/workflows/ci.yml`) sobe um MariaDB 11.4
   real, roda `run-migrations.sh` duas vezes seguidas e confere
-  idempotência via grep — uma migração que quebra ao rodar de novo
+  idempotência via grep. Uma migração que quebra ao rodar de novo
   (`CREATE TABLE` sem `IF NOT EXISTS`, `ALTER TABLE ADD COLUMN` sem
   checagem) falha esse job. Toda migração nova precisa ser escrita para
   rodar duas vezes sem erro.
@@ -36,7 +36,7 @@ automática, então a disciplina manual é o que evita corromper dados reais.
 
 - Procedures que fazem múltiplas escritas (`refresh_product_universe`,
   `purge_old_aggs`) usam `START TRANSACTION`/`COMMIT` com
-  `EXIT HANDLER FOR SQLEXCEPTION` fazendo `ROLLBACK` — uma procedure nova
+  `EXIT HANDLER FOR SQLEXCEPTION` fazendo `ROLLBACK`. Uma procedure nova
   que escreve em mais de uma tabela deveria seguir o mesmo padrão, para
   não deixar dado parcial se falhar no meio.
 
@@ -44,21 +44,21 @@ automática, então a disciplina manual é o que evita corromper dados reais.
 
 - Agregados são purgados após `RETENTION_DAYS` (`src/lib/retention.ts`,
   hoje 180 dias) via cron diário (`purge_old_aggs`, 03h). O import
-  automático usa o **mesmo** horizonte — mudar um sem o outro reabre o
-  loop importar→purgar→reimportar que a constante única foi feita para
+  automático usa o mesmo horizonte. Mudar um sem o outro reabre o loop
+  importar, purgar, reimportar que a constante única foi feita para
   evitar.
 
 ### Índices
 
 - Remover um índice não usado é uma otimização legítima (já aconteceu:
-  `0004_drop_indices_categoria_sales_prod_daily_agg.sql`) — não assuma
-  que mais índice é sempre melhor; cada um custa em toda escrita.
+  `0004_drop_indices_categoria_sales_prod_daily_agg.sql`). Não assuma
+  que mais índice é sempre melhor: cada um custa em toda escrita.
 - Antes de propor um índice novo, confirme com `EXPLAIN` que a query
-  realmente faz table scan — não adicione especulativamente.
+  realmente faz table scan. Não adicione especulativamente.
 
 ### Portabilidade
 
-- O projeto roda em MariaDB especificamente (não SQL genérico) — sintaxe
+- O projeto roda em MariaDB especificamente (não SQL genérico). Sintaxe
   já usada (ex.: `ON DUPLICATE KEY UPDATE`) não é portável para Postgres
   sem reescrita. Se portabilidade para Postgres virar requisito real, é
   decisão de arquitetura (ver skill `architecture-review`), não algo para
@@ -66,8 +66,8 @@ automática, então a disciplina manual é o que evita corromper dados reais.
 
 ## Checklist
 
-- [ ] Migração nova é idempotente (roda duas vezes sem erro)
-- [ ] Escrita múltipla em procedure está dentro de transação com rollback
-- [ ] Índice novo tem `EXPLAIN` comprovando necessidade
-- [ ] Mudança de retenção/horizonte atualiza import e purge junto
-- [ ] `bash scripts/run-migrations.sh` testado localmente antes do commit
+- Migração nova é idempotente (roda duas vezes sem erro)
+- Escrita múltipla em procedure está dentro de transação com rollback
+- Índice novo tem `EXPLAIN` comprovando necessidade
+- Mudança de retenção/horizonte atualiza import e purge junto
+- `bash scripts/run-migrations.sh` testado localmente antes do commit
