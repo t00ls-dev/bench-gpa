@@ -14,10 +14,10 @@ O checkbox "Manter conectado" na tela `/auth` escolhe entre dois modos,
 gravados no próprio JWT (`persistent: boolean`) e nunca trocados depois.
 Uma sessão não migra de um modo para o outro em voo.
 
-| Modo | Checkbox | Expiração | Desliza com uso? |
-|---|---|---|---|
-| Normal (padrão) | Desmarcado | 1h de inatividade, teto de 24h desde o login | Sim |
-| Persistente | Marcado | Fixo, 7 dias desde o login | Não |
+| Modo            | Checkbox   | Expiração                                    | Desliza com uso? |
+| --------------- | ---------- | -------------------------------------------- | ---------------- |
+| Normal (padrão) | Desmarcado | 1h de inatividade, teto de 24h desde o login | Sim              |
+| Persistente     | Marcado    | Fixo, 7 dias desde o login                   | Não              |
 
 - `INACTIVITY_TIMEOUT_SECONDS = 1h`: prazo do cookie no modo normal;
   qualquer request autenticado o renova.
@@ -36,11 +36,11 @@ Uma sessão não migra de um modo para o outro em voo.
 `slide` controla se ele reemite o cookie com um novo prazo como efeito
 colateral.
 
-| Chamador | `slide` | Por quê |
-|---|---|---|
-| `auth-middleware.ts` (`requireAuth`, toda server function autenticada) | `true` | É o que dá o comportamento de expiração por inatividade. Cada chamada de verdade "usa" a sessão. |
-| `auth-api.ts` (`getMe`) | `false` | Chamado a cada navegação e cacheado por 60s no client. Reemitir o cookie a cada chamada seria um efeito colateral sem propósito. |
-| `server.ts` (`handlePdfDownload`) | `false` | Rota fora do fluxo normal de server functions (`/_serverFn/`). Chamar `setCookie` do TanStack Start fora desse contexto de request não é confiável, então essa rota só lê a sessão, nunca a reemite. |
+| Chamador                                                               | `slide` | Por quê                                                                                                                                                                                              |
+| ---------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth-middleware.ts` (`requireAuth`, toda server function autenticada) | `true`  | É o que dá o comportamento de expiração por inatividade. Cada chamada de verdade "usa" a sessão.                                                                                                     |
+| `auth-api.ts` (`getMe`)                                                | `false` | Chamado a cada navegação e cacheado por 60s no client. Reemitir o cookie a cada chamada seria um efeito colateral sem propósito.                                                                     |
+| `server.ts` (`handlePdfDownload`)                                      | `false` | Rota fora do fluxo normal de server functions (`/_serverFn/`). Chamar `setCookie` do TanStack Start fora desse contexto de request não é confiável, então essa rota só lê a sessão, nunca a reemite. |
 
 Sessões persistentes (`persistent: true`) nunca deslizam nem checam o teto
 de 24h. Os dois se contradiriam.

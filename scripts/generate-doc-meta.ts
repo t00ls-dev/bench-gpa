@@ -42,6 +42,6 @@ for (const file of files) {
 
 const outDir = join(root, "src/generated");
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, "doc-meta.json"), JSON.stringify(meta, null, 2));
+writeFileSync(join(outDir, "doc-meta.json"), JSON.stringify(meta, null, 2) + "\n");
 
 console.error(`doc-meta.json generated (${Object.keys(meta).length} entries)`);

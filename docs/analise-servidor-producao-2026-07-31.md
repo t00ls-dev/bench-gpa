@@ -13,9 +13,9 @@ somente-leitura.
 | Load average                 | 0.06 / 0.02 / 0.00                                       | Ocioso                                                 |
 | Memória                      | 944Mi usado / 1.9Gi (987Mi disponível, 1.1Gi buff/cache) | Saudável                                               |
 | Swap                         | 426Mi / 2.0Gi em uso                                     | Normal para esta VPS, já documentado em `continuar.md` |
-| Disco (`/`)                  | 14G/20G usado (70%), 5.7G livres                         | Atenção, não crítico, sem muita folga                 |
-| Uptime                       | 10 dias (na data da coleta)                              | N/A                                                      |
-| Kernel/OS                    | Debian 12 (bookworm), `6.1.0-51-cloud-amd64`             | N/A                                                      |
+| Disco (`/`)                  | 14G/20G usado (70%), 5.7G livres                         | Atenção, não crítico, sem muita folga                  |
+| Uptime                       | 10 dias (na data da coleta)                              | N/A                                                    |
+| Kernel/OS                    | Debian 12 (bookworm), `6.1.0-51-cloud-amd64`             | N/A                                                    |
 | Atualizações de SO pendentes | 0 (inclusive segurança)                                  | Em dia                                                 |
 
 Maiores consumidores de disco: `/home/admin` 2.5G (837M são

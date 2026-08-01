@@ -44,26 +44,26 @@ Treze PRs mergeados (#14 a #26), em duas frentes.
 **Auditoria de performance/segurança/UX** (relatório Top 10 ROI, separado da
 `analise-completa.md`):
 
-| PR | O quê |
-| --- | --- |
-| #14 | 5 correções rápidas de segurança/performance |
-| #15 | Atualiza `seroval`: vulnerabilidade crítica |
-| #16 | Atualiza `xlsx` (via CDN do SheetJS, o npm está congelado em 0.18.5): prototype pollution + ReDoS |
-| #17 | Lazy-load de `CommandPalette`/`HelpOverlay`, tira do bundle da `/auth` |
-| #18 | Logos convertidas para WebP, redimensionadas pro tamanho real de exibição |
-| #19 | Remove 5 dependências npm e 27 componentes shadcn mortos (2240 linhas) |
-| #20 | Tempo decorrido no export de PDF da área (era só spinner, sem sinal de progresso) |
-| #21 | Divide `admin.functions.ts` (420 linhas, 12 funções) em `admin-users`/`admin-system`/`admin-docs` |
+| PR  | O quê                                                                                                                                         |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| #14 | 5 correções rápidas de segurança/performance                                                                                                  |
+| #15 | Atualiza `seroval`: vulnerabilidade crítica                                                                                                   |
+| #16 | Atualiza `xlsx` (via CDN do SheetJS, o npm está congelado em 0.18.5): prototype pollution + ReDoS                                             |
+| #17 | Lazy-load de `CommandPalette`/`HelpOverlay`, tira do bundle da `/auth`                                                                        |
+| #18 | Logos convertidas para WebP, redimensionadas pro tamanho real de exibição                                                                     |
+| #19 | Remove 5 dependências npm e 27 componentes shadcn mortos (2240 linhas)                                                                        |
+| #20 | Tempo decorrido no export de PDF da área (era só spinner, sem sinal de progresso)                                                             |
+| #21 | Divide `admin.functions.ts` (420 linhas, 12 funções) em `admin-users`/`admin-system`/`admin-docs`                                             |
 | #22 | Extrai `FilterField` compartilhado de `FilterBar`/`AreaFilters` (só o markup, a lógica de cascata continua separada de propósito, ver abaixo) |
-| #23 | Remove uma contagem duplicada em `area_analysis` (ver "Performance" abaixo) |
-| #25 | Agrupa as logos em `public/brand/` |
+| #23 | Remove uma contagem duplicada em `area_analysis` (ver "Performance" abaixo)                                                                   |
+| #25 | Agrupa as logos em `public/brand/`                                                                                                            |
 
 **"Números mágicos"** (quatro partes; as duas primeiras, `c314911` e `bc9262b`,
 já estavam feitas antes desta rodada):
 
-| PR | O quê |
-| --- | --- |
-| #24 | `KNOWN_JOBS.schedule`/`maxHours` (admin) e o fallback `180` de `purge_old_aggs` (SQL): os dois itens que tinham ficado de fora de propósito por conflitar com PRs em revisão na época |
+| PR  | O quê                                                                                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #24 | `KNOWN_JOBS.schedule`/`maxHours` (admin) e o fallback `180` de `purge_old_aggs` (SQL): os dois itens que tinham ficado de fora de propósito por conflitar com PRs em revisão na época                                                                   |
 | #26 | 17 ocorrências de `staleTime`/`gcTime` do React Query (13 arquivos) viram 5 constantes nomeadas por semântica (`QUERY_STALE_LIVE/ADMIN/IDENTITY/CORE/REFERENCE`); opções de paginação da área (`AREA_PAGE_SIZE_OPTIONS`); debounces nomeados localmente |
 
 Todas as 4 partes de números mágicos estão fechadas agora.
@@ -88,10 +88,10 @@ troca a segunda execução por `SELECT v_universe AS total_products;`.
 Validado com `scripts/validate-procs.sh` (37 cenários, hash idêntico) e depois
 com `scripts/bench-procs.sh` **contra produção**:
 
-| Cenário | Baseline (pós-revert, 26/07) | Medido em 30/07 | |
-| --- | ---: | ---: | --- |
-| `area_28d_sem_filtro` | 23.652 ms | **23.178 ms** | −2%, dispersão válida (1.08x) |
-| `area_7d_sem_filtro` | 2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras) | ~−7 a −11%, mas dispersão 1.39x: acima do limite de 1.3x que o próprio script exige, então não é um número "confirmado" |
+| Cenário               | Baseline (pós-revert, 26/07) |                      Medido em 30/07 |                                                                                                                         |
+| --------------------- | ---------------------------: | -----------------------------------: | ----------------------------------------------------------------------------------------------------------------------- |
+| `area_28d_sem_filtro` |                    23.652 ms |                        **23.178 ms** | −2%, dispersão válida (1.08x)                                                                                           |
+| `area_7d_sem_filtro`  |               2.114-2.196 ms | **1.944 ms** (mediana de 9 amostras) | ~−7 a −11%, mas dispersão 1.39x: acima do limite de 1.3x que o próprio script exige, então não é um número "confirmado" |
 
 Ganho real, mas pequeno: a query removida só toca `product_universe`, uma
 fração pequena do tempo total. **O teto continua o mesmo**: as 2-3 varreduras
@@ -137,10 +137,10 @@ volume`, o produto com mais e o com menos linhas na tabela toda, já que
 `lastFourSameWeekday`/`lastFourAll` varrem o histórico inteiro do produto, sem
 limite de data além do `v_ref_date`). Medido em produção, 20 amostras:
 
-| Cenário | Mediana | Faixa |
-| --- | ---: | --- |
-| `produto_alto_volume` (56 linhas de resultado) | 9 ms | 8-13 ms |
-| `produto_baixo_volume` (4 linhas de resultado) | 2 ms | 2-3 ms |
+| Cenário                                        | Mediana | Faixa   |
+| ---------------------------------------------- | ------: | ------- |
+| `produto_alto_volume` (56 linhas de resultado) |    9 ms | 8-13 ms |
+| `produto_baixo_volume` (4 linhas de resultado) |    2 ms | 2-3 ms  |
 
 A suspeita do doc estava certa: filtrar por `prod_code` (índice
 `idx_prod_daily_prod_code`, sobrevivente da limpeza do item 2) reduz o
@@ -221,13 +221,13 @@ mais usado pra sincronizar nada; os arquivos chegam por rsync do deploy).
 Os 5 arquivos, um PR cada, maior risco primeiro (pipeline de import e dado de
 venda antes das ferramentas administrativas):
 
-| Arquivo | Antes | Depois |
-| --- | ---: | ---: |
-| `upload.functions.ts` | 0% | 92,1% |
-| `product.functions.ts` | 0% | 81,25% |
-| `dashboard.functions.ts` | 26,8% | 92,85% |
-| `admin-system.functions.ts` | 0% | 98,36% |
-| `admin-docs.functions.ts` | 0% | 88,88% |
+| Arquivo                     | Antes | Depois |
+| --------------------------- | ----: | -----: |
+| `upload.functions.ts`       |    0% |  92,1% |
+| `product.functions.ts`      |    0% | 81,25% |
+| `dashboard.functions.ts`    | 26,8% | 92,85% |
+| `admin-system.functions.ts` |    0% | 98,36% |
+| `admin-docs.functions.ts`   |    0% | 88,88% |
 
 Cobertura total do projeto (statements): 55,6% → 74,2%.
 
@@ -329,7 +329,7 @@ Estão em `docs/medicao-performance.md`, mas as que mais custaram:
 3. **Medições locais não são confiáveis** para estas procs: o mesmo bloco variou
    de 8,6s a 0,9s. Medir em prod, em janela de baixo uso, com o harness.
 4. **Timing via CLI pode estar medindo o cliente, não o banco.** `time mariadb
-   ... > arquivo` seguido de `wc -l`/processamento do output infla o número com
+... > arquivo` seguido de `wc -l`/processamento do output infla o número com
    I/O de arquivo e renderização de texto, não custo de query. Redirecionar pro
    `/dev/null` ou usar `SET profiling=1` + `SHOW PROFILES` pra isolar o tempo
    real gasto no servidor.
@@ -347,7 +347,7 @@ Estão em `docs/medicao-performance.md`, mas as que mais custaram:
    (`/etc/apache2/conf.d/domains/gpa.t00ls.dev.conf`), quebrando o
    `apache2ctl configtest` pra sempre (`Include` de um arquivo com nome errado,
    `nginx.*` em vez de `apache2.*`), e o nginx real (`/etc/nginx/conf.d/
-   domains/gpa.t00ls.dev*.conf`) fica no template `default` genérico
+domains/gpa.t00ls.dev*.conf`) fica no template `default` genérico
    (proxy pra Apache na 8080, que serve a página placeholder), não no
    `node-ssr` (proxy direto pra Node na 3000).
 
@@ -374,7 +374,7 @@ Estão em `docs/medicao-performance.md`, mas as que mais custaram:
    próprio `sv1` (`nginx.conf`, `nginx.ssl.conf`, `apache2.conf`,
    `apache2.ssl.conf`). Restaurar com um `cp` direto se acontecer de novo.
    Verificar sempre com `curl -sD - https://gpa.t00ls.dev/ | grep
-   content-security-policy`: se sumir, é este bug batendo de novo.
+content-security-policy`: se sumir, é este bug batendo de novo.
 
    **Efeito colateral do mesmo rebuild, achado logo depois**: o `chmod` do
    Hestia sobre `public_html/` reverteu a permissão pra `751`

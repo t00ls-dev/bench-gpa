@@ -102,7 +102,7 @@ bun run dev
   ler a porta real no log, não assumir 3000.
 - **Cold-start gotcha:** a primeira navegação após o boot dispara
   `Re-optimizing dependencies` / `optimized dependencies changed,
-  reloading` no Vite, que recarrega o bundle client no meio da
+reloading` no Vite, que recarrega o bundle client no meio da
   requisição. Uma primeira tentativa de login pode travar no spinner
   sem erro nenhum. Isso não é bug do app: espere a otimização assentar
   (deixe o server rodando de 5 a 10s após o primeiro `curl`/`goto`, ou

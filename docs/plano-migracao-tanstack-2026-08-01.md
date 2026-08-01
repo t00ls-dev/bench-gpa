@@ -109,13 +109,13 @@ atualizar dependências, sem trocar de framework. Comparado o que está
 instalado (`package.json`) com a versão mais recente publicada no
 registro npm em 01/08/2026:
 
-| Pacote | Instalado | Mais recente | Defasagem |
-| --- | --- | --- | --- |
-| `@tanstack/react-query` | 5.101.4 | 5.101.4 | Nenhuma |
-| `@tanstack/react-router` | 1.170.18 | 1.170.18 | Nenhuma |
-| `@tanstack/react-start` | 1.168.33 | 1.168.34 | 1 patch |
-| `@tanstack/react-virtual` | 3.14.9 | 3.14.9 | Nenhuma |
-| `@tanstack/router-plugin` | 1.168.23 | 1.168.23 | Nenhuma |
+| Pacote                    | Instalado | Mais recente | Defasagem |
+| ------------------------- | --------- | ------------ | --------- |
+| `@tanstack/react-query`   | 5.101.4   | 5.101.4      | Nenhuma   |
+| `@tanstack/react-router`  | 1.170.18  | 1.170.18     | Nenhuma   |
+| `@tanstack/react-start`   | 1.168.33  | 1.168.34     | 1 patch   |
+| `@tanstack/react-virtual` | 3.14.9    | 3.14.9       | Nenhuma   |
+| `@tanstack/router-plugin` | 1.168.23  | 1.168.23     | Nenhuma   |
 
 Não há defasagem real: o projeto já está, na prática, na versão mais
 recente de todo o ecossistema TanStack em uso, e os pacotes seguem
@@ -193,9 +193,8 @@ menos testada das duas.
   procedures que hoje concentram a maior parte da lógica de leitura/escrita
   (`scripts/migrate-schema.sql`) continuariam fora do alcance do ORM,
   chamadas via SQL cru de qualquer forma. Confirmado na documentação
-  oficial do Drizzle: `db.execute(sql\`...\`)` executa SQL parametrizado
-  cru, o mesmo mecanismo que uma chamada `CALL nome_da_procedure(?, ?)`
-  usaria, só que trocando o driver `mysql2/promise` direto pelo wrapper do
+  oficial do Drizzle: `db.execute(sql\`...\`)`executa SQL parametrizado
+cru, o mesmo mecanismo que uma chamada`CALL nome_da_procedure(?, ?)`usaria, só que trocando o driver`mysql2/promise` direto pelo wrapper do
   Drizzle por cima dele. Na prática, adotar Drizzle envolveria só as
   poucas consultas ad hoc fora das procedures, não o núcleo do acesso a
   dado deste projeto.
@@ -247,21 +246,21 @@ Trabalho que vale a pena fazer primeiro porque é reversível, não quebra nada
 em produção, e reduz o risco de todas as fases seguintes:
 
 - [ ] Rodar a skill `dependency-management` para confirmar que não há
-  dependência hoje sem uso antes de somar dependências novas por cima.
+      dependência hoje sem uso antes de somar dependências novas por cima.
 - [ ] Separar, dentro de cada `*.functions.ts`, a lógica de negócio (query,
-  regra) do wrapper `createServerFn`. Hoje as duas coisas estão fundidas no
-  mesmo arquivo. Extrair a lógica para uma função pura testável é reversível
-  e não depende de qual framework vai chamá-la depois (Fastify e Start
-  conseguem invocar a mesma função pura igualmente).
+      regra) do wrapper `createServerFn`. Hoje as duas coisas estão fundidas no
+      mesmo arquivo. Extrair a lógica para uma função pura testável é reversível
+      e não depende de qual framework vai chamá-la depois (Fastify e Start
+      conseguem invocar a mesma função pura igualmente).
 - [ ] A partir dos 347 testes existentes, garantir que cada uma das 35
-  funções tem cobertura da função pura extraída, não só do wrapper. Isso
-  vira o contrato de comportamento que a futura rota Fastify precisa
-  preservar byte a byte.
+      funções tem cobertura da função pura extraída, não só do wrapper. Isso
+      vira o contrato de comportamento que a futura rota Fastify precisa
+      preservar byte a byte.
 - [ ] Documentar a assinatura (schema Zod de entrada, formato de saída) de
-  cada uma das 35 funções num único lugar. Isso é a especificação da futura
-  API Fastify, sem escrever uma linha de Fastify ainda.
+      cada uma das 35 funções num único lugar. Isso é a especificação da futura
+      API Fastify, sem escrever uma linha de Fastify ainda.
 - [ ] Nenhuma mudança visual ou de comportamento nesta fase. Se um teste
-  muda de resultado, é regressão, não refactor esperado.
+      muda de resultado, é regressão, não refactor esperado.
 
 ## 7. Fase 2: Infraestrutura
 
@@ -281,16 +280,16 @@ O que muda é topologia de processo, dependendo da opção escolhida na seção 
 Itens a validar antes de qualquer swap de produção:
 
 - [ ] Atualizar o template Nginx (`node-ssr.tpl`/`.stpl`, ver
-  `docs/migracao-vps-autossuficiente.md`) para a nova topologia de upstream.
+      `docs/migracao-vps-autossuficiente.md`) para a nova topologia de upstream.
 - [ ] Não existe ambiente de homologação formal hoje. Antes do swap final,
-  rodar a nova stack numa porta paralela na mesma VPS (ou subdomínio) e
-  validar com tráfego real de teste antes de apontar o Nginx principal para
-  ela.
+      rodar a nova stack numa porta paralela na mesma VPS (ou subdomínio) e
+      validar com tráfego real de teste antes de apontar o Nginx principal para
+      ela.
 - [ ] Confirmar que o rollback automático do workflow de deploy (troca
-  atômica de `.output`, restart PM2, reversão em falha de health-check)
-  continua funcionando com o novo formato de build.
+      atômica de `.output`, restart PM2, reversão em falha de health-check)
+      continua funcionando com o novo formato de build.
 - [ ] Logs e heartbeat de cron (`cron_heartbeat`, purge, refresh-universe)
-  não dependem do Start, não são afetados por esta migração.
+      não dependem do Start, não são afetados por esta migração.
 
 ## 8. Fase 3: Backend (Fastify ou Hono, ver seção 4)
 
@@ -300,62 +299,62 @@ Fastify e Hono antes de começar esta fase; a estrutura do trabalho é a
 mesma nos dois casos, só a API de rota/hook muda:
 
 - [ ] Portar as 35 funções puras extraídas na Fase 1 para rotas do
-  framework escolhido. A lógica não muda, só o transporte (de
-  `createServerFn`/RPC para rota HTTP normal).
+      framework escolhido. A lógica não muda, só o transporte (de
+      `createServerFn`/RPC para rota HTTP normal).
 - [ ] `requireAuth` (hoje `createMiddleware`) vira hook de requisição do
-  framework escolhido (`onRequest`/`preHandler` no Fastify, middleware de
-  rota no Hono). Mesma chamada a `resolveSession`, mesmo comportamento de
-  slide por inatividade.
+      framework escolhido (`onRequest`/`preHandler` no Fastify, middleware de
+      rota no Hono). Mesma chamada a `resolveSession`, mesmo comportamento de
+      slide por inatividade.
 - [ ] Rate limit (`rate-limit.middleware.ts`) vira hook equivalente,
-  mesmas 4 faixas por IP + balde por conta hoje documentadas no README.
+      mesmas 4 faixas por IP + balde por conta hoje documentadas no README.
 - [ ] `/api/pdf-download` (hoje fora do envelope RPC por precisar de
-  `Response` bruto) fica mais simples nesse mundo: nem Fastify nem Hono
-  têm envelope RPC a evitar, vira uma rota normal.
+      `Response` bruto) fica mais simples nesse mundo: nem Fastify nem Hono
+      têm envelope RPC a evitar, vira uma rota normal.
 - [ ] `jsonwebtoken`, `bcrypt`, `zod`, `mysql2/promise`: nenhum muda. Não
-  fazem parte do que está sendo removido.
+      fazem parte do que está sendo removido.
 - [ ] CSP nonce: se a Opção A for confirmada (sem SSR), o nonce por
-  requisição deixa de fazer sentido, já que não há HTML gerado no servidor
-  para injetar. Trocar por CSP baseada em hash estático do bundle, mais
-  simples que o padrão atual de variável de módulo global (que já é frágil
-  hoje: assume implicitamente que o Start isola essa variável por
-  requisição, e nada nesse ponto do código garante isso sob concorrência
-  real). Se a Opção B ou C for escolhida no lugar, esse ponto precisa de
-  contexto por requisição de verdade (`AsyncLocalStorage`), não repetir o
-  padrão de variável global.
+      requisição deixa de fazer sentido, já que não há HTML gerado no servidor
+      para injetar. Trocar por CSP baseada em hash estático do bundle, mais
+      simples que o padrão atual de variável de módulo global (que já é frágil
+      hoje: assume implicitamente que o Start isola essa variável por
+      requisição, e nada nesse ponto do código garante isso sob concorrência
+      real). Se a Opção B ou C for escolhida no lugar, esse ponto precisa de
+      contexto por requisição de verdade (`AsyncLocalStorage`), não repetir o
+      padrão de variável global.
 - [ ] Drizzle fica fora desta fase, deliberadamente. Não há dor hoje com SQL
-  cru (16 stored procedures, `mysql2/promise` direto), e amarrar troca de
-  ORM à troca de framework aumenta o raio de mudança de uma vez só, contra
-  a regra de "não reescrever tudo". Se um dia houver dor real com SQL cru,
-  vira uma decisão isolada e independente desta migração.
+      cru (16 stored procedures, `mysql2/promise` direto), e amarrar troca de
+      ORM à troca de framework aumenta o raio de mudança de uma vez só, contra
+      a regra de "não reescrever tudo". Se um dia houver dor real com SQL cru,
+      vira uma decisão isolada e independente desta migração.
 
 ## 9. Fase 4: Frontend
 
 Assumindo Opção A:
 
 - [ ] Rotas: recriar as 20 rotas com React Router. O padrão já existente de
-  separar `X.tsx` (layout/guarda de auth) de `X.page.tsx` (conteúdo) reduz o
-  trabalho: a página em si já está isolada da camada de roteamento, só o
-  wrapper muda.
+      separar `X.tsx` (layout/guarda de auth) de `X.page.tsx` (conteúdo) reduz o
+      trabalho: a página em si já está isolada da camada de roteamento, só o
+      wrapper muda.
 - [ ] `@tanstack/react-query`: usado em só 11 arquivos, o que torna viável
-  trocar por fetch nativo mais um hook próprio. Mas antes de trocar, decidir
-  conscientemente: o Query hoje dá de graça `staleTime`/`gcTime` calibrados
-  por tela e dedup de requisição em voo, que teriam que ser reimplementados
-  à mão (e ficariam redundantes com o `SimpleCache` que já existe do lado do
-  servidor). Entre as quatro peças do TanStack em uso, é a que menos atrapalha
-  ficar e a que mais trabalho dá para substituir sem perder comportamento.
-  Vale reavaliar se "sair do TanStack" precisa incluir o Query ou se ele pode
-  ficar como exceção justificada, mesmo mantendo a saída de Start/Router.
+      trocar por fetch nativo mais um hook próprio. Mas antes de trocar, decidir
+      conscientemente: o Query hoje dá de graça `staleTime`/`gcTime` calibrados
+      por tela e dedup de requisição em voo, que teriam que ser reimplementados
+      à mão (e ficariam redundantes com o `SimpleCache` que já existe do lado do
+      servidor). Entre as quatro peças do TanStack em uso, é a que menos atrapalha
+      ficar e a que mais trabalho dá para substituir sem perder comportamento.
+      Vale reavaliar se "sair do TanStack" precisa incluir o Query ou se ele pode
+      ficar como exceção justificada, mesmo mantendo a saída de Start/Router.
 - [ ] `@tanstack/react-virtual`: único uso é `area-table.tsx`. Antes de
-  escolher substituto (`react-window` ou remover virtualização), medir
-  quantas linhas a tabela de área tipicamente renderiza em produção: se o
-  volume real for pequeno, pode não precisar de virtualização nenhuma.
+      escolher substituto (`react-window` ou remover virtualização), medir
+      quantas linhas a tabela de área tipicamente renderiza em produção: se o
+      volume real for pequeno, pode não precisar de virtualização nenhuma.
 - [ ] React Hook Form (da proposta original): não adicionar por padrão.
-  Nenhum formulário hoje (login, upload, admin) tem validação cruzada
-  complexa que justifique a dependência nova. Reavaliar só se um formulário
-  genuinamente complexo aparecer.
+      Nenhum formulário hoje (login, upload, admin) tem validação cruzada
+      complexa que justifique a dependência nova. Reavaliar só se um formulário
+      genuinamente complexo aparecer.
 - [ ] Migrar rota por rota, uma PR por rota, não tudo de uma vez. Cada PR
-  troca uma rota da stack antiga para a nova mantendo as outras 19
-  funcionando sem alteração.
+      troca uma rota da stack antiga para a nova mantendo as outras 19
+      funcionando sem alteração.
 
 ## 10. Fase 5: Melhorias avançadas
 
@@ -403,8 +402,7 @@ cookie, CSP), build e deploy, e as 20 rotas ao mesmo tempo. Por isso:
 
 ## 14. Próximos passos
 
-1. Decidir entre Opção A, B ou C (seção 2). O restante do plano (Fases 3 e
-   4) muda de conteúdo dependendo da escolha.
+1. Decidir entre Opção A, B ou C (seção 2). O restante do plano (Fases 3 e 4) muda de conteúdo dependendo da escolha.
 2. Decidir entre Fastify e Hono para a Fase 3 (seção 4), e se Drizzle entra
    ou não como camada opcional para as consultas fora das stored procedures
    (seção 5, decisão independente da saída do TanStack).

@@ -14,18 +14,18 @@ repetidos aqui).
 
 ## Notas por categoria (0-10)
 
-| Categoria | Nota | Justificativa resumida |
-| --- | ---: | --- |
-| Arquitetura | 7.5 | Padrão único confirmado em banco/validação/auth/cache; perde ponto por um arquivo de 571 linhas com 4 responsabilidades e duplicação pequena de paginação |
-| Performance | 7.5 | Procs caras já cacheadas e medidas, bundle já dividido por rota, tabela grande já virtualizada; achados restantes são todos de baixo esforço |
-| **Segurança** | **4.5** | Nenhuma vulnerabilidade clássica de app (SQLi/XSS/CSRF/SSRF), mas segredo de produção exposto no histórico do git domina a nota |
-| Escalabilidade | 5.0 | Teto estrutural de infraestrutura (1 núcleo, 1,9GB compartilhado, PM2 fork único, cache em memória de processo): decisão de custo consciente, não falha de engenharia |
-| Organização | 7.5 | Sem fragmentação de padrão nos eixos centrais; ruído cosmético localizado (config morta, scripts de debug obsoletos) |
-| Legibilidade | 7.5 | Comentários explicam o não-óbvio de forma consistente; exceções pontuais (FK sem nota, funções de data sem nota cruzada) |
-| Manutenibilidade | 7.0 | Cobertura de teste real (74,2%) concentrada no risco certo; mas `noUnusedLocals`/`no-unused-vars` desligados sem explicação já deixaram passar código morto |
-| Infraestrutura | 6.5 | Deploy com rollback automático real e migrations antes do swap; mas zero auditoria de dependência no CI e zero rotação de log |
-| Documentação | 7.0 | `continuar.md`/`medicao-performance.md` são um diferencial real; drift pontual (README contraditório, feature removida ainda listada) |
-| **Qualidade geral** | **6.8** | Julgamento ponderado, não média aritmética: pesa o achado crítico de segurança e a ausência de rede de segurança automatizada para dependências |
+| Categoria           |    Nota | Justificativa resumida                                                                                                                                                |
+| ------------------- | ------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Arquitetura         |     7.5 | Padrão único confirmado em banco/validação/auth/cache; perde ponto por um arquivo de 571 linhas com 4 responsabilidades e duplicação pequena de paginação             |
+| Performance         |     7.5 | Procs caras já cacheadas e medidas, bundle já dividido por rota, tabela grande já virtualizada; achados restantes são todos de baixo esforço                          |
+| **Segurança**       | **4.5** | Nenhuma vulnerabilidade clássica de app (SQLi/XSS/CSRF/SSRF), mas segredo de produção exposto no histórico do git domina a nota                                       |
+| Escalabilidade      |     5.0 | Teto estrutural de infraestrutura (1 núcleo, 1,9GB compartilhado, PM2 fork único, cache em memória de processo): decisão de custo consciente, não falha de engenharia |
+| Organização         |     7.5 | Sem fragmentação de padrão nos eixos centrais; ruído cosmético localizado (config morta, scripts de debug obsoletos)                                                  |
+| Legibilidade        |     7.5 | Comentários explicam o não-óbvio de forma consistente; exceções pontuais (FK sem nota, funções de data sem nota cruzada)                                              |
+| Manutenibilidade    |     7.0 | Cobertura de teste real (74,2%) concentrada no risco certo; mas `noUnusedLocals`/`no-unused-vars` desligados sem explicação já deixaram passar código morto           |
+| Infraestrutura      |     6.5 | Deploy com rollback automático real e migrations antes do swap; mas zero auditoria de dependência no CI e zero rotação de log                                         |
+| Documentação        |     7.0 | `continuar.md`/`medicao-performance.md` são um diferencial real; drift pontual (README contraditório, feature removida ainda listada)                                 |
+| **Qualidade geral** | **6.8** | Julgamento ponderado, não média aritmética: pesa o achado crítico de segurança e a ausência de rede de segurança automatizada para dependências                       |
 
 ---
 
@@ -88,14 +88,14 @@ para os XLSX).
 
 ## Código morto
 
-| Item | Local | Risco de remoção | Prioridade |
-| --- | --- | --- | --- |
-| `safeError()` nunca invocada em produção | `src/lib/safe-error.ts:3-25` | Baixo | Média |
-| Parâmetro `label` de `assertAdmin` nunca lido | `src/lib/admin-utils.ts:39` | Baixo | Baixa |
-| `src/components/ui/toggle.tsx` órfão (0 imports) | `ui/toggle.tsx` | Baixo | Baixa |
-| 4 scripts de debug ad-hoc, credenciais/portas obsoletas | `scripts/debug-*.mjs`, `test-viewports.mjs` | Baixo | Baixa |
-| `backfill-null-categories.ts` solto na raiz de `scripts/` | `scripts/backfill-null-categories.ts` | Médio | Baixa |
-| ~10 exports/tipos sem consumidor externo | `filter-cascade.ts`, `rate-limit.ts`, `schemas.ts`, `use-hotkey.ts`, `extract-date.ts`… | Baixo | Baixa |
+| Item                                                      | Local                                                                                   | Risco de remoção | Prioridade |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------- | ---------- |
+| `safeError()` nunca invocada em produção                  | `src/lib/safe-error.ts:3-25`                                                            | Baixo            | Média      |
+| Parâmetro `label` de `assertAdmin` nunca lido             | `src/lib/admin-utils.ts:39`                                                             | Baixo            | Baixa      |
+| `src/components/ui/toggle.tsx` órfão (0 imports)          | `ui/toggle.tsx`                                                                         | Baixo            | Baixa      |
+| 4 scripts de debug ad-hoc, credenciais/portas obsoletas   | `scripts/debug-*.mjs`, `test-viewports.mjs`                                             | Baixo            | Baixa      |
+| `backfill-null-categories.ts` solto na raiz de `scripts/` | `scripts/backfill-null-categories.ts`                                                   | Médio            | Baixa      |
+| ~10 exports/tipos sem consumidor externo                  | `filter-cascade.ts`, `rate-limit.ts`, `schemas.ts`, `use-hotkey.ts`, `extract-date.ts`… | Baixo            | Baixa      |
 
 ## Dependências
 
@@ -110,7 +110,7 @@ para os XLSX).
   `seroval>=1.5.3`, e mover o pin para `overrides` real (não
   `pnpm.overrides`, que o bun ignora).
 - **`@tanstack/start-server-core` (alto)**: `@tanstack/react-start@
-  1.167.50` fixa `start-server-core@1.167.22`, abaixo do patch
+1.167.50` fixa `start-server-core@1.167.22`, abaixo do patch
   `1.167.30` que corrige uma CVE moderada de deserialização de
   request. Correção: bump para a série 1.168–1.170.
 
@@ -126,12 +126,12 @@ pesam 29MB em disco mas o bundle real é ~386KB carregado sob demanda;
 
 ## Performance
 
-| Achado | Local | Severidade | Correção |
-| --- | --- | --- | --- |
-| TTL de cache implícito (60s por acidente) | `area.functions.ts:108` | Médio | Passar `CACHE_TTL_SHORT` explicitamente |
-| `diagnoseData`: 7 round-trips sequenciais | `admin-system.functions.ts:37-55` | Baixo | `Promise.all` |
-| `getAuditLog`/`dbHealthCheck` sequenciais | `admin-system.functions.ts:93-108,144-150` | Baixo | `Promise.all` |
-| Filtro+paginação de usuários sem memo | `admin-user-management.tsx:85-100` | Baixo | `useMemo` |
+| Achado                                    | Local                                      | Severidade | Correção                                |
+| ----------------------------------------- | ------------------------------------------ | ---------- | --------------------------------------- |
+| TTL de cache implícito (60s por acidente) | `area.functions.ts:108`                    | Médio      | Passar `CACHE_TTL_SHORT` explicitamente |
+| `diagnoseData`: 7 round-trips sequenciais | `admin-system.functions.ts:37-55`          | Baixo      | `Promise.all`                           |
+| `getAuditLog`/`dbHealthCheck` sequenciais | `admin-system.functions.ts:93-108,144-150` | Baixo      | `Promise.all`                           |
+| Filtro+paginação de usuários sem memo     | `admin-user-management.tsx:85-100`         | Baixo      | `useMemo`                               |
 
 Verificado e descartado como não-problema: bundle já dividido
 corretamente, tabela de Área já virtualizada, nenhuma operação
@@ -139,12 +139,12 @@ bloqueante no servidor, nenhum context re-renderizando árvore à toa.
 
 ## Segurança
 
-| Achado | Severidade | Correção |
-| --- | --- | --- |
-| Segredos de produção no histórico do git | Crítico | Rotacionar + `filter-repo --path .env --invert-paths` |
-| Logout não revoga `token_version` no servidor | Alto | Incrementar `token_version` no logout, mesmo padrão de `resetPassword` |
-| Rate limit de login só por IP (não por conta) | Médio | Segundo balde por e-mail normalizado (ex.: 5/15min) |
-| Sem HSTS na própria aplicação | Baixo | Adicionar header em `applySecurityHeaders` (`server.ts`) |
+| Achado                                        | Severidade | Correção                                                               |
+| --------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| Segredos de produção no histórico do git      | Crítico    | Rotacionar + `filter-repo --path .env --invert-paths`                  |
+| Logout não revoga `token_version` no servidor | Alto       | Incrementar `token_version` no logout, mesmo padrão de `resetPassword` |
+| Rate limit de login só por IP (não por conta) | Médio      | Segundo balde por e-mail normalizado (ex.: 5/15min)                    |
+| Sem HSTS na própria aplicação                 | Baixo      | Adicionar header em `applySecurityHeaders` (`server.ts`)               |
 
 Verificado e sem achado: SQL injection, XSS, CSRF, SSRF, path
 traversal, command injection, enumeração de usuário, cost do bcrypt,
@@ -168,31 +168,31 @@ Confirmado: padrão único para acesso a banco, validação, autorização
 admin e split cache-servidor/cliente, sem fragmentação nos eixos
 centrais.
 
-| Achado | Local | Correção |
-| --- | --- | --- |
-| Lint de código morto desligado sem explicação | `tsconfig.json`, `eslint.config.js:23` | Religar `noUnusedLocals`/`no-unused-vars`, triar backlog |
-| `area.page.tsx` com 4 responsabilidades (571 linhas) | `area.page.tsx` | Extrair `useAreaProductsView`/`useAreaPdfExport` |
-| Paginação duplicada sob nome que não descreve os 2 usos | `AREA_PAGE_SIZE_OPTIONS` | Renomear, considerar `usePagination()` |
-| Ciclo `X.tsx` ↔ `X.page.tsx` (intencional, não é bug) | `routes/_authenticated/*` | Documentar em `routes/README.md` |
+| Achado                                                  | Local                                  | Correção                                                 |
+| ------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------- |
+| Lint de código morto desligado sem explicação           | `tsconfig.json`, `eslint.config.js:23` | Religar `noUnusedLocals`/`no-unused-vars`, triar backlog |
+| `area.page.tsx` com 4 responsabilidades (571 linhas)    | `area.page.tsx`                        | Extrair `useAreaProductsView`/`useAreaPdfExport`         |
+| Paginação duplicada sob nome que não descreve os 2 usos | `AREA_PAGE_SIZE_OPTIONS`               | Renomear, considerar `usePagination()`                   |
+| Ciclo `X.tsx` ↔ `X.page.tsx` (intencional, não é bug)   | `routes/_authenticated/*`              | Documentar em `routes/README.md`                         |
 
 ## Banco de dados
 
-| Achado | Local | Risco | Correção |
-| --- | --- | --- | --- |
-| `refresh_product_universe`/`refresh_filter_hierarchy` sem transação: garantia do comentário é falsa desde que saíram de `finalize_import` | `migrate-schema.sql:1097-1143` | Médio | `START TRANSACTION`/`COMMIT` no molde de `finalize_import` |
-| `purge_old_aggs` sem transação/handler: purge parcial possível | `migrate-schema.sql:1022-1063` | Médio | Mesmo padrão |
-| `idx_prod_daily_sale_date` provavelmente morto (63MB), mesmo padrão dos 4 índices já removidos | `migrate-schema.sql:115` | Baixo | Medir com `bench-procs.sh`, formalizar migration `0005` |
-| 3 índices redundantes com PK/UNIQUE | `idx_products_prod_code`, `idx_import_sale_date`, `idx_users_email` | Baixo | `DROP INDEX` |
-| Ausência de FK sem comentário explicando (única decisão não documentada do schema) | schema todo | Nenhum | Comentário de 1-2 linhas |
+| Achado                                                                                                                                    | Local                                                               | Risco  | Correção                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------ | ---------------------------------------------------------- |
+| `refresh_product_universe`/`refresh_filter_hierarchy` sem transação: garantia do comentário é falsa desde que saíram de `finalize_import` | `migrate-schema.sql:1097-1143`                                      | Médio  | `START TRANSACTION`/`COMMIT` no molde de `finalize_import` |
+| `purge_old_aggs` sem transação/handler: purge parcial possível                                                                            | `migrate-schema.sql:1022-1063`                                      | Médio  | Mesmo padrão                                               |
+| `idx_prod_daily_sale_date` provavelmente morto (63MB), mesmo padrão dos 4 índices já removidos                                            | `migrate-schema.sql:115`                                            | Baixo  | Medir com `bench-procs.sh`, formalizar migration `0005`    |
+| 3 índices redundantes com PK/UNIQUE                                                                                                       | `idx_products_prod_code`, `idx_import_sale_date`, `idx_users_email` | Baixo  | `DROP INDEX`                                               |
+| Ausência de FK sem comentário explicando (única decisão não documentada do schema)                                                        | schema todo                                                         | Nenhum | Comentário de 1-2 linhas                                   |
 
 ## Documentação
 
-| Inconsistência | Local | Realidade |
-| --- | --- | --- |
-| README lista "PDF export" em Dashboard e Produto | `README.md:58-59` | Removido no commit `fc7d92b` (#56) |
-| README se contradiz no rate limit de Auth | `README.md:107` vs `:108` | Real é 10/min IP |
-| `coverage-summary.md` mostra 55,6% | `docs/coverage-summary.md` | Real hoje é 74,2%, artefato não regenerado |
-| `continuar.md` não reflete PRs #71/#72 | `docs/continuar.md:261` | Ainda descreve feature já removida depois |
+| Inconsistência                                   | Local                      | Realidade                                  |
+| ------------------------------------------------ | -------------------------- | ------------------------------------------ |
+| README lista "PDF export" em Dashboard e Produto | `README.md:58-59`          | Removido no commit `fc7d92b` (#56)         |
+| README se contradiz no rate limit de Auth        | `README.md:107` vs `:108`  | Real é 10/min IP                           |
+| `coverage-summary.md` mostra 55,6%               | `docs/coverage-summary.md` | Real hoje é 74,2%, artefato não regenerado |
+| `continuar.md` não reflete PRs #71/#72           | `docs/continuar.md:261`    | Ainda descreve feature já removida depois  |
 
 ---
 

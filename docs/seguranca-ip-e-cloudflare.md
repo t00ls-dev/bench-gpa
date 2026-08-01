@@ -27,13 +27,13 @@ vem nos headers que o próprio Cloudflare injeta.
 
 `src/lib/rate-limit.ts` → `getClientIp()` tenta, nesta ordem de confiança:
 
-| Ordem | Header | Cenário |
-|-------|--------|---------|
-| 1 | `CF-Connecting-IP` | Produção via Cloudflare (padrão) |
-| 2 | `True-Client-IP` | Cloudflare Enterprise |
-| 3 | `X-Real-IP` | Acesso direto ao nginx (sem CF) |
-| 4 | `X-Forwarded-For` (1º salto) | Último recurso |
-| N/A | `"unknown"` | Nenhum header disponível |
+| Ordem | Header                       | Cenário                          |
+| ----- | ---------------------------- | -------------------------------- |
+| 1     | `CF-Connecting-IP`           | Produção via Cloudflare (padrão) |
+| 2     | `True-Client-IP`             | Cloudflare Enterprise            |
+| 3     | `X-Real-IP`                  | Acesso direto ao nginx (sem CF)  |
+| 4     | `X-Forwarded-For` (1º salto) | Último recurso                   |
+| N/A   | `"unknown"`                  | Nenhum header disponível         |
 
 Ainda normaliza porta (`1.2.3.4:5678`) e IPv4-mapeado em IPv6 (`::ffff:1.2.3.4`).
 
@@ -104,7 +104,7 @@ nginx -t && systemctl reload nginx
 Opcional e mais forte: o Cloudflare apresenta um certificado cliente que o
 nginx exige (`ssl_verify_client on;` + CA do Cloudflare). Assim, mesmo quem
 souber o IP da VPS não consegue falar com a origem sem o certificado do CF.
-Ver docs do Cloudflare: *SSL/TLS → Origin Server → Authenticated Origin Pulls*.
+Ver docs do Cloudflare: _SSL/TLS → Origin Server → Authenticated Origin Pulls_.
 
 ## 4. Verificação rápida
 
