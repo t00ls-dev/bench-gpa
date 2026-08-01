@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-01T13:49:24.175Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-01T15:48:31.747Z — thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 46.5% ✅ | 45.4% ✅ | 33.0% ✅ | 38.9% ✅ |
+| **Total** | 47.1% ✅ | 46.0% ✅ | 33.4% ✅ | 39.2% ✅ |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -105,11 +105,13 @@ _Gerado em 2026-08-01T13:49:24.175Z — thresholds: lines 20%, statements 20%, f
 | `src/lib/auth-config.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/auth-middleware.ts` | 100.0% ✅ | 92.3% ✅ | 100.0% ✅ | 75.0% ✅ |
 | `src/lib/boot-guards.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
+| `src/lib/content-disposition.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/csp.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/date-window.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/error-page.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/export-pdf.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/filter-cascade.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
+| `src/lib/pdf-download-store.ts` | 100.0% ✅ | 93.3% ✅ | 100.0% ✅ | 85.7% ✅ |
 | `src/lib/query-config.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/rate-limit.middleware.ts` | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ | 100.0% ✅ |
 | `src/lib/rate-limit.ts` | 100.0% ✅ | 94.6% ✅ | 100.0% ✅ | 86.1% ✅ |

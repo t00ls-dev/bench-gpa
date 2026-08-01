@@ -13,54 +13,57 @@ export function slugifyFilename(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// Anchor único e persistente, reaproveitado em toda chamada — não criado e
-// removido a cada clique. `openPdfInNewTab` (use-area-pdf-export.ts) é
-// assíncrona (await na busca do servidor + import dinâmico de jspdf/
-// jspdf-autotable) antes de chegar aqui, então o `.click()` programático
-// acontece bem depois do clique real do usuário que disparou o export.
-// Firefox é mais estrito que o Chrome em honrar `download` num cenário
-// assim — um <a> criado, inserido e removido na mesma chamada demonstrou
-// continuar salvando com nome genérico mesmo já anexado ao DOM no momento
-// do clique (ver histórico do commit). Um elemento estável, que já existe
-// na página antes do clique, é o padrão documentado como mais confiável
-// entre navegadores para download programático.
-let downloadAnchor: HTMLAnchorElement | undefined;
+// Anchor persistente só pro caminho de preview (abrir em nova aba) — nunca
+// teve o bug de nome de arquivo, então continua com blob: URL local. O
+// caminho de download forçado (com filename) não usa mais anchor nenhum, ver
+// openPdfBlob abaixo.
+let previewAnchor: HTMLAnchorElement | undefined;
 
-function getDownloadAnchor(): HTMLAnchorElement {
-  if (!downloadAnchor) {
-    downloadAnchor = document.createElement("a");
-    downloadAnchor.style.display = "none";
-    document.body.appendChild(downloadAnchor);
+function getPreviewAnchor(): HTMLAnchorElement {
+  if (!previewAnchor) {
+    previewAnchor = document.createElement("a");
+    previewAnchor.style.display = "none";
+    document.body.appendChild(previewAnchor);
   }
-  return downloadAnchor;
+  return previewAnchor;
 }
 
-export function openPdfBlob(doc: jsPDF, filename?: string) {
+/**
+ * Sem `filename`: abre o PDF numa aba nova pra preview (blob: URL local,
+ * como sempre funcionou).
+ *
+ * Com `filename`: passa pelo servidor (`/api/pdf-download` em src/server.ts)
+ * pra baixar com `Content-Disposition: attachment` de verdade, em vez de
+ * confiar no atributo `download` numa blob: URL do lado do cliente. Duas
+ * correções anteriores (anchor anexado ao DOM antes do clique;
+ * `dispatchEvent(MouseEvent)` em vez de `.click()`) não bastaram — o
+ * problema real é mais fundo: o gerenciador de download do Firefox não
+ * confia no atributo `download` pra blob: URLs em vários casos, caindo pro
+ * UUID da própria blob URL como nome (Mozilla Bugzilla #1282407).
+ * Content-Disposition é metadado de uma resposta HTTP real, respeitado de
+ * forma confiável por todo navegador — não depende de nenhum truque de
+ * anchor/blob do lado do cliente.
+ */
+export async function openPdfBlob(doc: jsPDF, filename?: string): Promise<void> {
   const blob = doc.output("blob");
-  const url = URL.createObjectURL(blob);
-  const a = getDownloadAnchor();
-  a.href = url;
-  if (filename) {
-    // Com `download` setado, o clique baixa o arquivo direto (com este nome)
-    // em vez de abrir uma aba de preview — `target`/`rel` não fazem sentido
-    // nesse caso. Precisa limpar explicitamente porque o anchor é reusado:
-    // uma chamada anterior sem filename pode ter deixado target/rel setados.
-    a.download = filename;
-    a.removeAttribute("target");
-    a.removeAttribute("rel");
-  } else {
-    a.removeAttribute("download");
+
+  if (!filename) {
+    const url = URL.createObjectURL(blob);
+    const a = getPreviewAnchor();
+    a.href = url;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
+    a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return;
   }
-  // `a.click()` (o método nativo) não é confiável no Firefox recente pra
-  // disparar o download programaticamente — mesmo com o anchor já anexado ao
-  // documento, o clique sintético às vezes não é tratado como um clique de
-  // verdade e o `download` acaba ignorado. Disparar um MouseEvent completo
-  // via dispatchEvent é o workaround documentado (jsPDF #3391, e a prática
-  // corrente pra download de blob cross-browser) — o comportamento padrão de
-  // ativação do link (baixar com o nome de `download`) dispara do mesmo jeito
-  // que um clique real do usuário dispararia.
-  a.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  const res = await fetch("/api/pdf-download", {
+    method: "POST",
+    headers: { "x-filename": encodeURIComponent(filename) },
+    body: blob,
+  });
+  if (!res.ok) throw new Error("Falha ao preparar o download do PDF.");
+  const { url } = (await res.json()) as { url: string };
+  window.location.href = url;
 }
