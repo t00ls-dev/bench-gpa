@@ -1,10 +1,10 @@
 // Lógica de cascata compartilhada entre FilterBar/index.page (Dashboard) e
 // AreaFilters/area.page (Área). As duas telas usam estratégias DIFERENTES
-// para calcular as OPÇÕES disponíveis em cada nível — FilterBar busca em
+// para calcular as OPÇÕES disponíveis em cada nível: FilterBar busca em
 // cascata via query no servidor (dashboard não carrega a hierarquia inteira,
 // pelo custo de agregação); AreaFilters recebe a hierarquia completa já
 // carregada e cascateia em memória. Essa parte não é unificada de propósito
-// (ver docs/continuar.md, item 4) — fundir trocaria uma decisão de
+// (ver docs/continuar.md, item 4): fundir trocaria uma decisão de
 // performance deliberada por uma abstração.
 //
 // O que É idêntico nas duas telas, e por isso vive aqui: ao trocar um nível,
@@ -45,7 +45,7 @@ interface AreaCascadeOptions {
 /**
  * Cascata em memória do AreaFilters: cada nível filtra o subconjunto da
  * hierarquia que casa com os níveis já selecionados acima dele, e as opções
- * do próprio nível saem desse subconjunto — nunca da hierarquia inteira.
+ * do próprio nível saem desse subconjunto, nunca da hierarquia inteira.
  */
 export function computeAreaCascadeOptions(
   hierarchy: HierarchyItem[],

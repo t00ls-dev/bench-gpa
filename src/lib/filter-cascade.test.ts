@@ -90,7 +90,7 @@ describe("computeAreaCascadeOptions", () => {
   });
 
   it("filtrar por depto não elimina outras lojas do mesmo depto (stores não depende de fDeptos)", () => {
-    // MERCEARIA existe em 1516 e 5287 — o filtro é hierárquico pra baixo, não pra cima.
+    // MERCEARIA existe em 1516 e 5287: o filtro é hierárquico pra baixo, não pra cima.
     const r = computeAreaCascadeOptions(hierarchy, { ...noFilters, fDeptos: ["MERCEARIA"] });
     expect(r.stores.map((s) => s.store_code)).toEqual(["1516", "1629", "5287"]);
     expect(r.secoesOpts.sort()).toEqual(["BEBIDAS", "SECA"]);

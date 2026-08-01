@@ -44,4 +44,4 @@ const outDir = join(root, "src/generated");
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, "doc-meta.json"), JSON.stringify(meta, null, 2));
 
-console.error(`✅ doc-meta.json generated (${Object.keys(meta).length} entries)`);
+console.error(`doc-meta.json generated (${Object.keys(meta).length} entries)`);

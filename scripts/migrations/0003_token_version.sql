@@ -2,7 +2,7 @@
 -- emitidas.
 --
 -- O JWT é stateless e vale 7 dias (JWT_EXPIRY). Até aqui, redefinir a senha de
--- uma conta comprometida NÃO derrubava quem já estava logado com ela — o token
+-- uma conta comprometida NÃO derrubava quem já estava logado com ela: o token
 -- antigo continuava sendo aceito por até uma semana. Inativar a conta
 -- funcionava, porque o requireAuth relê `is_active` do banco a cada request; a
 -- senha era o único vetor sem essa rede.
@@ -12,7 +12,7 @@
 -- token emitido antes deixa de valer no request seguinte.
 --
 -- DEFAULT 0 é o que torna a transição indolor: os tokens já em circulação não
--- têm o campo no payload, e o código lê `payload.tokenVersion ?? 0` — logo
+-- têm o campo no payload, e o código lê `payload.tokenVersion ?? 0`, logo
 -- continuam válidos até expirar naturalmente, sem deslogar ninguém no deploy.
 -- O primeiro resetPassword de cada usuário leva a coluna para 1 e aí sim
 -- invalida tudo que é anterior.
@@ -20,15 +20,15 @@
 -- A tabela users tem poucas linhas, então o custo do ALTER é irrelevante.
 --
 -- EDITADO em 01/08/2026 (auditoria de QA, item 10): o comentário original
--- dizia "MariaDB não tem ADD COLUMN IF NOT EXISTS" — errado, suporta desde a
+-- dizia "MariaDB não tem ADD COLUMN IF NOT EXISTS": errado, suporta desde a
 -- série 10.x (extensão própria do MariaDB, ausente só no MySQL vanilla até
 -- 8.0.29). Sem o `IF NOT EXISTS`, instalação nova (banco vazio) sempre
 -- quebrava aqui: migrate-schema.sql já cria `users.token_version` na
 -- definição da tabela, então o ADD COLUMN duplicava a coluna. Mesma classe de
 -- bug do item 2/10 desta auditoria, e mesmo raciocínio de segurança pra
 -- editar uma migration "já aplicada": o runner identifica migrations
--- concluídas pelo nome do arquivo, nunca reexecuta conteúdo já aplicado —
--- produção não é afetada, só instalação nova passa a funcionar.
+-- concluídas pelo nome do arquivo, nunca reexecuta conteúdo já aplicado.
+-- Produção não é afetada, só instalação nova passa a funcionar.
 
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0 AFTER is_active;

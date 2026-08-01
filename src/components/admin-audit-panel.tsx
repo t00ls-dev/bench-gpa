@@ -242,10 +242,10 @@ export function AuditLogSection({
                     <td className="py-1.5 pr-3">
                       <ActionBadge action={ev.action} />
                     </td>
-                    <td className="py-1.5 pr-3">{ev.actor_email ?? "—"}</td>
-                    <td className="py-1.5 pr-3 text-muted-foreground">{ev.detail ?? "—"}</td>
+                    <td className="py-1.5 pr-3">{ev.actor_email ?? "-"}</td>
+                    <td className="py-1.5 pr-3 text-muted-foreground">{ev.detail ?? "-"}</td>
                     <td className="py-1.5 pl-3 text-right font-mono text-muted-foreground">
-                      {ev.ip ?? "—"}
+                      {ev.ip ?? "-"}
                     </td>
                   </tr>
                 ))}

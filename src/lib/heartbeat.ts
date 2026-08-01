@@ -6,7 +6,7 @@ export type HeartbeatStatus = "ok" | "fail";
 /**
  * Registra (upsert) o último run de um job de cron para o painel admin
  * conseguir mostrar se a cron está rodando dentro do prazo.
- * Best-effort: nunca lança — o job em si não deve falhar por causa do heartbeat.
+ * Best-effort: nunca lança. O job em si não deve falhar por causa do heartbeat.
  */
 export async function recordHeartbeat(
   job: string,

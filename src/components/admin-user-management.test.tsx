@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // Primeiro teste de componente real (`render()`, não `renderHook`) do
-// repositório — prova que a correção do glob de `.test.tsx` em
+// repositório, prova que a correção do glob de `.test.tsx` em
 // vitest.config.ts realmente desbloqueou essa frente (ver
 // docs/auditoria-qa-2026-08-01.md, itens 2 e 9). Escolhido por ser o maior
 // risco de negócio sem teste nenhum: alimenta o path de `listUsers`/
@@ -33,7 +33,7 @@ vi.mock("@/lib/admin-users.functions", () => ({
 }));
 
 // CreateUserDialog/ResetPasswordDialog têm as próprias dependências de
-// servidor e o próprio escopo de teste — substituídos por um stub simples
+// servidor e o próprio escopo de teste, substituídos por um stub simples
 // pra manter este arquivo focado na tabela/busca/paginação/toggles, que é o
 // que pertence a AdminUserManagement.
 vi.mock("@/components/create-user-dialog", () => ({

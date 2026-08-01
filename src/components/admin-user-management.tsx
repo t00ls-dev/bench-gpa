@@ -94,7 +94,7 @@ export function AdminUserManagement({
   );
 
   // Busca/tamanho de página novos podem deixar a página atual fora do range
-  // (ex.: filtrar de 3 páginas pra 1) — volta pra 1 em vez de mostrar vazio.
+  // (ex.: filtrar de 3 páginas pra 1), volta pra 1 em vez de mostrar vazio.
   useResetOnChange([search, pageSize], () => setPage(1));
 
   const totalRows = filtered.length;

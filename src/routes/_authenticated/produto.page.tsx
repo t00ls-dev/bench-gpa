@@ -112,7 +112,7 @@ function ProdutoPage() {
     placeholderData: (prev) => prev,
   });
 
-  // byStore (result set 3 da proc) sempre traz TODAS as lojas — filtrar aqui
+  // byStore (result set 3 da proc) sempre traz TODAS as lojas: filtrar aqui
   // pro gráfico de comparação refletir só o subconjunto escolhido, sem outra
   // ida ao banco. Com 0 ou 1 loja selecionada não filtra (0 = todas; com 1 o
   // gráfico fica escondido via hideStoreComp, então o filtro não importa).
@@ -132,7 +132,7 @@ function ProdutoPage() {
   const refArticle =
     refWeekdayIdx != null ? (WEEKDAY_IS_MASC[refWeekdayIdx] ? "Últimos" : "Últimas") : "Últimas";
 
-  // As últimas 4 datas do mesmo dia da semana anteriores à referência — vêm da
+  // As últimas 4 datas do mesmo dia da semana anteriores à referência, vêm da
   // proc (result set lastFourSameWeekday), já excluindo a data de referência.
   const sameWeekdayDates = (analysisData?.lastFourSameWeekday ?? []) as SeriesPoint[];
 

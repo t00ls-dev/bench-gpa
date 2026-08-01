@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Cada teste precisa de um Map interno fresco — vi.resetModules() +
+// Cada teste precisa de um Map interno fresco: vi.resetModules() +
 // import dinâmico evita um token vazar de um teste pro outro.
 async function freshStore() {
   vi.resetModules();
@@ -28,7 +28,7 @@ describe("pdf-download-store", () => {
   });
 
   // Regressão de um bug real (01/08/2026): o token já foi uso único, e o
-  // Firefox faz mais de uma requisição pra URL de download antes de salvar —
+  // Firefox faz mais de uma requisição pra URL de download antes de salvar:
   // a segunda leitura vinha vazia (404 "Not found" salvo como se fosse o
   // PDF). TTL curto + isolamento por usuário já bastam como proteção; não
   // precisa também matar o token na primeira leitura.
@@ -45,7 +45,7 @@ describe("pdf-download-store", () => {
     expect(takePdf("token-que-nunca-existiu", "user-1")).toBeUndefined();
   });
 
-  // Isolamento por usuário: mesmo token, usuário errado — não é só teoria,
+  // Isolamento por usuário: mesmo token, usuário errado, não é só teoria,
   // é a única coisa que impede alguém de adivinhar o token de outro export.
   it("não devolve nada pra um userId diferente do que gerou o token", async () => {
     const { storePdf, takePdf } = await freshStore();
@@ -60,7 +60,7 @@ describe("pdf-download-store", () => {
     expect(takePdf(token, "user-1")).toBeDefined(); // certo, continua valendo
   });
 
-  it("expira depois do TTL — token válido mas velho não devolve nada", async () => {
+  it("expira depois do TTL, token válido mas velho não devolve nada", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     vi.advanceTimersByTime(61_000);

@@ -3,7 +3,7 @@
 # Prova que uma mudança nas procs de análise NÃO alterou o resultado.
 #
 # É a metade que falta do `scripts/bench-procs.sh`: aquele mede tempo, este mede
-# correção. Tempo sem correção não vale nada — uma proc mais rápida que devolve
+# correção. Tempo sem correção não vale nada: uma proc mais rápida que devolve
 # outro número é um bug mais rápido.
 #
 # COMO USAR
@@ -23,7 +23,7 @@
 #
 # Cada cenário gera dois: `ordem` é da saída como veio (pega mudança de ORDER BY)
 # e `conjunto` é da saída ordenada por fora. A distinção existe porque empate de
-# ordenação é não-determinístico — duas linhas com o mesmo valor podem trocar de
+# ordenação é não-determinístico: duas linhas com o mesmo valor podem trocar de
 # lugar entre execuções sem nada estar errado. Se `ordem` divergir mas `conjunto`
 # bater, é empate; se `conjunto` divergir, é dado diferente, e isso é sério.
 #
@@ -34,7 +34,7 @@
 # `p_date IS NULL` e o conjunto vazio (onde COALESCE decide entre 0 e NULL). As
 # quatro ordenações mais um `p_sort_by` inválido cobrem a whitelist da proc.
 # Busca com e sem match cobre os DOIS ramos do PREPARE de area_analysis, que têm
-# contagens de placeholder diferentes — e contagem de placeholder é erro de
+# contagens de placeholder diferentes, e contagem de placeholder é erro de
 # execução, não de compilação, então só aparece rodando.
 #
 # Roda no banco local por padrão (lê o .env do repo). Somente leitura.
@@ -62,7 +62,7 @@ M() {
 # As dimensões saem do próprio banco: um depto hardcoded envelhece junto com o
 # dataset, e aí o cenário deixa de exercitar o filtro sem ninguém perceber.
 LAST=$(M -e "SELECT MAX(sale_date) FROM sales_prod_daily_agg;")
-[ -n "$LAST" ] || { echo "ERRO: sales_prod_daily_agg vazia — nada a validar" >&2; exit 1; }
+[ -n "$LAST" ] || { echo "ERRO: sales_prod_daily_agg vazia, nada a validar" >&2; exit 1; }
 D7=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 6 DAY);")
 D28=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")
 DEPTO=$(M -e "SELECT depto FROM sales_prod_daily_agg WHERE depto IS NOT NULL GROUP BY depto ORDER BY COUNT(*) DESC LIMIT 1;")

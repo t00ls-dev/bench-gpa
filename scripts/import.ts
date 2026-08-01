@@ -36,7 +36,7 @@ function extractArg(args: string[], flag: string): string | undefined {
 async function main() {
   const { filePath, userId, chunkSize } = parseArgs();
 
-  console.log(`📄 Lendo ${filePath}...`);
+  console.log(`Lendo ${filePath}...`);
   const buffer = readFileSync(filePath).buffer;
   const parsed = parseAnyWorkbook(buffer);
   console.log(`   Data: ${parsed.sale_date}`);
@@ -47,7 +47,7 @@ async function main() {
   const batchId = randomUUID();
   const totalRows = parsed.sales.length;
 
-  // Mesma checagem de upload.functions.ts:beginImport — um arquivo com o
+  // Mesma checagem de upload.functions.ts:beginImport: um arquivo com o
   // marcador de data mas zero linhas de produto (planilha vazia, exportada
   // errada) chegaria intacto até aqui e só estouraria dentro de
   // finalize_import (SIGNAL SQLSTATE '45000' de staging_count=0), um erro cru
@@ -57,9 +57,9 @@ async function main() {
   }
 
   // ---- beginImport ----
-  console.log(`\n🚀 Iniciando importação (batch ${batchId})...`);
+  console.log(`\nIniciando importação (batch ${batchId})...`);
   await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [parsed.sale_date]);
-  console.log("   ✓ Staging limpo");
+  console.log("   OK: staging limpo");
 
   if (parsed.stores.length) {
     const ph = parsed.stores.map(() => "(?, ?)").join(", ");
@@ -68,7 +68,7 @@ async function main() {
       `INSERT INTO stores (store_code, store_name) VALUES ${ph} ON DUPLICATE KEY UPDATE store_name = VALUES(store_name)`,
       vals,
     );
-    console.log(`   ✓ ${parsed.stores.length} lojas`);
+    console.log(`   OK: ${parsed.stores.length} lojas`);
   }
 
   if (parsed.products.length) {
@@ -76,7 +76,7 @@ async function main() {
       JSON.stringify(parsed.products),
       parsed.sale_date,
     ]);
-    console.log(`   ✓ ${parsed.products.length} produtos`);
+    console.log(`   OK: ${parsed.products.length} produtos`);
   }
 
   // ---- insertSalesChunk ----
@@ -98,24 +98,24 @@ async function main() {
     );
     inserted += chunk.length;
     const pct = Math.round((inserted / totalRows) * 100);
-    console.log(`   ✓ Chunk ${i / chunkSize + 1}: ${chunk.length} linhas (${pct}%)`);
+    console.log(`   OK: chunk ${i / chunkSize + 1}: ${chunk.length} linhas (${pct}%)`);
   }
 
   // ---- finalizeImport ----
-  console.log("\n🔄 Finalizando...");
+  console.log("\nFinalizando...");
   await db.query("CALL finalize_import(?, ?, ?, ?)", [
     batchId,
     parsed.sale_date,
     totalRows,
     userId ?? null,
   ]);
-  console.log("   ✓ Importação finalizada");
+  console.log("   OK: importação finalizada");
 
-  console.log(`\n✅ Importação concluída com sucesso!`);
+  console.log(`\nImportação concluída com sucesso.`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error("❌ Erro fatal:", err instanceof Error ? err.message : String(err));
+  console.error("Erro fatal:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

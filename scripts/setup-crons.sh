@@ -1,12 +1,12 @@
 #!/bin/bash
-# setup-crons.sh — Instala/atualiza as crons do Bench GPA
+# setup-crons.sh: instala/atualiza as crons do Bench GPA
 # Uso: bash scripts/setup-crons.sh
 #
-# ⚠️ NÃO RODE ISTO EM PRODUÇÃO. Lá quem é dono do crontab é o HestiaCP: a fonte
-# de verdade é /usr/local/hestia/data/users/admin/cron.conf, e o crontab cru é
-# gerado a partir dela. Este script escreve direto com `crontab`, então mexeria
-# só no lado gerado — que o Hestia sobrescreve na próxima alteração, desfazendo
-# a mudança sem avisar.
+# ATENÇÃO: NÃO RODE ISTO EM PRODUÇÃO. Lá quem é dono do crontab é o HestiaCP: a
+# fonte de verdade é /usr/local/hestia/data/users/admin/cron.conf, e o crontab
+# cru é gerado a partir dela. Este script escreve direto com `crontab`, então
+# mexeria só no lado gerado, que o Hestia sobrescreve na próxima alteração,
+# desfazendo a mudança sem avisar.
 #
 # Em produção, usar as ferramentas do Hestia:
 #   sudo /usr/local/hestia/bin/v-add-cron-job admin '0' '3' '*' '*' '*' '<cmd>'
@@ -25,7 +25,7 @@ BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bu
 #
 # O cron do cli:watch existia porque as planilhas chegavam pelo git e alguém
 # precisava reagir a elas; foi desligado em 2026-07-26 junto com a saída dos
-# dados do versionamento. Os scripts continuam disponíveis para uso manual — se
+# dados do versionamento. Os scripts continuam disponíveis para uso manual, se
 # um dia voltar a fazer sentido automatizar, reintroduzir a linha aqui E o job
 # em KNOWN_JOBS (src/lib/admin-system.functions.ts), senão o painel admin não
 # monitora.
@@ -36,7 +36,7 @@ BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bu
 # descrevendo o mesmo horário. Mudar aqui (ou no v-add-cron-job do Hestia em
 # produção) sem mudar lá deixa o painel exibindo um horário que não é o real.
 #
-# refresh-universe roda 30min DEPOIS do purge de propósito — regenera
+# refresh-universe roda 30min DEPOIS do purge de propósito: regenera
 # product_universe/filter_hierarchy já enxergando o agg pós-poda numa única
 # passada. Até 30/07/2026 esse refresh rodava síncrono a cada import e a cada
 # purge com linha removida; passou a ser um cron dedicado (item 5 de
@@ -55,5 +55,5 @@ done >> /tmp/crontab-new
 crontab /tmp/crontab-new
 rm /tmp/crontab-new
 
-echo "✅ Crons instaladas:"
+echo "Crons instaladas:"
 crontab -l | grep "$BENCH_DIR"

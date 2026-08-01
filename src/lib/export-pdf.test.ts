@@ -10,7 +10,7 @@ function createMockDoc(): jsPDF {
 }
 
 // openPdfBlob reusa um anchor de preview único, criado uma vez no módulo (ver
-// export-pdf.ts) — vi.resetModules() + import dinâmico dá a cada teste um
+// export-pdf.ts). vi.resetModules() + import dinâmico dá a cada teste um
 // módulo fresco, sem esse estado vazando de um teste pro outro.
 async function freshOpenPdfBlob() {
   vi.resetModules();
@@ -24,7 +24,7 @@ function getAnchor(): HTMLAnchorElement {
   return a;
 }
 
-describe("openPdfBlob — sem filename (preview numa aba nova)", () => {
+describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
   let mockDoc: ReturnType<typeof createMockDoc>;
 
   beforeEach(() => {
@@ -42,7 +42,7 @@ describe("openPdfBlob — sem filename (preview numa aba nova)", () => {
     vi.useRealTimers();
   });
 
-  it("nunca chama fetch — preview fica só no cliente, sem passar pelo servidor", async () => {
+  it("nunca chama fetch, preview fica só no cliente, sem passar pelo servidor", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc);
     expect(fetch).not.toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe("openPdfBlob — sem filename (preview numa aba nova)", () => {
   });
 });
 
-describe("openPdfBlob — com filename (download forçado via servidor)", () => {
+describe("openPdfBlob: com filename (download forçado via servidor)", () => {
   let mockDoc: ReturnType<typeof createMockDoc>;
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -106,7 +106,7 @@ describe("openPdfBlob — com filename (download forçado via servidor)", () => 
     });
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(URL, "createObjectURL");
-    // window.location.href não é navegável no jsdom — sobrescreve pra
+    // window.location.href não é navegável no jsdom: sobrescreve pra
     // conseguir espionar sem o "Not implemented: navigation" do jsdom.
     delete (window as unknown as { location?: unknown }).location;
     (window as unknown as { location: { href: string } }).location = { href: "" };
@@ -119,11 +119,11 @@ describe("openPdfBlob — com filename (download forçado via servidor)", () => 
 
   // Regressão do bug real: blob: URL + atributo `download` não é confiável
   // no gerenciador de download do Firefox (cai pro UUID da própria blob URL
-  // como nome — Mozilla Bugzilla #1282407), mesmo com o anchor conectado ao
+  // como nome, Mozilla Bugzilla #1282407), mesmo com o anchor conectado ao
   // DOM e um MouseEvent de verdade disparado (as duas correções anteriores).
-  // Por isso o caminho de filename não cria blob: URL nem anchor nenhum —
+  // Por isso o caminho de filename não cria blob: URL nem anchor nenhum.
   // vai inteiro via POST pro servidor, que devolve Content-Disposition real.
-  it("não cria nenhuma blob: URL nem anchor — vai direto pro servidor", async () => {
+  it("não cria nenhuma blob: URL nem anchor, vai direto pro servidor", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc, "relatorio.pdf");
     expect(document.body.querySelector("a")).toBeNull();

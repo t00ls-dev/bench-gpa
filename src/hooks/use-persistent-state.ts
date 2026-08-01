@@ -10,7 +10,7 @@ import {
 /**
  * Like useState but persists the value to localStorage under `key`.
  * Falls back to `initial` when nothing is stored or storage is unavailable.
- * `sanitize` is called after restoring the value — useful to discard invalid persisted data.
+ * `sanitize` is called after restoring the value: useful to discard invalid persisted data.
  */
 export function usePersistentState<T>(
   key: string,
@@ -19,7 +19,7 @@ export function usePersistentState<T>(
 ): [T, Dispatch<SetStateAction<T>>] {
   // sanitizedOnLoad viaja junto com value (em vez de num ref separado mutado
   // dentro do inicializador do useState) para não mutar um ref durante o
-  // render — só efeitos/handlers de evento devem fazer isso. Sinaliza se
+  // render, só efeitos/handlers de evento devem fazer isso. Sinaliza se
   // sanitize() mudou o valor lido do storage, para o efeito abaixo escrever a
   // correção de volta imediatamente, em vez de só na próxima mudança
   // não-relacionada (o que deixaria dado ruim em disco indefinidamente para

@@ -24,7 +24,7 @@ function extractDateFromFilename(filename: string): string | null {
   const dmy = base.match(/(\d{2})[-./](\d{2})[-./](\d{4})/);
   if (dmy && isValidDate(dmy[3], dmy[2], dmy[1])) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
 
-  // 8+ digit sequences — try DDMMYYYY then YYYYMMDD
+  // 8+ digit sequences, try DDMMYYYY then YYYYMMDD
   const seqs = base.match(/\d{8,}/g) || [];
   for (const seq of seqs) {
     const [d1, m1, y1] = [seq.slice(0, 2), seq.slice(2, 4), seq.slice(4, 8)];

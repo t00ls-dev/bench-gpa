@@ -2,7 +2,7 @@ const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/sit
 
 /**
  * Turnstile está ativo (e portanto obrigatório) quando há uma secret
- * configurada e o bypass não está ligado. Serve para o login exigir o token —
+ * configurada e o bypass não está ligado. Serve para o login exigir o token:
  * fail-closed: quando ativo, uma requisição sem token deve ser recusada, não
  * ignorada.
  */
@@ -43,7 +43,7 @@ export async function verifyTurnstile(token: string, ip?: string): Promise<boole
     } catch (err) {
       console.error(`[Turnstile] Tentativa ${attempt + 1} falhou:`, err);
       if (attempt === 1) {
-        console.error("[Turnstile] API indisponível após 2 tentativas — fail-closed");
+        console.error("[Turnstile] API indisponível após 2 tentativas: fail-closed");
         return false;
       }
     }

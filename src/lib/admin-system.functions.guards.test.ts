@@ -1,5 +1,5 @@
 // Complementa admin-system.functions.test.ts, que mocka `assertAdmin` como
-// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade — prova
+// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade: prova
 // que um não-admin é de fato *bloqueado*, e que nenhuma consulta de negócio
 // roda antes disso (ver docs/auditoria-qa-2026-08-01.md, item 3).
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -48,7 +48,7 @@ vi.mock("./rate-limit.middleware", () => ({
         next({ context }),
   ),
 }));
-// admin-utils NÃO é mockado — é exatamente o que esta suíte prova de verdade.
+// admin-utils NÃO é mockado: é exatamente o que esta suíte prova de verdade.
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
 import { diagnoseData } from "./admin-system.functions";
@@ -58,14 +58,14 @@ beforeEach(() => {
   vi.mocked(db.query).mockReset();
 });
 
-describe("diagnoseData — guard de admin real (assertAdmin não mockado)", () => {
+describe("diagnoseData: guard de admin real (assertAdmin não mockado)", () => {
   it("rejeita usuário não-admin sem executar nenhuma consulta de negócio", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[[{ has_role: 0 }]]] as never); // CALL has_role
 
     await expect((diagnoseData as () => Promise<unknown>)()).rejects.toThrow(
       "Apenas administradores",
     );
-    // Só a checagem do próprio assertAdmin rodou — as 6 contagens de tabela e
+    // Só a checagem do próprio assertAdmin rodou: as 6 contagens de tabela e
     // a consulta de datas distintas nunca chegaram a ser disparadas.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);

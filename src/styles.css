@@ -50,7 +50,7 @@
 :root {
   --radius: 0.75rem;
 
-  /* Retail moderno — verde profundo + azul executivo + âmbar para acentos */
+  /* Retail moderno: verde profundo + azul executivo + âmbar para acentos */
   --background: oklch(0.985 0.005 90);
   --foreground: oklch(0.18 0.03 240);
 

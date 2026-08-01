@@ -13,7 +13,7 @@ export function slugifyFilename(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// Anchor persistente só pro caminho de preview (abrir em nova aba) — nunca
+// Anchor persistente só pro caminho de preview (abrir em nova aba): nunca
 // teve o bug de nome de arquivo, então continua com blob: URL local. O
 // caminho de download forçado (com filename) não usa mais anchor nenhum, ver
 // openPdfBlob abaixo.
@@ -36,12 +36,12 @@ function getPreviewAnchor(): HTMLAnchorElement {
  * pra baixar com `Content-Disposition: attachment` de verdade, em vez de
  * confiar no atributo `download` numa blob: URL do lado do cliente. Duas
  * correções anteriores (anchor anexado ao DOM antes do clique;
- * `dispatchEvent(MouseEvent)` em vez de `.click()`) não bastaram — o
+ * `dispatchEvent(MouseEvent)` em vez de `.click()`) não bastaram. O
  * problema real é mais fundo: o gerenciador de download do Firefox não
  * confia no atributo `download` pra blob: URLs em vários casos, caindo pro
  * UUID da própria blob URL como nome (Mozilla Bugzilla #1282407).
  * Content-Disposition é metadado de uma resposta HTTP real, respeitado de
- * forma confiável por todo navegador — não depende de nenhum truque de
+ * forma confiável por todo navegador, sem depender de nenhum truque de
  * anchor/blob do lado do cliente.
  */
 export async function openPdfBlob(doc: jsPDF, filename?: string): Promise<void> {

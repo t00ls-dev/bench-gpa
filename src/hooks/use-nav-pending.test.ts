@@ -16,7 +16,7 @@ describe("isNavPendingTo", () => {
   });
 
   it("does not treat a subroute as pending for an exact target", () => {
-    // Regressão: "/admin" é prefixo de "/admin/docs" — navegar para
+    // Regressão: "/admin" é prefixo de "/admin/docs", navegar para
     // Documentação não pode marcar Administração como pendente também.
     expect(isNavPendingTo("/admin/docs", "/admin", true)).toBe(false);
   });
