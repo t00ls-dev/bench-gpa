@@ -19,7 +19,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
   const token = parsed[SESSION_COOKIE];
 
   try {
-    // slide: true — toda chamada autenticada renova a sessão "normal" por mais
+    // slide: true: toda chamada autenticada renova a sessão "normal" por mais
     // INACTIVITY_TIMEOUT_SECONDS, é isso que dá o comportamento de expiração
     // por inatividade em vez de um prazo fixo desde o login.
     const session = await resolveSession(token, { slide: true });

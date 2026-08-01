@@ -118,7 +118,7 @@ export function strOrNull(v: unknown): string | null {
   if (v instanceof Date) return v.toISOString().slice(0, 10);
   return String(v);
 }
-// Unlike str()/strOrNull(), keeps the time-of-day — use for TIMESTAMP/DATETIME
+// Unlike str()/strOrNull(), keeps the time-of-day. Use for TIMESTAMP/DATETIME
 // columns (e.g. imported_at), not DATE-only columns (e.g. sale_date).
 export function dateTimeStr(v: unknown): string {
   if (v instanceof Date) return v.toISOString();

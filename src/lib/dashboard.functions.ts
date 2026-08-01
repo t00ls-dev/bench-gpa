@@ -98,7 +98,7 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
-    // Mesmo cache que o callMetrics já usava para o dashboard_metrics — esta era
+    // Mesmo cache que o callMetrics já usava para o dashboard_metrics: esta era
     // a única metade da tela inicial que ainda batia no banco a cada render.
     // A proc já varreu a sales_prod_daily_agg cinco vezes, uma por ranking, e
     // media 3,8s na janela padrão de 7 dias. Hoje varre uma vez só: medido em

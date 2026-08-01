@@ -66,7 +66,7 @@ function writeSessionCookie(token: string, persistent: boolean): void {
   });
 }
 
-/** Emite a sessão inicial no login — único ponto que decide entre o modo
+/** Emite a sessão inicial no login: único ponto que decide entre o modo
  * "Manter conectado" (fixo, 7 dias) e o modo normal (desliza por atividade,
  * teto de 24h). */
 export function issueSession(
@@ -80,13 +80,13 @@ export function issueSession(
 
 /**
  * Valida o cookie de sessão e, se `slide` for true e a sessão for do tipo
- * "normal" (não persistente), reemite o cookie com um novo prazo — é o que dá
+ * "normal" (não persistente), reemite o cookie com um novo prazo: é o que dá
  * o comportamento de expiração por inatividade. `slide: false` é usado por
  * quem só precisa checar a identidade (ex.: `getMe`, chamado a cada navegação
  * e cacheado por 60s) sem querer o efeito colateral de reemitir o cookie a
  * cada chamada.
  *
- * Lança em qualquer falha — cada mensagem começa com "Unauthorized" para quem
+ * Lança em qualquer falha: cada mensagem começa com "Unauthorized" para quem
  * precisa distinguir o motivo (`requireAuth`); `getMe` só quer saber se deu
  * certo e converte qualquer exceção em `null`.
  */
@@ -110,13 +110,13 @@ export async function resolveSession(
 
   // Revogação: resetPassword incrementa token_version, então todo token
   // emitido antes para de valer aqui. `?? 0` cobre tokens emitidos antes desta
-  // coluna existir — nascem em 0 e seguem válidos até expirar naturalmente.
+  // coluna existir: nascem em 0 e seguem válidos até expirar naturalmente.
   if ((payload.tokenVersion ?? 0) !== dbUser.token_version) {
     throw new Error("Unauthorized: session revoked");
   }
 
   if (!payload.persistent) {
-    // Tokens emitidos antes desta mudança não têm `loginAt` — tratamos como se
+    // Tokens emitidos antes desta mudança não têm `loginAt`: tratamos como se
     // o login fosse agora, dando um teto de 24h a partir do deploy em vez de
     // expirar todo mundo de uma vez.
     const loginAt = payload.loginAt ?? Math.floor(Date.now() / 1000);

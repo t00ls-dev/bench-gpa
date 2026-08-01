@@ -51,8 +51,8 @@ function splitCodeName(s: unknown): { code: string; name: string } | null {
  * ponto separa milhar, vírgula separa decimal ("1.234,56" → 1234.56).
  *
  * Na prática o XLSX quase sempre entrega `number` (lemos com `raw: true`), e é
- * por isso que o bug do `.replace(",", ".")` — que só trocava a PRIMEIRA
- * vírgula e deixava os pontos de milhar, transformando "1.234,56" em 1.234 —
+ * por isso que o bug do `.replace(",", ".")` (que só trocava a PRIMEIRA
+ * vírgula e deixava os pontos de milhar, transformando "1.234,56" em 1.234)
  * nunca apareceu. Basta uma coluna formatada como texto na origem para os
  * valores chegarem como string e o total do dia sair mil vezes menor.
  *

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ⚠️ NÃO COPIE ESTE MÉTODO. Ele está aqui como registro do experimento de
+# ATENÇÃO: NÃO COPIE ESTE MÉTODO. Ele está aqui como registro do experimento de
 # 2026-07-26, não como modelo.
 #
 # O script compara SQL avulso que IMITA a proc, em vez de medir a proc. Isso

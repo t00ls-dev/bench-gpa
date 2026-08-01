@@ -44,7 +44,7 @@ const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 function sanitizeAF(f: AreaFilters): AreaFilters {
   let dateFrom = isoDate.test(f.dateFrom) ? f.dateFrom : "";
   let dateTo = isoDate.test(f.dateTo) ? f.dateTo : "";
-  // Guard against a reversed range (e.g. persisted from an old session) —
+  // Guard against a reversed range (e.g. persisted from an old session):
   // it makes queries return no data and crashes the calendar picker.
   if (dateFrom && dateTo && dateFrom > dateTo) [dateFrom, dateTo] = [dateTo, dateFrom];
   return { ...f, dateFrom, dateTo };
@@ -52,7 +52,7 @@ function sanitizeAF(f: AreaFilters): AreaFilters {
 
 /**
  * Estado de filtros, hierarquia, busca/ordenação/paginação e a query de
- * produtos da tela de Área — tudo que não é exportação de PDF nem JSX.
+ * produtos da tela de Área, tudo que não é exportação de PDF nem JSX.
  * Extraído de `area.page.tsx` (auditoria técnica de 31/07, item "4
  * responsabilidades"); `getArea`/`useServerFn` fica de fora porque o export de
  * PDF em `useAreaPdfExport` também precisa dele, evitando dois server-fn
@@ -81,7 +81,7 @@ export function useAreaProductsView(
   // mesmo commit (ex.: hierarquia já em cache faz o efeito de período padrão
   // e o de click-through do Dashboard disputarem o primeiro render), cada
   // `setAf({...af, ...p})` calculado a partir do MESMO `af` (fechamento
-  // parado no render anterior) apaga o patch do outro — só o último a
+  // parado no render anterior) apaga o patch do outro: só o último a
   // "vencer" sobrevive. `setAf(prev => ...)` sempre parte do estado mais
   // recente, mesmo entre updates do mesmo commit.
   const patch = (p: Partial<AreaFilters>) => setAf((prev) => ({ ...prev, ...p }));
@@ -94,7 +94,7 @@ export function useAreaProductsView(
 
   // Click-through do ranking do Dashboard (?store=&depto=&secao=&grupo=&subgrupo=):
   // substitui os filtros de categoria persistidos pelo nível clicado, uma
-  // única vez por navegação — não deve reaplicar se o usuário mudar os
+  // única vez por navegação, não deve reaplicar se o usuário mudar os
   // filtros depois (por isso o guard em ref em vez de rodar a cada render).
   const appliedSearchRef = useRef(false);
   useEffect(() => {
@@ -130,7 +130,7 @@ export function useAreaProductsView(
   });
   const hierData = hierQ.data;
   // useMemo porque o `?? []` criava um array novo a cada render, e `hierarchy` é
-  // dependência do useMemo de `stores` — que portanto recalculava sempre.
+  // dependência do useMemo de `stores`, que portanto recalculava sempre.
   const hierarchy = useMemo(() => hierData?.hierarchy ?? [], [hierData]);
   const opts = hierData;
 

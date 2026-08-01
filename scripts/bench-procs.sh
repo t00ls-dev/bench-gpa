@@ -8,7 +8,7 @@
 # código: não havia como medir. No MariaDB local o mesmo bloco variou de 8,6s a
 # 0,9s entre execuções (buffer pool), um índice de teste apareceu sem ter sido
 # criado, e um índice de cobertura em `depto` não mudou nada. Sem número
-# confiável, qualquer reescrita de proc é chute — e "ficou mais rápido" vira
+# confiável, qualquer reescrita de proc é chute, e "ficou mais rápido" vira
 # opinião.
 #
 # O que este script garante, e que faltava:
@@ -20,7 +20,7 @@
 #      sessão SQL, antes e depois do CALL. Latência de SSH e de conexão ficam
 #      de fora.
 #   3. Descarta o primeiro tiro. Buffer pool frio mede o disco, não a query.
-#      Todas as medidas são de estado quente — que é o estado em que a tela
+#      Todas as medidas são de estado quente, que é o estado em que a tela
 #      real roda depois do primeiro acesso do dia.
 #   4. Repete N vezes e reporta a DISPERSÃO junto com a mediana. A dispersão é
 #      o número mais importante do relatório: se max/min passar de ~1,3, a
@@ -30,7 +30,7 @@
 #      com datasets ou buffer pools diferentes é comparar coisa nenhuma.
 #   6. Guarda o HASH DO RESULTADO de cada cenário. Performance não pode custar
 #      correção: depois de mexer numa proc, o hash tem de bater com o baseline.
-#      São dois hashes — um da saída na ordem em que veio (pega mudança de
+#      São dois hashes: um da saída na ordem em que veio (pega mudança de
 #      ORDER BY) e um da saída ordenada externamente (pega perda ou ganho de
 #      linha mesmo quando há empate de ordenação, que é não-determinístico).
 #   7. Recusa-se a rodar sob carga. O app tem 2 usuários e 1 núcleo: medir
@@ -155,7 +155,7 @@ D28="$(sql -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")"
 DEPTO="$(sql -e "SELECT depto FROM sales_prod_daily_agg WHERE sale_date>='$D28' GROUP BY depto ORDER BY COUNT(*) DESC LIMIT 1;")"
 STORE="$(sql -e "SELECT store_code FROM sales_prod_daily_agg WHERE sale_date>='$D28' GROUP BY store_code ORDER BY COUNT(*) DESC LIMIT 1;")"
 # product_analysis (item 3 de docs/continuar.md) faz 7 varreduras de
-# sales_prod_daily_agg, todas filtradas por prod_code = ? — inclusive
+# sales_prod_daily_agg, todas filtradas por prod_code = ?, inclusive
 # lastFourSameWeekday/lastFourAll, que não têm limite de data além de
 # v_ref_date, ou seja, varrem o histórico inteiro daquele produto. O custo
 # esperado escala com o volume do produto, não com o período, daí os dois
@@ -197,7 +197,7 @@ for entry in "${SCENARIOS[@]}"; do
   # medições e também serve de aquecimento adicional.
   raw="$OUT_DIR/$name.out"
   if ! sql -e "$call" > "$raw" 2> "$OUT_DIR/$name.err"; then
-    echo "  $name: FALHOU — ver $OUT_DIR/$name.err"
+    echo "  $name: FALHOU, ver $OUT_DIR/$name.err"
     continue
   fi
   h_order="$(md5sum < "$raw" | cut -c1-12)"

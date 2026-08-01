@@ -104,7 +104,7 @@ describe("getDashboardRankings", () => {
     expect(r.byProduto).toEqual([{ code: "1", name: "P1", val: 90 }]);
   });
 
-  // Era a única metade da tela inicial ainda sem cache — o dashboard_metrics já
+  // Era a única metade da tela inicial ainda sem cache: o dashboard_metrics já
   // era cacheado pelo callMetrics. Media 3,8s em prod na janela padrão, antes de
   // a proc passar a varrer o agregado uma vez só (19,0s em 28 dias hoje).
   describe("cache", () => {
@@ -148,7 +148,7 @@ describe("getFilterOptions", () => {
       secoes: ["SECA"],
       grupos: ["ARROZ"],
       subgrupos: ["ARROZ BRANCO"],
-      // A proc não garante ORDER BY sobrevivendo a schema drift — o array
+      // A proc não garante ORDER BY sobrevivendo a schema drift: o array
       // chega fora de ordem no fixture e tem que sair ordenado ascendente.
       availableDates: ["2026-05-27", "2026-06-15", "2026-07-20"],
     });

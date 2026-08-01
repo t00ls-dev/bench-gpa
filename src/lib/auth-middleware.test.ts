@@ -131,7 +131,7 @@ describe("requireAuth", () => {
 
     // Transição: os tokens já em circulação quando a coluna foi criada não têm
     // o campo no payload. Como a coluna nasce em 0, eles seguem válidos até
-    // expirar — o deploy não desloga ninguém.
+    // expirar, o deploy não desloga ninguém.
     it("aceita token legado sem tokenVersion enquanto a coluna estiver em 0", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
@@ -170,7 +170,7 @@ describe("requireAuth", () => {
   });
 
   // Expiração por inatividade: cada request autenticado renova a sessão
-  // "normal" — sem isso, a sessão teria que ter prazo fixo desde o login.
+  // "normal": sem isso, a sessão teria que ter prazo fixo desde o login.
   describe("sliding session", () => {
     it("reemite o cookie a cada request de uma sessão normal (não persistente)", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
@@ -217,7 +217,7 @@ describe("requireAuth", () => {
       expect(setCookie).not.toHaveBeenCalled();
     });
 
-    // Transição: tokens emitidos antes desta mudança não têm `loginAt` — em
+    // Transição: tokens emitidos antes desta mudança não têm `loginAt`, em
     // vez de expirar todo mundo no deploy, tratamos como login agora.
     it("trata token legado sem loginAt como login agora, sem expirar na hora", async () => {
       vi.mocked(jwt.verify).mockReturnValue({

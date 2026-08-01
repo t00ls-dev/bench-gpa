@@ -53,7 +53,7 @@ async function main() {
   console.log(`filter_hierarchy (linhas com algum '0'): ${beforeHier}`);
 
   if (total(beforeAgg) === 0 && beforeHier === 0) {
-    console.log('\n✅ Nada a fazer — nenhuma categoria "0" encontrada.');
+    console.log('\nNada a fazer: nenhuma categoria "0" encontrada.');
     process.exit(0);
   }
 
@@ -66,7 +66,7 @@ async function main() {
   }
 
   // O UPDATE é um único statement atômico por si só. A filter_hierarchy é
-  // derivada, então é regenerada do zero pelo proc (não editada diretamente) —
+  // derivada, então é regenerada do zero pelo proc (não editada diretamente):
   // isso também remove eventuais linhas que fiquem totalmente nulas.
   if (total(beforeAgg) > 0) {
     const [res] = await db.query(
@@ -92,12 +92,12 @@ async function main() {
   console.table(afterAgg);
   console.log(`filter_hierarchy com '0': ${afterHier}`);
   console.log(
-    remaining === 0 ? "\n✅ Backfill concluído." : `\n⚠️ Ainda restam ${remaining} valores "0".`,
+    remaining === 0 ? "\nBackfill concluído." : `\nAinda restam ${remaining} valores "0".`,
   );
   process.exit(remaining === 0 ? 0 : 1);
 }
 
 main().catch((err) => {
-  console.error("❌ Erro:", err instanceof Error ? err.message : String(err));
+  console.error("Erro:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

@@ -58,7 +58,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   // App interno, atrás de autenticação: não há público externo a atrair, então
   // metadado de indexação e de preview social é anti-feature aqui. Foram
   // removidos daqui `description`, `og:title`, `og:description`, `twitter:title`
-  // e `twitter:description` — não reintroduzir. O `public/robots.txt` continua
+  // e `twitter:description`: não reintroduzir. O `public/robots.txt` continua
   // com `Disallow: /` de propósito: ele bloqueia indexação, que é o que
   // queremos.
   //

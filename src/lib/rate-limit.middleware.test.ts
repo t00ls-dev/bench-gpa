@@ -1,12 +1,12 @@
 // Cobre a peça que faltava: `requireRateLimit()` é o middleware que de fato
 // aplica o rate limit em toda função não-auth, mas em todo *.functions.test.ts
-// ele é mockado como passthrough — nada prova que ele bloqueia de verdade, nem
+// ele é mockado como passthrough: nada prova que ele bloqueia de verdade, nem
 // que os tetos reais de produção (apiLimiter 300/min, uploadLimiter 200/min)
 // estão ligados corretamente (ver docs/auditoria-qa-2026-08-01.md, item 4).
 //
 // `vi.resetModules()` + import dinâmico por teste dá cada teste um
 // `apiLimiter`/`uploadLimiter` novo (singletons recriados do zero ao
-// reimportar "./rate-limit") — sem isso, o orçamento GLOBAL de cada tier
+// reimportar "./rate-limit"). Sem isso, o orçamento GLOBAL de cada tier
 // (compartilhado entre todos os IPs) vazaria de um teste pro outro.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

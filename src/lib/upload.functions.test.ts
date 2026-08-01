@@ -115,7 +115,7 @@ describe("beginImport", () => {
 
   it("pula o INSERT de lojas quando stores está vazio", async () => {
     await (beginImport as (d: typeof baseInput) => Promise<unknown>)({ ...baseInput, stores: [] });
-    // Só DELETE (staging) + CALL upsert_products_bulk — nenhuma chamada com "INSERT INTO stores".
+    // Só DELETE (staging) + CALL upsert_products_bulk: nenhuma chamada com "INSERT INTO stores".
     expect(db.query).toHaveBeenCalledTimes(2);
     expect(db.query).not.toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO stores"),
@@ -224,12 +224,12 @@ describe("getImportedDates", () => {
 
 describe("finalizeImport", () => {
   // `row_count` aqui é só o parâmetro que o cliente MANDA (parsed.sales.length,
-  // calculado antes de qualquer chunk ser de fato inserido) — este teste prova
+  // calculado antes de qualquer chunk ser de fato inserido). Este teste prova
   // que a função de servidor o repassa como veio, não que ele é confiável. A
   // reconciliação real está dentro da procedure `finalize_import`
   // (migrate-schema.sql): `import_log.row_count` grava `v_staging_count` (a
   // contagem real da staging, já verificada > 0 na mesma procedure), não
-  // `p_row_count` — um `db.query` mockado não executa SQL de verdade, então
+  // `p_row_count`: um `db.query` mockado não executa SQL de verdade, então
   // essa parte foi validada manualmente contra MariaDB real (ver
   // docs/auditoria-qa-2026-08-01.md, item 8): `CALL finalize_import(...,
   // 999, ...)` com só 3 linhas reais na staging gravou `row_count = 3` em

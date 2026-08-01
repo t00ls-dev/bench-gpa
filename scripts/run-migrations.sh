@@ -6,14 +6,14 @@
 #      Mantém tabelas (CREATE TABLE IF NOT EXISTS) e, sobretudo, TODAS as
 #      stored procedures (DROP IF EXISTS + CREATE) em sincronia com o
 #      repositório. É isto que elimina a defasagem de procedures entre o
-#      arquivo versionado e o banco em produção — a causa do bug de datas
+#      arquivo versionado e o banco em produção: a causa do bug de datas
 #      invertidas: a proc filter_options em prod ainda retornava
 #      `sale_date DESC` (revisão anterior à correção `ASC`), porque editar o
 #      .sql nunca re-executa CREATE PROCEDURE no banco já rodando.
 #
 #   2. MIGRATIONS versionadas forward-only (migrations/NNNN_*.sql), aplicadas
 #      UMA vez e registradas em `schema_migrations`. Para mudanças que o
-#      baseline idempotente não cobre — ALTER TABLE, backfills, etc.
+#      baseline idempotente não cobre: ALTER TABLE, backfills, etc.
 #      (CREATE TABLE IF NOT EXISTS não altera tabela já existente).
 #
 # Uso:
@@ -42,7 +42,7 @@ set +a
 
 # MYSQL_PWD mantém a senha fora da lista de processos (ps).
 export MYSQL_PWD="$DB_PASS"
-# Cliente `mariadb` — `mysql` é um alias deprecado no MariaDB 11.4. `--skip-ssl`
+# Cliente `mariadb`: `mysql` é um alias deprecado no MariaDB 11.4. `--skip-ssl`
 # porque a conexão é local (localhost/socket Unix), onde TLS não agrega; sem essa
 # flag o client polui o log de deploy com "insecure passwordless login".
 MYSQL=(mariadb --skip-ssl --host="$DB_HOST" --port="${DB_PORT:-3306}" --user="$DB_USER" "$DB_NAME")
@@ -60,7 +60,7 @@ SQL
 
 echo "==> [3/3] Migrations versionadas (forward-only)"
 # nullglob: sem arquivos, o loop simplesmente não executa. O glob do bash já
-# vem ordenado lexicograficamente (LC_COLLATE) — o prefixo NNNN garante a ordem.
+# vem ordenado lexicograficamente (LC_COLLATE): o prefixo NNNN garante a ordem.
 shopt -s nullglob
 applied_any=0
 for f in "$DIR"/migrations/*.sql; do

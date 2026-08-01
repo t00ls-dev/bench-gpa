@@ -62,7 +62,7 @@ export const login = createServerFn({ method: "POST" })
       throw new Error("Muitas tentativas de login. Aguarde um minuto.");
     }
 
-    // Balde por conta, além do balde por IP acima — protege contra
+    // Balde por conta, além do balde por IP acima: protege contra
     // credential stuffing distribuído por vários IPs contra a mesma conta.
     const rlAccount = authAccountLimiter.check(data.email);
     if (!rlAccount.allowed) {
@@ -70,8 +70,8 @@ export const login = createServerFn({ method: "POST" })
       throw new Error("Muitas tentativas de login para esta conta. Aguarde alguns minutos.");
     }
 
-    // Fail-closed: quando o Turnstile está ativo, o token é obrigatório —
-    // omiti-lo não pode ser um atalho para pular o CAPTCHA (credential stuffing).
+    // Fail-closed: quando o Turnstile está ativo, o token é obrigatório.
+    // Omiti-lo não pode ser um atalho para pular o CAPTCHA (credential stuffing).
     if (isTurnstileEnabled() && !data.turnstileToken) {
       await auditFail("Turnstile ausente");
       throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
@@ -120,7 +120,7 @@ export const login = createServerFn({ method: "POST" })
 export const getMe = createServerFn({ method: "GET" }).handler(async () => {
   const token = getCookie(SESSION_COOKIE);
   try {
-    // slide: false — getMe roda a cada navegação (cacheado 60s no guard de
+    // slide: false (getMe roda a cada navegação, cacheado 60s no guard de
     // rotas) e não deve ter o efeito colateral de reemitir o cookie; quem
     // renova a sessão por atividade é o requireAuth, chamado pelas funções que
     // de fato buscam dados.
@@ -142,10 +142,10 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
       // token_version + 1 revoga o JWT no servidor, não só o cookie no
-      // navegador — mesmo padrão de resetPassword (admin-users.functions.ts).
+      // navegador (mesmo padrão de resetPassword em admin-users.functions.ts).
       // Sem isto, um token capturado antes do logout (proxy, dispositivo
       // compartilhado, etc.) continuava aceito até expirar sozinho (até 7
-      // dias numa sessão "manter conectado" — auth-config.ts). Efeito
+      // dias numa sessão "manter conectado", ver auth-config.ts). Efeito
       // colateral aceito: desloga todas as sessões do usuário, não só esta.
       await db.query("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [
         payload.userId,
@@ -157,7 +157,7 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
         targetType: "session",
       });
     } catch {
-      // Token inválido/expirado — nada a revogar nem auditar.
+      // Token inválido/expirado: nada a revogar nem auditar.
     }
   }
   clearSessionCookie();

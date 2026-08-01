@@ -11,14 +11,14 @@ const HB_JOB = "import-watch";
 const LOG_FILE = "logs/import.log";
 
 /**
- * Pasta que o watcher observa. É um INBOX local, não versionada (ver .gitignore)
- * — quem coloca arquivo aqui é o operador, via scp/rsync. O outro caminho de
+ * Pasta que o watcher observa. É um INBOX local, não versionada (ver .gitignore):
+ * quem coloca arquivo aqui é o operador, via scp/rsync. O outro caminho de
  * importação é a tela /upload do app, que não passa por aqui.
  *
  * Antes as planilhas eram versionadas e este script as recebia por `git pull`,
  * renomeava com `git mv` e devolvia com `git commit`+`git push`. O git servia de
- * meio de transporte de dados, o que inchava o repositório (41 MiB de pack) e —
- * o que motivou a mudança — impedia proteger a branch main: qualquer regra de
+ * meio de transporte de dados, o que inchava o repositório (41 MiB de pack) e,
+ * o que motivou a mudança, impedia proteger a branch main: qualquer regra de
  * "exigir pull request" faria este push automático ser recusado, e o script só
  * registra o erro no log sem marcar falha no heartbeat, então quebraria calado.
  */
@@ -90,8 +90,8 @@ async function main() {
 
     const date = extractDate(filePath);
     if (!date) {
-      log(`Date: ERROR — não foi possível extrair a data de ${filePath}`);
-      failed.push(`${filePath} — data não identificada`);
+      log(`Date: ERROR, não foi possível extrair a data de ${filePath}`);
+      failed.push(`${filePath}: data não identificada`);
       continue;
     }
     log(`Date: ${date}`);
@@ -99,19 +99,19 @@ async function main() {
     const [rows] = await db.query("SELECT sale_date FROM import_log WHERE sale_date = ?", [date]);
     if ((Array.isArray(rows) ? rows : [])[0]) {
       // Não apaga: o operador pode ter colocado uma versão corrigida da mesma
-      // data. Reimportar exige apagar a data no admin antes — decisão dele, não
+      // data. Reimportar exige apagar a data no admin antes, decisão dele, não
       // deste script, que só importa o que ainda não existe.
-      log(`import_log: ${date} já importado — mantido no inbox, nada a fazer`);
+      log(`import_log: ${date} já importado, mantido no inbox, nada a fazer`);
       alreadyImported.push(`${filePath} (${date} já importado)`);
       continue;
     }
 
     // Cap atrelado ao purge (RETENTION_DAYS): ignora arquivos além do horizonte
-    // de retenção — o purge das 3h os apagaria da import_log e a rodada seguinte
+    // de retenção: o purge das 3h os apagaria da import_log e a rodada seguinte
     // os reimportaria, num loop diário. Dentro de 180 dias, importa normalmente.
     const daysAgo = daysSinceUtc(date);
     if (!isWithinRetention(date)) {
-      log(`Skip: ${date} além da retenção (${daysAgo}d > ${RETENTION_DAYS}d) — seria purgado`);
+      log(`Skip: ${date} além da retenção (${daysAgo}d > ${RETENTION_DAYS}d), seria purgado`);
       skippedOld.push(`${filePath} (${daysAgo}d, além da retenção)`);
       continue;
     }
@@ -119,7 +119,7 @@ async function main() {
     log(`Import: starting...`);
     const imp = exec(["bun", "run", "cli:import", filePath]);
     if (!imp.ok) {
-      log(`Import: ERROR — ${imp.stderr}`);
+      log(`Import: ERROR: ${imp.stderr}`);
       failed.push(`${filePath} (erro na importação)`);
       continue;
     }
@@ -130,7 +130,7 @@ async function main() {
     // Importou: o arquivo cumpriu seu papel e é descartado. A fonte de verdade
     // passa a ser o banco, que tem dump diário do HestiaCP para o Backblaze; se
     // um dia for preciso reconstruir, as planilhas são rebaixáveis do portal do
-    // GPA. Só se apaga depois do sucesso — falha mantém o arquivo para retry.
+    // GPA. Só se apaga depois do sucesso, falha mantém o arquivo para retry.
     rmSync(filePath, { force: true });
     log(`Removido do inbox: ${filePath}`);
     imported.push(`${filePath} → ${date}`);
@@ -163,7 +163,7 @@ async function main() {
 // esvazia e o processo fica pendurado em epoll_wait DEPOIS de terminar o
 // trabalho. Sem isto, cada rodada do cron (a cada 3h) deixava para trás um bun
 // de ~55 MB: foram encontrados 6 vivos ao mesmo tempo, ~350 MB de RAM numa
-// máquina de 1,9 GB — que é o que empurrava a caixa para o swap.
+// máquina de 1,9 GB, que é o que empurrava a caixa para o swap.
 main()
   .then(() => process.exit(0))
   .catch(async (err) => {

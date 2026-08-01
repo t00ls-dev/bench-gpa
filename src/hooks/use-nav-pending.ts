@@ -15,7 +15,7 @@ export function useNavPendingPath(): string | null {
 
 /**
  * True se a navegação pendente é para `to` (ou uma subrota dele, a menos que
- * `exact` seja true). Sem `exact`, "/admin" seria prefixo de "/admin/docs" —
+ * `exact` seja true). Sem `exact`, "/admin" seria prefixo de "/admin/docs":
  * navegar para Documentação marcava Administração como pendente também.
  */
 export function isNavPendingTo(pending: string | null, to: string, exact = false): boolean {

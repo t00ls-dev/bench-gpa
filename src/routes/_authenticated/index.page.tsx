@@ -32,7 +32,7 @@ const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 function sanitizeFilters(f: Filters): Filters {
   let dateFrom = isoDate.test(f.dateFrom) ? f.dateFrom : "";
   let dateTo = isoDate.test(f.dateTo) ? f.dateTo : "";
-  // Guard against a reversed range (e.g. persisted from an old session) —
+  // Guard against a reversed range (e.g. persisted from an old session):
   // it makes queries return no data and crashes the calendar picker.
   if (dateFrom && dateTo && dateFrom > dateTo) [dateFrom, dateTo] = [dateTo, dateFrom];
   return { ...f, dateFrom, dateTo };
@@ -52,16 +52,16 @@ function Dashboard() {
   const queryClient = useQueryClient();
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
   // Só carrega a loja no click-through se o Dashboard já estava filtrado
-  // numa única loja — com múltiplas/nenhuma loja, o destino decide sozinho.
+  // numa única loja: com múltiplas/nenhuma loja, o destino decide sozinho.
   const clickThroughStore = filters.stores.length === 1 ? filters.stores[0] : undefined;
   const goToArea = async (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
     if (!name) return;
     // A Área exige Departamento pra mostrar qualquer coisa (`ready` em
-    // area.page.tsx) — clicar em Seção/Grupo/Subgrupo sem resolver o
+    // area.page.tsx): clicar em Seção/Grupo/Subgrupo sem resolver o
     // Departamento-pai levava a uma tela vazia pedindo pra selecionar Loja e
     // Departamento, com a Seção/Grupo/Subgrupo já aplicada por baixo dos
     // panos mas sem nenhum dado visível. Busca a hierarquia (mesma query e
-    // mesmo cache — client e servidor — que a própria Área já usa; se a Área
+    // mesmo cache (client e servidor) que a própria Área já usa; se a Área
     // já foi visitada nesta sessão, isso não gera nenhum request novo) só
     // quando precisa, pra achar o depto dono do nível clicado.
     let depto: string | undefined;

@@ -1,5 +1,5 @@
 // Complementa admin-docs.functions.test.ts, que mocka `assertAdmin` como
-// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade — prova
+// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade: prova
 // que um não-admin é de fato *bloqueado* antes de ler qualquer doc (ver
 // docs/auditoria-qa-2026-08-01.md, item 3).
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -48,7 +48,7 @@ vi.mock("./rate-limit.middleware", () => ({
         next({ context }),
   ),
 }));
-// admin-utils NÃO é mockado — é exatamente o que esta suíte prova de verdade.
+// admin-utils NÃO é mockado: é exatamente o que esta suíte prova de verdade.
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
 import { listDocs } from "./admin-docs.functions";
@@ -58,13 +58,13 @@ beforeEach(() => {
   vi.mocked(db.query).mockReset();
 });
 
-describe("listDocs — guard de admin real (assertAdmin não mockado)", () => {
+describe("listDocs: guard de admin real (assertAdmin não mockado)", () => {
   it("rejeita usuário não-admin sem devolver a lista de documentos", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[[{ has_role: 0 }]]] as never); // CALL has_role
 
     await expect((listDocs as () => Promise<unknown>)()).rejects.toThrow("Apenas administradores");
-    // listDocs nem usa banco pro corpo (lê docs/**/*.md via import.meta.glob) —
-    // a única chamada é a do próprio assertAdmin.
+    // listDocs nem usa banco pro corpo (lê docs/**/*.md via import.meta.glob).
+    // A única chamada é a do próprio assertAdmin.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
   });

@@ -22,11 +22,11 @@ export class RateLimiter {
    * se já reprovar, a requisição sai sem tocar o contador global.
    *
    * Antes os dois contadores eram incrementados de uma vez, antes de qualquer
-   * veredito — então as rejeições do próprio abusador continuavam empurrando o
+   * veredito: então as rejeições do próprio abusador continuavam empurrando o
    * contador compartilhado. Com o authLimiter (10/IP, 40 global), bastava um
    * curl em loop de um único IP: as 10 primeiras passavam, da 11ª em diante
    * eram rejeitadas mas seguiam somando, e ao chegar em 41 o login caía para
-   * TODOS os usuários — um atacante amplificado para 100% da base, sem botnet.
+   * TODOS os usuários: um atacante amplificado para 100% da base, sem botnet.
    *
    * Com o curto-circuito, a contribuição máxima de um IP para o orçamento
    * global é maxPerIp. O teto global volta a ser o que deveria ser: um
@@ -99,13 +99,13 @@ function normalizeIp(raw: string | null | undefined): string | null {
 /**
  * IP real do cliente cobrindo múltiplos cenários de proxy.
  *
- * Ordem de confiança (atrás do Cloudflare, X-Forwarded-For[0] é FALSIFICÁVEL —
- * o CF apenas acrescenta o IP do visitante, então o primeiro salto pode ser
+ * Ordem de confiança (atrás do Cloudflare, X-Forwarded-For[0] é FALSIFICÁVEL,
+ * já que o CF apenas acrescenta o IP do visitante, então o primeiro salto pode ser
  * forjado pelo cliente; por isso os headers do próprio CF vêm primeiro):
- *   1. CF-Connecting-IP  — Cloudflare padrão (sobrescrito pelo CF)
- *   2. True-Client-IP    — Cloudflare Enterprise
- *   3. X-Real-IP         — nginx de origem, acesso direto sem CF
- *   4. X-Forwarded-For   — último recurso (primeiro salto)
+ *   1. CF-Connecting-IP: Cloudflare padrão (sobrescrito pelo CF)
+ *   2. True-Client-IP: Cloudflare Enterprise
+ *   3. X-Real-IP: nginx de origem, acesso direto sem CF
+ *   4. X-Forwarded-For: último recurso (primeiro salto)
  *
  * Observação de infra: para confiar plenamente no CF-Connecting-IP, a origem
  * deve aceitar tráfego só do Cloudflare (allowlist de faixas de IP do CF ou
@@ -124,7 +124,7 @@ export function getClientIp(request?: Request): string {
 }
 
 /**
- * Janela de contagem dos quatro tiers. Um minuto em todos — o valor estava
+ * Janela de contagem dos quatro tiers. Um minuto em todos: o valor estava
  * repetido literal em cada construção, dando a impressão de serem ajustáveis
  * separadamente quando na prática nunca divergiram.
  */
@@ -134,7 +134,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
  * Tetos por tier: `[porIp, global]`.
  *
  * Não afrouxar sem medir: a VPS tem um núcleo e dois usuários reais. O teto do
- * `auth` é o mais sensível — cada tentativa de login custa um bcrypt de custo 12
+ * `auth` é o mais sensível: cada tentativa de login custa um bcrypt de custo 12
  * (ver BCRYPT_COST em auth-config.ts), que satura o núcleo sozinho.
  *
  * O teto global é um disjuntor de carga agregada, não um limite por usuário: a
@@ -156,12 +156,12 @@ export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.s
 /**
  * Balde por conta, independente do `authLimiter` acima (que é por IP). Cobre
  * o caso em que um ataque de credential stuffing distribui as tentativas
- * contra UMA conta por vários IPs — cada IP isolado nunca estoura o teto de
+ * contra UMA conta por vários IPs: cada IP isolado nunca estoura o teto de
  * 10/min do authLimiter, mas a conta-alvo continua recebendo tentativa atrás
  * de tentativa.
  *
  * Janela deliberadamente mais longa (15min) que os outros tiers: o objetivo
- * aqui não é o throughput agregado da VPS — isso já é papel do authLimiter —
+ * aqui não é o throughput agregado da VPS (isso já é papel do authLimiter):
  * é conter quem já sabe qual conta está mirando, mesmo trocando de IP a cada
  * request. `maxGlobal` como `Number.MAX_SAFE_INTEGER` desliga de propósito o
  * segundo tier da classe (o disjuntor de carga agregada já existe no

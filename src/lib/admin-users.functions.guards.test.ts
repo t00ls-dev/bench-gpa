@@ -1,5 +1,5 @@
 // Complementa admin-users.functions.test.ts, que mocka `assertAdmin` como
-// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade — prova
+// no-op e só confirma que foi *chamado*. Aqui o guard é o de verdade: prova
 // que um não-admin é de fato *bloqueado* antes de listar usuários (ver
 // docs/auditoria-qa-2026-08-01.md, item 3).
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -48,7 +48,7 @@ vi.mock("./rate-limit.middleware", () => ({
         next({ context }),
   ),
 }));
-// admin-utils NÃO é mockado — é exatamente o que esta suíte prova de verdade.
+// admin-utils NÃO é mockado: é exatamente o que esta suíte prova de verdade.
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
 import { listUsers } from "./admin-users.functions";
@@ -58,12 +58,12 @@ beforeEach(() => {
   vi.mocked(db.query).mockReset();
 });
 
-describe("listUsers — guard de admin real (assertAdmin não mockado)", () => {
+describe("listUsers: guard de admin real (assertAdmin não mockado)", () => {
   it("rejeita usuário não-admin sem consultar a tabela de usuários", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[[{ has_role: 0 }]]] as never); // CALL has_role
 
     await expect((listUsers as () => Promise<unknown>)()).rejects.toThrow("Apenas administradores");
-    // Só a checagem do próprio assertAdmin rodou — o SELECT em `users` (que
+    // Só a checagem do próprio assertAdmin rodou: o SELECT em `users` (que
     // vazaria email/role de todo mundo) nunca chegou a ser disparado.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
