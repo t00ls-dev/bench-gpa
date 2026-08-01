@@ -47,6 +47,15 @@ async function main() {
   const batchId = randomUUID();
   const totalRows = parsed.sales.length;
 
+  // Mesma checagem de upload.functions.ts:beginImport — um arquivo com o
+  // marcador de data mas zero linhas de produto (planilha vazia, exportada
+  // errada) chegaria intacto até aqui e só estouraria dentro de
+  // finalize_import (SIGNAL SQLSTATE '45000' de staging_count=0), um erro cru
+  // de banco em vez desta mensagem.
+  if (totalRows === 0) {
+    throw new Error("Nenhuma linha de venda para importar.");
+  }
+
   // ---- beginImport ----
   console.log(`\n🚀 Iniciando importação (batch ${batchId})...`);
   await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [parsed.sale_date]);
