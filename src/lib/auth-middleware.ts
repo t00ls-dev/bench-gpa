@@ -5,6 +5,7 @@ import { parseCookie } from "cookie";
 import { SESSION_COOKIE } from "./auth-config";
 import { resolveSession } from "./session";
 import { getClientIp } from "./rate-limit";
+import { sentryServerClient } from "./instrument-server";
 
 export interface AuthContext {
   userId: string;
@@ -20,24 +21,39 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
   const parsed = parseCookie(cookieHeader);
   const token = parsed[SESSION_COOKIE];
 
+  let session;
   try {
     // slide: true: toda chamada autenticada renova a sessão "normal" por mais
     // INACTIVITY_TIMEOUT_SECONDS, é isso que dá o comportamento de expiração
     // por inatividade em vez de um prazo fixo desde o login.
-    const session = await resolveSession(token, { slide: true });
-    // Escopo isolado por requisição (instrumentação automática do @sentry/node):
-    // não vaza identidade entre chamadas concorrentes de usuários diferentes
-    // no mesmo processo. IP vem do mesmo getClientIp() que a auditoria já usa
-    // (audit_log confirma que pega certo, IPv4 ou IPv6); "unknown" fica de
-    // fora, mesmo motivo do guard em src/server.ts: o Sentry rejeita valor
-    // que não é IP de verdade.
-    const ip = getClientIp(request);
-    Sentry.setUser({
-      id: session.userId,
-      email: session.userEmail,
-      ...(ip !== "unknown" && { ip_address: ip }),
-    });
-    return next({
+    session = await resolveSession(token, { slide: true });
+  } catch (err) {
+    // Escopo estreito de propósito: só cobre a resolução da sessão. Um catch
+    // amplo (incluindo o next() abaixo) mascararia qualquer erro real de
+    // dentro do handler como "Unauthorized: invalid token", perdendo o erro
+    // original (mesmo indo pro .cause, é o tipo de bug que confunde debug).
+    sentryServerClient?.captureException(err);
+    if (err instanceof Error && err.message.startsWith("Unauthorized")) {
+      throw err;
+    }
+    throw new Error("Unauthorized: invalid token", { cause: err });
+  }
+
+  // Referência explícita ao client (ver comentário em instrument-server.ts):
+  // Sentry.setUser() ambiente não é confiável dentro da execução de server
+  // function do TanStack Start, então usa-se a API de escopo isolado, que
+  // não depende de lookup implícito.
+  const ip = getClientIp(request);
+  const scope = new Sentry.Scope();
+  scope.setClient(sentryServerClient);
+  scope.setUser({
+    id: session.userId,
+    email: session.userEmail,
+    ...(ip !== "unknown" && { ip_address: ip }),
+  });
+
+  try {
+    return await next({
       context: {
         userId: session.userId,
         // role vem do BANCO, não do payload: o JWT carrega o papel congelado na
@@ -50,9 +66,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
       } satisfies AuthContext,
     });
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith("Unauthorized")) {
-      throw err;
-    }
-    throw new Error("Unauthorized: invalid token", { cause: err });
+    scope.captureException(err);
+    throw err;
   }
 });
