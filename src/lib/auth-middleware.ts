@@ -1,5 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { parseCookie } from "cookie";
 import { SESSION_COOKIE } from "./auth-config";
 import { resolveSession } from "./session";
@@ -23,6 +24,10 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     // INACTIVITY_TIMEOUT_SECONDS, é isso que dá o comportamento de expiração
     // por inatividade em vez de um prazo fixo desde o login.
     const session = await resolveSession(token, { slide: true });
+    // Escopo isolado por requisição (instrumentação automática do @sentry/node):
+    // não vaza identidade entre chamadas concorrentes de usuários diferentes
+    // no mesmo processo.
+    Sentry.setUser({ id: session.userId, email: session.userEmail });
     return next({
       context: {
         userId: session.userId,
