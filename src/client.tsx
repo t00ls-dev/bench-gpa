@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/tanstackstart-react";
 import { isRedirect, isNotFound } from "@tanstack/react-router";
 import { StartClient } from "@tanstack/react-start/client";
-import { StrictMode } from "react";
+import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
@@ -30,9 +30,14 @@ Sentry.init({
   },
 });
 
-hydrateRoot(
-  document,
-  <StrictMode>
-    <StartClient />
-  </StrictMode>,
-);
+// startTransition: mesmo padrão do entry client.tsx padrão do TanStack Start
+// (node_modules/@tanstack/react-start/dist/plugin/default-entry/client.tsx),
+// perdido quando este arquivo virou custom entry pro Sentry.init() acima.
+startTransition(() => {
+  hydrateRoot(
+    document,
+    <StrictMode>
+      <StartClient />
+    </StrictMode>,
+  );
+});
