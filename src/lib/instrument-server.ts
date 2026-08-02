@@ -5,7 +5,14 @@
 import * as Sentry from "@sentry/tanstackstart-react";
 import { isRedirect, isNotFound } from "@tanstack/react-router";
 
-Sentry.init({
+// Referência direta ao client, não a busca ambiente (Sentry.getClient()):
+// dentro da execução de server function do TanStack Start, a propagação de
+// contexto que o SDK usa pra achar o client/scope "atual" não funciona (não
+// é só o tunnel: confirmado que nem captureException() direto acha client
+// nenhum aqui, mesmo chamado no mesmo request). server.ts já tinha essa
+// mesma lição pro tunnel (allowedDsns explícito em vez de getClient()); esta
+// é a versão pra dentro de server functions.
+export const sentryServerClient = Sentry.init({
   dsn: process.env.SENTRY_DSN,
   enabled: !!process.env.SENTRY_DSN,
   environment: process.env.NODE_ENV === "production" ? "production" : "development",
