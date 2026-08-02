@@ -1,5 +1,7 @@
+import "./lib/instrument-server";
 import "./lib/error-capture";
 
+import * as Sentry from "@sentry/tanstackstart-react";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
@@ -11,6 +13,11 @@ import { resolveSession } from "./lib/session";
 import { storePdf, takePdf } from "./lib/pdf-download-store";
 import { contentDispositionHeader } from "./lib/content-disposition";
 import { ServerResponse } from "node:http";
+
+// Same-origin de propósito: mantém o CSP com connect-src só 'self', sem
+// depender de conseguir alcançar *.sentry.io (bloqueado por ad-blocker em
+// parte dos usuários, ou por firewall corporativo do GPA).
+const sentryTunnelRoute = Sentry.createSentryTunnelRoute({});
 
 assertSafeBoot(process.env);
 
@@ -137,7 +144,7 @@ function applySecurityHeaders(
   return new Response(body, { status, headers });
 }
 
-export default {
+const serverEntry: ServerEntry = {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const ip = getClientIp(request);
     const rl = ssrLimiter.check(ip);
@@ -161,6 +168,10 @@ export default {
 
       if (url.pathname.startsWith("/api/pdf-download")) {
         return await handlePdfDownload(request, url);
+      }
+
+      if (request.method === "POST" && url.pathname === "/monitoring") {
+        return await sentryTunnelRoute.handlers.POST({ request });
       }
 
       const nonce = crypto.randomUUID();
@@ -187,13 +198,31 @@ export default {
         return applySecurityHeaders(body, response.status, nonce);
       }
 
-      console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${jsonBody}`));
+      const swallowedError =
+        consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${jsonBody}`);
+      console.error(swallowedError);
+      Sentry.captureException(swallowedError);
       const errNonce = crypto.randomUUID();
       return applySecurityHeaders(renderErrorPage(), 500, errNonce);
     } catch (error) {
       console.error(error);
+      Sentry.captureException(error);
       const errNonce = crypto.randomUUID();
       return applySecurityHeaders(renderErrorPage(), 500, errNonce);
     }
   },
 };
+
+// wrapFetchWithSentry tipa o parâmetro como (request, opts?): genérico o
+// bastante pra cobrir handler de fetch de qualquer runtime, não só o formato
+// (request, env, ctx) que o node-server preset da Nitro realmente usa aqui.
+// Na prática ela embrulha `.fetch` num Proxy que repassa `arguments` inteiro
+// pro handler original, então os 3 argumentos reais chegam normalmente; o
+// cast é só pra bater com essa assinatura mais genérica do tipo.
+Sentry.wrapFetchWithSentry(
+  serverEntry as unknown as {
+    fetch: (request: Request, opts?: unknown) => Response | Promise<Response>;
+  },
+);
+
+export default serverEntry;
