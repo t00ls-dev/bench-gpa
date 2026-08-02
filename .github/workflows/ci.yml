@@ -40,6 +40,13 @@ jobs:
       - run: bun run build
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          # Sem SENTRY_AUTH_TOKEN o plugin de upload de source map nem entra
+          # no array de plugins (vite.config.ts): build segue normal até os
+          # secrets existirem.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
       - uses: actions/upload-artifact@v7
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:

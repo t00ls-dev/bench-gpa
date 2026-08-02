@@ -1,4 +1,8 @@
 import { createStart, createMiddleware } from "@tanstack/react-start";
+import {
+  sentryGlobalRequestMiddleware,
+  sentryGlobalFunctionMiddleware,
+} from "@sentry/tanstackstart-react";
 
 import { renderErrorPage } from "./lib/error-page";
 
@@ -18,6 +22,6 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [],
-  requestMiddleware: [errorMiddleware],
+  functionMiddleware: [sentryGlobalFunctionMiddleware],
+  requestMiddleware: [sentryGlobalRequestMiddleware, errorMiddleware],
 }));
