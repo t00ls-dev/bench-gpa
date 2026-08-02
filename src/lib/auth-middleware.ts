@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/tanstackstart-react";
 import { parseCookie } from "cookie";
 import { SESSION_COOKIE } from "./auth-config";
 import { resolveSession } from "./session";
+import { getClientIp } from "./rate-limit";
 
 export interface AuthContext {
   userId: string;
@@ -26,8 +27,16 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     const session = await resolveSession(token, { slide: true });
     // Escopo isolado por requisição (instrumentação automática do @sentry/node):
     // não vaza identidade entre chamadas concorrentes de usuários diferentes
-    // no mesmo processo.
-    Sentry.setUser({ id: session.userId, email: session.userEmail });
+    // no mesmo processo. IP vem do mesmo getClientIp() que a auditoria já usa
+    // (audit_log confirma que pega certo, IPv4 ou IPv6); "unknown" fica de
+    // fora, mesmo motivo do guard em src/server.ts: o Sentry rejeita valor
+    // que não é IP de verdade.
+    const ip = getClientIp(request);
+    Sentry.setUser({
+      id: session.userId,
+      email: session.userEmail,
+      ...(ip !== "unknown" && { ip_address: ip }),
+    });
     return next({
       context: {
         userId: session.userId,
