@@ -74,7 +74,7 @@ export const Route = createFileRoute("/_authenticated")({
       // erro de client daqui pra frente. Erro dentro de server function usa o
       // mesmo Sentry.setUser() em src/lib/auth-middleware.ts (requireAuth),
       // sem depender deste beforeLoad já ter rodado.
-      Sentry.setUser({ id: user.id, email: user.email, username: user.name });
+      Sentry.setUser({ id: user.id, email: user.email, name: user.name });
       return { user: user as UserProfile };
     } catch {
       const next = location.pathname + location.searchStr;
@@ -136,7 +136,7 @@ function AuthedLayout() {
   // que garantidamente monta no navegador, que o Sentry do client fica
   // sabendo quem é o usuário.
   useEffect(() => {
-    Sentry.setUser({ id: user.id, email: user.email, username: user.name });
+    Sentry.setUser({ id: user.id, email: user.email, name: user.name });
   }, [user.id, user.email, user.name]);
 
   const signOut = async () => {
