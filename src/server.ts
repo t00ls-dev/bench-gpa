@@ -42,6 +42,9 @@ import { ServerResponse } from "node:http";
  * tocado, tudo mais passa direto sem decodificar.
  */
 async function handleSentryTunnel(request: Request, realIp: string): Promise<Response> {
+  console.error(
+    `[ip-debug] realIp=${realIp} cf=${request.headers.get("cf-connecting-ip")} tci=${request.headers.get("true-client-ip")} xri=${request.headers.get("x-real-ip")} xff=${request.headers.get("x-forwarded-for")}`,
+  );
   const bytes = new Uint8Array(await request.arrayBuffer());
 
   let envelope: ReturnType<typeof parseEnvelope>;
