@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -111,22 +111,8 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-// TEMPORÁRIO: verificação manual de que o Sentry está recebendo erro de
-// client em produção (sem console disponível no dispositivo de teste).
-// Remover depois de confirmado (ver PR que reverte este bloco).
-function useSentryManualTest() {
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("sentrytest") === "1") {
-      setTimeout(() => {
-        throw new Error("Teste Sentry - pode ignorar (verificação manual temporária)");
-      }, 0);
-    }
-  }, []);
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  useSentryManualTest();
   return (
     <QueryClientProvider client={queryClient}>
       <RouteProgress />
