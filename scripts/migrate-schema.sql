@@ -500,31 +500,37 @@ BEGIN
   SELECT MAX(sale_date) AS latest_date FROM import_log;
 
   -- All queries use filter_hierarchy (21k rows): no date filtering on options
-  -- Stores: filter by depto/secao/grupo selections
+  --
+  -- Cascata só de cima pra baixo (Loja > Departamento > Seção > Grupo >
+  -- Subgrupo), nunca o inverso: cada nível filtra só pelos níveis ACIMA dele,
+  -- nunca pelos abaixo. Antes disso, um nível de baixo (ex: Grupo) também
+  -- estreitava as opções do nível de cima (ex: Departamento) — o que parecia
+  -- inofensivo, mas colapsava `opts.deptos` pro próprio subconjunto já
+  -- selecionado e disparava um falso allSelected no MultiSelect (o filtro
+  -- virava "Todos" sozinho sem o usuário nunca ter clicado "Selecionar
+  -- todos", ver src/components/multi-select.tsx). Área já seguia essa mesma
+  -- regra desde sempre (computeAreaCascadeOptions em src/lib/filter-cascade.ts),
+  -- por isso nunca teve esse bug.
+  --
+  -- Stores: raiz da cascata, não filtra por nada.
   SELECT DISTINCT f.store_code, COALESCE(s.store_name, f.store_code) AS store_name
   FROM filter_hierarchy f
   LEFT JOIN stores s ON s.store_code = f.store_code
-  WHERE (v_has_depto = 0 OR f.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (v_has_secao = 0 OR f.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (v_has_grupo = 0 OR f.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
   ORDER BY f.store_code;
 
-  -- Deptos: filter by store/secao/grupo selections
+  -- Deptos: filtra só por store (único nível acima dele).
   SELECT DISTINCT f.depto
   FROM filter_hierarchy f
   WHERE f.depto IS NOT NULL
     AND (v_has_store = 0 OR f.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (v_has_secao = 0 OR f.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (v_has_grupo = 0 OR f.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
   ORDER BY f.depto;
 
-  -- Secoes: filter by store/depto/grupo selections
+  -- Secoes: filtra por store/depto (níveis acima dele).
   SELECT DISTINCT f.secao
   FROM filter_hierarchy f
   WHERE f.secao IS NOT NULL
     AND (v_has_store = 0 OR f.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (v_has_depto = 0 OR f.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (v_has_grupo = 0 OR f.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
   ORDER BY f.secao;
 
   -- Grupos: filter by store/depto/secao selections
