@@ -175,7 +175,6 @@ function ProdutoPage() {
           <Label className="text-xs">Loja</Label>
           <MultiSelect
             label="Todas as lojas"
-            noun={{ one: "loja", other: "lojas" }}
             options={stores.map((s) => ({
               value: s.store_code,
               label: `${s.store_code} - ${s.store_name}`,

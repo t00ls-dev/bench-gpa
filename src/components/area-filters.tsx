@@ -86,7 +86,6 @@ export function AreaFilters({
         <FilterField label="Seção">
           <MultiSelect
             label="Todas"
-            noun={{ one: "seção", other: "seções" }}
             options={secoesOpts.map((s) => ({ value: s, label: s }))}
             value={fSecoes}
             onChange={onSecoesChange}
@@ -95,7 +94,6 @@ export function AreaFilters({
         <FilterField label="Grupo">
           <MultiSelect
             label="Todos"
-            noun={{ one: "grupo", other: "grupos" }}
             options={gruposOpts.map((g) => ({ value: g, label: g }))}
             value={fGrupos}
             onChange={onGruposChange}
@@ -104,7 +102,6 @@ export function AreaFilters({
         <FilterField label="Subgrupo" className="md:col-span-2">
           <MultiSelect
             label="Todos"
-            noun={{ one: "subgrupo", other: "subgrupos" }}
             options={subgruposOpts.map((s) => ({ value: s, label: s }))}
             value={fSubgrupos}
             onChange={onSubgruposChange}
