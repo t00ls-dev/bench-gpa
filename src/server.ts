@@ -2,6 +2,13 @@ import "./lib/instrument-server";
 import "./lib/error-capture";
 
 import * as Sentry from "@sentry/tanstackstart-react";
+import {
+  parseEnvelope,
+  serializeEnvelope,
+  makeDsn,
+  getEnvelopeEndpointWithUrlEncodedAuth,
+  type Event as SentryEvent,
+} from "@sentry/core";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { setCspNonce } from "./lib/csp";
@@ -14,18 +21,65 @@ import { storePdf, takePdf } from "./lib/pdf-download-store";
 import { contentDispositionHeader } from "./lib/content-disposition";
 import { ServerResponse } from "node:http";
 
-// Same-origin de propósito: mantém o CSP com connect-src só 'self', sem
-// depender de conseguir alcançar *.sentry.io (bloqueado por ad-blocker em
-// parte dos usuários, ou por firewall corporativo do GPA).
-//
-// allowedDsns explícito (em vez de deixar a lib inferir via getClient()):
-// getClient() lê o client do escopo Sentry *atual*, que em runtime Node com
-// instrumentação HTTP automática pode ser um escopo isolado por requisição
-// sem o client global associado, dependendo de timing/isolamento. Ler direto
-// de process.env aqui evita depender desse comportamento.
-const sentryTunnelRoute = Sentry.createSentryTunnelRoute(
-  process.env.SENTRY_DSN ? { allowedDsns: [process.env.SENTRY_DSN] } : {},
-);
+/**
+ * Tunnel same-origin do Sentry: /monitoring recebe o envelope do navegador e
+ * repassa pro Sentry a partir do próprio servidor, em vez do client falar
+ * direto com *.sentry.io. Mantém o CSP com connect-src só 'self' (sem expor
+ * domínio de terceiro, sem risco de ad-blocker bloquear).
+ *
+ * Implementação própria em vez de Sentry.createSentryTunnelRoute() por dois
+ * motivos: (1) allowedDsns explícito em vez de getClient(), que em runtime
+ * Node com instrumentação HTTP automática pode ler o escopo isolado errado;
+ * (2) dá pra corrigir o IP do evento antes de repassar. Sem isso, o Sentry
+ * geolocalizava pelo IP de quem *conecta com ele* (a própria VPS, sempre a
+ * mesma cidade), não de quem gerou o erro no navegador: o tunnel esconde o
+ * IP real do usuário do Sentry por natureza, então é preciso injetar de
+ * volta manualmente.
+ *
+ * parseEnvelope/serializeEnvelope (do próprio @sentry/core, usadas
+ * internamente por handleTunnelRequest) preservam item binário intacto
+ * (payload de Session Replay, comprimido): só o item "event" (JSON) é
+ * tocado, tudo mais passa direto sem decodificar.
+ */
+async function handleSentryTunnel(request: Request, realIp: string): Promise<Response> {
+  const bytes = new Uint8Array(await request.arrayBuffer());
+
+  let envelope: ReturnType<typeof parseEnvelope>;
+  try {
+    envelope = parseEnvelope(bytes);
+  } catch {
+    return new Response("Invalid envelope", { status: 400 });
+  }
+
+  const [envelopeHeader, items] = envelope;
+  const dsn = envelopeHeader.dsn;
+  if (!dsn || dsn !== process.env.SENTRY_DSN) {
+    return new Response("DSN not allowed", { status: 403 });
+  }
+
+  const dsnComponents = makeDsn(dsn);
+  if (!dsnComponents) {
+    return new Response("Invalid DSN", { status: 403 });
+  }
+
+  for (const [itemHeader, payload] of items) {
+    if (itemHeader.type === "event" && payload && typeof payload === "object") {
+      const event = payload as SentryEvent;
+      event.user = { ...event.user, ip_address: realIp };
+    }
+  }
+
+  const sentryIngestUrl = getEnvelopeEndpointWithUrlEncodedAuth(dsnComponents);
+  try {
+    return await fetch(sentryIngestUrl, {
+      method: "POST",
+      headers: { "content-type": "application/x-sentry-envelope" },
+      body: serializeEnvelope(envelope) as BodyInit,
+    });
+  } catch {
+    return new Response("Failed to forward envelope to Sentry", { status: 500 });
+  }
+}
 
 assertSafeBoot(process.env);
 
@@ -179,7 +233,7 @@ const serverEntry: ServerEntry = {
       }
 
       if (request.method === "POST" && url.pathname === "/monitoring") {
-        return await sentryTunnelRoute.handlers.POST({ request });
+        return await handleSentryTunnel(request, ip);
       }
 
       const nonce = crypto.randomUUID();
