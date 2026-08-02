@@ -47,6 +47,7 @@ module.exports = {
         JWT_SECRET: env.JWT_SECRET ?? "",
         TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY ?? "",
         TURNSTILE_BYPASS: env.TURNSTILE_BYPASS ?? "false",
+        SENTRY_DSN: env.SENTRY_DSN ?? "",
       },
       max_memory_restart: "512M",
       error_file: "logs/pm2-error.log",
