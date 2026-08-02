@@ -12,7 +12,6 @@ import { AdminUserManagement } from "@/components/admin-user-management";
 import { DataCountSection, DbHealthSection } from "@/components/admin-system-panel";
 import { HeartbeatSection, AuditLogSection } from "@/components/admin-audit-panel";
 import { Users, Server, Shield, Database, HardDrive, ScrollText, HeartPulse } from "lucide-react";
-import { sentryDebugThrow } from "@/lib/sentry-debug.functions";
 
 export default function AdminPage() {
   const list = useServerFn(listUsers);
@@ -20,7 +19,6 @@ export default function AdminPage() {
   const health = useServerFn(dbHealthCheck);
   const heartbeats = useServerFn(getHeartbeats);
   const audit = useServerFn(getAuditLog);
-  const sentryDebug = useServerFn(sentryDebugThrow);
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => list(),
@@ -40,14 +38,6 @@ export default function AdminPage() {
           Gerencie usuários e monitore o banco de dados.
         </p>
         {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
-        {/* TEMPORÁRIO: remover junto com src/lib/sentry-debug.functions.ts */}
-        <button
-          id="sentry-debug-btn"
-          onClick={() => sentryDebug().catch(() => {})}
-          className="mt-2 text-xs text-muted-foreground underline"
-        >
-          [debug] testar captura Sentry
-        </button>
       </header>
 
       <div className="mb-6 flex gap-1 rounded-lg bg-muted p-1 w-fit">
