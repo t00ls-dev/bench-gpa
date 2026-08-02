@@ -17,7 +17,15 @@ import { ServerResponse } from "node:http";
 // Same-origin de propósito: mantém o CSP com connect-src só 'self', sem
 // depender de conseguir alcançar *.sentry.io (bloqueado por ad-blocker em
 // parte dos usuários, ou por firewall corporativo do GPA).
-const sentryTunnelRoute = Sentry.createSentryTunnelRoute({});
+//
+// allowedDsns explícito (em vez de deixar a lib inferir via getClient()):
+// getClient() lê o client do escopo Sentry *atual*, que em runtime Node com
+// instrumentação HTTP automática pode ser um escopo isolado por requisição
+// sem o client global associado, dependendo de timing/isolamento. Ler direto
+// de process.env aqui evita depender desse comportamento.
+const sentryTunnelRoute = Sentry.createSentryTunnelRoute(
+  process.env.SENTRY_DSN ? { allowedDsns: [process.env.SENTRY_DSN] } : {},
+);
 
 assertSafeBoot(process.env);
 
