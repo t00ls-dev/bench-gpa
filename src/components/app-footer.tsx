@@ -41,7 +41,14 @@ export function AppFooter() {
       <span className="flex items-center gap-1.5">
         <GitCommitHorizontal className="size-3.5" />
         commit <code className="text-foreground/70">{__COMMIT_HASH__}</code> (
-        {timeAgo(Number(__COMMIT_DATE__))})
+        {/* timeAgo() chama Date.now(): servidor e cliente calculam em
+        instantes diferentes, então o texto pode divergir por 1 unidade
+        (ex: "há 13 minutos" no SSR vs "há 14 minutos" na hidratação) se a
+        virada acontecer entre os dois. Mismatch esperado e inofensivo
+        (mesma categoria que relógio ao vivo, caso canônico do React pra
+        suppressHydrationWarning): não vale forçar remontagem da árvore por
+        isso. */}
+        <span suppressHydrationWarning>{timeAgo(Number(__COMMIT_DATE__))}</span>)
       </span>
     </div>
   );
