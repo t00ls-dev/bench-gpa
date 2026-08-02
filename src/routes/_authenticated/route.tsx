@@ -6,7 +6,8 @@ import {
   useRouter,
   useLocation,
 } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useState } from "react";
+import * as Sentry from "@sentry/tanstackstart-react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import type { FC } from "react";
 import {
   LayoutDashboard,
@@ -69,6 +70,11 @@ export const Route = createFileRoute("/_authenticated")({
         staleTime: QUERY_STALE_IDENTITY,
       });
       if (!user) throw new Error("not authenticated");
+      // beforeLoad roda em server (SSR) e client (hidratação/navegação): cobre
+      // erro de client daqui pra frente. Erro dentro de server function usa o
+      // mesmo Sentry.setUser() em src/lib/auth-middleware.ts (requireAuth),
+      // sem depender deste beforeLoad já ter rodado.
+      Sentry.setUser({ id: user.id, email: user.email, name: user.name });
       return { user: user as UserProfile };
     } catch {
       const next = location.pathname + location.searchStr;
@@ -124,11 +130,23 @@ function AuthedLayout() {
   const router = useRouter();
   const { user, queryClient } = Route.useRouteContext();
 
+  // beforeLoad (acima, no Route config) roda no servidor durante o SSR, mas
+  // não necessariamente no client: a hidratação reaproveita o resultado já
+  // resolvido em vez de re-executar beforeLoad, então é aqui, no componente
+  // que garantidamente monta no navegador, que o Sentry do client fica
+  // sabendo quem é o usuário.
+  useEffect(() => {
+    Sentry.setUser({ id: user.id, email: user.email, name: user.name });
+  }, [user.id, user.email, user.name]);
+
   const signOut = async () => {
     const { logout } = await import("@/lib/auth-api");
     await logout().catch(() => {});
     // Invalida a identidade em cache p/ o guard revalidar no próximo acesso.
     queryClient.removeQueries({ queryKey: ["me"] });
+    // Sem isso, um segundo login na mesma aba (troca de conta) herdaria a
+    // identidade anterior em qualquer erro de client até o próximo beforeLoad.
+    Sentry.setUser(null);
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
 
