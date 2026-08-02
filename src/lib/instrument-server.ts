@@ -11,6 +11,11 @@ Sentry.init({
   environment: process.env.NODE_ENV === "production" ? "production" : "development",
   release: __COMMIT_HASH__,
   tracesSampleRate: 1.0,
+  enableLogs: true,
+  // Níveis batem com o que o código já usa (só console.warn/console.error
+  // hoje, nenhum console.log): não precisa mudar call site nenhum pra
+  // esses logs aparecerem correlacionados com erro/trace no Sentry.
+  integrations: [Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] })],
   // redirect()/notFound() do TanStack Router se propagam como throw (ver
   // errorMiddleware em src/start.ts, que os deixa passar de propósito) e não
   // são erro nenhum, são navegação normal: sem este filtro, toda troca de
