@@ -18,7 +18,11 @@ Sentry.init({
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
-  integrations: [Sentry.replayIntegration()],
+  enableLogs: true,
+  integrations: [
+    Sentry.replayIntegration(),
+    Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
+  ],
   beforeSend(event, hint) {
     const error = hint.originalException;
     if (isRedirect(error) || isNotFound(error)) return null;
