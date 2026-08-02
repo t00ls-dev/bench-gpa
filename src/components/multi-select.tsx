@@ -18,7 +18,6 @@ export function MultiSelect({
   onChange,
   searchable = false,
   single = false,
-  noun,
 }: {
   label: string;
   options: MSOption[];
@@ -26,8 +25,6 @@ export function MultiSelect({
   onChange: (v: string[]) => void;
   searchable?: boolean;
   single?: boolean;
-  /** Substantivo do filtro p/ o resumo multi ("3 lojas"). Sem ele, cai em "3 selecionados". */
-  noun?: { one: string; other: string };
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -201,13 +198,12 @@ export function MultiSelect({
           <span className="truncate min-w-0">
             {value.length === 0
               ? label
-              : single
-                ? (options.find((o) => o.value === value[0])?.label ?? value[0])
-                : allSelected
-                  ? label
-                  : noun
-                    ? `${value.length} ${value.length === 1 ? noun.one : noun.other}`
-                    : `${value.length} ${label.trim().endsWith("as") ? "selecionadas" : "selecionados"}`}
+              : allSelected
+                ? label
+                : (() => {
+                    const first = options.find((o) => o.value === value[0])?.label ?? value[0];
+                    return single || value.length === 1 ? first : `${first} +${value.length - 1}`;
+                  })()}
           </span>
           <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
