@@ -12,6 +12,22 @@ Sentry.init({
   release: __COMMIT_HASH__,
   tracesSampleRate: 1.0,
   enableLogs: true,
+  // Substitui sendDefaultPii (deprecado): habilita só query string de URL e
+  // parâmetros/valores de query SQL (dado de negócio interno, sem PII de
+  // consumidor). Todo o resto explicitamente desligado, mesmo os que
+  // teriam default true nesta opção: cookie de sessão é o JWT httpOnly,
+  // corpo de request inclui a senha em texto puro no POST de /auth, e
+  // variável local no stack trace pode capturar credencial que estivesse
+  // em memória no momento do crash.
+  dataCollection: {
+    userInfo: false,
+    cookies: false,
+    httpHeaders: { request: false, response: false },
+    httpBodies: [],
+    urlQueryParams: true,
+    databaseQueryData: true,
+    stackFrameVariables: false,
+  },
   // Níveis batem com o que o código já usa (só console.warn/console.error
   // hoje, nenhum console.log): não precisa mudar call site nenhum pra
   // esses logs aparecerem correlacionados com erro/trace no Sentry.
