@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
@@ -33,7 +34,11 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useState(() => {
+    // Error boundary de rota do TanStack Router: intercepta antes do erro
+    // chegar no onCaughtError/onUncaughtError do React (hydrateRoot, em
+    // client.tsx), então precisa do próprio report, não é redundante.
     console.error("Root error boundary caught:", error);
+    Sentry.captureException(error);
   });
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
