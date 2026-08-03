@@ -13,6 +13,23 @@ export interface AuthContext {
   userEmail: string;
 }
 
+// Marca o erro como já reportado ao Sentry: sentryFunctionErrorMiddleware
+// (src/start.ts), por estar fora de requireAuth na cadeia de middleware,
+// recaptura qualquer erro relançado daqui, duplicando o evento. A captura
+// daqui usa Scope explícito (contexto de usuário), a de lá não — mantém a
+// captura mais rica e faz a outra pular quando já aconteceu.
+const SENTRY_REPORTED = Symbol("sentryReported");
+
+export function isSentryReported(error: unknown): boolean {
+  return typeof error === "object" && error !== null && SENTRY_REPORTED in error;
+}
+
+function markSentryReported(error: unknown) {
+  if (typeof error === "object" && error !== null) {
+    Object.defineProperty(error, SENTRY_REPORTED, { value: true });
+  }
+}
+
 export const requireAuth = createMiddleware({ type: "function" }).server(async ({ next }) => {
   if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET not configured");
 
@@ -34,9 +51,12 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     // original (mesmo indo pro .cause, é o tipo de bug que confunde debug).
     sentryServerClient?.captureException(err);
     if (err instanceof Error && err.message.startsWith("Unauthorized")) {
+      markSentryReported(err);
       throw err;
     }
-    throw new Error("Unauthorized: invalid token", { cause: err });
+    const wrapped = new Error("Unauthorized: invalid token", { cause: err });
+    markSentryReported(wrapped);
+    throw wrapped;
   }
 
   // Referência explícita ao client (ver comentário em instrument-server.ts):
@@ -67,6 +87,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     });
   } catch (err) {
     scope.captureException(err);
+    markSentryReported(err);
     throw err;
   }
 });
