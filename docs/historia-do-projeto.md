@@ -113,7 +113,7 @@ Os arquivos que viviam em `docs/improvements/` com o aviso
 escrito por Lovable), datavam de antes da Era 3. Cada "problema" que
 descreviam (dark mode inativo, `assertAdmin` duplicado, ausência de rate
 limit, sessão em localStorage) foi endereçado durante ou depois da migração,
-e está registrado como resolvido em `docs/improvements/analise-completa.md`
+e está registrado como resolvido em `docs/analise-completa.md`
 (seção "Resolvido"). Os três foram removidos no mesmo commit que criou
 este documento (`a4a19e8`, 30/07/2026): não havia mais valor de referência
 técnica neles além do que este documento já resume.
@@ -123,8 +123,22 @@ misturava itens já resolvidos com itens genuinamente ainda abertos: os
 abertos foram migrados para `docs/continuar.md` (ver commit que acompanha
 esta reorganização) antes do arquivo ser removido.
 
-`docs/improvements/novas-analises.md` é diferente dos outros três: é uma
-lista de _ideias de feature_ (dashboard por loja, sazonalidade, previsão,
-gap de sortimento, relatórios agendados), não um diagnóstico de código:
-o próprio arquivo já dizia "independente da migração", e continua válido como
-backlog. Foi desmarcado como histórico.
+`docs/improvements/novas-analises.md` (hoje `docs/novas-analises.md`) é
+diferente dos outros três: é uma lista de _ideias de feature_ (dashboard
+por loja, sazonalidade, previsão, gap de sortimento, relatórios agendados),
+não um diagnóstico de código: o próprio arquivo já dizia "independente da
+migração", e continua válido como backlog. Foi desmarcado como histórico.
+
+Um quinto arquivo da mesma pasta, `performance.md`, foi apagado (não
+marcado) em 26/07/2026: media coisa errada e priorizava otimizações que a
+medição em produção mostrou irrelevantes, o mais convidativo pra quem
+fosse atacar performance e o mais enganoso. Substituído por
+`docs/medicao-performance.md`, com números medidos de verdade. A
+automação que gerava os docs desta pasta automaticamente
+(`code-review.yml` + `scripts/code-review.ts`) foi removida antes disso,
+em `e672ef1` (21/07/2026): "CI + deploy já cobrem" foi a justificativa, o
+que ficou obsoleto assim que a CI passou a rodar lint/typecheck de
+verdade. `docs/improvements/` deixou de existir como pasta em 03/08/2026:
+os dois arquivos sobreviventes (`analise-completa.md`, `novas-analises.md`)
+foram movidos pra `docs/`, e o `README.md` da pasta (que só existia pra
+explicar a pasta em si) foi removido, seu conteúdo consolidado aqui.

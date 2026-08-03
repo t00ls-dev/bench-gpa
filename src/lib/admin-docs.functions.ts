@@ -8,7 +8,6 @@ import docMeta from "@/generated/doc-meta.json";
 interface DocEntry {
   slug: string;
   title: string;
-  category: string;
   date: string;
   lastModified: number | null;
 }
@@ -26,16 +25,12 @@ export const listDocs = createServerFn({ method: "GET" })
     const entries: DocEntry[] = [];
     for (const [filePath, content] of Object.entries(docModules)) {
       const slug = filePath.replace(/^\/docs\//, "").replace(/\.md$/, "");
-      if (slug === "improvements/README") continue;
       const title =
         extractDocTitle(content) ??
         slug.replace(/[/_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
       const date = extractDocDate(content) ?? "";
-      const category = slug.startsWith("improvements/")
-        ? "Análise do Código"
-        : "Documentação Técnica";
       const lastModified = (docMeta as Record<string, number | null>)[filePath] ?? null;
-      entries.push({ slug, title, category, date, lastModified });
+      entries.push({ slug, title, date, lastModified });
     }
     entries.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
     return entries;
@@ -49,8 +44,9 @@ export const getDocContent = createServerFn({ method: "POST" })
     const filePath = `/docs/${data.slug}.md`;
     const content = docModules[filePath];
     if (!content) throw new Error("Documento não encontrado.");
+    const date = extractDocDate(content) ?? "";
     const lastModified = (docMeta as Record<string, number | null>)[filePath] ?? null;
-    return { content, lastModified };
+    return { content, date, lastModified };
   });
 
 function extractDocTitle(content: string): string | null {
