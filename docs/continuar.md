@@ -1,4 +1,4 @@
-# Onde parar e por onde retomar
+# Estado do projeto e itens em aberto (30/07/2026, histórico)
 
 Estado em **2026-07-30**. Este documento existe para a próxima sessão não ter de
 reconstruir contexto a partir do histórico do git. Para o "como chegamos até

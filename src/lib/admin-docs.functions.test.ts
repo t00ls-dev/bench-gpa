@@ -94,7 +94,7 @@ describe("listDocs", () => {
   it("extrai o título do primeiro cabeçalho `# ...` do markdown", async () => {
     const result = await (listDocs as () => Promise<DocEntry[]>)();
     const continuar = result.find((d) => d.slug === "continuar");
-    expect(continuar?.title).toBe("Onde parar e por onde retomar");
+    expect(continuar?.title).toBe("Estado do projeto e itens em aberto (30/07/2026, histórico)");
   });
 });
 
@@ -108,7 +108,9 @@ describe("getDocContent", () => {
     )({ slug: "continuar" });
 
     expect(assertAdmin).toHaveBeenCalled();
-    expect(result.content).toContain("# Onde parar e por onde retomar");
+    expect(result.content).toContain(
+      "# Estado do projeto e itens em aberto (30/07/2026, histórico)",
+    );
     expect(typeof result.lastModified === "number" || result.lastModified === null).toBe(true);
   });
 
