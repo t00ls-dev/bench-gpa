@@ -33,9 +33,9 @@ Esta análise **substitui** o snapshot de 21/07/2026 22:53, que estava desatuali
 | `requireRateLimit` aplicado               | 100% das funções lidas, tier explícito por rota (`"api"`/`"upload"`)                                                                                                   |
 | Lint                                      | 0 erros, 3 warnings (ruído de fast-refresh do shadcn/ui)                                                                                                               |
 | Typecheck (`tsc --noEmit`)                | 0 erros                                                                                                                                                                |
-| Testes (`vitest run`)                     | 214 passando, 22 arquivos                                                                                                                                              |
-| Cobertura geral                           | 55,6% lines (ver `docs/coverage-summary.md`, gerado via `bun run coverage:summary`)                                                                                    |
-| Cobertura das server functions de negócio | [Médio] `area` 66,7%, `admin-users` 74,3% (herdou o teste do antigo `admin.functions.ts`), `dashboard` 26,8%; `admin-docs`, `admin-system`, `product` e `upload` em 0% |
+| Testes (`vitest run`)                     | ~~214 passando, 22 arquivos~~ Desatualizado: 361 passando, 40 arquivos                                                                                                 |
+| Cobertura geral                           | ~~55,6% lines~~ Desatualizado, ver `docs/coverage-summary.md` (regenerado, número muda a cada rodada de teste)                                                        |
+| Cobertura das server functions de negócio | ~~[Médio] `area` 66,7%... `admin-docs`, `admin-system`, `product` e `upload` em 0%~~ Resolvido em 30/07/2026, ver "Testes e Qualidade" abaixo                         |
 | Arquivos >300 linhas                      | 6 (`sidebar.tsx` 744, shadcn, não é código próprio; `area.page.tsx` 507; `upload.page.tsx` 375; `produto.page.tsx` 370; `index.page.tsx` 341; `area-table.tsx` 322)    |
 
 ---
@@ -104,9 +104,9 @@ Nenhum item aberto no momento.
 
 ## Testes e Qualidade
 
-- **138 testes passando**, 17 arquivos. Cobrem bem: `rate-limit.ts` (94%), `admin-utils.ts` (100%), `auth-api.ts` (85%), `use-hotkey.ts` (94%), `xlsx-parser.ts` (78%).
-- [Crítico] **Lógica de negócio principal sem nenhum teste**: `dashboard.functions.ts`, `area.functions.ts`, `product.functions.ts`, `upload.functions.ts` estão em **0% de cobertura** (confirmado via `coverage/lcov.info`, não só o resumo). `admin.functions.ts` está em ~23%. É exatamente o código que processa dinheiro/vendas e o pipeline de import, o que mais precisaria de rede de segurança para refactors.
-- [Médio] `vitest.config.ts` só inclui `src/**/*.test.ts`: **nenhum componente React (`.tsx`) é testável neste setup**, mesmo com `@testing-library/react` instalado. Zero cobertura de rotas/componentes por configuração, não por falta de esforço.
+- ~~138 testes passando, 17 arquivos~~ Desatualizado: 361 testes, 40 arquivos (ver `docs/coverage-summary.md`, regenerado).
+- ~~[Crítico] Lógica de negócio principal sem nenhum teste: `dashboard.functions.ts`, `area.functions.ts`, `product.functions.ts`, `upload.functions.ts` estão em 0% de cobertura~~ Resolvido em 30/07/2026 (`docs/continuar.md` §7, item 7): `upload.functions.ts` 92,1%, `product.functions.ts` 81,25%, `dashboard.functions.ts` 92,85%, `admin-system.functions.ts` 98,36%, `admin-docs.functions.ts` 88,88%.
+- ~~[Médio] `vitest.config.ts` só inclui `src/**/*.test.ts`: nenhum componente React (`.tsx`) é testável~~ Resolvido em 01/08/2026 (auditoria de QA, item 2, ver `scripts/coverage-thresholds.ts`): `.tsx` incluído em `test.include`/`coverage.include`.
 - [Baixo] `xlsx-parser.ts` é a lógica mais frágil do pipeline (depende do layout exato da planilha) e tem cobertura parcial (78%), vale fechar os 22% restantes antes de mexer nele.
 - [Novo] `bun run coverage:summary` gera `docs/coverage-summary.md` com tabela por arquivo: usar isso para acompanhar progresso em vez de rodar `coverage` manualmente.
 
@@ -165,7 +165,7 @@ Nenhum item aberto no momento.
 ### Média (próximas semanas)
 
 1. Invalidar cache ativamente após upload/mudança de role (não só TTL)
-2. Escrever testes para `dashboard/area/product/upload.functions.ts` (0% de cobertura hoje)
+2. ~~Escrever testes para `dashboard/area/product/upload.functions.ts` (0% de cobertura hoje)~~ Resolvido em 30/07/2026, ver "Testes e Qualidade" acima.
 3. Documentar as correções manuais de permissão do VPS em `docs/migracao-vps-autossuficiente.md` (idempotência se o VPS for reconstruído)
 
 ### Baixa (melhorias contínuas)
