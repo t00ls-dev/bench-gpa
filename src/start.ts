@@ -3,6 +3,7 @@ import { sentryGlobalRequestMiddleware } from "@sentry/tanstackstart-react";
 
 import { renderErrorPage } from "./lib/error-page";
 import { sentryServerClient } from "./lib/instrument-server";
+import { isSentryReported } from "./lib/auth-middleware";
 
 const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   try {
@@ -33,7 +34,14 @@ const sentryFunctionErrorMiddleware = createMiddleware({ type: "function" }).ser
     try {
       return await next();
     } catch (error) {
-      sentryServerClient?.captureException(error);
+      // requireAuth (src/lib/auth-middleware.ts) já captura com Scope próprio
+      // (contexto de usuário) para o caso comum de server function autenticada:
+      // sem este check, o mesmo erro é reportado duas vezes ao Sentry, aqui
+      // sem contexto nenhum. Só captura o que ainda não passou por lá (ex.:
+      // erro dentro de server function pública, sem requireAuth).
+      if (!isSentryReported(error)) {
+        sentryServerClient?.captureException(error);
+      }
       throw error;
     }
   },
