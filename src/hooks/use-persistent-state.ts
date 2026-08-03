@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 /**
  * Like useState but persists the value to localStorage under `key`.
@@ -17,18 +10,31 @@ export function usePersistentState<T>(
   initial: T,
   sanitize?: (v: T) => T,
 ): [T, Dispatch<SetStateAction<T>>] {
-  // sanitizedOnLoad viaja junto com value (em vez de num ref separado mutado
-  // dentro do inicializador do useState) para não mutar um ref durante o
-  // render, só efeitos/handlers de evento devem fazer isso. Sinaliza se
-  // sanitize() mudou o valor lido do storage, para o efeito abaixo escrever a
-  // correção de volta imediatamente, em vez de só na próxima mudança
-  // não-relacionada (o que deixaria dado ruim em disco indefinidamente para
-  // um usuário que nunca dispara outro update).
-  const [state, setState] = useState<{ value: T; sanitizedOnLoad: boolean }>(() => {
-    if (typeof window === "undefined") return { value: initial, sanitizedOnLoad: false };
+  // O valor persistido só pode ser lido depois de montado (window não existe
+  // no SSR), nunca no inicializador do useState: um inicializador que
+  // resolve `initial` no servidor e o valor do localStorage no cliente faz o
+  // primeiro render pós-hidratação divergir do HTML enviado pelo SSR (erro
+  // de hidratação do React sempre que o usuário já tinha algo salvo).
+  // `hydrated` trava o efeito de persistência abaixo até esse primeiro
+  // load acontecer, senão ele escreveria `initial` de volta e apagaria o
+  // valor salvo antes do setState da hidratação renderizar.
+  const [state, setState] = useState<{ value: T; hydrated: boolean }>({
+    value: initial,
+    hydrated: false,
+  });
+
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(key);
-      if (raw == null) return { value: initial, sanitizedOnLoad: false };
+      if (raw == null) {
+        // Carga única de localStorage no mount, não estado derivado de
+        // props: não existe idioma sem setState-em-efeito pra ler um storage
+        // externo síncrono só depois que `window` existe (ver comentário
+        // acima da declaração do state).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setState((s) => ({ ...s, hydrated: true }));
+        return;
+      }
       const parsed = JSON.parse(raw);
       // Shallow-merge stored object with defaults so fields added later
       // don't read back as `undefined` (e.g. when new array fields are introduced).
@@ -42,32 +48,27 @@ export function usePersistentState<T>(
       const merged = isMergeable
         ? ({ ...(initial as object), ...(parsed as object) } as T)
         : (parsed as T);
-      if (!sanitize) return { value: merged, sanitizedOnLoad: false };
-      const cleaned = sanitize(merged);
-      const sanitizedOnLoad = JSON.stringify(cleaned) !== JSON.stringify(merged);
-      return { value: cleaned, sanitizedOnLoad };
+      const cleaned = sanitize ? sanitize(merged) : merged;
+      setState({ value: cleaned, hydrated: true });
     } catch {
-      return { value: initial, sanitizedOnLoad: false };
+      setState((s) => ({ ...s, hydrated: true }));
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
-  const firstRender = useRef(true);
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      if (!state.sanitizedOnLoad) return;
-    }
+    if (!state.hydrated) return;
     try {
       window.localStorage.setItem(key, JSON.stringify(state.value));
     } catch {
       // ignore quota / unavailable
     }
-  }, [key, state.value, state.sanitizedOnLoad]);
+  }, [key, state.value, state.hydrated]);
 
   const setValue = useCallback<Dispatch<SetStateAction<T>>>((updater) => {
     setState((s) => ({
       value: typeof updater === "function" ? (updater as (prev: T) => T)(s.value) : updater,
-      sanitizedOnLoad: false,
+      hydrated: true,
     }));
   }, []);
 
