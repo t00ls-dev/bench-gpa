@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listDocs, getDocContent } from "@/lib/admin-docs.functions";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookText, FileText } from "lucide-react";
 import { Route } from "./admin.docs";
 
-function timeago(ts: number): string {
-  return formatDistanceToNow(ts * 1000, { addSuffix: true, locale: ptBR });
+/**
+ * Data absoluta, não relativa: "última atualização" via git (`lastModified`)
+ * conta byte alterado, não conteúdo relevante alterado (uma linha de título
+ * já basta pra virar "agora"). `date`, extraída do texto do próprio doc,
+ * é preferida por não sofrer desse problema; `lastModified` formatado como
+ * data é só o fallback pros poucos docs sem data própria no conteúdo.
+ */
+function lastUpdated(date: string, lastModified: number | null): string | null {
+  if (date) return date;
+  if (lastModified) return format(lastModified * 1000, "dd/MM/yyyy", { locale: ptBR });
+  return null;
 }
 
 export default function AdminDocsPage() {
@@ -68,11 +77,6 @@ function DocList() {
     );
   }
 
-  const grouped: Record<string, typeof data> = {};
-  for (const doc of data ?? []) {
-    (grouped[doc.category] ??= []).push(doc);
-  }
-
   return (
     <div className="space-y-8">
       <header className="mb-6">
@@ -83,35 +87,31 @@ function DocList() {
           Documentação técnica e análises do sistema.
         </p>
       </header>
-      {Object.keys(grouped).length === 0 ? (
+      {!data || data.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum documento encontrado.</p>
       ) : (
-        Object.entries(grouped).map(([category, docs]) => (
-          <section key={category}>
-            <h2 className="mb-3 text-lg font-semibold text-muted-foreground">{category}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {docs?.map((doc) => (
-                <button
-                  key={doc.slug}
-                  onClick={() => navigate({ search: { slug: doc.slug } })}
-                  className="kpi-card flex items-start gap-3 text-left hover:bg-accent/50 transition-colors cursor-pointer"
-                >
-                  <FileText className="mt-0.5 size-5 shrink-0 text-primary" />
-                  <div className="min-w-0">
-                    <div className="font-medium">{doc.title}</div>
-                    {(doc.lastModified || doc.date) && (
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        {doc.lastModified && timeago(doc.lastModified)}
-                        {doc.lastModified && doc.date && " · "}
-                        {doc.date}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        ))
+        <div className="grid gap-3 sm:grid-cols-2">
+          {data.map((doc) => {
+            const updated = lastUpdated(doc.date, doc.lastModified);
+            return (
+              <button
+                key={doc.slug}
+                onClick={() => navigate({ search: { slug: doc.slug } })}
+                className="kpi-card flex items-start gap-3 text-left hover:bg-accent/50 transition-colors cursor-pointer"
+              >
+                <FileText className="mt-0.5 size-5 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <div className="font-medium">{doc.title}</div>
+                  {updated && (
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      Última atualização: {updated}
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -127,7 +127,7 @@ function DocViewer({ slug }: { slug: string }) {
   });
 
   const content = data?.content ?? "";
-  const lastModified = data?.lastModified ?? null;
+  const updated = data ? lastUpdated(data.date, data.lastModified) : null;
 
   return (
     <div className="space-y-4">
@@ -146,8 +146,8 @@ function DocViewer({ slug }: { slug: string }) {
         </div>
       ) : (
         <>
-          {lastModified && (
-            <p className="text-xs text-muted-foreground">Atualizado {timeago(lastModified)}</p>
+          {updated && (
+            <p className="text-xs text-muted-foreground">Última atualização: {updated}</p>
           )}
           <article className="markdown-content overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>

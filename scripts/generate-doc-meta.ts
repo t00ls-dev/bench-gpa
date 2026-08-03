@@ -36,7 +36,6 @@ const files = walk(docsDir, root);
 const meta: Meta = {};
 
 for (const file of files) {
-  if (file === "docs/improvements/README.md") continue;
   meta[`/${file}`] = getGitTimestamp(file);
 }
 

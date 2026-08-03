@@ -1,7 +1,7 @@
 # Fix: cookie de sessão JWT não era `httpOnly`
 
 > Data: 22/07/2026
-> Referência: achado crítico #1 em [`docs/improvements/analise-completa.md`](./improvements/analise-completa.md)
+> Referência: achado crítico #1 em [`docs/analise-completa.md`](./analise-completa.md)
 
 ## Problema
 
@@ -65,15 +65,14 @@ Não rodei `bun run build`/teste manual em navegador nesta sessão: o ambiente n
 | `src/router.tsx`                        | Sessão expirada agora chama `logout()` real em vez de tentar limpar `document.cookie`                                                                        |
 | `src/routes/_authenticated/route.tsx`   | `signOut()` agora chama `logout()` real em vez de tentar limpar `document.cookie`                                                                            |
 | `src/lib/auth-api.test.ts`              | Mocks/asserts atualizados para o novo contrato (`setCookie`/`getCookie`/`deleteCookie`)                                                                      |
-| `docs/improvements/analise-completa.md` | Análise completa do código (item separado, já entregue antes deste fix)                                                                                      |
-| `docs/improvements/README.md`           | Sinaliza quais docs de análise estão desatualizados                                                                                                          |
+| `docs/analise-completa.md`              | Análise completa do código (item separado, já entregue antes deste fix)                                                                                      |
 
 ## O que **não** foi feito (fora do escopo deste fix, listado para não parecer esquecido)
 
-Itens relacionados a sessão/autenticação que ficaram registrados em `docs/improvements/analise-completa.md` mas que não foram tocados aqui, por não fazerem parte do pedido ("corrija o httpOnly"):
+Itens relacionados a sessão/autenticação que ficaram registrados em `docs/analise-completa.md` mas que não foram tocados aqui, por não fazerem parte do pedido ("corrija o httpOnly"):
 
 - Sem revogação/blacklist de token: um JWT copiado antes do logout continua válido até expirar (7 dias). ~~Resolvido em 30/07/2026 (PR #59)~~: expiração deixou de ser um `expiresIn: "7d"` fixo, ver `docs/sessao-inatividade-manter-conectado.md`.
 - Cache de `assertAdmin` (`admin-utils.ts`) continua com janela de até 5 min para revogar privilégio de admin após um rebaixamento.
 - ~~Deploy ainda não é gateado pelo resultado da CI, e a CI ainda não roda lint/typecheck~~ Resolvido: `deploy` tem `needs: [ci, schema-check]` (`.github/workflows/ci.yml:110`), e `ci` roda lint/typecheck/test/build.
 
-Esses seguem priorizados em `docs/improvements/analise-completa.md`.
+Esses seguem priorizados em `docs/analise-completa.md`.
