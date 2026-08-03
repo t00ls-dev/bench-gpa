@@ -54,7 +54,6 @@ import { assertAdmin } from "./admin-utils";
 interface DocEntry {
   slug: string;
   title: string;
-  category: string;
   date: string;
   lastModified: number | null;
 }
@@ -64,31 +63,21 @@ beforeEach(() => {
 });
 
 describe("listDocs", () => {
-  it("lista os docs reais, exclui improvements/README e ordena por título (pt-BR)", async () => {
+  it("lista os docs reais (lista única, sem categoria) ordenados por título (pt-BR)", async () => {
     const result = await (listDocs as () => Promise<DocEntry[]>)();
 
     expect(assertAdmin).toHaveBeenCalled();
     expect(result.length).toBeGreaterThan(0);
-    expect(result.some((d) => d.slug === "improvements/README")).toBe(false);
 
     for (const entry of result) {
       expect(entry.slug).toBeTruthy();
       expect(entry.title).toBeTruthy();
-      expect(["Análise do Código", "Documentação Técnica"]).toContain(entry.category);
+      expect(entry.slug.includes("/")).toBe(false);
     }
 
     const titles = result.map((d) => d.title);
     const sorted = [...titles].sort((a, b) => a.localeCompare(b, "pt-BR"));
     expect(titles).toEqual(sorted);
-  });
-
-  it('categoriza slugs "improvements/*" como Análise do Código, o resto como Documentação Técnica', async () => {
-    const result = await (listDocs as () => Promise<DocEntry[]>)();
-    const improvementsDoc = result.find((d) => d.slug.startsWith("improvements/"));
-    const topLevelDoc = result.find((d) => !d.slug.includes("/"));
-
-    expect(improvementsDoc?.category).toBe("Análise do Código");
-    expect(topLevelDoc?.category).toBe("Documentação Técnica");
   });
 
   it("extrai o título do primeiro cabeçalho `# ...` do markdown", async () => {
