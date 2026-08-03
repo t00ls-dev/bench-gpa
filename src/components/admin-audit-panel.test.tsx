@@ -1,52 +1,15 @@
 // @vitest-environment jsdom
 //
-// buildAuditTooltip é testado direto (sem montar o Popover do Radix: Portal +
-// ResizeObserver não existem no jsdom deste projeto, ver vitest.setup.ts).
+// buildAuditTooltip é testado separado, em src/lib/audit-tooltip.test.ts.
 // AuditLogSection é testado só até o ponto de existir ou não um botão
-// clicável por linha, sem abrir o popover, pelo mesmo motivo.
+// clicável por linha, sem abrir o Popover do Radix (Portal + ResizeObserver
+// não existem no jsdom deste projeto, ver vitest.setup.ts).
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuditLogSection, buildAuditTooltip } from "./admin-audit-panel";
+import { AuditLogSection } from "./admin-audit-panel";
 import type { AuditRow } from "@/lib/admin-system.functions";
-
-describe("buildAuditTooltip", () => {
-  it("retorna vazio quando não há e-mail nem detalhe", () => {
-    expect(buildAuditTooltip("auth.login", null, null)).toBe("");
-  });
-
-  it("retorna só o e-mail quando não há detalhe", () => {
-    expect(buildAuditTooltip("user.role_change", "ana@gpabr.com", null)).toBe("ana@gpabr.com");
-  });
-
-  it("retorna só o detalhe quando não há e-mail (ex.: purga de dados)", () => {
-    expect(buildAuditTooltip("data.purge", null, "purge manual, 120 registros")).toBe(
-      "purge manual, 120 registros",
-    );
-  });
-
-  it("combina e-mail e detalhe com parênteses, nunca travessão", () => {
-    const result = buildAuditTooltip("user.role_change", "ana@gpabr.com", "novo papel: admin");
-    expect(result).toBe("ana@gpabr.com (novo papel: admin)");
-    expect(result).not.toContain("—");
-  });
-
-  it("ignora o detail de user.activate/user.deactivate mesmo quando gravado (texto antigo)", () => {
-    // Linhas gravadas antes do JOIN por target_id existir têm detail solto
-    // tipo "reativou a conta"/"inativou a conta", que não deve mais aparecer.
-    expect(buildAuditTooltip("user.deactivate", "ana@gpabr.com", "inativou a conta")).toBe(
-      "ana@gpabr.com",
-    );
-    expect(buildAuditTooltip("user.activate", "ana@gpabr.com", "reativou a conta")).toBe(
-      "ana@gpabr.com",
-    );
-  });
-
-  it("user.activate/user.deactivate sem target_email (usuário excluído) cai pra vazio", () => {
-    expect(buildAuditTooltip("user.deactivate", null, "inativou a conta")).toBe("");
-  });
-});
 
 function row(overrides: Partial<AuditRow> = {}): AuditRow {
   return {
