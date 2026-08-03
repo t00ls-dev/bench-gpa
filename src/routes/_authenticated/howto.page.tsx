@@ -152,22 +152,24 @@ export default function HowToPage() {
         </Section>
       )}
 
-      <Section title="Cache" icon={HelpCircle}>
-        <p className="mb-3 text-sm text-muted-foreground">
-          O sistema usa cache temporário para evitar consultas repetidas ao banco de dados:
-        </p>
-        <div className="divide-y divide-border/50">
-          {cacheRows.map((c) => (
-            <div
-              key={c.key}
-              className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
-            >
-              <Kbd>{c.key}</Kbd>
-              <span className="text-sm text-muted-foreground">TTL: {c.ttl}</span>
-            </div>
-          ))}
-        </div>
-      </Section>
+      {isAdmin && (
+        <Section title="Cache" icon={HelpCircle}>
+          <p className="mb-3 text-sm text-muted-foreground">
+            O sistema usa cache temporário para evitar consultas repetidas ao banco de dados:
+          </p>
+          <div className="divide-y divide-border/50">
+            {cacheRows.map((c) => (
+              <div
+                key={c.key}
+                className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
+              >
+                <Kbd>{c.key}</Kbd>
+                <span className="text-sm text-muted-foreground">TTL: {c.ttl}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
     </div>
   );
 }
