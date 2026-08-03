@@ -71,7 +71,7 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
                 id="create-email"
                 value={emailLocal}
                 onChange={(e) => setEmailLocal(e.target.value)}
-                placeholder="ex.: uilton.leite"
+                placeholder="nome.sobrenome"
                 className="rounded-r-none"
                 autoComplete="off"
               />
