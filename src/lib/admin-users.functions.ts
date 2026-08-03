@@ -56,7 +56,7 @@ export const createUser = createServerFn({ method: "POST" })
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: id,
-      detail: `criou ${data.email} (${data.role})`,
+      detail: `${data.email} (${data.role})`,
     });
     return { ok: true, id };
   });
@@ -100,7 +100,6 @@ export const setUserActive = createServerFn({ method: "POST" })
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: data.userId,
-      detail: data.isActive ? "reativou a conta" : "inativou a conta",
     });
     return { ok: true };
   });
@@ -130,7 +129,7 @@ export const resetPassword = createServerFn({ method: "POST" })
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: data.userId,
-      detail: "redefiniu a senha (sessões anteriores revogadas)",
+      detail: "sessões anteriores revogadas",
     });
     return { ok: true };
   });
