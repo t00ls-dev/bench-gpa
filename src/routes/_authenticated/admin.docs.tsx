@@ -6,9 +6,7 @@ const docsSearchSchema = z.object({
   slug: z.string().optional(),
 });
 
-const AdminDocsPage = lazy(() => import("./admin.docs.page"));
-
 export const Route = createFileRoute("/_authenticated/admin/docs")({
   validateSearch: docsSearchSchema,
-  component: AdminDocsPage,
+  component: lazy(() => import("./admin.docs.page")),
 });
