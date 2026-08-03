@@ -245,7 +245,7 @@ export function AuditLogSection({
     <div className="kpi-card space-y-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          Ações sensíveis de autenticação e administração, mais recentes primeiro.
+          Ações sensíveis de autenticação e administração.
         </p>
         <RefreshButton fetching={isFetching} onClick={() => refetch()} />
       </div>
