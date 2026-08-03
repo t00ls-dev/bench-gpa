@@ -244,20 +244,20 @@ export function AuditLogSection({
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-left uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  <th className="py-2 pr-3">Usuário</th>
-                  <th className="py-2 pr-3">Ação</th>
                   <th className="py-2 pr-3">Data</th>
+                  <th className="py-2 pr-3">Ação</th>
+                  <th className="py-2 pr-3">Usuário</th>
                   <th className="py-2 pl-3 text-right">IP</th>
                 </tr>
               </thead>
               <tbody>
                 {data.events.map((ev) => (
                   <tr key={ev.id} className="border-b border-border/40 whitespace-nowrap">
-                    <td className="py-1.5 pr-3">{ev.actor_email ?? "-"}</td>
+                    <td className="py-1.5 pr-3 font-mono">{fmtDT(ev.created_at)}</td>
                     <td className="py-1.5 pr-3">
                       <ActionBadge action={ev.action} detail={ev.detail} />
                     </td>
-                    <td className="py-1.5 pr-3 font-mono">{fmtDT(ev.created_at)}</td>
+                    <td className="py-1.5 pr-3">{ev.actor_email ?? "-"}</td>
                     <td className="py-1.5 pl-3 text-right font-mono text-muted-foreground">
                       {ev.ip ?? "-"}
                     </td>
