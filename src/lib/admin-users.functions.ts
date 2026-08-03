@@ -10,6 +10,13 @@ import db from "./db";
 import { EmailSchema, PasswordSchema, RoleEnum, UserIdSchema } from "./schemas";
 import { asArray, asRecord, dateTimeStr } from "./api-types";
 
+/** E-mail do usuário-alvo, para registrar "de quem" nas ações que afetam outra conta. */
+async function getUserEmail(userId: string): Promise<string> {
+  const [rows] = await db.query("SELECT email FROM users WHERE id = ?", [userId]);
+  const email = asRecord(asArray(rows)[0]).email;
+  return email ? String(email) : userId;
+}
+
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit()])
   .handler(async ({ context }) => {
@@ -69,6 +76,7 @@ export const setUserRole = createServerFn({ method: "POST" })
     if (context.userId === data.userId && data.role !== "admin") {
       throw new Error("Você não pode remover seu próprio acesso de administrador.");
     }
+    const targetEmail = await getUserEmail(data.userId);
     await db.query("UPDATE users SET role = ? WHERE id = ?", [data.role, data.userId]);
     invalidateAdminCache(data.userId);
     await recordAudit({
@@ -77,7 +85,7 @@ export const setUserRole = createServerFn({ method: "POST" })
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: data.userId,
-      detail: `novo papel: ${data.role}`,
+      detail: `${targetEmail} → novo papel: ${data.role}`,
     });
     return { ok: true };
   });
@@ -92,6 +100,7 @@ export const setUserActive = createServerFn({ method: "POST" })
     if (context.userId === data.userId && !data.isActive) {
       throw new Error("Você não pode inativar sua própria conta.");
     }
+    const targetEmail = await getUserEmail(data.userId);
     await db.query("UPDATE users SET is_active = ? WHERE id = ?", [data.isActive, data.userId]);
     invalidateAdminCache(data.userId);
     await recordAudit({
@@ -100,6 +109,7 @@ export const setUserActive = createServerFn({ method: "POST" })
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: data.userId,
+      detail: targetEmail,
     });
     return { ok: true };
   });
@@ -119,6 +129,7 @@ export const resetPassword = createServerFn({ method: "POST" })
     // contraste com setUserActive, que sempre funcionou: requireAuth relê
     // `is_active` do banco a cada request, e a senha era o único vetor sem essa
     // rede.
+    const targetEmail = await getUserEmail(data.userId);
     await db.query(
       "UPDATE users SET password = ?, token_version = token_version + 1 WHERE id = ?",
       [hash, data.userId],
@@ -129,7 +140,7 @@ export const resetPassword = createServerFn({ method: "POST" })
       actorEmail: context.userEmail,
       targetType: "user",
       targetId: data.userId,
-      detail: "sessões anteriores revogadas",
+      detail: `${targetEmail} (sessões anteriores revogadas)`,
     });
     return { ok: true };
   });
