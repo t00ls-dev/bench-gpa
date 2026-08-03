@@ -63,6 +63,13 @@ export default defineConfig({
             project: process.env.SENTRY_PROJECT,
             authToken: process.env.SENTRY_AUTH_TOKEN,
             autoInstrumentMiddleware: false,
+            // Sem isto, o plugin usa GITHUB_SHA (hash completo) como nome do
+            // release do upload de source map, enquanto Sentry.init({release})
+            // em client.tsx/instrument-server.ts usa __COMMIT_HASH__ (hash
+            // curto, mesma variável commitHash abaixo). Nomes diferentes nunca
+            // casam, e o Sentry associa source map a evento por match exato de
+            // release: sem isto os stack traces em produção ficam minificados.
+            release: { name: commitHash },
           }),
         ]
       : []),

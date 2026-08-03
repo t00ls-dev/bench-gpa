@@ -23,7 +23,7 @@ vi.mock("cookie", () => ({
   parseCookie: vi.fn(() => ({ session: "valid-jwt" })),
 }));
 
-import { requireAuth } from "./auth-middleware";
+import { requireAuth, isSentryReported } from "./auth-middleware";
 import db from "./db";
 import jwt from "jsonwebtoken";
 import { setCookie } from "@tanstack/react-start/server";
@@ -228,6 +228,32 @@ describe("requireAuth", () => {
       } as never);
       await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
       expect(setCookie).toHaveBeenCalled();
+    });
+  });
+
+  // sentryFunctionErrorMiddleware (src/start.ts) recaptura qualquer erro que
+  // saia daqui, já que fica fora de requireAuth na cadeia de middleware: sem
+  // a marca, o mesmo erro vira dois eventos no Sentry.
+  describe("marca de erro já reportado ao Sentry", () => {
+    it("marca o erro de sessão inválida (JWT expirado)", async () => {
+      vi.mocked(jwt.verify).mockImplementation(() => {
+        throw new Error("jwt expired");
+      });
+      await expect(call()).rejects.toSatisfy((err: unknown) => isSentryReported(err));
+    });
+
+    it("marca o erro relançado de dentro de next()", async () => {
+      const boom = new Error("boom dentro do handler");
+      await expect(
+        (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)(
+          {
+            next: () => {
+              throw boom;
+            },
+          },
+        ),
+      ).rejects.toBe(boom);
+      expect(isSentryReported(boom)).toBe(true);
     });
   });
 });
