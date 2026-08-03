@@ -168,6 +168,24 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
 // pra estas duas ações, independente do que estiver gravado.
 const ACTIONS_WITHOUT_EXTRA_DETAIL = new Set(["user.activate", "user.deactivate"]);
 
+/**
+ * Monta o texto do tooltip do badge de ação. Isolado do JSX pra ser testável
+ * sem depender do Popover do Radix (Portal + ResizeObserver não existem no
+ * jsdom deste projeto).
+ */
+export function buildAuditTooltip(
+  action: string,
+  targetEmail: string | null,
+  detail: string | null,
+): string {
+  // target_email vem de um JOIN em `users` pelo target_id (não do `detail`
+  // gravado na hora): resolve o alvo mesmo em eventos gravados antes desse
+  // JOIN existir, sem precisar reescrever histórico.
+  const effectiveDetail = ACTIONS_WITHOUT_EXTRA_DETAIL.has(action) ? null : detail;
+  if (targetEmail && effectiveDetail) return `${targetEmail} (${effectiveDetail})`;
+  return targetEmail ?? effectiveDetail ?? "";
+}
+
 function ActionBadge({
   action,
   targetEmail,
@@ -188,14 +206,7 @@ function ActionBadge({
       {meta.label}
     </span>
   );
-  // target_email vem de um JOIN em `users` pelo target_id (não do `detail`
-  // gravado na hora): resolve o alvo mesmo em eventos gravados antes desse
-  // JOIN existir, sem precisar reescrever histórico.
-  const effectiveDetail = ACTIONS_WITHOUT_EXTRA_DETAIL.has(action) ? null : detail;
-  const tooltip =
-    targetEmail && effectiveDetail
-      ? `${targetEmail} (${effectiveDetail})`
-      : (targetEmail ?? effectiveDetail ?? "");
+  const tooltip = buildAuditTooltip(action, targetEmail, detail);
   if (!tooltip) return badge;
   return (
     <Popover>
