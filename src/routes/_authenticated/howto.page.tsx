@@ -11,6 +11,7 @@ const shortcutRows = [
   { keys: "g + u", desc: "Ir para Importar" },
   { keys: "g + o", desc: "Ir para Documentação" },
   { keys: "g + n", desc: "Ir para Administração" },
+  { keys: "g + h", desc: "Ir para Como usar" },
   { keys: "Shift + ?", desc: "Abrir esta ajuda" },
 ];
 
@@ -59,7 +60,7 @@ function ShortcutTable({ rows }: { rows: { keys: string; desc: string }[] }) {
 }
 
 const cacheRows = [
-  { key: "dashboard_metrics", ttl: "30s" },
+  { key: "dashboard_metrics", ttl: "1min" },
   { key: "area_filter_hierarchy", ttl: "5min" },
   { key: "imported_dates", ttl: "1min" },
   { key: "has_role", ttl: "5min / usuário" },
@@ -101,11 +102,8 @@ export default function HowToPage() {
             Use o <strong>seletor de datas</strong> no topo para escolher o período.
           </li>
           <li>
-            Use os <strong>filtros</strong> para selecionar lojas, departamentos, seções e grupos.
-          </li>
-          <li>
-            Escolha o tipo de <strong>comparação</strong> (período anterior, semana anterior ou mês
-            anterior) para ver a variação %.
+            Use os <strong>filtros</strong> para selecionar lojas, departamentos, seções, grupos e
+            subgrupos.
           </li>
         </ul>
       </Section>
@@ -145,7 +143,11 @@ export default function HowToPage() {
           <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
             <li>Apenas administradores podem importar dados.</li>
             <li>O progresso da importação é exibido em tempo real.</li>
-            <li>Após finalizar, os dados ficam imediatamente disponíveis nos relatórios.</li>
+            <li>
+              Vendas de produtos já cadastrados aparecem nos relatórios assim que a importação
+              termina. Produtos ou categorias genuinamente novos só aparecem na Área e nos filtros
+              no dia seguinte, depois do refresh diário às 03h30.
+            </li>
           </ul>
         </Section>
       )}
