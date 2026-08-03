@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 interface Props {
@@ -19,6 +20,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
+    // Reporta sempre, não só quando quem usa passa onError: sem isto, um
+    // erro de render pego aqui não ia pra lugar nenhum, nem console. Os 6
+    // usos atuais (Dashboard) não passavam onError, então ficavam 100%
+    // silenciosos.
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: info.componentStack } },
+    });
     this.props.onError?.(error, info);
   }
 

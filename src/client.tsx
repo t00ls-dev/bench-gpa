@@ -39,5 +39,16 @@ startTransition(() => {
     <StrictMode>
       <StartClient />
     </StrictMode>,
+    // Sem isto, erro de hidratação (recuperável: React descarta a árvore SSR
+    // e renderiza de novo no cliente) só vira um console.error interno do
+    // React, capturado pelo consoleLoggingIntegration como log, sem stack
+    // trace nem componentStack de verdade. reactErrorHandler() é o helper
+    // oficial do SDK pra isso: captura como exceção real, com o componente
+    // que causou o mismatch anexado ao evento.
+    {
+      onCaughtError: Sentry.reactErrorHandler(),
+      onUncaughtError: Sentry.reactErrorHandler(),
+      onRecoverableError: Sentry.reactErrorHandler(),
+    },
   );
 });
