@@ -162,6 +162,12 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
   "data.purge": { label: "Purga de dados", className: "bg-warning/15 text-warning" },
 };
 
+// Linhas gravadas antes do JOIN por target_id existir têm um `detail` de texto
+// livre ("reativou a conta"/"inativou a conta") que não bate com o rótulo do
+// badge (fala em "usuário") e não soma nada ao target_email. Ignorado sempre
+// pra estas duas ações, independente do que estiver gravado.
+const ACTIONS_WITHOUT_EXTRA_DETAIL = new Set(["user.activate", "user.deactivate"]);
+
 function ActionBadge({
   action,
   targetEmail,
@@ -185,7 +191,11 @@ function ActionBadge({
   // target_email vem de um JOIN em `users` pelo target_id (não do `detail`
   // gravado na hora): resolve o alvo mesmo em eventos gravados antes desse
   // JOIN existir, sem precisar reescrever histórico.
-  const tooltip = [targetEmail, detail].filter(Boolean).join(" — ");
+  const effectiveDetail = ACTIONS_WITHOUT_EXTRA_DETAIL.has(action) ? null : detail;
+  const tooltip =
+    targetEmail && effectiveDetail
+      ? `${targetEmail} (${effectiveDetail})`
+      : (targetEmail ?? effectiveDetail ?? "");
   if (!tooltip) return badge;
   return (
     <Popover>
