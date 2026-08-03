@@ -123,6 +123,8 @@ export interface AuditRow {
   action: string;
   target_type: string | null;
   target_id: string | null;
+  /** E-mail atual do usuário-alvo (JOIN em `users`), null se o alvo não for um usuário ou não existir mais. */
+  target_email: string | null;
   detail: string | null;
   ip: string | null;
 }
@@ -143,8 +145,15 @@ export const getAuditLog = createServerFn({ method: "POST" })
     const offset = data.offset ?? 0;
     const [[rows], [countRows]] = await Promise.all([
       db.query(
-        `SELECT id, created_at, actor_email, action, target_type, target_id, detail, ip
-           FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?`,
+        // LEFT JOIN em vez de confiar em texto gravado no `detail`: resolve o
+        // e-mail do alvo pelo target_id pra qualquer linha, inclusive as
+        // gravadas antes de existir esse recurso (não há edição nem exclusão
+        // de usuário no sistema, então o e-mail atual é sempre o certo).
+        `SELECT a.id, a.created_at, a.actor_email, a.action, a.target_type, a.target_id,
+                u.email AS target_email, a.detail, a.ip
+           FROM audit_log a
+           LEFT JOIN users u ON a.target_type = 'user' AND a.target_id = u.id
+           ORDER BY a.id DESC LIMIT ? OFFSET ?`,
         [limit, offset],
       ),
       db.query("SELECT COUNT(*) AS total FROM audit_log"),
@@ -159,6 +168,7 @@ export const getAuditLog = createServerFn({ method: "POST" })
         action: String(rec.action ?? ""),
         target_type: rec.target_type ? String(rec.target_type) : null,
         target_id: rec.target_id ? String(rec.target_id) : null,
+        target_email: rec.target_email ? String(rec.target_email) : null,
         detail: rec.detail ? String(rec.detail) : null,
         ip: rec.ip ? String(rec.ip) : null,
       };
