@@ -80,9 +80,11 @@ vi.mock("./admin-utils", () => ({
 
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("bcrypt", () => ({ default: { hash: vi.fn() } }));
+vi.mock("./audit", () => ({ recordAudit: vi.fn() }));
 
 import { createUser, resetPassword, setUserRole, setUserActive } from "./admin-users.functions";
 import { invalidateAdminCache } from "./admin-utils";
+import { recordAudit } from "./audit";
 import db from "./db";
 import bcrypt from "bcrypt";
 
@@ -90,6 +92,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(bcrypt.hash).mockResolvedValue("$2b$12$mockedhash" as never);
   vi.mocked(db.query).mockResolvedValue([{ affectedRows: 1 }] as never);
+  vi.mocked(recordAudit).mockResolvedValue(undefined);
 });
 
 describe("createUser", () => {
@@ -109,6 +112,9 @@ describe("createUser", () => {
       "INSERT INTO users (id, email, name, password, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
       [result.id, "newuser@gpabr.com", "New User", "$2b$12$mockedhash", "analyst"],
     );
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "user.create", detail: "papel: analyst" }),
+    );
   });
 });
 
@@ -125,6 +131,54 @@ describe("resetPassword", () => {
       "UPDATE users SET password = ?, token_version = token_version + 1 WHERE id = ?",
       ["$2b$12$mockedhash", "u1"],
     );
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "user.password_reset",
+        detail: "sessões anteriores revogadas",
+      }),
+    );
+  });
+});
+
+describe("detail gravado no audit log", () => {
+  it("setUserRole grava o novo papel", async () => {
+    await (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
+      userId: "u-alvo",
+      role: "admin",
+    });
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "user.role_change", detail: "novo papel: admin" }),
+    );
+  });
+
+  it("setUserActive(true) grava user.activate sem detail", async () => {
+    await (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
+      userId: "u-alvo",
+      isActive: true,
+    });
+    const call = vi.mocked(recordAudit).mock.calls[0][0];
+    expect(call.action).toBe("user.activate");
+    expect(call.detail).toBeUndefined();
+  });
+
+  it("setUserActive(false) grava user.deactivate sem detail", async () => {
+    await (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
+      userId: "u-alvo",
+      isActive: false,
+    });
+    const call = vi.mocked(recordAudit).mock.calls[0][0];
+    expect(call.action).toBe("user.deactivate");
+    expect(call.detail).toBeUndefined();
+  });
+
+  it("barra auto-inativação antes de gravar qualquer audit", async () => {
+    await expect(
+      (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
+        userId: "admin-u1",
+        isActive: false,
+      }),
+    ).rejects.toThrow("não pode inativar sua própria conta");
+    expect(recordAudit).not.toHaveBeenCalled();
   });
 });
 
