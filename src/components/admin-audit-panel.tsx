@@ -162,17 +162,33 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
   "data.purge": { label: "Purga de dados", className: "bg-warning/15 text-warning" },
 };
 
-function ActionBadge({ action }: { action: string }) {
+function ActionBadge({ action, detail }: { action: string; detail: string | null }) {
   const meta = ACTION_META[action] ?? {
     label: action,
     className: "bg-muted text-muted-foreground",
   };
-  return (
+  const badge = (
     <span
       className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${meta.className}`}
     >
       {meta.label}
     </span>
+  );
+  if (!detail) return badge;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="cursor-pointer border-0 bg-transparent p-0 underline decoration-dotted underline-offset-4"
+        >
+          {badge}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 text-xs" side="top" align="start">
+        {detail}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -228,22 +244,20 @@ export function AuditLogSection({
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-left uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  <th className="py-2 pr-3">Quando</th>
+                  <th className="py-2 pr-3">Usuário</th>
                   <th className="py-2 pr-3">Ação</th>
-                  <th className="py-2 pr-3">Ator</th>
-                  <th className="py-2 pr-3">Detalhe</th>
+                  <th className="py-2 pr-3">Data</th>
                   <th className="py-2 pl-3 text-right">IP</th>
                 </tr>
               </thead>
               <tbody>
                 {data.events.map((ev) => (
                   <tr key={ev.id} className="border-b border-border/40 whitespace-nowrap">
-                    <td className="py-1.5 pr-3 font-mono">{fmtDT(ev.created_at)}</td>
-                    <td className="py-1.5 pr-3">
-                      <ActionBadge action={ev.action} />
-                    </td>
                     <td className="py-1.5 pr-3">{ev.actor_email ?? "-"}</td>
-                    <td className="py-1.5 pr-3 text-muted-foreground">{ev.detail ?? "-"}</td>
+                    <td className="py-1.5 pr-3">
+                      <ActionBadge action={ev.action} detail={ev.detail} />
+                    </td>
+                    <td className="py-1.5 pr-3 font-mono">{fmtDT(ev.created_at)}</td>
                     <td className="py-1.5 pl-3 text-right font-mono text-muted-foreground">
                       {ev.ip ?? "-"}
                     </td>
