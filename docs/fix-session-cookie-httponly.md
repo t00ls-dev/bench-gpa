@@ -72,9 +72,8 @@ Não rodei `bun run build`/teste manual em navegador nesta sessão: o ambiente n
 
 Itens relacionados a sessão/autenticação que ficaram registrados em `docs/improvements/analise-completa.md` mas que não foram tocados aqui, por não fazerem parte do pedido ("corrija o httpOnly"):
 
-- Sem revogação/blacklist de token: um JWT copiado antes do logout continua válido até expirar (7 dias).
-- `JWT_EXPIRY` do `.env` continua sem ser lido (`login()` ainda hardcoda `expiresIn: "7d"`).
+- Sem revogação/blacklist de token: um JWT copiado antes do logout continua válido até expirar (7 dias). ~~Resolvido em 30/07/2026 (PR #59)~~: expiração deixou de ser um `expiresIn: "7d"` fixo, ver `docs/sessao-inatividade-manter-conectado.md`.
 - Cache de `assertAdmin` (`admin-utils.ts`) continua com janela de até 5 min para revogar privilégio de admin após um rebaixamento.
-- Deploy ainda não é gateado pelo resultado da CI, e a CI ainda não roda lint/typecheck.
+- ~~Deploy ainda não é gateado pelo resultado da CI, e a CI ainda não roda lint/typecheck~~ Resolvido: `deploy` tem `needs: [ci, schema-check]` (`.github/workflows/ci.yml:110`), e `ci` roda lint/typecheck/test/build.
 
 Esses seguem priorizados em `docs/improvements/analise-completa.md`.
