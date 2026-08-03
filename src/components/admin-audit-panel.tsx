@@ -162,7 +162,15 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
   "data.purge": { label: "Purga de dados", className: "bg-warning/15 text-warning" },
 };
 
-function ActionBadge({ action, detail }: { action: string; detail: string | null }) {
+function ActionBadge({
+  action,
+  targetEmail,
+  detail,
+}: {
+  action: string;
+  targetEmail: string | null;
+  detail: string | null;
+}) {
   const meta = ACTION_META[action] ?? {
     label: action,
     className: "bg-muted text-muted-foreground",
@@ -174,7 +182,11 @@ function ActionBadge({ action, detail }: { action: string; detail: string | null
       {meta.label}
     </span>
   );
-  if (!detail) return badge;
+  // target_email vem de um JOIN em `users` pelo target_id (não do `detail`
+  // gravado na hora): resolve o alvo mesmo em eventos gravados antes desse
+  // JOIN existir, sem precisar reescrever histórico.
+  const tooltip = [targetEmail, detail].filter(Boolean).join(" — ");
+  if (!tooltip) return badge;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -186,7 +198,7 @@ function ActionBadge({ action, detail }: { action: string; detail: string | null
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 text-xs" side="top" align="start">
-        {detail}
+        {tooltip}
       </PopoverContent>
     </Popover>
   );
@@ -255,7 +267,11 @@ export function AuditLogSection({
                   <tr key={ev.id} className="border-b border-border/40 whitespace-nowrap">
                     <td className="py-1.5 pr-3 font-mono">{fmtDT(ev.created_at)}</td>
                     <td className="py-1.5 pr-3">
-                      <ActionBadge action={ev.action} detail={ev.detail} />
+                      <ActionBadge
+                        action={ev.action}
+                        targetEmail={ev.target_email}
+                        detail={ev.detail}
+                      />
                     </td>
                     <td className="py-1.5 pr-3">{ev.actor_email ?? "-"}</td>
                     <td className="py-1.5 pl-3 text-right font-mono text-muted-foreground">

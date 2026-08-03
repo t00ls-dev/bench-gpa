@@ -167,6 +167,7 @@ describe("getAuditLog", () => {
     action: "data.purge",
     target_type: "data",
     target_id: null,
+    target_email: null,
     detail: "purge manual",
     ip: "203.0.113.5",
   };
