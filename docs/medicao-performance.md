@@ -528,3 +528,28 @@ individuais). `ci.yml` agora tenta o reload até 3 vezes, cada uma com seu
 próprio healthcheck, antes de considerar falha real e disparar o rollback
 (PR #188, mesmo PR da Causa 2 — as duas foram corrigidas juntas porque a
 segunda só apareceu testando a primeira).
+
+**Risco residual, medido em produção (PR #189, commit vazio só pra disparar
+deploy real sob curl contínuo no domínio público).** O primeiro deploy real
+depois do fix acima bateu na Causa 3 ao vivo: tentativa 1 do reload marcou
+os dois workers como "online", mas de 11:08:59 a 11:09:05 UTC (~6,2s,
+10 requisições seguidas) `https://gpa.t00ls.dev` respondeu `502` pra
+tráfego real. A tentativa 2 corrigiu sozinha e o deploy terminou com
+sucesso, sem rollback incorreto e sem intervenção manual — mas os ~6s de
+502 antes disso aconteceram de verdade.
+
+Ou seja: o retry evita que o *deploy* falhe e reverta pro build anterior
+(o problema que motivou a Causa 2/3 originalmente), mas não elimina a
+janela de indisponibilidade quando o bug do PM2 é acionado — só garante que
+o deploy converge pro estado certo logo depois. Não é o zero-downtime real
+que a migração pro cluster mode (PR #184) prometia.
+
+Decisão: aceitar esse risco residual por agora, sem redesenhar o mecanismo
+de reload (precisaria de algo tipo blue-green manual — subir a release nova
+sob um nome de app separado, validar, só depois trocar — pra contornar o
+bug do PM2 em vez de só reagir a ele). Motivo: é raro (a mesma ordem de
+grandeza da taxa medida isoladamente, ~5-10% dos deploys), a janela é curta
+(segundos, não minutos), e o estado anterior (rollback incorreto deixando
+código velho no ar até alguém notar) era pior. Revisitar se a frequência
+observada em produção for maior que o medido aqui, ou se o tráfego
+justificar o investimento.
