@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { existsSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-// Cada teste precisa de um Map interno fresco: vi.resetModules() +
-// import dinâmico evita um token vazar de um teste pro outro.
+// O estado agora é um diretório fixo em disco (precisa ser o mesmo caminho
+// entre processos/workers, ver comentário em pdf-download-store.ts), não mais
+// um Map de módulo: vi.resetModules() sozinho não isola mais um teste do
+// outro, então limpa o diretório antes de cada teste. Mantém o
+// resetModules()/import dinâmico mesmo assim, por consistência com o padrão
+// do projeto pra estado de módulo singleton.
+const DIR = join(tmpdir(), "bench-gpa-pdf-downloads");
+
 async function freshStore() {
   vi.resetModules();
   const mod = await import("./pdf-download-store");
@@ -13,6 +22,7 @@ const BYTES = new Uint8Array([1, 2, 3, 4]);
 describe("pdf-download-store", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    if (existsSync(DIR)) rmSync(DIR, { recursive: true, force: true });
   });
 
   afterEach(() => {
@@ -81,5 +91,25 @@ describe("pdf-download-store", () => {
     expect(t1).not.toBe(t2);
     expect(takePdf(t1, "user-1")?.filename).toBe("a.pdf");
     expect(takePdf(t2, "user-1")?.filename).toBe("b.pdf");
+  });
+
+  // Cobre o próprio motivo da mudança: dois "processos" diferentes (aqui,
+  // duas instâncias de módulo via import dinâmico separado, sem
+  // resetModules() entre elas) enxergando o mesmo token pelo disco.
+  it("um token gravado por uma instância do módulo é lido por outra", async () => {
+    const store1 = await freshStore();
+    const token = store1.storePdf("user-1", BYTES, "relatorio.pdf");
+
+    vi.resetModules();
+    const store2 = await import("./pdf-download-store");
+    const entry = store2.takePdf(token, "user-1");
+    expect(entry?.bytes).toEqual(BYTES);
+    expect(entry?.filename).toBe("relatorio.pdf");
+  });
+
+  it("token com formato inválido (não-UUID) devolve undefined, sem tentar ler arquivo", async () => {
+    const { takePdf } = await freshStore();
+    expect(takePdf("../../etc/passwd", "user-1")).toBeUndefined();
+    expect(takePdf("token-qualquer", "user-1")).toBeUndefined();
   });
 });
