@@ -33,7 +33,16 @@ module.exports = {
   apps: [
     {
       name: "bench-gpa",
-      script: ".output/server/index.mjs",
+      // "current" é symlink pra releases/<sha>/, nunca um diretório real (ver
+      // .github/workflows/ci.yml, step "Atomic swap"). Node resolve o caminho
+      // REAL do módulo de entrada (segue symlink) no import() inicial: uma vez
+      // de pé, cada worker fica preso pra sempre na sua própria releases/.../,
+      // imune a uma troca de symlink que aconteça depois — é o que evita o
+      // ENOENT de asset que o esquema antigo (troca de conteúdo no MESMO
+      // caminho ".output") causava em workers ainda de pé durante o reload
+      // gradual do cluster mode (achado em 04/08/2026, terceiro rollback do
+      // dia: ver docs/medicao-performance.md).
+      script: "current/server/index.mjs",
       // cluster (não fork): pm2 reload faz troca gradual worker por worker
       // (sobe o novo, espera responder, só então mata o antigo) em vez do
       // restart completo do fork mode. VPS de 1 núcleo: 2 instâncias não
