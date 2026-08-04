@@ -29,6 +29,7 @@ import { DataCoverage } from "@/components/admin-data-coverage";
 import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS } from "@/lib/import-config";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 
 interface FileEntry {
   file: File;
@@ -84,6 +85,7 @@ export default function UploadPage() {
     }>
   >([]);
   const [processing, setProcessing] = useState<ProcessingState>(IDLE_STATE);
+  useWakeLock(processing.busy);
 
   const processingRef = useRef(false);
   const cancelRef = useRef(false);
