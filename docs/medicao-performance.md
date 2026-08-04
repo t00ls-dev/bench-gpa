@@ -457,3 +457,74 @@ consegue calcular mais tentativas por segundo de verdade, porque o gargalo
 continua sendo a CPU compartilhada, não o contador em si. Revisitar se a VPS
 ganhar mais núcleos algum dia (aí sim 2 workers rodam de verdade em paralelo,
 e a diluição passa a valer mais).
+
+## 2026-08-04: três rollbacks seguidos no deploy do PM2 cluster mode, duas causas raiz distintas
+
+Registro da investigação, não medição formal. A migração pra cluster mode
+(item acima) expôs dois bugs reais no pipeline de deploy que nunca tinham
+aparecido em modo fork/1 instância — nenhum dos dois é do cluster mode em si,
+mas o cluster mode alargou a janela de tempo o suficiente pra virar visível.
+
+**Causa 1 — `listen_timeout` default do PM2 curto demais.** Medido em
+produção: cada worker leva consistentemente ~4,8s do pedido de reload até
+confirmar `listening` (pool de conexão do MariaDB, SDK do Sentry, registro de
+rotas, tudo competindo pela CPU única com o outro worker subindo ao mesmo
+tempo). O default do PM2 (`GRACEFUL_LISTEN_TIMEOUT`) é 3000ms: curto demais
+pro nosso boot real. Sem isto, o PM2 desistia de esperar antes do worker novo
+responder e considerava o reload malsucedido, mesmo com os workers saudáveis
+um instante depois. Fix: `listen_timeout: 8000` em `ecosystem.config.cjs`
+(PR #187).
+
+**Causa 2 — troca de conteúdo no mesmo caminho, worker antigo lendo por
+baixo.** O script de deploy trocava o diretório inteiro
+(`mv .output .output.old && mv .output.new .output`) **antes** de pedir o
+reload ao PM2. Em modo fork/1 instância a janela entre essa troca e o
+processo antigo morrer era de milissegundos — irrelevante. Em cluster mode, o
+reload troca os workers um de cada vez (~10-20s no total pros dois); durante
+essa janela, o worker antigo — ainda de pé, ainda recebendo tráfego real —
+fazia qualquer leitura de asset sob demanda (hash antigo, não cacheado em
+memória do processo) pelo caminho `.output`, que a troca já tinha apontado
+pro build NOVO por baixo dele: `ENOENT`/500 real, reproduzido tanto pelo
+healthcheck do próprio deploy quanto potencialmente por usuário de verdade
+nesse intervalo. Log de produção, 2026-08-04T09:55:07Z:
+
+```
+Error: ENOENT: no such file or directory, open
+'.output/public/assets/auth-BTwUPa54.js'
+```
+
+Fix: esquema de release versionada (`releases/<timestamp>-<sha>/`, nunca
+reescrita) + symlink `current` trocado atomicamente. Node resolve o caminho
+REAL do módulo de entrada (segue symlink) no `import()` inicial: uma vez de
+pé, cada worker fica preso pra sempre na sua própria `releases/.../`, imune a
+uma troca de symlink que aconteça depois — nenhum worker antigo volta a ler
+de um caminho cujo conteúdo mudou debaixo dele. Testado manualmente no
+servidor (simulação de dois ciclos completos de deploy, incluindo o cenário
+de rollback) antes de subir via CI (PR #188).
+
+**Causa 3 — descoberta testando a Causa 2, bug do próprio PM2.** Validando o
+fix de release versionada em produção (seis ciclos de reload em sequência),
+o sexto ciclo deixou `gpa.t00ls.dev` respondendo 502 por alguns minutos: o
+`pm2 startOrReload` reportou os dois workers "online" e o `pm2 describe`
+mostrava tudo saudável, mas nenhum dos dois processos jamais conseguiu de
+fato ligar na porta 3000 — nenhum erro no log da aplicação, nenhuma linha
+"Listening on" pra aquele ciclo, nenhum socket em `LISTEN` (`ss`/`lsof`
+confirmaram). Recuperado na hora com `pm2 delete` + `pm2 start` limpo.
+
+Reproduzido de forma isolada (bun + PM2 7.0.3 + MariaDB locais, fora da VPS,
+pra não arriscar outra indisponibilidade real) com ciclos de reload em
+sequência rápida: falha em ~5-33% das tentativas individuais (variou entre
+duas rodadas de teste), sempre nos dois workers ao mesmo tempo, sempre sem
+nenhum erro de aplicação — bate com bug documentado do próprio PM2
+([Unitech/pm2#3946](https://github.com/Unitech/pm2/issues/3946), "TCP port
+isn't released on reload when app is running in cluster mode"). Não há
+versão mais nova do PM2 disponível (7.0.3 já é a última no momento) que
+corrija isso.
+
+Mitigação: chamar `pm2 startOrReload` de novo (mesmo release, sem precisar
+de `delete` antes) sempre corrigiu no teste — 20 ciclos com até 3 tentativas
+cada, só 1 precisou de uma segunda tentativa (1 falha em 21 tentativas
+individuais). `ci.yml` agora tenta o reload até 3 vezes, cada uma com seu
+próprio healthcheck, antes de considerar falha real e disparar o rollback
+(PR #188, mesmo PR da Causa 2 — as duas foram corrigidas juntas porque a
+segunda só apareceu testando a primeira).

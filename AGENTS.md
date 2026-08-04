@@ -173,9 +173,13 @@ em vez de commit direto em `main`.
 - CI/CD (`.github/workflows/ci.yml`) roda lint, typecheck, test, build e
   schema-check antes de liberar o deploy: o gate é a própria CI, não um
   job separado
-- Deploy é atômico: o `.output` novo troca de lugar com o anterior via SSH
-  no VPS. Se o health-check pós-restart do PM2 falhar, o workflow reverte
-  sozinho para o build anterior
+- Deploy é atômico: cada build vira uma release versionada em
+  `releases/<sha>/` no VPS, e o symlink `current` troca atomicamente para
+  ela (nunca sobrescreve o conteúdo de uma release em uso — evita workers
+  antigos, ainda de pé durante o reload gradual do cluster mode, lendo
+  arquivo de um caminho que mudou debaixo deles). Se o health-check
+  pós-reload do PM2 falhar, o workflow reverte sozinho o symlink para a
+  release anterior
 - Deploy real é CI Actions para a VPS Hestia (`sv1.t00ls.dev`,
   `gpa.t00ls.dev`). Não há PaaS
 
