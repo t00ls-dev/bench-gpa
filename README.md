@@ -111,8 +111,8 @@ Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 - **PWA**: `manifest.json` + ícones (favicon, apple-touch-icon, maskable) versionados com o hash do commit, cache-busting automático a cada deploy, independente do cache do Cloudflare. Instalável em mobile; não funciona offline (dados vêm sempre do servidor).
 - **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile, rate limit em todas as server functions autenticadas (`requireRateLimit`, hoje 27 usos em 8 arquivos `*.functions.ts`).
 - **Auditoria & monitoramento**: `audit_log` registra ações sensíveis (login ok/falho, logout, criação/alteração de usuário, reset de senha, purga); IP resolvido atrás do Cloudflare (`CF-Connecting-IP`). `cron_heartbeat` grava a última execução de cada cron (`purge`, `refresh-universe`) com status e duração, sinalizando atrasos. Ambos visíveis em `/admin` → aba **Auditoria**.
-- **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Import automático varre o mês corrente com cap de 180 dias.
-- **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). O import automático usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria: evita o loop importar→purgar→reimportar.
+- **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Sem cron: pela tela `/upload` ou por `cli:import`/`cli:watch`, sob demanda (ver seção "Importação de Dados" acima).
+- **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). `cli:watch` usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria: evita o loop importar→purgar→reimportar.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
 - **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área).
 - **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → swap atômico + restart PM2 com rollback automático. Não há PaaS. Docs em `docs/`.
@@ -126,7 +126,7 @@ Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 │   ├── hooks/        → Hooks customizados
 │   ├── lib/          → Server functions, schemas Zod, cache, CSP, rate limit, Turnstile, auth/sessão, PDF export
 │   └── routes/       → Rotas TanStack Router (lazy loaded)
-├── scripts/          → CLI de import (manual e automático)
+├── scripts/          → CLI de import (execução manual, sob demanda)
 ├── data/             → Inbox local de planilhas XLSX (não versionado)
 └── docs/             → Documentação técnica e planos de migração
 ```
