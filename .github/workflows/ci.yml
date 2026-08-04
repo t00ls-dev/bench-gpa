@@ -142,6 +142,22 @@ jobs:
           SSH_CMD="ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
           REMOTE=${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html
           rsync -az --delete -e "$SSH_CMD" .output/ "$REMOTE/.output.new/"
+
+          # ecosystem.config.cjs fica na raiz de $APPDIR, fora do .output/
+          # (bundle self-contained do Nitro): nunca fez parte de nenhum rsync
+          # deste workflow, então uma mudança nele (instances, exec_mode etc.)
+          # nunca chegava no servidor de verdade até alguém copiar manualmente
+          # (achado em 04/08/2026, na migração pra PM2 cluster mode: PR
+          # mergeado, CI verde, deploy "com sucesso", e o servidor continuou
+          # rodando fork/1 instância porque o pm2 startOrReload lia a config
+          # antiga). Sem --delete/staging: rsync de arquivo único já escreve
+          # em temp e renomeia por cima, é atômico por padrão, não precisa da
+          # mesma dança de .new/swap do .output/. Fora do bloco tolerante a
+          # falha (cron scripts, mais abaixo) de propósito: isto controla
+          # quantos workers sobem e em que modo, é tão crítico quanto o
+          # .output/ em si.
+          rsync -az -e "$SSH_CMD" ecosystem.config.cjs "$REMOTE/"
+
           # Runner + baseline + migrations versionadas → $APPDIR/_migrations/
           rsync -az -e "$SSH_CMD" \
             scripts/run-migrations.sh scripts/migrate-schema.sql scripts/migrations \
