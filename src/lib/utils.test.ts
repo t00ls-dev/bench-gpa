@@ -97,12 +97,48 @@ describe("fmtBRShort", () => {
   });
 
   it("formats Date object", () => {
-    const d = new Date(2024, 2, 15);
+    // Meio-dia UTC, não meia-noite: fora de qualquer zona de ambiguidade de
+    // fuso, testa só a formatação em si, não a conversão de fuso (isso tem
+    // teste dedicado logo abaixo).
+    const d = new Date("2024-03-15T12:00:00.000Z");
     expect(fmtBRShort(d)).toBe("15/03/24");
   });
 
   it("returns fallback for invalid string", () => {
     expect(fmtBRShort("not-a-date")).toBe("(sem)");
+  });
+
+  // Regressão do bug real (04/08/2026, Sentry BENCH-GPA-Y): só o ramo
+  // `string` de fmtBRShort era seguro pra hidratação (parsing manual, sem
+  // Date). Os ramos Date/number liam getFullYear()/getMonth()/getDate()
+  // (getters locais) — mesma classe de bug do fmtDT, ativa de verdade em
+  // admin-user-management.tsx (new Date(u.created_at), aba padrão de
+  // /admin, sempre visível) e em admin.docs.page.tsx (via date-fns antes
+  // desta correção).
+  it("ramo Date: usa o dia em Brasília, não em UTC, perto da virada do dia", () => {
+    // 00:00 UTC de 15/03 = 21:00 de 14/03 em America/Sao_Paulo (UTC-3).
+    const d = new Date("2024-03-15T00:00:00.000Z");
+    expect(fmtBRShort(d)).toBe("14/03/24");
+  });
+
+  it("ramo number: mesma conversão de fuso, mesmo instante como timestamp ms", () => {
+    const ms = new Date("2024-03-15T00:00:00.000Z").getTime();
+    expect(fmtBRShort(ms)).toBe("14/03/24");
+  });
+
+  it("ramos Date e number independem do fuso do processo", () => {
+    const originalTz = process.env.TZ;
+    try {
+      const instant = new Date("2026-08-04T09:30:00.000Z");
+      process.env.TZ = "UTC";
+      const asUtc = fmtBRShort(instant);
+      process.env.TZ = "America/New_York";
+      const asNewYork = fmtBRShort(instant.getTime());
+      expect(asUtc).toBe(asNewYork);
+      expect(asUtc).toBe("04/08/26");
+    } finally {
+      process.env.TZ = originalTz;
+    }
   });
 });
 
