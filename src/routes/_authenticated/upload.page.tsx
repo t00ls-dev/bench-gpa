@@ -310,7 +310,6 @@ export default function UploadPage() {
               eta={processing.eta}
               processed={processing.processed}
               currentDate={processing.currentDate}
-              onProcess={confirmImport}
               onCancel={() => {
                 cancelRef.current = true;
               }}
