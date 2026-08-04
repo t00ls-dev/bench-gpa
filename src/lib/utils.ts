@@ -109,17 +109,21 @@ export function fmtBRShort(input: string | Date | number | null | undefined): st
     y = Number(Y);
     m = Number(M);
     d = Number(D);
-  } else if (input instanceof Date) {
-    if (isNaN(input.getTime())) return "(sem)";
-    y = input.getFullYear();
-    m = input.getMonth() + 1;
-    d = input.getDate();
-  } else if (typeof input === "number") {
-    const dt = new Date(input);
+  } else if (input instanceof Date || typeof input === "number") {
+    // Fuso fixo (todayFormatter, já usado por todayISOBrazil acima), não
+    // getters locais: Date/number aqui é sempre um instante absoluto (ex.:
+    // new Date(u.created_at) em admin-user-management.tsx), e getFullYear()/
+    // getMonth()/getDate() leem no fuso de quem roda o código — mesma classe
+    // de bug do fmtDT (Sentry BENCH-GPA-Y), só que neste ramo específico
+    // (o ramo `string`, acima, já era seguro por não passar por Date algum).
+    const dt = input instanceof Date ? input : new Date(input);
     if (isNaN(dt.getTime())) return "(sem)";
-    y = dt.getFullYear();
-    m = dt.getMonth() + 1;
-    d = dt.getDate();
+    const parts = Object.fromEntries(
+      todayFormatter.formatToParts(dt).map((p) => [p.type, p.value]),
+    );
+    y = Number(parts.year);
+    m = Number(parts.month);
+    d = Number(parts.day);
   } else {
     return "(sem)";
   }
