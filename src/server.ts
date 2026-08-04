@@ -11,7 +11,7 @@ import {
 } from "@sentry/core";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { setCspNonce } from "./lib/csp";
+import { runWithCspNonce } from "./lib/csp";
 import { ssrLimiter, getClientIp } from "./lib/rate-limit";
 import { assertSafeBoot } from "./lib/boot-guards";
 import { parseCookie } from "cookie";
@@ -172,8 +172,6 @@ function applySecurityHeaders(
   nonce: string,
   extraHeaders?: [string, string][],
 ): Response {
-  setCspNonce(undefined);
-
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
@@ -243,9 +241,11 @@ const serverEntry: ServerEntry = {
       }
 
       const nonce = crypto.randomUUID();
-      setCspNonce(nonce);
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
+      // runWithCspNonce, não setCspNonce solto: isola o nonce por cadeia
+      // assíncrona (ver comentário em src/lib/csp.ts), então requisições
+      // concorrentes não pisam uma na outra durante o SSR.
+      const response = await runWithCspNonce(nonce, () => handler.fetch(request, env, ctx));
 
       if (response.status < 500) {
         const body = await response.text();
