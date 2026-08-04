@@ -11,7 +11,7 @@ import {
 } from "@sentry/core";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { runWithCspNonce } from "./lib/csp";
+import { runWithCspNonce } from "./lib/csp-server";
 import { ssrLimiter, getClientIp } from "./lib/rate-limit";
 import { assertSafeBoot } from "./lib/boot-guards";
 import { parseCookie } from "cookie";

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { runWithCspNonce, getCspNonce } from "./csp";
+import { readFileSync } from "node:fs";
+import { getCspNonce } from "./csp";
+import { runWithCspNonce } from "./csp-server";
 
 describe("csp", () => {
   it("não tem nonce fora de qualquer runWithCspNonce", () => {
@@ -50,5 +52,24 @@ describe("csp", () => {
 
     expect(seenByFirst).toEqual(["nonce-1", "nonce-1"]);
     expect(seenBySecond).toEqual(["nonce-2", "nonce-2"]);
+  });
+
+  // Regressão real (04/08/2026, poucas horas em produção): csp.ts é
+  // importado por router.tsx, que roda no bundle do client também.
+  // `node:async_hooks` não existe no navegador — um import estático dele
+  // aqui, mesmo sem nunca ser chamado, já quebrava a hidratação da aplicação
+  // inteira assim que o bundle do client carregava (Vite externaliza o
+  // import, acessar o nome exportado do stub já lança). Este teste roda em
+  // Node (onde node:async_hooks existe e o import não falharia), então não
+  // reproduz o erro do navegador — só garante, por inspeção estática do
+  // arquivo fonte, que ninguém reintroduza um import de módulo do Node aqui.
+  // A implementação real fica em csp-server.ts, importado só por
+  // src/server.ts (nunca por código compartilhado com o client).
+  it("csp.ts não importa nenhum módulo do Node (mantém o arquivo seguro pro bundle do client)", () => {
+    const source = readFileSync(new URL("./csp.ts", import.meta.url), "utf-8");
+    const importLines = source.split("\n").filter((line) => line.trimStart().startsWith("import "));
+    for (const line of importLines) {
+      expect(line).not.toMatch(/from\s+["']node:/);
+    }
   });
 });
