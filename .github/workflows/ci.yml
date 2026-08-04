@@ -259,7 +259,7 @@ jobs:
             APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
             bash "$APPDIR/_migrations/run-migrations.sh" "$APPDIR/.env"
 
-      - name: Atomic swap + Restart PM2 (com rollback automático)
+      - name: Atomic swap (release versionada) + Restart PM2 (com rollback automático)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -273,35 +273,88 @@ jobs:
             APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
             cd "$APPDIR"
 
+            # Release versionada + symlink "current" (não mais troca de conteúdo
+            # no MESMO caminho ".output"): achado em 04/08/2026, terceiro
+            # rollback do dia. Reload em cluster mode troca os workers um de
+            # cada vez (~10-20s no total); com o esquema antigo, o worker
+            # antigo — ainda de pé, ainda recebendo tráfego real — ficava lendo
+            # qualquer asset sob demanda (hash antigo, não cacheado em memória)
+            # do caminho ".output", que essa mesma troca já tinha apontado pro
+            # build NOVO por baixo dele: ENOENT/500 real, pego tanto pelo
+            # healthcheck abaixo quanto por usuário de verdade nesse intervalo.
+            # Ver docs/medicao-performance.md.
+            #
+            # Cada release vai para releases/<timestamp>-<sha>/, nunca
+            # reescrita. Node resolve o caminho REAL (segue symlink) do módulo
+            # de entrada no import() inicial: uma vez de pé, cada worker fica
+            # preso pra sempre na sua própria releases/.../ — nenhum worker
+            # antigo volta a ler de um caminho cujo conteúdo mudou debaixo dele.
+            RELEASE_SHA="${{ github.sha }}"
+            RELEASE="$APPDIR/releases/$(date +%Y%m%d%H%M%S)-${RELEASE_SHA:0:7}"
+            PREV_RELEASE=$(readlink -f "$APPDIR/current" 2>/dev/null || true)
+
             rollback() {
-              echo "FALHA no deploy — revertendo para o build anterior"
+              echo "FALHA no deploy — revertendo para o release anterior"
               sudo -u admin pm2 delete bench-gpa >&2 || true
-              sudo rm -rf "$APPDIR/.output"
-              if [ -d "$APPDIR/.output.old" ]; then
-                sudo mv "$APPDIR/.output.old" "$APPDIR/.output"
+              if [ -n "$PREV_RELEASE" ] && [ -d "$PREV_RELEASE" ]; then
+                sudo ln -sfn "$PREV_RELEASE" "$APPDIR/current"
                 sudo -u admin pm2 start ecosystem.config.cjs >&2 || true
                 sudo -u admin pm2 save >&2 || true
               fi
+              sudo rm -rf "$RELEASE"
               exit 1
             }
 
+            sudo mkdir -p "$APPDIR/releases"
             sudo chown -R admin:www-data "$APPDIR/.output.new/"
-            sudo rm -rf "$APPDIR/.output.old"
-            sudo mv "$APPDIR/.output" "$APPDIR/.output.old" 2>/dev/null || true
-            sudo mv "$APPDIR/.output.new" "$APPDIR/.output"
+            sudo mv "$APPDIR/.output.new" "$RELEASE"
+            sudo ln -sfn "$RELEASE" "$APPDIR/current"
 
             # startOrReload é idempotente: sobe se não existe, recarrega se já
-            # existe. Substitui o par delete+start, que sempre logava
-            # "[PM2][WARN] Applications bench-gpa not running" e deixava o app
-            # fora do PM2 entre os dois comandos. --update-env força reler o
-            # ecosystem.config.cjs (e o .env que ele carrega); sem a flag, o
-            # reload preservaria o ambiente da execução anterior.
+            # existe. --update-env força reler o ecosystem.config.cjs (e o .env
+            # que ele carrega); sem a flag, o reload preservaria o ambiente da
+            # execução anterior. listen_timeout: 8000 (ecosystem.config.cjs) dá
+            # ao PM2 margem real pro boot completo de cada worker sob reload.
             # Obs.: com exec_mode "fork" o reload equivale a restart — o blip é
             # curto, mas não é zero-downtime.
-            sudo -u admin pm2 startOrReload ecosystem.config.cjs --update-env || rollback
-
-            sleep 3
-            curl -sf --max-time 10 http://127.0.0.1:3000/ -o /dev/null || rollback
+            #
+            # Retry no reload (não só no healthcheck): bug conhecido do PM2 em
+            # cluster mode (Unitech/pm2#3946, "TCP port isn't released on
+            # reload") — de vez em quando o startOrReload marca os dois workers
+            # como "online" sem o processo novo ter de fato religado na porta
+            # (nenhum erro no log da app, só nada em LISTEN). Medido isolado,
+            # fora da VPS (04/08/2026, 20 ciclos de reload em sequência): cerca
+            # de 5-10% das tentativas individuais caem nisso, mas chamar
+            # startOrReload de novo (mesmo release, sem precisar de delete
+            # antes) sempre corrigiu — nunca precisou de mais de uma segunda
+            # tentativa no teste. Cada tentativa aqui é independente da
+            # anterior, então a chance de as 3 falharem ao mesmo tempo já é
+            # residual; se acontecer mesmo assim, é rollback de verdade, não
+            # mascarado.
+            ok=""
+            for attempt in 1 2 3; do
+              sudo -u admin pm2 startOrReload ecosystem.config.cjs --update-env || true
+              healthy=""
+              for check in 1 2; do
+                sleep 2
+                if curl -sf --max-time 10 http://127.0.0.1:3000/ -o /dev/null; then
+                  healthy=1
+                  break
+                fi
+              done
+              if [ -n "$healthy" ]; then
+                ok=1
+                break
+              fi
+              echo "tentativa $attempt de reload não respondeu ao healthcheck, tentando de novo"
+            done
+            [ -n "$ok" ] || rollback
 
             sudo -u admin pm2 save
-            sudo rm -rf "$APPDIR/.output.old"
+
+            # Mantém as últimas 5 releases: todo worker antigo já foi
+            # substituído e confirmado morto pelo pm2 startOrReload acima
+            # (comando bloqueia até o reload de todas as instâncias terminar),
+            # nada mais lê deles. Só espaço em disco, não correção — 18M cada,
+            # folga enorme (VPS tem ~9,5G livre).
+            cd "$APPDIR/releases" && ls -1t | tail -n +6 | xargs -r sudo rm -rf
