@@ -32,11 +32,57 @@ export function fmtBytes(bytes: number): string {
   return `${v.toFixed(decimals)} ${units[i]}`;
 }
 
+// Fuso fixo (America/Sao_Paulo) em vez do fuso ambiente de onde o código
+// roda: mesma filosofia de fmtBRL/fmtInt, que já fixam "pt-BR" em vez de
+// depender do locale do navegador. Sem isto, `new Date(iso).getHours()`
+// (getters locais) lê o horário do fuso de quem está rodando o código —
+// servidor (UTC) no SSR, navegador do usuário (Brasil, UTC-3) na
+// hidratação — produzindo strings diferentes pro mesmo instante e um erro
+// real de hidratação no React (Sentry BENCH-GPA-Y, achado em 04/08/2026,
+// ~4h depois de outro bug de hidratação distinto no mesmo dia). `iso` já
+// chega sempre com sufixo "Z" (dateTimeStr() em api-types.ts usa
+// toISOString()), então o parsing do instante em si nunca foi ambíguo —
+// só a formatação dependia de onde o código roda.
+const dtFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 export function fmtDT(iso: string | Date | null | undefined): string {
   if (!iso) return "(sem)";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "(sem)";
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const parts = Object.fromEntries(dtFormatter.formatToParts(d).map((p) => [p.type, p.value]));
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
+}
+
+const todayFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * "Hoje" (YYYY-MM-DD) no fuso de Brasília, nunca no fuso de onde o código
+ * roda — mesmo motivo do fmtDT acima: `new Date().getDate()` (getters
+ * locais) lido no servidor (UTC) e no cliente (Brasil) pode divergir por um
+ * dia inteiro numa janela diária (~21h-00h de Brasília, quando UTC já virou
+ * o dia seguinte). Risco real só se algum componente que compara contra
+ * "hoje" renderizar durante SSR/hidratação; hoje nenhum renderiza (ver
+ * import-calendar.tsx), mas fixar o fuso aqui evita a pegadinha se isso
+ * mudar no futuro (ex.: aba virar deep-link por URL).
+ */
+export function todayISOBrazil(): string {
+  const parts = Object.fromEntries(
+    todayFormatter.formatToParts(new Date()).map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 /**
