@@ -434,3 +434,26 @@ Migração `vite@7.3.2` → `8.2.0` (+ `@vitejs/plugin-react` `5.2.0` → `6.0.4
 execuções antes/depois, não uma medição rigorosa. Zero mudança de código
 necessária; resto da stack (nitro, `@tanstack/react-start`, router-plugin,
 `vite-tsconfig-paths`, `@tailwindcss/vite`, vitest) já suportava `vite@^8`.
+
+## 2026-08-04: PM2 cluster mode, diluição consciente do rate limit por IP
+
+Não é medição, é registro de uma decisão de trade-off discutida em conversa,
+pra não se perder (mesmo motivo do item acima).
+
+Migrar `ecosystem.config.cjs` de `fork`/1 instância para `cluster`/2
+instâncias (zero-downtime real em deploy via `pm2 reload`, em vez do restart
+completo do fork mode) tem um efeito colateral: `RateLimiter`
+(`src/lib/rate-limit.ts`) guarda os contadores em memória do processo, um por
+worker. Com 2 workers, o teto efetivo por IP dilui (as requisições de um
+mesmo IP se dividem entre os processos, cada um com seu próprio contador).
+
+Decisão: aceitar a diluição sem redesenhar o rate limiter pra estado
+compartilhado entre processos. Motivo: a VPS tem um núcleo físico só, os dois
+workers competem pelo mesmo núcleo. O `authLimiter` (o tier mais sensível,
+10/min por IP) existe principalmente pra conter o custo de CPU do bcrypt
+(custo 12, já satura um núcleo sozinho) tanto quanto pra contar tentativas: um
+atacante consegue fazer o contador subir mais devagar até bloquear, mas não
+consegue calcular mais tentativas por segundo de verdade, porque o gargalo
+continua sendo a CPU compartilhada, não o contador em si. Revisitar se a VPS
+ganhar mais núcleos algum dia (aí sim 2 workers rodam de verdade em paralelo,
+e a diluição passa a valer mais).
