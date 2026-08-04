@@ -2,12 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { listDocs, getDocContent } from "@/lib/admin-docs.functions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookText, FileText } from "lucide-react";
+import { fmtBRShort } from "@/lib/utils";
 import { Route } from "./admin.docs";
 
 /**
@@ -16,10 +15,16 @@ import { Route } from "./admin.docs";
  * já basta pra virar "agora"). `date`, extraída do texto do próprio doc,
  * é preferida por não sofrer desse problema; `lastModified` formatado como
  * data é só o fallback pros poucos docs sem data própria no conteúdo.
+ *
+ * fmtBRShort (não date-fns) de propósito: reusa a mesma formatação com fuso
+ * fixo do resto do app, em vez de outra biblioteca com o mesmo problema de
+ * getters locais por baixo dos panos (era a causa real do Sentry
+ * BENCH-GPA-Y continuar disparando em /admin/docs mesmo depois do fix do
+ * fmtDT, 04/08/2026).
  */
 function lastUpdated(date: string, lastModified: number | null): string | null {
   if (date) return date;
-  if (lastModified) return format(lastModified * 1000, "dd/MM/yyyy", { locale: ptBR });
+  if (lastModified) return fmtBRShort(lastModified * 1000);
   return null;
 }
 
