@@ -5,7 +5,7 @@ description: Launch Bench GPA (TanStack Start SSR app) locally, dev server or pr
 
 # Rodando o Bench GPA localmente
 
-TanStack Start (SSR) + React 19 + Vite 7 + MariaDB. Rodar de verdade
+TanStack Start (SSR) + React 19 + Vite 8 + MariaDB. Rodar de verdade
 exige runtime `bun`, um MariaDB com o schema carregado, e um `.env`
 preenchido: sem isso o server nem sobe (falha cedo em `src/lib/db.ts`
 / `JWT_SECRET` ausente).
