@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { cn, pad2, fmtInt, fmtDT, fmtBRL, fmtBRShort } from "./utils";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { cn, pad2, fmtInt, fmtDT, fmtBRL, fmtBRShort, todayISOBrazil } from "./utils";
 
 describe("cn", () => {
   it("merges class names", () => {
@@ -103,5 +103,35 @@ describe("fmtBRShort", () => {
 
   it("returns fallback for invalid string", () => {
     expect(fmtBRShort("not-a-date")).toBe("(sem)");
+  });
+});
+
+describe("todayISOBrazil", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("usa o dia em Brasília, não em UTC, perto da virada do dia", () => {
+    // 01:00 UTC de 04/08 = 22:00 de 03/08 em America/Sao_Paulo (UTC-3): getters
+    // locais rodando num processo em UTC (o servidor) diriam "04", errado.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-04T01:00:00.000Z"));
+    expect(todayISOBrazil()).toBe("2026-08-03");
+  });
+
+  it("independe do fuso do processo, igual fmtDT", () => {
+    const originalTz = process.env.TZ;
+    try {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-08-04T15:00:00.000Z"));
+      process.env.TZ = "UTC";
+      const asUtc = todayISOBrazil();
+      process.env.TZ = "America/New_York";
+      const asNewYork = todayISOBrazil();
+      expect(asUtc).toBe(asNewYork);
+      expect(asUtc).toBe("2026-08-04");
+    } finally {
+      process.env.TZ = originalTz;
+    }
   });
 });

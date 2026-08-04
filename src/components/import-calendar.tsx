@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fmtBRShort, fmtDT } from "@/lib/utils";
+import { fmtBRShort, fmtDT, todayISOBrazil } from "@/lib/utils";
 
 interface ImportRecord {
   sale_date: string;
@@ -59,8 +59,11 @@ export function ImportCalendar({ records }: Props) {
   }
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  // todayISOBrazil() (não new Date() + getters locais): esse componente só
+  // renderiza client-side hoje (atrás de um clique de aba, ver upload.page.tsx),
+  // então não é um bug ativo, mas usar o mesmo fuso fixo do fmtDT evita a
+  // mesma classe de erro de hidratação se esse gate mudar no futuro.
+  const todayIso = todayISOBrazil();
 
   const prevMonth = () =>
     setView((v) => (v.m === 0 ? { y: v.y - 1, m: 11 } : { y: v.y, m: v.m - 1 }));

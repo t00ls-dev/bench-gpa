@@ -61,6 +61,30 @@ export function fmtDT(iso: string | Date | null | undefined): string {
   return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
 }
 
+const todayFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * "Hoje" (YYYY-MM-DD) no fuso de Brasília, nunca no fuso de onde o código
+ * roda — mesmo motivo do fmtDT acima: `new Date().getDate()` (getters
+ * locais) lido no servidor (UTC) e no cliente (Brasil) pode divergir por um
+ * dia inteiro numa janela diária (~21h-00h de Brasília, quando UTC já virou
+ * o dia seguinte). Risco real só se algum componente que compara contra
+ * "hoje" renderizar durante SSR/hidratação; hoje nenhum renderiza (ver
+ * import-calendar.tsx), mas fixar o fuso aqui evita a pegadinha se isso
+ * mudar no futuro (ex.: aba virar deep-link por URL).
+ */
+export function todayISOBrazil(): string {
+  const parts = Object.fromEntries(
+    todayFormatter.formatToParts(new Date()).map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 /**
  * Formato compacto padrão para exibição visual: DD/MM/AA.
  * Aceita string ISO (YYYY-MM-DD) ou Date.
