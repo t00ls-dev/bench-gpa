@@ -49,6 +49,18 @@ module.exports = {
       // entre os workers no mesmo núcleo, não o contador em si.
       instances: 2,
       exec_mode: "cluster",
+      // Default do PM2 (GRACEFUL_LISTEN_TIMEOUT) é 3000ms: tempo curto demais
+      // pro nosso boot real sob reload. Medido em produção (04/08/2026, duas
+      // falhas de deploy seguidas causadas por isto): cada worker leva
+      // consistentemente ~4,8s do pedido de reload até confirmar "listening"
+      // (pool de conexão do MariaDB, SDK do Sentry, registro de rotas, tudo
+      // competindo pela CPU única com o outro worker subindo ao mesmo tempo).
+      // Sem isto, o PM2 desiste de esperar antes do worker novo responder,
+      // considera o reload malsucedido e o workflow de deploy reverte pro
+      // build anterior mesmo com os dois workers saudáveis um instante depois.
+      // 8000ms dá margem confortável acima do medido, mesma ordem de grandeza
+      // do GRACEFUL_TIMEOUT (8000ms) que o próprio PM2 já usa como padrão.
+      listen_timeout: 8000,
       env: {
         NODE_ENV: "production",
         PORT: env.PORT ?? "3000",
