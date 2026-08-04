@@ -34,8 +34,21 @@ module.exports = {
     {
       name: "bench-gpa",
       script: ".output/server/index.mjs",
-      instances: 1,
-      exec_mode: "fork",
+      // cluster (não fork): pm2 reload faz troca gradual worker por worker
+      // (sobe o novo, espera responder, só então mata o antigo) em vez do
+      // restart completo do fork mode. VPS de 1 núcleo: 2 instâncias não
+      // ganha paralelismo real de CPU, é só o suficiente pra sempre ter pelo
+      // menos um worker de pé durante a troca.
+      //
+      // Estado em memória de processo deixa de ser global do app com isto:
+      // SimpleCache (src/lib/cache.ts) e os RateLimiter (src/lib/rate-limit.ts)
+      // passam a ser por worker, não mais únicos. Cache: só reduz um pouco o
+      // hit rate, sem bug. Rate limit: o teto efetivo por IP dilui por worker,
+      // aceito conscientemente (ver docs/medicao-performance.md) porque o
+      // gargalo real do authLimiter é o custo de CPU do bcrypt, compartilhado
+      // entre os workers no mesmo núcleo, não o contador em si.
+      instances: 2,
+      exec_mode: "cluster",
       env: {
         NODE_ENV: "production",
         PORT: env.PORT ?? "3000",
