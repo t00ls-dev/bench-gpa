@@ -30,6 +30,30 @@ Sentry.init({
   },
 });
 
+const CHUNK_RELOAD_KEY = "bench-gpa:chunk-reload-attempted";
+
+// Vite dispara este evento (cancelable, node_modules/vite/.../handlePreloadError)
+// antes de deixar um import() dinâmico falho estourar - chunk removido por um
+// deploy no meio da sessão, ou rede instável no meio do carregamento (comum em
+// mobile: BENCH-GPA-Q). preventDefault() assume a recuperação em vez de deixar
+// virar exceção não tratada: reporta ao Sentry primeiro (senão perdemos a
+// captura, já que ela não chega mais no onUncaughtError) e recarrega uma vez.
+// sessionStorage evita loop se o reload falhar pelo mesmo motivo (ex.: usuário
+// genuinamente offline) - a segunda falha na mesma aba cai na tela normal de
+// erro em vez de recarregar de novo. Pulado em /upload pelo mesmo motivo do
+// useVersionCheck: um fluxo de múltiplas etapas não pode ser interrompido por
+// um reload.
+window.addEventListener("vite:preloadError", (event) => {
+  Sentry.captureException((event as Event & { payload?: unknown }).payload ?? event);
+  event.preventDefault();
+
+  if (window.location.pathname.startsWith("/upload")) return;
+  if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
+
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+  window.location.reload();
+});
+
 // startTransition: mesmo padrão do entry client.tsx padrão do TanStack Start
 // (node_modules/@tanstack/react-start/dist/plugin/default-entry/client.tsx),
 // perdido quando este arquivo virou custom entry pro Sentry.init() acima.
