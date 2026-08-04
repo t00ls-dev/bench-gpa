@@ -1,28 +1,22 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-
 /**
- * Uma variável de módulo comum aqui já foi um bug real (achado em 04/08/2026,
- * na investigação do PM2 cluster mode, mas existente mesmo em fork/1
- * instância): o nonce é setado antes de renderizar (src/server.ts) e lido bem
- * fundo, dentro do SSR (router.tsx). Como o event loop do Node intercala
- * requisições concorrentes em qualquer gap de await, uma segunda requisição
- * podia sobrescrever o nonce da primeira antes dela terminar de renderizar: o
- * header CSP da resposta saía certo (é local, closure), mas o HTML podia
- * embutir o nonce de outra requisição nas tags de script, e o navegador
- * bloqueava por violação de CSP.
+ * Sem NENHUM import do Node aqui de propósito: este arquivo é importado por
+ * router.tsx, que roda tanto no server quanto no bundle do client. A
+ * implementação real (AsyncLocalStorage) mora em src/lib/csp-server.ts, que
+ * só o server entry (src/server.ts) importa — o registro em `globalThis`
+ * (feito por csp-server.ts ao ser importado) é a única ponte entre os dois.
  *
- * AsyncLocalStorage isola por cadeia de execução assíncrona, não por módulo:
- * cada chamada a runWithCspNonce tem seu próprio valor, mesmo entrelaçada com
- * outras no mesmo processo. Não precisa mais de reset manual (o antigo
- * setCspNonce(undefined) em server.ts) pra evitar vazar pra próxima
- * requisição: fora do run(), simplesmente não tem valor nenhum.
+ * Regressão real que motivou essa separação (04/08/2026, poucas horas depois
+ * da versão anterior ir pro ar): `node:async_hooks` não existe no navegador;
+ * um `import { AsyncLocalStorage } from "node:async_hooks"` estático neste
+ * arquivo, mesmo sem nunca ser chamado no client, já quebrava a avaliação do
+ * módulo assim que o bundle do client carregava (o Vite externaliza o
+ * import, e acessar o nome exportado do stub already lança) — derrubava a
+ * hidratação da aplicação inteira, não só o CSP.
+ *
+ * No client, `globalThis.__cspNonceStorage` nunca é definido (csp-server.ts
+ * nunca é importado lá), então getCspNonce() sempre devolve undefined —
+ * correto, já que o client não precisa saber o nonce da resposta SSR.
  */
-const nonceStorage = new AsyncLocalStorage<string>();
-
-export function runWithCspNonce<T>(nonce: string, fn: () => T): T {
-  return nonceStorage.run(nonce, fn);
-}
-
 export function getCspNonce(): string | undefined {
-  return nonceStorage.getStore();
+  return globalThis.__cspNonceStorage?.getStore();
 }
