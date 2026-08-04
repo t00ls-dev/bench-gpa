@@ -214,7 +214,13 @@ jobs:
               done
               sudo rm -rf "$STAGE"
               cd "$APPDIR"
-              sudo -u admin bun install --frozen-lockfile
+              # --production: os dois cron scripts (cli:purge, cli:refresh-universe)
+              # só importam dependência de produção (confirmado nos imports de
+              # scripts/purge-aggs.ts e scripts/refresh-universe.ts). Sem isto,
+              # todo deploy reinstalava devDependencies inteiras aqui, incluindo
+              # puppeteer, cujo postinstall baixa um Chromium de ~700MB que nada
+              # neste servidor usa (04/08/2026, ~2G reclamados na limpeza).
+              sudo -u admin bun install --frozen-lockfile --production
             else
               echo "AVISO: staging .cronsrc.new ausente (rsync anterior deve ter falhado) — pulando"
             fi
