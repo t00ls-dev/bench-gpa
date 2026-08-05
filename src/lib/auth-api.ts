@@ -51,8 +51,8 @@ export const login = createServerFn({ method: "POST" })
         identifier: z.string().trim().min(1),
         password: z.string().min(1),
         turnstileToken: z.string().optional(),
-        // "Manter conectado": sessão fixa de 7 dias em vez da normal (desliza
-        // por atividade, teto de 24h). Ver src/lib/auth-config.ts.
+        // "Keep me signed in": fixed 7-day session instead of the normal one
+        // (slides by activity, 24h cap). See src/lib/auth-config.ts.
         rememberMe: z.boolean().optional().default(false),
       })
       .parse(d),
@@ -60,8 +60,8 @@ export const login = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const request = getRequest();
     const ip = getClientIp(request);
-    // Só minúsculas: matrícula é dígitos (case não importa) e username já é
-    // normalizado pra minúsculas na criação/migração.
+    // Lowercase only: employee_id is digits (case doesn't matter) and
+    // username is already normalized to lowercase at creation/migration.
     const identifier = data.identifier.toLowerCase();
 
     const auditFail = (reason: string, actorId?: string | null, actorUsername?: string | null) =>
@@ -87,12 +87,12 @@ export const login = createServerFn({ method: "POST" })
     const rows = rowsRaw as unknown as UserRow[];
     const user = rows[0] ?? null;
 
-    // Balde por conta, chaveado pelo id resolvido (não pela string digitada):
-    // protege contra credential stuffing distribuído por vários IPs contra a
-    // mesma conta, e alternar entre login por username e por matrícula da
-    // MESMA conta não reseta o balde. Conta não encontrada cai para uma chave
-    // pelo identificador bruto, mantendo a mesma cobertura contra
-    // brute-force de conta inexistente.
+    // Bucket per account, keyed by the resolved id (not the string typed in):
+    // protects against credential stuffing distributed across several IPs
+    // against the same account, and switching between login by username and
+    // by employee_id for the SAME account doesn't reset the bucket. Account
+    // not found falls back to a key by the raw identifier, keeping the same
+    // coverage against brute-force of a nonexistent account.
     const rlAccount = authAccountLimiter.check(
       user ? `user:${user.id}` : `identifier:${identifier}`,
     );
@@ -101,8 +101,8 @@ export const login = createServerFn({ method: "POST" })
       throw new Error("Muitas tentativas de login para esta conta. Aguarde alguns minutos.");
     }
 
-    // Fail-closed: quando o Turnstile está ativo, o token é obrigatório.
-    // Omiti-lo não pode ser um atalho para pular o CAPTCHA (credential stuffing).
+    // Fail-closed: when Turnstile is active, the token is required. Omitting
+    // it can't be a shortcut to skip the CAPTCHA (credential stuffing).
     if (isTurnstileEnabled() && !data.turnstileToken) {
       await auditFail("Turnstile ausente", user?.id, user?.username);
       throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
@@ -151,10 +151,10 @@ export const login = createServerFn({ method: "POST" })
 export const getMe = createServerFn({ method: "GET" }).handler(async () => {
   const token = getCookie(SESSION_COOKIE);
   try {
-    // slide: false (getMe roda a cada navegação, cacheado 60s no guard de
-    // rotas) e não deve ter o efeito colateral de reemitir o cookie; quem
-    // renova a sessão por atividade é o requireAuth, chamado pelas funções que
-    // de fato buscam dados.
+    // slide: false (getMe runs on every navigation, cached 60s in the route
+    // guard) and shouldn't have the side effect of re-issuing the cookie;
+    // requireAuth is what renews the session by activity, called by the
+    // functions that actually fetch data.
     const session = await resolveSession(token, { slide: false });
     return {
       id: session.userId,
@@ -176,12 +176,13 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
       const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
       const [rowsRaw] = await db.query("SELECT username FROM users WHERE id = ?", [payload.userId]);
       const rows = rowsRaw as unknown as { username: string | null }[];
-      // token_version + 1 revoga o JWT no servidor, não só o cookie no
-      // navegador (mesmo padrão de resetPassword em admin-users.functions.ts).
-      // Sem isto, um token capturado antes do logout (proxy, dispositivo
-      // compartilhado, etc.) continuava aceito até expirar sozinho (até 7
-      // dias numa sessão "manter conectado", ver auth-config.ts). Efeito
-      // colateral aceito: desloga todas as sessões do usuário, não só esta.
+      // token_version + 1 revokes the JWT server-side, not just the browser
+      // cookie (same pattern as resetPassword in admin-users.functions.ts).
+      // Without this, a token captured before logout (proxy, shared device,
+      // etc.) would keep being accepted until it expired on its own (up to
+      // 7 days on a "keep me signed in" session, see auth-config.ts).
+      // Accepted side effect: logs out all of the user's sessions, not just
+      // this one.
       await db.query("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [
         payload.userId,
       ]);
@@ -192,7 +193,7 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
         targetType: "session",
       });
     } catch {
-      // Token inválido/expirado: nada a revogar nem auditar.
+      // Invalid/expired token: nothing to revoke or audit.
     }
   }
   clearSessionCookie();
@@ -200,15 +201,15 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
 });
 
 /**
- * Define a senha de uma conta sem senha (primeiro acesso, ou depois de um
- * reset por admin -- os dois deixam `password` NULL, mesmo estado, mesmo
- * fluxo). Sem sessão: como não há senha pra conferir, o único identificador
- * (username OU matrícula, mesma resolução do login) faz o papel de prova de
- * identidade -- por decisão de produto, um campo só, para não exigir do
- * usuário informação que ele pode não ter em mãos. Como isso é uma prova de
- * identidade mais fraca que username+matrícula juntos, as três camadas de
- * proteção do login continuam obrigatórias aqui: rate limit por IP, por
- * conta (chave = id resolvido) e Turnstile fail-closed.
+ * Sets the password for an account with no password (first access, or after
+ * an admin reset -- both leave `password` NULL, same state, same flow). No
+ * session: since there's no password to check, the single identifier
+ * (username OR employee_id, same resolution as login) serves as proof of
+ * identity -- a product decision, one field only, to avoid requiring
+ * information the user might not have on hand. Since this is a weaker proof
+ * of identity than username+employee_id together, the login's three
+ * protection layers stay mandatory here: rate limit by IP, by account (key =
+ * resolved id), and fail-closed Turnstile.
  */
 export const setInitialPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -260,9 +261,10 @@ export const setInitialPassword = createServerFn({ method: "POST" })
       }
     }
 
-    // Mensagem genérica tanto pra identificador inexistente quanto pra conta
-    // que já concluiu o primeiro acesso: não virar oráculo de enumeração de
-    // contas (revelar "essa conta já tem senha" já é informação demais).
+    // Generic message for both a nonexistent identifier and an account
+    // that's already completed first access: don't become an account
+    // enumeration oracle (revealing "this account already has a password"
+    // is already too much information).
     if (!user || user.password !== null) {
       await recordAudit({
         action: "auth.first_access_failed",
@@ -279,9 +281,9 @@ export const setInitialPassword = createServerFn({ method: "POST" })
       hash,
       user.id,
     ]);
-    // Auto-login: o usuário acabou de provar posse do identificador E
-    // escolher a própria senha na mesma requisição, exigir login de novo
-    // logo em seguida não ganha segurança nenhuma, só adiciona uma viagem.
+    // Auto-login: the user just proved possession of the identifier AND
+    // chose their own password in the same request, requiring a fresh login
+    // right after gains no security at all, just adds a round trip.
     issueSession({ id: user.id, role: user.role, tokenVersion: user.token_version }, false);
     await recordAudit({
       action: "auth.first_access_completed",
@@ -294,12 +296,12 @@ export const setInitialPassword = createServerFn({ method: "POST" })
   });
 
 /**
- * Troca de senha autenticada: exige a senha atual. Serve tanto a troca
- * voluntária quanto o fluxo forçado por expiração (usuário já autenticou com
- * a senha atual/expirada no login, só precisa confirmá-la de novo) -- por
- * isso usa `requireAuthAllowExpiredPassword`, não o `requireAuth` padrão: é a
- * própria função que resolve o estado de "senha expirada", não pode ser
- * bloqueada por ele.
+ * Authenticated password change: requires the current password. Serves both
+ * the voluntary change and the forced-by-expiry flow (user already
+ * authenticated with the current/expired password at login, just needs to
+ * confirm it again) -- that's why it uses `requireAuthAllowExpiredPassword`,
+ * not the default `requireAuth`: it's the function that resolves the
+ * "expired password" state itself, it can't be blocked by it.
  */
 export const changePassword = createServerFn({ method: "POST" })
   .middleware([requireAuthAllowExpiredPassword, requireRateLimit("auth")])
@@ -320,12 +322,13 @@ export const changePassword = createServerFn({ method: "POST" })
     }
 
     const newHash = await bcrypt.hash(data.newPassword, BCRYPT_COST);
-    // token_version + 1 derruba as outras sessões abertas (mesmo padrão do
-    // reset por admin). Precisa ler a versão nova de volta pra reemitir a
-    // sessão do PRÓPRIO request antes de retornar: sem isso, a aba que
-    // acabou de trocar a senha se autodestrói na chamada seguinte (o cookie
-    // em mãos carrega a token_version antiga) -- no fluxo forçado por
-    // expiração isso é pior ainda, vira um loop de troca-desloga-troca.
+    // token_version + 1 revokes the other open sessions (same pattern as an
+    // admin reset). Needs to read the new version back to re-issue the
+    // session for the CURRENT request before returning: without this, the
+    // tab that just changed the password self-destructs on the next call
+    // (the cookie in hand carries the old token_version) -- in the
+    // forced-by-expiry flow it's even worse, it turns into a
+    // change-logout-change loop.
     await db.query(
       "UPDATE users SET password = ?, password_changed_at = NOW(), token_version = token_version + 1 WHERE id = ?",
       [newHash, context.userId],

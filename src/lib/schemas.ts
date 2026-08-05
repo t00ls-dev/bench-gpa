@@ -16,29 +16,32 @@ export const FilterSchema = DateRangeSchema.extend({
 export type Filters = z.infer<typeof FilterSchema>;
 
 /**
- * Opções de itens/página do seletor de paginação da tela Área. Único lugar
- * onde a lista existe: o estado do seletor (`useState<25 | 50 | 100 | 250>`)
- * e as opções do dropdown a derivam, em vez de repetir os quatro números.
+ * Items-per-page options for the Área screen's pagination selector. The one
+ * place this list exists: the selector's state (`useState<25 | 50 | 100 |
+ * 250>`) and the dropdown options derive from it, instead of repeating the
+ * four numbers.
  */
 export const PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const;
 
 /**
- * Tamanho de página usado pelo export (PDF), que precisa da listagem inteira.
+ * Page size used by the export (PDF), which needs the full listing.
  *
- * Não é um número redondo por acaso: tem de ser (a) maior que o universo de PLUs
- * sob qualquer filtro (eram ~13,6k PLUs distintos em prod em 2026-07), (b)
- * menor ou igual ao teto do AreaAnalysisSchema, e (c) MAIOR que o limiar de
- * cache em area.functions.ts, que é o que mantém a listagem inteira fora do
- * SimpleCache. Ao mexer em qualquer um dos três, revisar os outros dois.
+ * Not a round number by accident: it has to be (a) larger than the universe
+ * of PLUs under any filter (~13.6k distinct PLUs in prod as of 2026-07), (b)
+ * less than or equal to AreaAnalysisSchema's ceiling, and (c) GREATER than
+ * the cache threshold in area.functions.ts, which is what keeps the full
+ * listing out of SimpleCache. Touching any of the three means reviewing the
+ * other two.
  */
 export const EXPORT_PAGE_SIZE = 50_000;
 
 /**
- * Teto de pageSize. Medido em 2026-07-25: um LIMIT grande NÃO encarece a
- * consulta (250 e 999999 deram o mesmo tempo, ~32s) porque o LIMIT não cria
- * linhas: o custo é dominado pelos agregados. O teto existe para limitar o
- * PAYLOAD serializado, não a CPU do banco, e para barrar pedidos absurdos de um
- * cliente autenticado. Precisa acomodar o EXPORT_PAGE_SIZE.
+ * pageSize ceiling. Measured on 2026-07-25: a large LIMIT does NOT make the
+ * query more expensive (250 and 999999 took the same ~32s) because LIMIT
+ * doesn't create rows: the cost is dominated by the aggregates. The ceiling
+ * exists to limit the serialized PAYLOAD, not the database's CPU, and to
+ * block absurd requests from an authenticated client. Needs to accommodate
+ * EXPORT_PAGE_SIZE.
  */
 const MAX_PAGE_SIZE = EXPORT_PAGE_SIZE;
 

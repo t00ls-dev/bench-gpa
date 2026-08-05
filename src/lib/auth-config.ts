@@ -1,55 +1,58 @@
 /**
- * Constantes da sessão e da senha. Ficam juntas aqui porque erram juntas: o
- * cookie, a validade do token e o custo do hash descrevem uma decisão só: como
- * uma sessão nasce, quanto vale e o que custa autenticar.
+ * Session and password constants. Kept together here because they fail
+ * together: the cookie, the token's validity, and the hash cost describe a
+ * single decision: how a session is born, how long it's worth, and what
+ * authenticating costs.
  *
- * Segue o modelo de `retention.ts`: fonte única, com o porquê de cada valor no
- * próprio arquivo em vez de espalhado por quem consome.
+ * Follows the `retention.ts` pattern: single source, with the why of each
+ * value in the file itself instead of scattered across consumers.
  */
 
 /**
- * Nome do cookie de sessão.
+ * Session cookie name.
  *
- * Existia como `const SESSION_COOKIE` em auth-api.ts, mas o auth-middleware lia
- * `parsed["session"]` com a string solta: a mesma chave em dois arquivos de
- * auth, mantida em sincronia só por atenção de quem editasse. Renomear de um
- * lado deslogaria todo mundo sem erro de compilação.
+ * Used to exist as `const SESSION_COOKIE` in auth-api.ts, but auth-middleware
+ * read `parsed["session"]` with the loose string: the same key in two auth
+ * files, kept in sync only by whoever was editing paying attention. Renaming
+ * one side would log everyone out with no compile error.
  */
 export const SESSION_COOKIE = "session";
 
 /**
- * Sessão "normal" (checkbox "Manter conectado" desmarcado no login): desliza a
- * cada request autenticado: cada chamada que passa por `requireAuth` reemite
- * o cookie com um novo prazo de INACTIVITY_TIMEOUT_SECONDS a partir de agora.
- * Fica ociosa esse tempo sem gerar nenhum request e expira.
+ * "Normal" session ("Keep me signed in" checkbox unchecked at login): slides
+ * on every authenticated request: every call that goes through `requireAuth`
+ * re-issues the cookie with a new deadline of INACTIVITY_TIMEOUT_SECONDS from
+ * now. Stays idle that long with no request and expires.
  */
 export const INACTIVITY_TIMEOUT_SECONDS = 60 * 60; // 1h
 
 /**
- * Teto absoluto da sessão "normal", contado a partir do login original
- * (`loginAt` no payload do JWT, não reemitido no slide): existe pra cobrir o
- * caso de um dispositivo em uso contínuo (ex.: terminal fixo numa loja) que
- * nunca ficaria ocioso tempo suficiente pra bater o INACTIVITY_TIMEOUT_SECONDS
- * sozinho. Sem este teto, o slide renovaria pra sempre.
+ * Absolute cap on the "normal" session, counted from the original login
+ * (`loginAt` in the JWT payload, not re-issued on slide): exists to cover a
+ * device in continuous use (e.g. a fixed terminal at a store) that would
+ * never sit idle long enough to hit INACTIVITY_TIMEOUT_SECONDS on its own.
+ * Without this cap, sliding would renew forever.
  */
 export const SESSION_ABSOLUTE_CAP_SECONDS = 24 * 60 * 60; // 24h
 
 /**
- * Sessão "Manter conectado" (checkbox marcado no login): expiração fixa, sem
- * slide e sem o teto acima: os dois se contradiriam. Mesmo valor que já era o
- * padrão único do sistema antes desta mudança: quem marcar o checkbox não fica
- * pior do que estava, quem não marcar passa a ter uma janela de exposição bem
- * menor (1h ocioso / 24h de uso contínuo, em vez de 7 dias fixos sempre).
+ * "Keep me signed in" session (checkbox checked at login): fixed expiry, no
+ * sliding and no cap above: the two would contradict each other. Same value
+ * that was already the system's single default before this change: whoever
+ * checks the box is no worse off than before, whoever doesn't gets a much
+ * smaller exposure window (1h idle / 24h continuous use, instead of always
+ * a fixed 7 days).
  */
-export const REMEMBER_ME_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 dias
+export const REMEMBER_ME_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 /**
- * Custo do bcrypt. Estava repetido em `createUser`, `resetPassword` e no script
- * de criação do admin de teste.
+ * bcrypt cost. Used to be repeated in `createUser`, `resetPassword`, and the
+ * test-admin creation script.
  *
- * NÃO aumentar sem medir: a VPS tem um núcleo só, e o bcrypt é deliberadamente
- * caro em CPU. Cada incremento dobra o tempo de hash, e como login e criação de
- * usuário são síncronos no mesmo processo que serve as telas, o custo aparece
- * como lentidão geral, não como lentidão do login.
+ * Do NOT increase without measuring: the VPS has a single core, and bcrypt
+ * is deliberately CPU-expensive. Each increment doubles the hash time, and
+ * since login and user creation are synchronous in the same process that
+ * serves the screens, the cost shows up as general slowness, not just
+ * login slowness.
  */
 export const BCRYPT_COST = 12;
