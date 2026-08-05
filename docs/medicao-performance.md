@@ -553,3 +553,24 @@ grandeza da taxa medida isoladamente, ~5-10% dos deploys), a janela é curta
 código velho no ar até alguém notar) era pior. Revisitar se a frequência
 observada em produção for maior que o medido aqui, ou se o tráfego
 justificar o investimento.
+
+## 2026-08-05: afrouxa o rate limit do tier `auth`, apoiado na diluição já aceita do cluster mode
+
+Não é medição, é registro de uma decisão de trade-off (mesmo motivo dos dois
+itens acima). `RATE_LIMITS.auth` (`src/lib/rate-limit.ts`) subiu de `[10, 40]`
+para `[15, 60]` (mesma proporção ~4x entre teto por IP e teto global).
+
+Motivo: login e primeiro acesso (as duas rotas deste tier que recebem
+tráfego anônimo) já exigem Turnstile antes de aceitar a tentativa, cobrindo
+a parte automatizada do problema — o teto por IP é a defesa que sobra contra
+uso legítimo em rajada (ex.: usuário errando a senha algumas vezes seguidas).
+Apoiado na entrada de 2026-08-04 acima: em cluster mode o contador do
+`RateLimiter` já é diluído por processo, e o gargalo real continua sendo a
+CPU compartilhada (bcrypt custo 12), não o valor do contador — subir o teto
+não aumenta o número de bcrypt/s que a VPS de fato processa, só reduz a
+fricção de usuários legítimos sendo barrados antes de saturar a CPU de
+verdade. `changePassword` também usa este tier mas só é alcançável por quem
+já tem sessão válida, então o afrouxamento não abre superfície nova pra
+tráfego anônimo ali. Revisitar se a frequência de "Muitas requisições" no
+Sentry/audit_log for maior que o esperado, ou se a VPS ganhar mais núcleos
+(nesse caso vale reavaliar o teto de novo, com folga real).

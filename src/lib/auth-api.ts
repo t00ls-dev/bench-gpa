@@ -271,7 +271,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
         targetType: "session",
         ip,
       });
-      throw new Error("Usuário ou matrícula inválidos, ou conta já configurada.");
+      throw new Error("Usuário ou matrícula inválidos.");
     }
 
     const hash = await bcrypt.hash(data.newPassword, BCRYPT_COST);
