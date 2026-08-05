@@ -23,11 +23,13 @@ como "aberto" aqui ainda está aberto.
 - **MariaDB local para testes de verdade**: existe um banco `bench_gpa_dev` local
   com volume de dado representativo (~2M linhas em `sales_prod_daily_agg`, perto
   do real de produção), parado por padrão (`sudo systemctl start mariadb` para
-  subir, `stop` ao terminar, não deixar rodando 24/7). Login de teste:
-  `test@gpabr.com` / `TestLocal!2026x` (`TURNSTILE_BYPASS=true` no `.env` local,
-  que é git-ignored). Sem isso, mudança em query/proc/UI de filtro só dá pra
-  validar por leitura de código, não por execução real. Vale manter esse
-  ambiente entre sessões em vez de recriar do zero.
+  subir, `stop` ao terminar, não deixar rodando 24/7). Login de teste (desde
+  a migração de auth para username/matrícula, 05/08/2026): usuário `test`
+  (`TURNSTILE_BYPASS=true` no `.env` local, que é git-ignored), senha
+  criada por `scripts/create-test-admin.ts`. Sem isso, mudança em
+  query/proc/UI de filtro só dá pra validar por leitura de código, não por
+  execução real. Vale manter esse ambiente entre sessões em vez de recriar
+  do zero.
 - **Se mexer nas procs de análise**, as duas ferramentas são um par e nenhuma
   basta sozinha: `scripts/bench-procs.sh` mede o custo em prod (via SSH,
   `~/.ssh/gpa-key`) e `scripts/validate-procs.sh` prova que o resultado não
@@ -293,11 +295,16 @@ O que sobrou genuinamente aberto:
 - **Dashboard**: exportação em XLSX (só tem PDF, e o PDF foi removido).
 - **Produto**: exportação em XLSX (mesma situação).
 - **Upload**: sem remover/reordenar arquivo na fila antes de importar.
-- **Auth**: sem fluxo de "esqueci minha senha": o único item alto-esforço
-  desta lista (endpoint + envio de email + UI completos).
 
 Nenhum desses tem prioridade estabelecida: ficam registrados pra quando
 o produto (não a engenharia) decidir o que vale a pena.
+
+**Resolvido em 05/08/2026**: o item "Auth: sem fluxo de esqueci minha senha"
+deixou de fazer sentido — a refatoração de auth pra username/matrícula
+eliminou e-mail do sistema por completo (nunca haveria infra de SMTP pra
+um "esqueci senha" self-service viável mesmo). O mecanismo definitivo agora
+é admin reseta a senha → usuário refaz o fluxo de primeiro acesso
+(`/first-access`). Ver `docs/plano-refatoracao-auth-username-matricula-2026-08-05.md`.
 
 ## Decidido NÃO fazer
 
@@ -386,3 +393,22 @@ content-security-policy`: se sumir, é este bug batendo de novo.
    `v-rebuild-web-domains` rodar de novo neste domínio, verificar também
    `ls -ld .../public_html/` (precisa ter `w` no grupo) antes de assumir que
    só o vhost quebrou.**
+
+   **Recorreu em 05/08/2026.** Gatilho desta vez: eu mesmo rodei
+   `v-rebuild-web-domain admin gpa.t00ls.dev yes` manualmente (investigando
+   um 403 "Access Denied" que já existia antes desse comando — o disparo
+   original foi outra causa não identificada, provavelmente um auto-update
+   ou renovação de SSL do próprio Hestia, a julgar pelo timestamp dos
+   arquivos gerados). Sintomas idênticos: `apache2ctl configtest` falhando
+   no `Include` do `nginx.forcessl.conf*` dentro do `.conf` do Apache,
+   `public_html/` servido via autoindex (403) em vez de proxy pra 3000, e
+   `chmod` de `public_html/` revertido pra `751`. Restaurado com o mesmo
+   backup em `/tmp/gpa-conf-backup-working/` no `sv1` (`cp` dos 4 arquivos
+   pros destinos em `/etc/nginx/conf.d/domains/` e
+   `/etc/apache2/conf.d/domains/`, `systemctl reload` nos dois) +
+   `chmod g+w public_html/` de novo. **Confirma que o backup continua
+   sendo a forma mais rápida de recuperar: não tentar entender/consertar o
+   bug do Hestia de novo, só restaurar os 4 arquivos e os dois `reload`.**
+   Lição operacional: `v-rebuild-web-domain`/`v-rebuild-web-domains` NUNCA
+   deve ser rodado neste domínio como parte de troubleshooting -- é
+   exatamente o comando que reproduz o bug.
