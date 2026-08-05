@@ -10,14 +10,14 @@ export function usePersistentState<T>(
   initial: T,
   sanitize?: (v: T) => T,
 ): [T, Dispatch<SetStateAction<T>>] {
-  // O valor persistido só pode ser lido depois de montado (window não existe
-  // no SSR), nunca no inicializador do useState: um inicializador que
-  // resolve `initial` no servidor e o valor do localStorage no cliente faz o
-  // primeiro render pós-hidratação divergir do HTML enviado pelo SSR (erro
-  // de hidratação do React sempre que o usuário já tinha algo salvo).
-  // `hydrated` trava o efeito de persistência abaixo até esse primeiro
-  // load acontecer, senão ele escreveria `initial` de volta e apagaria o
-  // valor salvo antes do setState da hidratação renderizar.
+  // The persisted value can only be read after mounting (window doesn't
+  // exist during SSR), never in the useState initializer: an initializer
+  // that resolves `initial` on the server and the localStorage value on the
+  // client makes the first post-hydration render diverge from the HTML sent
+  // by SSR (a React hydration error whenever the user already had something
+  // saved). `hydrated` gates the persistence effect below until that first
+  // load happens, otherwise it would write `initial` back and wipe out the
+  // saved value before hydration's setState renders.
   const [state, setState] = useState<{ value: T; hydrated: boolean }>({
     value: initial,
     hydrated: false,
@@ -27,10 +27,10 @@ export function usePersistentState<T>(
     try {
       const raw = window.localStorage.getItem(key);
       if (raw == null) {
-        // Carga única de localStorage no mount, não estado derivado de
-        // props: não existe idioma sem setState-em-efeito pra ler um storage
-        // externo síncrono só depois que `window` existe (ver comentário
-        // acima da declaração do state).
+        // One-time localStorage load on mount, not state derived from
+        // props: there's no way around a setState-in-effect to read a
+        // synchronous external store that only exists after `window` does
+        // (see the comment above the state declaration).
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setState((s) => ({ ...s, hydrated: true }));
         return;
