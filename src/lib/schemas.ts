@@ -65,12 +65,12 @@ export const UserIdSchema = z.string().uuid();
 
 export const RoleEnum = z.enum(["admin", "user"]);
 
-// Username e matrícula nunca podem casar o mesmo valor: o login resolve
-// `WHERE username = ? OR matricula = ?` num único identificador, e essa
-// consulta fica ambígua se um valor puder ser interpretado como os dois.
-// Matrícula é sempre só dígitos, então username proíbe string puramente
-// numérica (lookahead negativo) -- é a mesma regra usada pra classificar o
-// e-mail legado em scripts/migrate-users-to-username.ts.
+// Username and employee_id can never match the same value: login resolves
+// `WHERE username = ? OR employee_id = ?` into a single identifier, and
+// that query becomes ambiguous if a value could be read as either. Employee
+// id is always digits-only, so username forbids a purely numeric string
+// (negative lookahead) -- same rule used to classify the legacy email in
+// scripts/migrate-users-to-username.ts.
 export const UsernameSchema = z
   .string()
   .trim()
@@ -80,8 +80,11 @@ export const UsernameSchema = z
     "Username deve conter letras, números, ._- e não pode ser só dígitos",
   );
 
-// Sem .transform(Number): preserva zero à esquerda, comum em matrícula de RH.
-export const MatriculaSchema = z.string().trim().regex(/^\d+$/, "Matrícula deve conter só dígitos");
+// No .transform(Number): preserves leading zeros, common in HR employee IDs.
+export const EmployeeIdSchema = z
+  .string()
+  .trim()
+  .regex(/^\d+$/, "Matrícula deve conter só dígitos");
 
 export const PasswordSchema = z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(128);
 

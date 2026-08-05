@@ -56,7 +56,7 @@ const HelpOverlay = lazy(() =>
 interface UserProfile {
   id: string;
   username: string | null;
-  matricula: string | null;
+  employeeId: string | null;
   name: string;
   role: string;
 }
@@ -240,7 +240,7 @@ function AuthedLayout() {
           <SidebarFooter>
             <div className="flex items-center gap-1 px-3 py-2">
               <span className="flex-1 truncate text-xs text-sidebar-foreground/60">
-                {user.username ?? user.matricula ?? "-"}
+                {user.username ?? user.employeeId ?? "-"}
               </span>
               <Button
                 variant="ghost"
@@ -292,7 +292,7 @@ function AuthedLayout() {
         </SidebarInset>
         <MobileNav
           isAdmin={isAdmin}
-          username={user.username ?? user.matricula}
+          username={user.username ?? user.employeeId}
           onSignOut={signOut}
         />
       </SidebarProvider>

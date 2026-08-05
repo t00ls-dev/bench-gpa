@@ -23,7 +23,7 @@ interface AuthUserRow {
   is_active: boolean;
   token_version: number;
   username: string | null;
-  matricula: string | null;
+  employee_id: string | null;
   password_change_required: number | boolean;
 }
 
@@ -32,7 +32,7 @@ export interface ResolvedSession {
   userRole: string;
   userName: string;
   userUsername: string | null;
-  userMatricula: string | null;
+  userEmployeeId: string | null;
   persistent: boolean;
   /** true se a conta ainda não definiu senha (primeiro acesso/reset por
    * admin) ou se a senha já passou de 30 dias sem trocar. Quem decide o que
@@ -120,7 +120,7 @@ export async function resolveSession(
   // uma conta cujo password_changed_at nunca foi preenchido ficaria isenta
   // de expirar para sempre.
   const [rowsRaw] = await db.query(
-    `SELECT id, name, role, is_active, token_version, username, matricula,
+    `SELECT id, name, role, is_active, token_version, username, employee_id,
             (password IS NULL
              OR password_changed_at IS NULL
              OR password_changed_at < NOW() - INTERVAL 30 DAY) AS password_change_required
@@ -164,7 +164,7 @@ export async function resolveSession(
     userRole: dbUser.role,
     userName: dbUser.name,
     userUsername: dbUser.username,
-    userMatricula: dbUser.matricula,
+    userEmployeeId: dbUser.employee_id,
     persistent: payload.persistent ?? false,
     passwordChangeRequired: Boolean(dbUser.password_change_required),
   };
