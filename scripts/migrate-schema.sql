@@ -55,8 +55,8 @@ DROP PROCEDURE IF EXISTS has_role;
 -- tratam NULL como "precisa agir" (fail-safe), nunca como "está tudo certo".
 CREATE TABLE IF NOT EXISTS users (
   id            VARCHAR(36) PRIMARY KEY,
-  username      VARCHAR(60) NULL UNIQUE,
   employee_id   VARCHAR(30) NULL UNIQUE,
+  username      VARCHAR(60) NULL UNIQUE,
   name          VARCHAR(255) NOT NULL,
   password      VARCHAR(255) NULL,
   role          ENUM('admin','user') NOT NULL DEFAULT 'user',
