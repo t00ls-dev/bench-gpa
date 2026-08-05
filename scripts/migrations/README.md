@@ -18,10 +18,17 @@ Aplicadas automaticamente no deploy por `scripts/run-migrations.sh`.
 
 ## Convenção
 
-- Nome: `NNNN_descricao_curta.sql` (ex.: `0001_add_col_users_last_login.sql`).
-  Ordenado por `sort`: mantenha o prefixo numérico com zero-padding.
-- **Forward-only**: nunca edite uma migration já aplicada em produção (o
-  runner a considera concluída pelo nome). Para corrigir, crie uma nova.
+- Nome: `NNNN_short_description.sql` em inglês (ex.:
+  `0001_add_col_users_last_login.sql`). Ordenado por `sort`: mantenha o
+  prefixo numérico com zero-padding.
+- **Forward-only**: nunca edite (nem renomeie) uma migration já aplicada em
+  produção. O runner (`scripts/run-migrations.sh`) registra cada migration
+  em `schema_migrations` usando o **nome do arquivo** como chave; renomear
+  um arquivo já aplicado faz o próximo deploy achar que é uma migration nova
+  e tentar reaplicá-la. Para corrigir, crie uma nova. Por esse motivo, as
+  migrations `0001`-`0006` mantêm nomes parcialmente em português (legado de
+  antes desta convenção): são imutáveis por design, não uma inconsistência
+  a corrigir.
 - Escreva SQL puro (o client `mysql` processa `DELIMITER` se precisar de
   procedures/triggers, mas procedures pertencem ao baseline).
 - Idealmente idempotente mesmo assim (`ADD COLUMN IF NOT EXISTS`,

@@ -199,6 +199,28 @@ em vez de commit direto em `main`.
   (`.page.tsx`) usam `export default function` (exigência do TanStack
   Router)
 
+### Idioma
+
+Toda nomenclatura técnica (arquivos, diretórios, funções, variáveis, tipos,
+componentes, hooks, rotas, tabelas/colunas de banco, chaves de cache,
+scripts, configs, CI/CD) e todo comentário técnico devem estar em **inglês**.
+
+Exceções, nunca traduza:
+
+- Arquivos `.md` (documentação em português).
+- Qualquer texto voltado ao usuário final na UI: labels, mensagens, toasts,
+  validações, placeholders.
+
+Exceção técnica (não é inconsistência a corrigir): nomes de migration já
+aplicadas em produção (`scripts/migrations/000N_*.sql`) são imutáveis por
+design (`scripts/run-migrations.sh` rastreia pelo nome do arquivo). Algumas
+das existentes nasceram em português antes desta regra existir; não
+renomeie. Migrations novas nascem em inglês.
+
+Ao tocar um arquivo por outro motivo, aproveite para traduzir os comentários
+em português que encontrar nele (tradução incremental, não uma varredura
+retroativa dedicada).
+
 Checklists detalhados de auditoria (segurança, performance, banco de dados,
 qualidade de código, dependências, frontend, testes, arquitetura) vivem em
 `.claude/skills/<categoria>/SKILL.md`, carregados sob demanda, não

@@ -48,8 +48,8 @@ import db from "./db";
 import { cache } from "./cache";
 import { AreaAnalysisSchema, EXPORT_PAGE_SIZE } from "./schemas";
 
-// A proc devolve 4 result sets: KPIs, total para paginação, byDate e produtos.
-const RESULTADO_DA_PROC = [
+// The proc returns 4 result sets: KPIs, total for pagination, byDate and products.
+const PROC_RESULT = [
   [
     [{ total: 1000, plus_total: 10, plus_with_sale: 8, plus_without_sale: 2 }],
     [{ total_products: 10 }],
@@ -84,7 +84,7 @@ interface AreaInput {
   sortDir: string;
 }
 
-const FILTROS: AreaInput = {
+const FILTERS: AreaInput = {
   dateFrom: "2026-07-14",
   dateTo: "2026-07-20",
   stores: [],
@@ -101,14 +101,14 @@ const FILTROS: AreaInput = {
 
 type AreaFn = (d: AreaInput) => Promise<{ total: number; products: unknown[] }>;
 const call = (d: Partial<AreaInput>) =>
-  (getAreaAnalysis as unknown as AreaFn)({ ...FILTROS, ...d });
+  (getAreaAnalysis as unknown as AreaFn)({ ...FILTERS, ...d });
 
 beforeEach(() => {
   vi.clearAllMocks();
   // Sem isto um caso vaza resultado para o outro pela chave de cache.
   cache.destroy();
   (cache as unknown as { store: Map<string, unknown> }).store.clear();
-  vi.mocked(db.query).mockResolvedValue(RESULTADO_DA_PROC as never);
+  vi.mocked(db.query).mockResolvedValue(PROC_RESULT as never);
 });
 
 describe("getAreaAnalysis", () => {

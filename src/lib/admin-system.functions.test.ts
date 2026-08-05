@@ -194,9 +194,9 @@ describe("getAuditLog", () => {
   });
 
   it("respeita limit/offset informados e trata campos nulos como null", async () => {
-    const rowComCamposNulos = { ...ROW, actor_username: null, target_id: null, detail: null };
+    const rowWithNullFields = { ...ROW, actor_username: null, target_id: null, detail: null };
     vi.mocked(db.query)
-      .mockResolvedValueOnce([[rowComCamposNulos]] as never)
+      .mockResolvedValueOnce([[rowWithNullFields]] as never)
       .mockResolvedValueOnce([[{ total: 200 }]] as never);
 
     const result = await (

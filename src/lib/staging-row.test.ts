@@ -54,10 +54,10 @@ describe("staging-row", () => {
   });
 
   it("val_vda é a única medida no layout", () => {
-    // O export do GPA traz só VAL_VDA (verificado nas 68 planilhas de data/).
-    // Se alguém reintroduzir qty/custo/margem aqui sem o parser preenchê-las,
-    // este teste falha e obriga a conferir o export antes.
-    const medidas = STAGING_COLS.filter((c) => /^(val|qty|per)_/.test(c));
-    expect(medidas).toEqual(["val_vda"]);
+    // GPA's export only brings VAL_VDA (verified across the 68 spreadsheets in data/).
+    // If someone reintroduces qty/cost/margin here without the parser filling
+    // them in, this test fails and forces a check of the export first.
+    const measures = STAGING_COLS.filter((c) => /^(val|qty|per)_/.test(c));
+    expect(measures).toEqual(["val_vda"]);
   });
 });
