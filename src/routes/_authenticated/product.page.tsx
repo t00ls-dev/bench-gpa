@@ -47,7 +47,7 @@ interface SeriesPoint {
   val: number;
 }
 
-function ProdutoPage() {
+function ProductPage() {
   const { plu, store } = Route.useSearch();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
@@ -263,4 +263,4 @@ function ProdutoPage() {
   );
 }
 
-export default ProdutoPage;
+export default ProductPage;

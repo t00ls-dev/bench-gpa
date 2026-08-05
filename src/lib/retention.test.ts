@@ -19,9 +19,9 @@ describe("daysSinceUtc", () => {
   });
 
   it("não depende da hora do dia", () => {
-    const madrugada = Date.parse("2026-07-23T00:30:00Z");
-    const noite = Date.parse("2026-07-23T23:45:00Z");
-    expect(daysSinceUtc("2026-01-24", madrugada)).toBe(daysSinceUtc("2026-01-24", noite));
+    const earlyMorning = Date.parse("2026-07-23T00:30:00Z");
+    const night = Date.parse("2026-07-23T23:45:00Z");
+    expect(daysSinceUtc("2026-01-24", earlyMorning)).toBe(daysSinceUtc("2026-01-24", night));
   });
 
   it("devolve negativo para data futura", () => {
@@ -60,14 +60,14 @@ describe("isWithinRetention: borda casada com o purge_old_aggs", () => {
   });
 
   it("não há dia em que importar e purgar discordem", () => {
-    // Varre a vizinhança da borda: para todo dia, "import-watch importa" tem que
-    // ser exatamente "purge preserva". O purge preserva quando
-    // daysSinceUtc <= RETENTION_DAYS: a mesma conta, escrita à mão aqui de
-    // propósito, para o teste falhar se a implementação mudar de critério.
+    // Sweeps the neighborhood of the boundary: for every day, "import-watch
+    // imports" has to be exactly "purge preserves". Purge preserves when
+    // daysSinceUtc <= RETENTION_DAYS: the same math, written by hand here on
+    // purpose, so the test fails if the implementation changes criteria.
     for (let d = RETENTION_DAYS - 5; d <= RETENTION_DAYS + 5; d++) {
       const date = daysAgo(d);
-      const purgePreserva = daysSinceUtc(date, NOW) <= RETENTION_DAYS;
-      expect(isWithinRetention(date, NOW)).toBe(purgePreserva);
+      const purgePreserves = daysSinceUtc(date, NOW) <= RETENTION_DAYS;
+      expect(isWithinRetention(date, NOW)).toBe(purgePreserves);
     }
   });
 });

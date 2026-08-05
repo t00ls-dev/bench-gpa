@@ -30,7 +30,7 @@ jobs:
       # de build/lint (vite/postcss/js-yaml/babel), não caminho de request.
       # Isso é o que teria pego a regressão do seroval (GHSA-mv8w-475r-vwqw)
       # automaticamente, em vez de precisar de uma auditoria manual.
-      - name: Auditoria de dependências (bun audit)
+      - name: Dependency audit (bun audit)
         run: |
           bun audit || true
           bun audit --audit-level=critical
@@ -86,9 +86,9 @@ jobs:
           --health-retries=10
     steps:
       - uses: actions/checkout@v7
-      - name: Instala cliente mariadb
+      - name: Install mariadb client
         run: sudo apt-get update && sudo apt-get install -y mariadb-client
-      - name: Aplica o schema do zero e prova idempotência (roda 2x)
+      - name: Apply schema from scratch and prove idempotency (runs 2x)
         run: |
           cat > /tmp/schema-check.env <<EOF
           DB_HOST=127.0.0.1
@@ -131,7 +131,7 @@ jobs:
           name: build-output
           path: .output/
 
-      - name: Upload .output + arquivos de migração via rsync
+      - name: Upload .output + migration files via rsync
         shell: bash
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -208,7 +208,7 @@ jobs:
       # que este step falhe. O pior caso é a próxima cron rodar código de um
       # deploy atrás até o deploy seguinte corrigir; o app em produção nunca
       # fica pendurado esperando isto.
-      - name: Atualiza checkout e dependências usados pelas crons
+      - name: Update checkout and dependencies used by the crons
         continue-on-error: true
         uses: appleboy/ssh-action@v1
         with:
@@ -245,7 +245,7 @@ jobs:
       # (re-sincroniza procedures sem quebrar o código antigo ainda em execução).
       # Se falhar, o job para aqui — nenhum código novo é ativado e o app atual
       # segue rodando no schema anterior.
-      - name: Aplicar migrations de banco
+      - name: Apply database migrations
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -259,7 +259,7 @@ jobs:
             APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
             bash "$APPDIR/_migrations/run-migrations.sh" "$APPDIR/.env"
 
-      - name: Atomic swap (release versionada) + Restart PM2 (com rollback automático)
+      - name: Atomic swap (versioned release) + Restart PM2 (with automatic rollback)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
