@@ -61,11 +61,14 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
           <UserPlus className="mr-2 size-4" /> Novo usuário
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Novo usuário</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Informe usuário ou matrícula (basta um dos dois).
+          </p>
           <div>
             <Label htmlFor="create-username">Usuário</Label>
             <Input
@@ -73,7 +76,6 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
               className="mt-1.5"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="nome.sobrenome"
               autoComplete="off"
             />
           </div>
@@ -114,7 +116,7 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
           <Button variant="outline" onClick={() => setOpen(false)} disabled={creating}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={creating || !username || !matricula || !name}>
+          <Button onClick={submit} disabled={creating || (!username && !matricula) || !name}>
             {creating ? <Loader2 className="size-4 animate-spin" /> : "Criar"}
           </Button>
         </DialogFooter>

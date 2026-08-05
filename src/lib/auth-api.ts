@@ -11,7 +11,7 @@ import { SESSION_COOKIE, BCRYPT_COST } from "./auth-config";
 import { issueSession, resolveSession } from "./session";
 import { requireAuthAllowExpiredPassword } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
-import { UsernameSchema, MatriculaSchema, PasswordSchema } from "./schemas";
+import { PasswordSchema } from "./schemas";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -202,19 +202,19 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
 /**
  * Define a senha de uma conta sem senha (primeiro acesso, ou depois de um
  * reset por admin -- os dois deixam `password` NULL, mesmo estado, mesmo
- * fluxo). Sem sessão: como não há senha pra conferir, username + matrícula
- * JUNTOS (AND, não OR) fazem o papel de prova de identidade. Por isso as
- * mesmas três camadas de proteção do login: rate limit por IP, por conta
- * (chave = id resolvido) e Turnstile fail-closed -- sem elas, este seria o
- * endpoint mais fraco do sistema (baixa entropia: matrícula costuma ser
- * sequencial, username costuma ser previsível).
+ * fluxo). Sem sessão: como não há senha pra conferir, o único identificador
+ * (username OU matrícula, mesma resolução do login) faz o papel de prova de
+ * identidade -- por decisão de produto, um campo só, para não exigir do
+ * usuário informação que ele pode não ter em mãos. Como isso é uma prova de
+ * identidade mais fraca que username+matrícula juntos, as três camadas de
+ * proteção do login continuam obrigatórias aqui: rate limit por IP, por
+ * conta (chave = id resolvido) e Turnstile fail-closed.
  */
 export const setInitialPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     refinePasswordsMatch(
       z.object({
-        username: UsernameSchema,
-        matricula: MatriculaSchema,
+        identifier: z.string().trim().min(1),
         turnstileToken: z.string().optional(),
         ...NewPasswordFields,
       }),
@@ -223,6 +223,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const request = getRequest();
     const ip = getClientIp(request);
+    const identifier = data.identifier.toLowerCase();
 
     const rl = authLimiter.check(ip);
     if (!rl.allowed) {
@@ -230,11 +231,12 @@ export const setInitialPassword = createServerFn({ method: "POST" })
     }
 
     const [rowsRaw] = await db.query(
-      "SELECT id, role, password, token_version FROM users WHERE username = ? AND matricula = ?",
-      [data.username, data.matricula],
+      "SELECT id, username, role, password, token_version FROM users WHERE username = ? OR matricula = ?",
+      [identifier, identifier],
     );
     const rows = rowsRaw as unknown as {
       id: string;
+      username: string | null;
       role: string;
       password: string | null;
       token_version: number;
@@ -242,7 +244,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
     const user = rows[0] ?? null;
 
     const rlAccount = authAccountLimiter.check(
-      user ? `user:${user.id}` : `identifier:${data.username}:${data.matricula}`,
+      user ? `user:${user.id}` : `identifier:${identifier}`,
     );
     if (!rlAccount.allowed) {
       throw new Error("Muitas tentativas. Aguarde alguns minutos.");
@@ -258,17 +260,18 @@ export const setInitialPassword = createServerFn({ method: "POST" })
       }
     }
 
-    // Mensagem genérica tanto pra combinação inexistente quanto pra conta que
-    // já concluiu o primeiro acesso: não virar oráculo de enumeração de
+    // Mensagem genérica tanto pra identificador inexistente quanto pra conta
+    // que já concluiu o primeiro acesso: não virar oráculo de enumeração de
     // contas (revelar "essa conta já tem senha" já é informação demais).
     if (!user || user.password !== null) {
       await recordAudit({
         action: "auth.first_access_failed",
-        actorUsername: data.username,
+        actorId: user?.id ?? null,
+        actorUsername: user?.username ?? identifier,
         targetType: "session",
         ip,
       });
-      throw new Error("Combinação de usuário e matrícula inválida, ou conta já configurada.");
+      throw new Error("Usuário ou matrícula inválidos, ou conta já configurada.");
     }
 
     const hash = await bcrypt.hash(data.newPassword, BCRYPT_COST);
@@ -276,14 +279,14 @@ export const setInitialPassword = createServerFn({ method: "POST" })
       hash,
       user.id,
     ]);
-    // Auto-login: o usuário acabou de provar posse de username+matrícula E
+    // Auto-login: o usuário acabou de provar posse do identificador E
     // escolher a própria senha na mesma requisição, exigir login de novo
     // logo em seguida não ganha segurança nenhuma, só adiciona uma viagem.
     issueSession({ id: user.id, role: user.role, tokenVersion: user.token_version }, false);
     await recordAudit({
       action: "auth.first_access_completed",
       actorId: user.id,
-      actorUsername: data.username,
+      actorUsername: user.username ?? identifier,
       targetType: "session",
       ip,
     });

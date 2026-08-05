@@ -8,8 +8,7 @@ import { KeyRound, Loader2 } from "lucide-react";
 import { useTurnstile } from "@/hooks/use-turnstile";
 
 function FirstAccessPage() {
-  const [username, setUsername] = useState("");
-  const [matricula, setMatricula] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +21,7 @@ function FirstAccessPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !matricula || !newPassword || !confirmPassword || loading) return;
+    if (!identifier || !newPassword || !confirmPassword || loading) return;
 
     if (newPassword !== confirmPassword) {
       toast.error("As senhas não coincidem.");
@@ -38,14 +37,12 @@ function FirstAccessPage() {
     try {
       const { setInitialPassword } = await import("@/lib/auth-api");
       const payload: {
-        username: string;
-        matricula: string;
+        identifier: string;
         newPassword: string;
         confirmPassword: string;
         turnstileToken?: string;
       } = {
-        username: username.trim(),
-        matricula: matricula.trim(),
+        identifier: identifier.trim(),
         newPassword,
         confirmPassword,
       };
@@ -74,32 +71,20 @@ function FirstAccessPage() {
         <div className="kpi-card">
           <h2 className="font-display text-xl font-semibold">Primeiro acesso</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Confirme seu usuário e matrícula e defina sua senha.
+            Informe seu usuário ou matrícula e defina sua senha.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>
-              <Label htmlFor="fa-username">Usuário</Label>
+              <Label htmlFor="fa-identifier">Usuário</Label>
               <Input
-                id="fa-username"
+                id="fa-identifier"
                 type="text"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="mt-1.5"
                 autoComplete="username"
-              />
-            </div>
-            <div>
-              <Label htmlFor="fa-matricula">Matrícula</Label>
-              <Input
-                id="fa-matricula"
-                type="text"
-                inputMode="numeric"
-                required
-                value={matricula}
-                onChange={(e) => setMatricula(e.target.value)}
-                className="mt-1.5"
               />
             </div>
             <div>
