@@ -44,6 +44,12 @@ DROP PROCEDURE IF EXISTS has_role;
 -- Cadastro de usuário novo pelo admin exige os dois via Zod (UsernameSchema/
 -- MatriculaSchema em schemas.ts), não via NOT NULL do banco.
 --
+-- employee_id: rename em andamento de `matricula` para nomenclatura em
+-- inglês (padronização 2026-08-05). As duas colunas coexistem de propósito
+-- (ver migrations/0009_users_employee_id.sql): o app ainda lê/escreve só
+-- `matricula` nesta fase; `employee_id` é aditivo até o PR de corte de
+-- aplicação. Não usar `employee_id` em código novo antes desse PR.
+--
 -- password NULL: conta criada sem senha (primeiro acesso) ou zerada por reset
 -- de admin. password_changed_at NULL ou mais velha que 30 dias força troca no
 -- próximo login (ver passwordChangeRequired em session.ts). Ambos os campos
@@ -52,6 +58,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            VARCHAR(36) PRIMARY KEY,
   username      VARCHAR(60) NULL UNIQUE,
   matricula     VARCHAR(30) NULL UNIQUE,
+  employee_id   VARCHAR(30) NULL UNIQUE,
   name          VARCHAR(255) NOT NULL,
   password      VARCHAR(255) NULL,
   role          ENUM('admin','user') NOT NULL DEFAULT 'user',
