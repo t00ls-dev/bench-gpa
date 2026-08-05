@@ -20,7 +20,6 @@ import { AsyncLocalStorage } from "node:async_hooks";
 const nonceStorage = new AsyncLocalStorage<string>();
 
 declare global {
-  // eslint-disable-next-line no-var
   var __cspNonceStorage: { getStore(): string | undefined } | undefined;
 }
 
