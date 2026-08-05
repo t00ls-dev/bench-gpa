@@ -1,30 +1,32 @@
 /**
- * Parâmetros da importação de planilhas, compartilhados pelos dois caminhos de
- * entrada: a tela `/upload` e o CLI (`cli:import`).
+ * Spreadsheet import parameters, shared by the two entry paths: the
+ * `/upload` screen and the CLI (`cli:import`).
  *
- * Os dois usavam 1000 linhas por lote, mas por coincidência, não por acordo:
- * cada um com seu literal, em arquivos que ninguém lê junto. Podiam divergir
- * sem que nada acusasse, e o efeito de divergir não é erro: é um caminho
- * importando em lotes de tamanho diferente do outro, com perfil de memória e de
- * tempo distinto para o mesmo arquivo.
+ * Both used to use 1000 rows per batch, but by coincidence, not by
+ * agreement: each with its own literal, in files nobody reads side by
+ * side. They could diverge without anything flagging it, and the effect of
+ * diverging isn't an error: it's one path importing in a different batch
+ * size than the other, with a distinct memory and time profile for the
+ * same file.
  */
 
 /**
- * Linhas por lote enviado ao banco.
+ * Rows per batch sent to the database.
  *
- * Equilibra duas pressões opostas: lote grande demais estoura o
- * `max_allowed_packet` do MariaDB e segura memória no processo (a VPS tem 1,9 GB
- * e um núcleo); lote pequeno demais multiplica idas ao banco: uma planilha
- * diária tem ~48k linhas, o que já dá ~48 lotes neste tamanho.
+ * Balances two opposing pressures: too large a batch blows MariaDB's
+ * `max_allowed_packet` and holds memory in the process (the VPS has 1.9 GB
+ * and one core); too small a batch multiplies round-trips to the database:
+ * a daily spreadsheet has ~48k rows, which already comes out to ~48
+ * batches at this size.
  */
 export const IMPORT_CHUNK_SIZE = 1000;
 
 /**
- * Teto de linhas por arquivo, verificado na tela antes de começar.
+ * Row cap per file, checked on the screen before starting.
  *
- * É uma barreira de sanidade, não um limite técnico: as planilhas diárias reais
- * ficam em torno de 48k linhas, então algo acima disto é sinal de arquivo
- * errado (um export acumulado, o relatório de outro período): melhor recusar
- * na hora do que descobrir no meio de uma importação de vários minutos.
+ * This is a sanity barrier, not a technical limit: real daily spreadsheets
+ * sit around 48k rows, so anything above this is a sign of the wrong file
+ * (an accumulated export, another period's report): better to reject it
+ * upfront than to discover it partway through a multi-minute import.
  */
 export const IMPORT_MAX_ROWS = 200_000;
