@@ -24,9 +24,9 @@ interface ChartRow {
   Atual: number;
 }
 
-// Hoisted para fora de DashboardCharts (não pode ser recriado a cada render):
-// maxIndex/minIndex chegam como props extras no elemento passado a `dot`, que
-// o Recharts mescla com as próprias props internas (cx, cy, index...) via
+// Hoisted out of DashboardCharts (must not be recreated on every render):
+// maxIndex/minIndex arrive as extra props on the element passed to `dot`,
+// which Recharts merges with its own internal props (cx, cy, index...) via
 // cloneElement.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomDot(props: any) {

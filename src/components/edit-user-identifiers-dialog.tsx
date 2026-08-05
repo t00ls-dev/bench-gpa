@@ -30,9 +30,9 @@ function EditUserIdentifiersForm({
   onSaved: () => void;
 }) {
   const update = useServerFn(updateUserIdentifiers);
-  // Inicializado a partir de `target`: o componente é remontado (key={target.id}
-  // no chamador) sempre que o alvo muda, então isto nunca fica desatualizado
-  // sem precisar de useEffect pra sincronizar estado derivado de prop.
+  // Initialized from `target`: the component is remounted (key={target.id}
+  // in the caller) whenever the target changes, so this never goes stale
+  // without needing a useEffect to sync state derived from a prop.
   const [username, setUsername] = useState(target.username ?? "");
   const [employeeId, setEmployeeId] = useState(target.employeeId ?? "");
   const [saving, setSaving] = useState(false);

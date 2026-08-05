@@ -150,9 +150,17 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `index.page.tsx`, `product.page.tsx`, `admin.docs.page.tsx`,
   `change-password.tsx`, `area.tsx`). Os demais arquivos de rota (wrappers
   finos, sem lógica) não tinham comentários. **`src/routes/` está completo.**
-- **Restante, não iniciado**: ~28 arquivos em `src/components/`, ~17 em
-  `scripts/` (exceto as 5 migrations já aplicadas, imutáveis por design),
-  ~38 arquivos de teste (categoria própria, tratamento a definir).
+- **Etapa 6** (concluída, PR #214): 13 arquivos de `src/components/` com
+  comentários em português (`route-progress.tsx`, `import-calendar.tsx`,
+  `area-filters.tsx`, `error-boundary.tsx`, `product-charts.tsx`,
+  `edit-user-identifiers-dialog.tsx`, `date-range-picker.tsx`,
+  `dashboard-charts.tsx`, `admin-user-management.tsx`,
+  `upload-dropzone.tsx`, `create-user-dialog.tsx`, `command-palette.tsx`,
+  `admin-gate.tsx`). Os demais arquivos do diretório não tinham comentários
+  em português. **`src/components/` está completo.**
+- **Restante, não iniciado**: ~17 arquivos em `scripts/` (exceto as 5
+  migrations já aplicadas, imutáveis por design), ~38 arquivos de teste
+  (categoria própria, tratamento a definir).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

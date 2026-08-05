@@ -62,8 +62,8 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (search.length < 2) return;
-    // Sinaliza "buscando" antes de agendar o debounce: parte da coreografia
-    // do fetch assíncrono deste efeito, não estado derivado de uma prop.
+    // Signals "searching" before scheduling the debounce: part of this
+    // effect's async fetch choreography, not state derived from a prop.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     window.clearTimeout(debounceRef.current ?? undefined);
