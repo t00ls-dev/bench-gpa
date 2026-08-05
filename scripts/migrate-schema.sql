@@ -37,14 +37,27 @@ DROP PROCEDURE IF EXISTS has_role;
 -- derrubava quem já estava logado. O token carrega a versão vigente na emissão;
 -- requireAuth/getMe comparam com a do banco e resetPassword incrementa.
 -- Ver migrations/0003_token_version.sql.
+--
+-- username/matricula NULL UNIQUE: nullable só para acomodar usuários legados
+-- migrados do modelo por e-mail, que podem ter só um dos dois definido até o
+-- admin completar o outro (ver migrations/0006_users_username_matricula.sql).
+-- Cadastro de usuário novo pelo admin exige os dois via Zod (UsernameSchema/
+-- MatriculaSchema em schemas.ts), não via NOT NULL do banco.
+--
+-- password NULL: conta criada sem senha (primeiro acesso) ou zerada por reset
+-- de admin. password_changed_at NULL ou mais velha que 30 dias força troca no
+-- próximo login (ver passwordChangeRequired em session.ts). Ambos os campos
+-- tratam NULL como "precisa agir" (fail-safe), nunca como "está tudo certo".
 CREATE TABLE IF NOT EXISTS users (
   id            VARCHAR(36) PRIMARY KEY,
-  email         VARCHAR(255) NOT NULL UNIQUE,
+  username      VARCHAR(60) NULL UNIQUE,
+  matricula     VARCHAR(30) NULL UNIQUE,
   name          VARCHAR(255) NOT NULL,
-  password      VARCHAR(255) NOT NULL,
+  password      VARCHAR(255) NULL,
   role          ENUM('admin','user') NOT NULL DEFAULT 'user',
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   token_version INT NOT NULL DEFAULT 0,
+  password_changed_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_users_role (role),
@@ -178,13 +191,13 @@ CREATE TABLE IF NOT EXISTS product_universe (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Trilha de auditoria: ações sensíveis de auth e admin.
--- actor_email é desnormalizado de propósito: o registro precisa sobreviver
+-- actor_username é desnormalizado de propósito: o registro precisa sobreviver
 -- mesmo se o usuário for removido depois.
 CREATE TABLE IF NOT EXISTS audit_log (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   actor_id    VARCHAR(36),
-  actor_email VARCHAR(255),
+  actor_username VARCHAR(60),
   action      VARCHAR(60) NOT NULL,
   target_type VARCHAR(40),
   target_id   VARCHAR(255),
