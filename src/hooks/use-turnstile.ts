@@ -15,10 +15,11 @@ function getTurnstile(): TurnstileWidget | undefined {
 }
 
 /**
- * Widget do Cloudflare Turnstile: injeta o script, monta/remonta honrando o
- * tema efetivo (a API não permite trocar o tema de um widget já montado) e
- * expõe o token atual. Extraído de auth.page.tsx para ser reusado por
- * first-access.page.tsx, que precisa exatamente do mesmo comportamento.
+ * Cloudflare Turnstile widget: injects the script, mounts/remounts honoring
+ * the effective theme (the API doesn't allow changing the theme of an
+ * already-mounted widget), and exposes the current token. Extracted from
+ * auth.page.tsx to be reused by first-access.page.tsx, which needs exactly
+ * the same behavior.
  */
 export function useTurnstile() {
   const effectiveTheme = useEffectiveTheme();

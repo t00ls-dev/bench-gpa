@@ -1,16 +1,17 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Mantém a tela ligada enquanto `active` for true (ex.: durante um import
- * longo, pra não perder o progresso visual nem a tela apagar no meio de um
- * upload que pode levar minutos). Usa a Screen Wake Lock API nativa;
- * navegadores sem suporte (ou fora de contexto seguro, http sem TLS) só não
- * fazem nada — degrada bem, nunca quebra o fluxo de import em si.
+ * Keeps the screen on while `active` is true (e.g. during a long import, so
+ * the visual progress isn't lost and the screen doesn't turn off mid-upload
+ * on something that can take minutes). Uses the native Screen Wake Lock
+ * API; browsers without support (or outside a secure context, http without
+ * TLS) simply do nothing — degrades gracefully, never breaks the import
+ * flow itself.
  *
- * A API libera o lock sozinha quando a aba fica oculta (troca de app,
- * minimizar, tela bloqueada): é o comportamento documentado da spec, não um
- * bug. O browser recomenda reobter no retorno se ainda estiver ativo, por
- * isso o listener de visibilitychange.
+ * The API releases the lock on its own when the tab becomes hidden (app
+ * switch, minimize, locked screen): that's the spec's documented behavior,
+ * not a bug. The browser recommends reacquiring it on return if still
+ * active, hence the visibilitychange listener.
  */
 export function useWakeLock(active: boolean): void {
   const lockRef = useRef<WakeLockSentinel | null>(null);
@@ -28,18 +29,18 @@ export function useWakeLock(active: boolean): void {
           await sentinel.release();
           return;
         }
-        // O navegador dispara "release" tanto quando chamamos sentinel.release()
-        // quanto quando ele mesmo libera sozinho (aba escondida) — sem ouvir
-        // isso, lockRef.current ficaria com uma referência desatualizada e o
-        // handler de visibilitychange abaixo nunca reobteria o lock de volta.
+        // The browser fires "release" both when we call sentinel.release()
+        // and when it releases on its own (hidden tab) -- without listening
+        // for this, lockRef.current would hold a stale reference and the
+        // visibilitychange handler below would never reacquire the lock.
         sentinel.addEventListener("release", () => {
           if (lockRef.current === sentinel) lockRef.current = null;
         });
         lockRef.current = sentinel;
       } catch {
-        // NotAllowedError (aba não visível no momento do request, permissão
-        // negada pelo browser, etc.): sem tela sempre ligada, mas o import
-        // segue normal. Não é um erro que valha interromper nada.
+        // NotAllowedError (tab not visible at request time, permission
+        // denied by the browser, etc.): the screen won't stay on, but the
+        // import proceeds normally. Not an error worth interrupting anything for.
       }
     }
 
