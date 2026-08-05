@@ -140,10 +140,23 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
  * O teto global é um disjuntor de carga agregada, não um limite por usuário: a
  * contribuição máxima de um IP para ele é o próprio teto por IP, graças ao
  * curto-circuito documentado em `check()`.
+ *
+ * `auth` afrouxado de [10, 40] para [15, 60] (mesma proporção ~4x): as duas
+ * rotas que recebem tráfego anônimo neste tier (login, primeiro acesso) já
+ * exigem Turnstile antes de aceitar a tentativa, cobrindo a parte
+ * automatizada do problema -- este teto por IP é a defesa que sobra. Também
+ * apoiado no que já está registrado em docs/medicao-performance.md (entrada
+ * de 2026-08-04): em cluster mode (2 workers) o contador já é diluído por
+ * processo e o gargalo real continua sendo a CPU compartilhada, não o
+ * contador -- subir o teto não aumenta o número de bcrypt/s que a VPS
+ * consegue de fato processar. `changePassword` também usa este tier mas só é
+ * alcançável por quem já tem sessão válida (`requireAuthAllowExpiredPassword`
+ * roda antes do rate limit no middleware), então o afrouxamento não abre
+ * superfície nova para tráfego anônimo ali.
  */
 const RATE_LIMITS = {
   api: [300, 1000],
-  auth: [10, 40],
+  auth: [15, 60],
   upload: [200, 500],
   ssr: [300, 1500],
 } as const;
@@ -172,9 +185,15 @@ export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.s
  * resetar o balde, e `id` nunca muda mesmo que o admin edite o username
  * depois. Conta não encontrada usa `identifier:<bruto>` como chave, mantendo
  * a mesma cobertura contra brute-force de conta inexistente.
+ *
+ * 10 (não menos): tanto login quanto primeiro acesso já exigem Turnstile
+ * antes de aceitar a tentativa, o que cobre a parte automatizada do
+ * problema; este balde é a defesa que sobra contra um humano/script
+ * insistindo numa conta específica. 10/15min dá folga real para erro de
+ * digitação sem abrir mão dessa contenção.
  */
 const AUTH_ACCOUNT_WINDOW_MS = 15 * 60_000;
-const AUTH_ACCOUNT_MAX_PER_KEY = 5;
+const AUTH_ACCOUNT_MAX_PER_KEY = 10;
 export const authAccountLimiter = new RateLimiter(
   AUTH_ACCOUNT_WINDOW_MS,
   AUTH_ACCOUNT_MAX_PER_KEY,

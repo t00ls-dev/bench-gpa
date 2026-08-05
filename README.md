@@ -107,8 +107,8 @@ Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
 
 ## Arquitetura
 
-- **Auth**: JWT próprio (bcrypt + jsonwebtoken), login por username ou matrícula, + Turnstile CAPTCHA (fail-closed). Rate limiting: 10/min IP (tier Auth) + 5/15min por conta (chave = id resolvido, não a string digitada).
-- **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers por IP: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min), mais um balde independente por conta no login (5/15min, chaveado pelo id do usuário resolvido), contra credential stuffing distribuído por vários IPs.
+- **Auth**: JWT próprio (bcrypt + jsonwebtoken), login por username ou matrícula, + Turnstile CAPTCHA (fail-closed). Rate limiting: 10/min IP (tier Auth) + 10/15min por conta (chave = id resolvido, não a string digitada).
+- **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers por IP: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min), mais um balde independente por conta no login (10/15min, chaveado pelo id do usuário resolvido), contra credential stuffing distribuído por vários IPs.
 - **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard e rankings (60s), hierarquia área e opções de filtro (5min), datas importadas (60s), role (5min/user).
 - **PWA**: `manifest.json` + ícones (favicon, apple-touch-icon, maskable) versionados com o hash do commit, cache-busting automático a cada deploy, independente do cache do Cloudflare. Instalável em mobile; não funciona offline (dados vêm sempre do servidor).
 - **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile, rate limit em todas as server functions autenticadas (`requireRateLimit`, hoje 27 usos em 8 arquivos `*.functions.ts`).
