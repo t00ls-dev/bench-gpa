@@ -11,30 +11,33 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /**
- * Guarda os bytes de um PDF por pouco tempo, entre o POST que os envia e o GET
- * que os baixa de volta: a ponte que faz `/api/pdf-download` (server.ts)
- * devolver um `Content-Disposition: attachment; filename=...` de verdade, em
- * vez de depender do atributo `download` numa blob URL do lado do cliente
- * (Firefox não confia nesse atributo pra blob: em vários casos, o
- * gerenciador de download cai pro UUID da própria blob URL como nome. Ver
- * Mozilla Bugzilla #1282407).
+ * Holds a PDF's bytes for a short time, between the POST that sends them
+ * and the GET that downloads them back: the bridge that makes
+ * `/api/pdf-download` (server.ts) return a real
+ * `Content-Disposition: attachment; filename=...`, instead of relying on
+ * the `download` attribute on a client-side blob URL (Firefox doesn't
+ * trust that attribute for blob: URLs in several cases, and its download
+ * manager falls back to the blob URL's own UUID as the name. See Mozilla
+ * Bugzilla #1282407).
  *
- * Em arquivo, não em memória: PM2 em cluster mode roda mais de um processo
- * Node atendendo a mesma porta, e o POST que grava pode cair num worker
- * diferente do GET que busca. Como os dois só precisam se enxergar dentro do
- * mesmo host (não entre máquinas), um diretório compartilhado no disco local
- * resolve sem precisar de Redis nem de gravar PDF inteiro como BLOB no banco
- * (dado transiente de 60s, sem motivo pra pesar no binlog do MariaDB).
+ * On disk, not in memory: PM2 in cluster mode runs more than one Node
+ * process serving the same port, and the POST that writes can land on a
+ * different worker than the GET that fetches. Since the two only need to
+ * see each other within the same host (not across machines), a shared
+ * directory on local disk solves it without needing Redis or writing the
+ * entire PDF as a BLOB in the database (60s of transient data, no reason
+ * to weigh down MariaDB's binlog).
  *
- * NÃO é uso único, de propósito: já foi (bug real, corrigido em 01/08/2026):
- * o Firefox faz mais de uma requisição pra URL de download antes de salvar o
- * arquivo (confirmado com um caso real: a segunda leitura vinha com o token
- * já apagado pela primeira, e o Firefox salvava o corpo do 404 ("Not found",
- * 9 bytes) como se fosse o PDF). TTL curto (60s) + isolamento por usuário já
- * bastam como proteção; um token só vale pra quem gerou e só por pouco tempo,
- * não precisa também morrer na primeira leitura. `takePdf` nunca apaga
- * arquivo: só `cleanupExpired` (chamado a cada `storePdf`) remove o que já
- * passou do TTL.
+ * Deliberately NOT single-use: it used to be (a real bug, fixed on
+ * 08/01/2026): Firefox makes more than one request to the download URL
+ * before saving the file (confirmed with a real case: the second read came
+ * back with the token already erased by the first, and Firefox saved the
+ * body of the 404 ("Not found", 9 bytes) as if it were the PDF). Short TTL
+ * (60s) + per-user isolation are already enough protection; a token is
+ * only valid for whoever generated it and only for a short time, it
+ * doesn't also need to die on the first read. `takePdf` never deletes a
+ * file: only `cleanupExpired` (called on every `storePdf`) removes what's
+ * already past its TTL.
  */
 
 interface Meta {
@@ -45,8 +48,9 @@ interface Meta {
 
 const TTL_MS = 60_000;
 const DIR = join(tmpdir(), "bench-gpa-pdf-downloads");
-// crypto.randomUUID() sempre bate com isto: a checagem existe pro token vindo
-// da URL (entrada de fora) em takePdf, não pra confiar no que a gente mesmo gera.
+// crypto.randomUUID() always matches this: the check exists for the token
+// coming from the URL (external input) in takePdf, not to distrust what we
+// generate ourselves.
 const TOKEN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 mkdirSync(DIR, { recursive: true });
@@ -75,20 +79,20 @@ function cleanupExpired(): void {
       const meta = JSON.parse(readFileSync(metaPath(token), "utf8")) as Meta;
       expired = now > meta.expiresAt;
     } catch {
-      // meta corrompido ou sumiu no meio da leitura: trata como expirado, não
-      // deixa lixo órfão acumulando no diretório.
+      // meta corrupted or disappeared mid-read: treat as expired, don't let
+      // orphan garbage pile up in the directory.
       expired = true;
     }
     if (!expired) continue;
     try {
       unlinkSync(metaPath(token));
     } catch {
-      // já não existe, tanto faz
+      // already gone, doesn't matter
     }
     try {
       unlinkSync(binPath(token));
     } catch {
-      // já não existe, tanto faz
+      // already gone, doesn't matter
     }
   }
 }

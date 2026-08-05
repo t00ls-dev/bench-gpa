@@ -1,88 +1,93 @@
 /**
- * Horizonte de retenção de dados, em dias.
+ * Data retention horizon, in days.
  *
- * O `purge_old_aggs` apaga tudo (aggs + import_log) com `sale_date` mais antigo
- * que isso. O `import-watch` ignora arquivos além desse horizonte para NÃO cair
- * num loop de importar→purgar→reimportar (um arquivo velho na pasta do mês
- * corrente seria importado, o purge das 3h o removeria da import_log e a
- * próxima rodada o reimportaria, todo dia).
+ * `purge_old_aggs` deletes everything (aggs + import_log) with a
+ * `sale_date` older than this. `import-watch` ignores files beyond this
+ * horizon so it does NOT fall into an import->purge->reimport loop (an old
+ * file in the current month's folder would get imported, the 3am purge
+ * would remove it from import_log, and the next run would reimport it,
+ * every day).
  *
- * Manter purge e import-watch atrelados a esta mesma constante é essencial:
- * se um dia a retenção mudar, muda só aqui.
+ * Keeping purge and import-watch tied to this same constant is essential:
+ * if retention ever changes, it only changes here.
  */
 export const RETENTION_DAYS = 180;
 
 /**
- * Agendamento do cron de purge, para exibição no painel de heartbeats do
- * admin (KNOWN_JOBS em admin-system.functions.ts).
+ * Purge cron schedule, for display in the admin heartbeats panel
+ * (KNOWN_JOBS in admin-system.functions.ts).
  *
- * A fonte real do agendamento em produção é o cron.conf do HestiaCP
- * (v-add-cron-job "0" "3" "*" "*" "*"), não este arquivo. Ver
- * scripts/setup-crons.sh, que documenta isso e não deve rodar em produção.
- * Bash/cron não importa TS, então não há como estas duas pontas se
- * referenciarem de verdade. Ao mudar o horário do cron em produção, mude
- * também PURGE_CRON_LABEL aqui, senão o painel mostra um horário que não é
- * o praticado.
+ * The real source of the schedule in production is HestiaCP's cron.conf
+ * (v-add-cron-job "0" "3" "*" "*" "*"), not this file. See
+ * scripts/setup-crons.sh, which documents this and must not run in
+ * production. Bash/cron doesn't import TS, so there's no way for these two
+ * ends to actually reference each other. When changing the cron time in
+ * production, also change PURGE_CRON_LABEL here, otherwise the panel shows
+ * a schedule that no longer matches reality.
  */
 export const PURGE_CRON_LABEL = "diária, 03h";
 
 /**
- * Prazo (horas) após o agendamento antes do heartbeat do purge ser
- * considerado atrasado: 24h do intervalo diário + 2h de folga para variação
- * no horário real de execução.
+ * Deadline (hours) after the schedule before the purge heartbeat is
+ * considered overdue: 24h for the daily interval + 2h of slack for
+ * variation in the actual run time.
  */
 export const PURGE_MAX_HOURS_OVERDUE = 26;
 
 /**
- * Agendamento do cron de refresh-universe (product_universe/filter_hierarchy),
- * para exibição no painel de heartbeats do admin, mesma ressalva de
- * PURGE_CRON_LABEL: a fonte real é o cron.conf do HestiaCP em produção.
+ * refresh-universe cron schedule (product_universe/filter_hierarchy), for
+ * display in the admin heartbeats panel, same caveat as PURGE_CRON_LABEL:
+ * the real source is HestiaCP's cron.conf in production.
  *
- * Roda 30min depois do purge (03h) de propósito: assim já enxerga o agg
- * pós-poda numa única passada, em vez de precisar rodar duas vezes por dia.
- * Até 30/07/2026 este refresh rodava síncrono dentro de finalize_import (todo
- * import) e de purge_old_aggs (toda poda com linha removida): item 5 de
- * docs/continuar.md: um PLU/categoria novo agora só aparece na Área após este
- * cron, não no mesmo dia do import. Aceito porque isso é raro.
+ * Deliberately runs 30min after the purge (03h): that way it already sees
+ * the post-purge agg in a single pass, instead of needing to run twice a
+ * day. Until 07/30/2026 this refresh ran synchronously inside
+ * finalize_import (every import) and purge_old_aggs (every purge that
+ * removed a row): docs/continuar.md item 5: a new PLU/category now only
+ * shows up in Área after this cron, not on the same day as the import.
+ * Accepted because it's rare.
  */
 export const REFRESH_UNIVERSE_CRON_LABEL = "diária, 03h30";
 
 /**
- * Prazo (horas) após o agendamento antes do heartbeat do refresh-universe ser
- * considerado atrasado, mesmo raciocínio de PURGE_MAX_HOURS_OVERDUE.
+ * Deadline (hours) after the schedule before the refresh-universe heartbeat
+ * is considered overdue, same reasoning as PURGE_MAX_HOURS_OVERDUE.
  */
 export const REFRESH_UNIVERSE_MAX_HOURS_OVERDUE = 26;
 
 /**
- * Idade de uma data `YYYY-MM-DD` em dias de calendário UTC.
+ * Age of a `YYYY-MM-DD` date in UTC calendar days.
  *
- * Datas futuras devolvem valor negativo: o chamador trata como "dentro da
- * retenção", que é o comportamento certo.
+ * Future dates return a negative value: the caller treats that as "within
+ * retention", which is the correct behavior.
  */
 export function daysSinceUtc(dateIso: string, now: number = Date.now()): number {
   return Math.floor((now - Date.parse(`${dateIso}T00:00:00Z`)) / 86_400_000);
 }
 
 /**
- * `true` quando o purge PRESERVA esta data (e, portanto, quando o import-watch
- * pode importá-la sem cair no loop importar→purgar→reimportar).
+ * `true` when the purge PRESERVES this date (and, therefore, when
+ * import-watch can import it without falling into the
+ * import->purge->reimport loop).
  *
- * Esta função é o lado JS de uma invariante que tem a outra ponta em SQL, no
- * `purge_old_aggs` (scripts/migrate-schema.sql):
+ * This function is the JS side of an invariant whose other end lives in
+ * SQL, in `purge_old_aggs` (scripts/migrate-schema.sql):
  *
  *     DELETE ... WHERE sale_date < DATE_SUB(CURRENT_DATE, INTERVAL 180 DAY)
  *
- * Preservar `sale_date >= hoje - 180` equivale a `daysSinceUtc(...) <= 180`. A
- * comparação do purge é ESTRITA, então a data exatamente na borda (180 dias) é
- * mantida, e por isso aqui também é `<=`, não `<`. Trocar por `<` de um lado
- * só reabre o loop diário de reimportação.
+ * Preserving `sale_date >= today - 180` is equivalent to
+ * `daysSinceUtc(...) <= 180`. The purge's comparison is STRICT, so the
+ * date exactly on the boundary (180 days) is kept, which is why this is
+ * also `<=`, not `<`. Swapping either side for `<` reopens the daily
+ * reimport loop.
  *
- * DEPENDÊNCIA DE FUSO: os dois lados só concordam porque o SO do servidor e o
- * MariaDB estão ambos em UTC (`time_zone = SYSTEM`, TZ do host `Etc/UTC`): aí
- * `CURRENT_DATE` e o dia UTC calculado aqui são o mesmo dia. Se o fuso do host
- * ou do banco mudar para `America/Sao_Paulo`, o `CURRENT_DATE` passa a virar 3h
- * antes do dia UTC e a borda desalinha por um dia. Ao mexer em fuso, revisar
- * esta invariante junto.
+ * TIMEZONE DEPENDENCY: the two sides only agree because the server OS and
+ * MariaDB are both on UTC (`time_zone = SYSTEM`, host TZ `Etc/UTC`) --
+ * that's what makes `CURRENT_DATE` and the UTC day computed here the same
+ * day. If the host's or the database's timezone changes to
+ * `America/Sao_Paulo`, `CURRENT_DATE` starts rolling over 3h before the UTC
+ * day and the boundary drifts by a day. When touching timezone config,
+ * review this invariant along with it.
  */
 export function isWithinRetention(dateIso: string, now: number = Date.now()): boolean {
   return daysSinceUtc(dateIso, now) <= RETENTION_DAYS;

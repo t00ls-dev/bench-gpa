@@ -140,13 +140,15 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `dashboard.functions.ts`, `content-disposition.ts`, `staging-row.ts`,
   `cache.ts`, `export-pdf.ts`, `csp-server.ts`, `xlsx-parser.ts`,
   `admin-system.functions.ts`.
-- **Restante, não iniciado**: ~10 arquivos maiores de `src/lib/`
-  (`retention.ts`, `utils.ts`, `date-window.ts`, `instrument-server.ts`,
-  `query-config.ts`, `pdf-download-store.ts`, `filter-cascade.ts`,
-  `area.functions.ts`, `import-config.ts`, `csp.ts`), ~28 em
-  `src/components/`, ~14 em `src/routes/`, ~17 em `scripts/` (exceto as 5
-  migrations já aplicadas, imutáveis por design), ~38 arquivos de teste
-  (categoria própria, tratamento a definir).
+- **Etapa 4** (concluída, PR #212): os 10 arquivos restantes de `src/lib/`
+  (parte 2): `retention.ts`, `utils.ts`, `date-window.ts`,
+  `instrument-server.ts`, `query-config.ts`, `pdf-download-store.ts`,
+  `filter-cascade.ts`, `area.functions.ts`, `import-config.ts`, `csp.ts`.
+  **`src/lib/` está completo.**
+- **Restante, não iniciado**: ~28 arquivos em `src/components/`, ~14 em
+  `src/routes/`, ~17 em `scripts/` (exceto as 5 migrations já aplicadas,
+  imutáveis por design), ~38 arquivos de teste (categoria própria,
+  tratamento a definir).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --
