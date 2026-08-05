@@ -316,12 +316,12 @@ describe("useAreaProductsView", () => {
     });
     await waitFor(() => expect(result.current.products.length).toBe(3));
 
-    // sortAsc=false por padrão ao trocar de coluna: nunca-vendido primeiro,
-    // depois do mais parado para o mais recente.
+    // sortAsc=false by default when switching columns: never-sold first,
+    // then from the most idle to the most recent.
     act(() => result.current.toggleSort("daysSince"));
     expect(result.current.products.map((p) => p.prod_code)).toEqual(["P1", "P3", "P2"]);
 
-    // Clique de novo na mesma coluna inverte: mais recente primeiro, nunca-vendido no fim.
+    // Clicking the same column again inverts it: most recent first, never-sold at the end.
     act(() => result.current.toggleSort("daysSince"));
     expect(result.current.products.map((p) => p.prod_code)).toEqual(["P2", "P3", "P1"]);
   });

@@ -31,16 +31,16 @@ describe("sanitizeNext", () => {
     expect(sanitizeNext("http://evil.com/path", ORIGIN)).toBe("/");
   });
 
-  // O bug real corrigido aqui: "/\evil.com" passava num check ingênuo de
-  // prefixo (começa com "/", não começa com "//"), mas o parser de URL
-  // normaliza "\" para "/" e resolve pra uma origem externa.
+  // The real bug fixed here: "/\evil.com" passed a naive prefix check
+  // (starts with "/", doesn't start with "//"), but the URL parser
+  // normalizes "\" to "/" and resolves to an external origin.
   it("falls back to / for a backslash-normalization bypass", () => {
     expect(sanitizeNext("/\\evil.com", ORIGIN)).toBe("/");
     expect(sanitizeNext("\\\\evil.com", ORIGIN)).toBe("/");
   });
 
-  // Mesma classe de bug: tab/quebra de linha são removidos pelo parser antes
-  // de resolver a URL, então "/\t/evil.com" também normaliza pra "//evil.com".
+  // Same class of bug: tabs/newlines are stripped by the parser before
+  // resolving the URL, so "/\t/evil.com" also normalizes to "//evil.com".
   it("falls back to / for a tab/newline-stripping bypass", () => {
     expect(sanitizeNext("/\t/evil.com", ORIGIN)).toBe("/");
     expect(sanitizeNext("/\n/evil.com", ORIGIN)).toBe("/");

@@ -184,9 +184,26 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     `admin-user-management.test.tsx`, `use-wake-lock.test.ts`,
     `retention.test.ts`, `admin-users.functions.guards.test.ts`,
     `admin-docs.functions.guards.test.ts`).
-  - Restam ~16 arquivos de teste menores para a etapa 9; strings de
-    descrição `it("...")`/`describe("...")` em português continuam fora de
-    escopo (categoria própria, ainda não iniciada).
+  - **Etapa 9** (concluída, PR #217): os 16 arquivos de teste restantes com
+    comentário em português (`staging-row.test.ts`, `sanitize-next.test.ts`,
+    `rate-limit.test.ts`, `dashboard.functions.test.ts`,
+    `admin-system.functions.guards.test.ts`, `use-area-pdf-export.test.ts`,
+    `admin-audit-panel.test.tsx`, `admin-utils.test.ts`, `date-window.test.ts`,
+    `audit-tooltip.test.ts`, `api-types.test.ts`,
+    `admin-users.functions.test.ts`, `admin-docs.functions.test.ts`,
+    `use-nav-pending.test.ts`, `filter-cascade.test.ts`,
+    `use-area-products-view.test.ts`). **Todos os arquivos de teste com
+    comentário em português estão traduzidos.**
+  - Strings de descrição `it("...")`/`describe("...")` em português
+    continuam fora de escopo (categoria própria, ainda não iniciada).
+  - **Estado geral da tradução de comentários (Fase 3)**: `src/lib/`,
+    `src/hooks/`, `src/routes/`, `src/components/`, `scripts/` (não-SQL) e
+    todos os arquivos de teste estão completos (Etapas 1-9, PRs #207, #209,
+    #211-#217). Só restam `scripts/migrate-schema.sql` (209 linhas de
+    comentário SQL, majoritariamente dentro das stored procedures --
+    etapa dedicada futura, dado o histórico de cautela desta sessão com
+    essas procedures) e as strings de descrição de teste (categoria à
+    parte, ver acima).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

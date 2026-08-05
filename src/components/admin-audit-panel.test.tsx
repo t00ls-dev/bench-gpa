@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 //
-// buildAuditTooltip é testado separado, em src/lib/audit-tooltip.test.ts.
-// AuditLogSection é testado só até o ponto de existir ou não um botão
-// clicável por linha, sem abrir o Popover do Radix (Portal + ResizeObserver
-// não existem no jsdom deste projeto, ver vitest.setup.ts).
+// buildAuditTooltip is tested separately, in src/lib/audit-tooltip.test.ts.
+// AuditLogSection is only tested up to whether a clickable button exists
+// per row, without opening Radix's Popover (Portal + ResizeObserver don't
+// exist in this project's jsdom, see vitest.setup.ts).
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";

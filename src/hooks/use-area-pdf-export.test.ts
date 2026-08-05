@@ -65,8 +65,8 @@ function product(overrides: Partial<AreaProduct>): AreaProduct {
   };
 }
 
-// daysSinceNum interpreta o próprio lastSaleDate como número de dias, só
-// para deixar o teste do comparador legível sem recalcular datas.
+// daysSinceNum interprets lastSaleDate itself as a number of days, just to
+// keep the comparator test readable without recomputing dates.
 const daysSinceNum = (iso: string | null): number | null => (iso === null ? null : Number(iso));
 const daysSinceLabel = (iso: string | null): string => (iso === null ? "-" : String(Number(iso)));
 
@@ -169,8 +169,8 @@ describe("useAreaPdfExport", () => {
       await result.current.openPdfInNewTab();
     });
     const expectedPrefix = `analise-area-${slugifyFilename("Loja 1 - LEBLON › MERC")}-2026-07-14-a-2026-07-20-`;
-    // Timestamp no fim garante nome único a cada export (evita reaproveitar
-    // PDF antigo em cache quando o mesmo período é exportado de novo).
+    // Timestamp at the end guarantees a unique name for every export
+    // (avoids reusing an old cached PDF when the same period is exported again).
     expect(openPdfBlob).toHaveBeenCalledWith(
       expect.anything(),
       expect.stringMatching(new RegExp(`^${expectedPrefix}\\d{8}-\\d{6}\\.pdf$`)),
