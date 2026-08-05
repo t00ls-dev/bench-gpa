@@ -31,11 +31,12 @@ const ADMIN_ITEMS = [
 
 interface Props {
   isAdmin: boolean;
-  username: string | null;
+  name: string;
+  employeeId: string | null;
   onSignOut: () => void;
 }
 
-export function MobileNav({ isAdmin, username, onSignOut }: Props) {
+export function MobileNav({ isAdmin, name, employeeId, onSignOut }: Props) {
   const loc = useLocation();
   const pendingPath = useNavPendingPath();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -83,11 +84,14 @@ export function MobileNav({ isAdmin, username, onSignOut }: Props) {
         <DrawerContent>
           <div className="flex flex-col items-center pt-6 pb-2">
             <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
-              {(username ?? "?")[0].toUpperCase()}
+              {name[0].toUpperCase()}
             </div>
-            <span className="mt-2 text-sm text-muted-foreground truncate max-w-[80%]">
-              {username ?? "-"}
-            </span>
+            <span className="mt-2 text-sm font-medium truncate max-w-[80%]">{name}</span>
+            {employeeId && (
+              <span className="text-xs text-muted-foreground truncate max-w-[80%]">
+                {employeeId}
+              </span>
+            )}
           </div>
           <div className="space-y-1 px-2 pb-4">
             {isAdmin && (
