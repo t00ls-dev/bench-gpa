@@ -57,11 +57,12 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
-    // Layout e defaults vêm de staging-row.ts, o mesmo módulo que o import via
-    // CLI usa. Esta função mantinha uma cópia própria da lista de colunas: foi
-    // exatamente essa duplicação que deixou os dois caminhos divergirem antes
-    // (o CLI com `?? 0`, este com `?? null`), e o `?? 0` transformava categoria
-    // nula na string "0". Uma fonte só elimina a classe do problema.
+    // Layout and defaults come from staging-row.ts, the same module the CLI
+    // import uses. This function used to keep its own copy of the column
+    // list: that exact duplication is what let the two paths diverge before
+    // (the CLI with `?? 0`, this one with `?? null`), and the `?? 0` turned
+    // a null category into the string "0". A single source eliminates that
+    // whole class of bug.
     const placeholders = data.rows
       .map(() => `(${STAGING_COLS.map(() => "?").join(", ")})`)
       .join(", ");

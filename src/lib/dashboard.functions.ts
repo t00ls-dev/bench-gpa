@@ -98,12 +98,13 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => DashboardRankingsSchema.parse(d))
   .handler(async ({ data }): Promise<DashboardRankingsResult> => {
-    // Mesmo cache que o callMetrics já usava para o dashboard_metrics: esta era
-    // a única metade da tela inicial que ainda batia no banco a cada render.
-    // A proc já varreu a sales_prod_daily_agg cinco vezes, uma por ranking, e
-    // media 3,8s na janela padrão de 7 dias. Hoje varre uma vez só: medido em
-    // prod, 32,4s -> 19,0s numa janela de 28 dias (docs/medicao-performance.md).
-    // Continua cara o bastante para o cache valer.
+    // Same cache callMetrics already used for dashboard_metrics: this was the
+    // only half of the home screen that still hit the database on every
+    // render. The proc used to scan sales_prod_daily_agg five times, once
+    // per ranking, averaging 3.8s on the default 7-day window. Now it scans
+    // once: measured in prod, 32.4s -> 19.0s on a 28-day window
+    // (docs/medicao-performance.md). Still expensive enough for the cache to
+    // be worth it.
     const { cache } = await import("./cache");
     const key = `rankings:${data.dateFrom ?? ""}:${data.dateTo ?? ""}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.limit ?? 10}`;
     return cache.wrap(
@@ -128,8 +129,9 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
           byProduto: parseCodeNameVal(byProduto),
         };
       },
-      // Explícito agora: antes esta chamada omitia o TTL e caía no default de
-      // 60s do SimpleCache, o que era invisível para quem lesse só aqui.
+      // Explicit now: this call used to omit the TTL and fall back to
+      // SimpleCache's 60s default, which was invisible to anyone reading
+      // just this call site.
       CACHE_TTL_SHORT,
     );
   });

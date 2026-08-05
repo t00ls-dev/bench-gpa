@@ -1,14 +1,14 @@
 const FALLBACK = "/";
 
 /**
- * `next` só é confiável se, depois de resolvido pelo parser de URL, aponta
- * pra a mesma origem: comparar prefixos da string crua (`startsWith("/")`,
- * `!startsWith("//")`) não basta: o parser WHATWG normaliza `\` para `/` e
- * remove tab/quebra de linha antes de resolver a URL, então strings como
- * "/\\evil.com" ou "/\t/evil.com" passam num check de prefixo mas resolvem
- * pra uma origem externa. Deixar o próprio parser resolver e comparar o
- * `.origin` final é imune a qualquer variação desse truque de normalização,
- * em vez de tentar adivinhar caso a caso.
+ * `next` is only trustworthy if, once resolved by the URL parser, it points
+ * to the same origin: comparing raw-string prefixes (`startsWith("/")`,
+ * `!startsWith("//")`) isn't enough -- the WHATWG parser normalizes `\` to
+ * `/` and strips tabs/newlines before resolving the URL, so strings like
+ * "/\\evil.com" or "/\t/evil.com" pass a prefix check but resolve to an
+ * external origin. Letting the parser itself resolve it and comparing the
+ * final `.origin` is immune to any variation of that normalization trick,
+ * instead of trying to guess case by case.
  */
 export function sanitizeNext(next: unknown, origin: string): string {
   if (typeof next !== "string" || next === "") return FALLBACK;
