@@ -59,10 +59,11 @@ export function ImportCalendar({ records }: Props) {
   }
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // todayISOBrazil() (não new Date() + getters locais): esse componente só
-  // renderiza client-side hoje (atrás de um clique de aba, ver upload.page.tsx),
-  // então não é um bug ativo, mas usar o mesmo fuso fixo do fmtDT evita a
-  // mesma classe de erro de hidratação se esse gate mudar no futuro.
+  // todayISOBrazil() (not new Date() + local getters): this component only
+  // renders client-side today (behind a tab click, see upload.page.tsx), so
+  // it isn't an active bug, but using the same fixed timezone as fmtDT
+  // avoids the same class of hydration error if that gate changes in the
+  // future.
   const todayIso = todayISOBrazil();
 
   const prevMonth = () =>

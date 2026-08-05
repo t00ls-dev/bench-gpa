@@ -42,10 +42,10 @@ export function UploadDropzone({
   onFilesSelected: (entries: FileEntry[]) => void;
   disabled?: boolean;
 }) {
-  // Ler e parsear os arquivos (worker) acontece antes de onFilesSelected, e
-  // pode levar alguns segundos com vários arquivos/planilhas grandes: sem
-  // isto, a caixa de upload ficava parada nesse intervalo, sem indicar que
-  // algo estava acontecendo.
+  // Reading and parsing the files (worker) happens before onFilesSelected,
+  // and can take a few seconds with several files/large spreadsheets:
+  // without this, the upload box just sat there during that interval, with
+  // no indication that anything was happening.
   const [parsing, setParsing] = useState(false);
   const isDisabled = disabled || parsing;
 

@@ -39,10 +39,10 @@ export function AreaFilters({
   onGruposChange: (v: string[]) => void;
   onSubgruposChange: (v: string[]) => void;
 }) {
-  // Cascata em memória: cada nível filtra o subconjunto da hierarquia que já
-  // casa com os níveis selecionados acima dele. Lógica pura testada em
-  // src/lib/filter-cascade.test.ts, ver comentário lá sobre por que essa
-  // estratégia (em memória) não é unificada com a do FilterBar (server-side).
+  // In-memory cascade: each level filters the subset of the hierarchy that
+  // already matches the levels selected above it. Pure logic tested in
+  // src/lib/filter-cascade.test.ts, see the comment there for why this
+  // (in-memory) strategy isn't unified with FilterBar's (server-side).
   const { stores, deptosOpts, secoesOpts, gruposOpts, subgruposOpts } = useMemo(
     () => computeAreaCascadeOptions(hierarchy, { fStores, fDeptos, fSecoes, fGrupos }),
     [hierarchy, fStores, fDeptos, fSecoes, fGrupos],

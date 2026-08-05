@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 
 /**
- * Barra de progresso fina no topo, sinalizando que uma navegação está em
- * andamento. Alimentada pelo status do router. Um pequeno atraso antes de
- * aparecer evita "piscar" em navegações instantâneas.
+ * Thin progress bar at the top, signaling that a navigation is in
+ * progress. Fed by the router's status. A small delay before it appears
+ * avoids "flashing" on instant navigations.
  */
 export function RouteProgress() {
   const pending = useRouterState({ select: (s) => s.status === "pending" });
-  const [progress, setProgress] = useState(0); // 0 = escondida
+  const [progress, setProgress] = useState(0); // 0 = hidden
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const trickle = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -26,7 +26,7 @@ export function RouteProgress() {
 
     if (pending) {
       clearAll();
-      // Só mostra se a navegação passar de ~80ms: instantâneas nem aparecem.
+      // Only shows if the navigation takes longer than ~80ms: instant ones don't even appear.
       timers.current.push(
         setTimeout(() => {
           setProgress(12);
@@ -37,10 +37,10 @@ export function RouteProgress() {
       );
     } else {
       clearAll();
-      // Completa e some, só quando de fato estava visível. Fica no efeito de
-      // propósito (não dá pra mover pra render): é parte da coreografia
-      // imperativa do timer que a linha seguinte agenda, não estado derivado
-      // de uma prop.
+      // Completes and disappears, only when it was actually visible. Stays
+      // in the effect deliberately (can't be moved to render): it's part of
+      // the imperative timer choreography that the next line schedules, not
+      // state derived from a prop.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProgress((p) => (p > 0 ? 100 : 0));
       timers.current.push(setTimeout(() => setProgress(0), 200));
