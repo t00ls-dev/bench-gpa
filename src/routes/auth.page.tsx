@@ -80,12 +80,11 @@ function AuthPage() {
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>
-              <Label htmlFor="identifier">Usuário ou matrícula</Label>
+              <Label htmlFor="identifier">Usuário</Label>
               <Input
                 id="identifier"
                 type="text"
                 required
-                placeholder="nome.sobrenome ou matrícula"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="mt-1.5"
