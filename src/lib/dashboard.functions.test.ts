@@ -53,8 +53,8 @@ import {
 import db from "./db";
 import { cache } from "./cache";
 
-// A proc devolve 5 rankings: depto, seção, grupo, subgrupo e produto.
-const RESULTADO_DA_PROC = [
+// The proc returns 5 rankings: depto, secao, grupo, subgrupo and product.
+const PROC_RESULT = [
   [
     [{ name: "BAZAR", val: 500 }],
     [{ name: "SECAO A", val: 300 }],
@@ -75,7 +75,7 @@ interface RankingsInput {
   limit: number;
 }
 
-const FILTROS: RankingsInput = {
+const FILTERS: RankingsInput = {
   dateFrom: "2026-07-14",
   dateTo: "2026-07-20",
   stores: [],
@@ -88,13 +88,13 @@ const FILTROS: RankingsInput = {
 
 type RankFn = (d: RankingsInput) => Promise<{ byDepto: unknown[]; byProduto: unknown[] }>;
 const call = (d: Partial<RankingsInput>) =>
-  (getDashboardRankings as unknown as RankFn)({ ...FILTROS, ...d });
+  (getDashboardRankings as unknown as RankFn)({ ...FILTERS, ...d });
 
 beforeEach(() => {
   vi.clearAllMocks();
   cache.destroy();
   (cache as unknown as { store: Map<string, unknown> }).store.clear();
-  vi.mocked(db.query).mockResolvedValue(RESULTADO_DA_PROC as never);
+  vi.mocked(db.query).mockResolvedValue(PROC_RESULT as never);
 });
 
 describe("getDashboardRankings", () => {
