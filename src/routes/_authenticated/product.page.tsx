@@ -12,7 +12,7 @@ import { ProductSearch } from "@/components/product-search";
 import { ProductKPIs } from "@/components/product-kpis";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Loader2 } from "lucide-react";
-import { Route } from "./produto";
+import { Route } from "./product";
 
 const SEARCH_DEBOUNCE_MS = 250;
 const MAX_RECENT_PRODUCTS = 5;

@@ -20,7 +20,7 @@ vi.mock("@tanstack/react-start", () => {
       return {
         inputValidator: () => ({
           handler: (fn: Handler) => async (input: unknown) => {
-            let ctx = { userId: "admin-u1", userEmail: "admin@gpabr.com" };
+            let ctx = { userId: "admin-u1", userUsername: "admin" };
             for (const m of chain.middlewares) {
               const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
                 { context?: unknown } | undefined;
@@ -30,7 +30,7 @@ vi.mock("@tanstack/react-start", () => {
           },
         }),
         handler: (fn: Handler) => async (input: unknown) => {
-          let ctx = { userId: "admin-u1", userEmail: "admin@gpabr.com" };
+          let ctx = { userId: "admin-u1", userUsername: "admin" };
           for (const m of chain.middlewares) {
             const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
               { context?: unknown } | undefined;
@@ -117,7 +117,7 @@ describe("purgeOldAggs", () => {
     expect(db.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("INSERT INTO audit_log"),
-      expect.arrayContaining(["admin-u1", "admin@gpabr.com"]),
+      expect.arrayContaining(["admin-u1", "admin"]),
     );
   });
 });
@@ -163,11 +163,11 @@ describe("getAuditLog", () => {
   const ROW = {
     id: 1,
     created_at: "2026-07-30 10:00:00",
-    actor_email: "admin@gpabr.com",
+    actor_username: "admin",
     action: "data.purge",
     target_type: "data",
     target_id: null,
-    target_email: null,
+    target_username: null,
     detail: "purge manual",
     ip: "203.0.113.5",
   };
@@ -194,7 +194,7 @@ describe("getAuditLog", () => {
   });
 
   it("respeita limit/offset informados e trata campos nulos como null", async () => {
-    const rowComCamposNulos = { ...ROW, actor_email: null, target_id: null, detail: null };
+    const rowComCamposNulos = { ...ROW, actor_username: null, target_id: null, detail: null };
     vi.mocked(db.query)
       .mockResolvedValueOnce([[rowComCamposNulos]] as never)
       .mockResolvedValueOnce([[{ total: 200 }]] as never);
@@ -203,10 +203,10 @@ describe("getAuditLog", () => {
       getAuditLog as (d: {
         limit: number;
         offset: number;
-      }) => Promise<{ events: { actor_email: string | null }[] }>
+      }) => Promise<{ events: { actor_username: string | null }[] }>
     )({ limit: 10, offset: 20 });
 
-    expect(result.events[0].actor_email).toBeNull();
+    expect(result.events[0].actor_username).toBeNull();
     expect(db.query).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("FROM audit_log"),

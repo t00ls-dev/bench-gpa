@@ -1,100 +1,37 @@
-import { useEffect, useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { useSearch } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { LogIn, Loader2 } from "lucide-react";
-import { useEffectiveTheme } from "@/hooks/use-theme";
 import { sanitizeNext } from "@/lib/sanitize-next";
-
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
-const TURNSTILE_BYPASS = import.meta.env.VITE_TURNSTILE_BYPASS === "true";
-
-type TurnstileWidget = {
-  render: (container: HTMLElement, options: Record<string, unknown>) => string;
-  remove: (id: string) => void;
-  reset: (id: string) => void;
-};
-
-function getTurnstile(): TurnstileWidget | undefined {
-  return (window as unknown as { turnstile?: TurnstileWidget }).turnstile;
-}
+import { useTurnstile } from "@/hooks/use-turnstile";
 
 function AuthPage() {
   const { next } = useSearch({ from: "/auth" });
-  const effectiveTheme = useEffectiveTheme();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | undefined>(undefined);
+  const {
+    ref: turnstileRef,
+    token: turnstileToken,
+    reset: resetTurnstile,
+    bypass,
+  } = useTurnstile();
 
   const goNext = () => {
     const target = sanitizeNext(next, window.location.origin);
     window.location.href = target;
   };
 
-  // Injeta o script do Turnstile uma única vez.
-  useEffect(() => {
-    if (TURNSTILE_BYPASS || !TURNSTILE_SITE_KEY) return;
-
-    const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-
-    return () => {
-      script.remove();
-    };
-  }, []);
-
-  // (Re)renderiza o widget honrando o tema efetivo atual. O Turnstile não
-  // permite trocar o tema de um widget já montado, então em mudança de
-  // preferência removemos o anterior e renderizamos de novo.
-  useEffect(() => {
-    if (TURNSTILE_BYPASS) return;
-    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
-
-    let attempts = 0;
-    const poll = setInterval(() => {
-      const ts = getTurnstile();
-      if (ts && turnstileRef.current) {
-        clearInterval(poll);
-        if (widgetIdRef.current) {
-          ts.remove(widgetIdRef.current);
-          setTurnstileToken("");
-        }
-        widgetIdRef.current = ts.render(turnstileRef.current, {
-          sitekey: TURNSTILE_SITE_KEY,
-          theme: effectiveTheme,
-          callback: (token: string) => setTurnstileToken(token),
-          "expired-callback": () => setTurnstileToken(""),
-          "error-callback": () => setTurnstileToken(""),
-        });
-      }
-      if (++attempts > 100) clearInterval(poll);
-    }, 100);
-
-    return () => {
-      clearInterval(poll);
-      const ts = getTurnstile();
-      if (widgetIdRef.current && ts) {
-        ts.remove(widgetIdRef.current);
-        widgetIdRef.current = undefined;
-      }
-    };
-  }, [effectiveTheme]);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || loading) return;
+    if (!identifier || !password || loading) return;
 
-    if (!TURNSTILE_BYPASS && !turnstileToken) {
+    if (!bypass && !turnstileToken) {
       toast.error("Resolva o desafio de segurança e tente novamente.");
       return;
     }
@@ -104,29 +41,23 @@ function AuthPage() {
     try {
       const { login } = await import("@/lib/auth-api");
       const payload: {
-        email: string;
+        identifier: string;
         password: string;
         turnstileToken?: string;
         rememberMe: boolean;
       } = {
-        email: email.trim().toLowerCase(),
+        identifier: identifier.trim(),
         password,
         rememberMe,
       };
-      if (!TURNSTILE_BYPASS) payload.turnstileToken = turnstileToken;
+      if (!bypass) payload.turnstileToken = turnstileToken;
       await login({ data: payload });
       goNext();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao fazer login.";
       toast.error(msg);
       setLoading(false);
-      if (!TURNSTILE_BYPASS) {
-        setTurnstileToken("");
-      }
-      const ts = getTurnstile();
-      if (turnstileRef.current && ts && widgetIdRef.current) {
-        ts.reset(widgetIdRef.current);
-      }
+      if (!bypass) resetTurnstile();
     }
   };
 
@@ -143,18 +74,20 @@ function AuthPage() {
 
         <div className="kpi-card">
           <h2 className="font-display text-xl font-semibold">Entrar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Acesse com seu e-mail e senha.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Acesse com seu usuário ou matrícula e senha.
+          </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="identifier">Usuário ou matrícula</Label>
               <Input
-                id="email"
-                type="email"
+                id="identifier"
+                type="text"
                 required
-                placeholder="nome.sobrenome@gpabr.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nome.sobrenome ou matrícula"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="mt-1.5"
                 autoComplete="username"
               />
@@ -177,7 +110,7 @@ function AuthPage() {
               <Label htmlFor="remember-me">Manter-me conectado por 7 dias</Label>
             </div>
 
-            {!TURNSTILE_BYPASS && <div className="flex justify-center" ref={turnstileRef} />}
+            {!bypass && <div className="flex justify-center" ref={turnstileRef} />}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
@@ -189,6 +122,14 @@ function AuthPage() {
               )}
             </Button>
           </form>
+
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Primeiro acesso?{" "}
+            <Link to="/first-access" className="font-medium text-primary underline">
+              Defina sua senha aqui
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

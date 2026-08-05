@@ -70,7 +70,7 @@ TURNSTILE_BYPASS="true"
 VITE_TURNSTILE_SITE_KEY="1x00000000000000000000AA"
 VITE_TURNSTILE_BYPASS="true"
 
-TEST_ADMIN_EMAIL="test@gpabr.com"
+TEST_ADMIN_USERNAME="test"
 TEST_ADMIN_PASSWORD="devpass123"
 TEST_APP_URL="http://localhost:3000"
 EOF
@@ -82,13 +82,16 @@ disco com segredos de teste, mesmo sendo dev-only.
 ## 4. Criar um usuário de teste
 
 `scripts/create-test-admin.ts` insere um admin usando as credenciais
-hardcoded no próprio script (`test@gpabr.com` / `Gpa@Test1970`). Lê
-`DB_*` do `.env` carregado no processo `bun`:
+hardcoded no próprio script (username `test`, matrícula `00001`, senha
+`Gpa@Test1970`), com `password_changed_at` já preenchido (senão a
+conta nasce em estado de senha "expirada" e cai no gate de troca
+obrigatória em toda verificação manual). Lê `DB_*` do `.env` carregado
+no processo `bun`:
 
 ```bash
 bun run scripts/create-test-admin.ts
 # idempotente? não. Se já existir, apaga antes:
-# mysql -u bench_gpa -pdevpass123 bench_gpa_dev -e "DELETE FROM users WHERE email='test@gpabr.com';"
+# mysql -u bench_gpa -pdevpass123 bench_gpa_dev -e "DELETE FROM users WHERE username='test';"
 ```
 
 ## 5. Subir o dev server
@@ -127,8 +130,8 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.goto("http://localhost:3001/auth", { waitUntil: "domcontentloaded" });
-await page.waitForSelector("input[type=email]");
-await page.type("input[type=email]", "test@gpabr.com");
+await page.waitForSelector("#identifier");
+await page.type("#identifier", "test"); // username OU matrícula, ver create-test-admin.ts
 await page.type("input[type=password]", "Gpa@Test1970"); // ou TEST_ADMIN_PASSWORD do .env
 await page.click('button[type="submit"]');
 await page.waitForSelector(".kpi-card", { timeout: 30000 });

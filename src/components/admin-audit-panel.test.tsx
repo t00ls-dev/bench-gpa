@@ -15,11 +15,11 @@ function row(overrides: Partial<AuditRow> = {}): AuditRow {
   return {
     id: 1,
     created_at: "2026-08-03 10:00:00",
-    actor_email: "admin@gpabr.com",
+    actor_username: "admin",
     action: "auth.login",
     target_type: null,
     target_id: null,
-    target_email: null,
+    target_username: null,
     detail: null,
     ip: "203.0.113.5",
     ...overrides,
@@ -50,13 +50,13 @@ describe("AuditLogSection", () => {
     expect(screen.getByText("algo.inexistente")).toBeInTheDocument();
   });
 
-  it("só torna a ação clicável (com tooltip) quando há e-mail ou detalhe pra mostrar", async () => {
+  it("só torna a ação clicável (com tooltip) quando há username ou detalhe pra mostrar", async () => {
     const events = [
-      row({ id: 1, action: "auth.login", target_email: null, detail: null }),
+      row({ id: 1, action: "auth.login", target_username: null, detail: null }),
       row({
         id: 2,
         action: "user.role_change",
-        target_email: "ana@gpabr.com",
+        target_username: "ana",
         detail: "novo papel: admin",
       }),
     ];

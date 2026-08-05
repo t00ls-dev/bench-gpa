@@ -88,7 +88,7 @@ function Dashboard() {
   };
   const goToProduto = (code?: string) => {
     if (!code) return;
-    navigate({ to: "/produto", search: { plu: code, store: clickThroughStore } });
+    navigate({ to: "/product", search: { plu: code, store: clickThroughStore } });
   };
 
   const { data, isFetching, isLoading } = useQuery({

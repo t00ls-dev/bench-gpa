@@ -14,7 +14,7 @@ export interface AuditEntry {
   /** Ação no formato "dominio.verbo", ex.: "auth.login", "user.role_change". */
   action: string;
   actorId?: string | null;
-  actorEmail?: string | null;
+  actorUsername?: string | null;
   targetType?: string | null;
   targetId?: string | null;
   /** Resumo legível do que mudou. Truncado em 500 chars. */
@@ -38,11 +38,11 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
       }
     }
     await db.query(
-      `INSERT INTO audit_log (actor_id, actor_email, action, target_type, target_id, detail, ip)
+      `INSERT INTO audit_log (actor_id, actor_username, action, target_type, target_id, detail, ip)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         entry.actorId ?? null,
-        entry.actorEmail ?? null,
+        entry.actorUsername ?? null,
         entry.action,
         entry.targetType ?? null,
         entry.targetId ?? null,

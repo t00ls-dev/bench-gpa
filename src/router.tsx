@@ -18,6 +18,15 @@ export const getRouter = () => {
     queryCache: new QueryCache({
       onError: async (error) => {
         const msg = error?.message ?? "";
+        // Sessão continua válida aqui (diferente do ramo "Unauthorized"
+        // abaixo): a senha só precisa ser definida/atualizada antes de
+        // continuar, então NÃO desloga -- só redireciona pra tela de troca.
+        if (msg.includes("PasswordChangeRequired")) {
+          const path = window.location.pathname + window.location.search;
+          const next = path && path !== "/" ? `?next=${encodeURIComponent(path)}` : "";
+          window.location.href = `/change-password${next}`;
+          return;
+        }
         if (
           msg.includes("Unauthorized") ||
           msg.includes("Invalid token") ||

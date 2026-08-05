@@ -10,14 +10,18 @@ import { sentryServerClient } from "./instrument-server";
 export interface AuthContext {
   userId: string;
   userRole: string;
-  userEmail: string;
+  userUsername: string | null;
+  persistent: boolean;
 }
 
 // Marca o erro como já reportado ao Sentry: sentryFunctionErrorMiddleware
 // (src/start.ts), por estar fora de requireAuth na cadeia de middleware,
 // recaptura qualquer erro relançado daqui, duplicando o evento. A captura
 // daqui usa Scope explícito (contexto de usuário), a de lá não — mantém a
-// captura mais rica e faz a outra pular quando já aconteceu.
+// captura mais rica e faz a outra pular quando já aconteceu. Também usado
+// para o caso de PasswordChangeRequired abaixo, que nunca é de fato
+// reportado (não é um erro, é um estado de fluxo esperado), só marcado como
+// "já visto" para a outra camada não reportar por engano.
 const SENTRY_REPORTED = Symbol("sentryReported");
 
 export function isSentryReported(error: unknown): boolean {
@@ -30,7 +34,9 @@ function markSentryReported(error: unknown) {
   }
 }
 
-export const requireAuth = createMiddleware({ type: "function" }).server(async ({ next }) => {
+async function resolveAuthContext(
+  allowPasswordChangeRequired: boolean,
+): Promise<{ context: AuthContext; scope: Sentry.Scope }> {
   if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET not configured");
 
   const request = getRequest();
@@ -59,6 +65,21 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
     throw wrapped;
   }
 
+  // Fora do try/catch acima de propósito: se entrasse ali, cairia no ramo
+  // "else" (mensagem não começa com "Unauthorized") e seria embrulhado em
+  // "Unauthorized: invalid token", destruindo a distinção que o client
+  // precisa pra redirecionar pra /change-password em vez de deslogar. Não é
+  // reportado ao Sentry como erro de verdade: é um estado de fluxo esperado,
+  // só marcado como "já visto" pra sentryFunctionErrorMiddleware não
+  // reportar por engano.
+  if (!allowPasswordChangeRequired && session.passwordChangeRequired) {
+    const err = new Error(
+      "PasswordChangeRequired: a senha precisa ser definida ou atualizada antes de continuar.",
+    );
+    markSentryReported(err);
+    throw err;
+  }
+
   // Referência explícita ao client (ver comentário em instrument-server.ts):
   // Sentry.setUser() ambiente não é confiável dentro da execução de server
   // function do TanStack Start, então usa-se a API de escopo isolado, que
@@ -68,26 +89,44 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
   scope.setClient(sentryServerClient);
   scope.setUser({
     id: session.userId,
-    email: session.userEmail,
+    username: session.userUsername ?? undefined,
     ...(ip !== "unknown" && { ip_address: ip }),
   });
 
-  try {
-    return await next({
-      context: {
-        userId: session.userId,
-        // role vem do BANCO, não do payload: o JWT carrega o papel congelado na
-        // emissão, então um usuário rebaixado seguiria com `userRole: "admin"`
-        // no contexto até a sessão expirar. Hoje nada decide privilégio por
-        // este campo (assertAdmin refaz a consulta via has_role), mas ele
-        // existe e seria uma armadilha para o próximo uso.
-        userRole: session.userRole,
-        userEmail: session.userEmail,
-      } satisfies AuthContext,
-    });
-  } catch (err) {
-    scope.captureException(err);
-    markSentryReported(err);
-    throw err;
-  }
-});
+  return {
+    scope,
+    context: {
+      userId: session.userId,
+      // role vem do BANCO, não do payload: o JWT carrega o papel congelado na
+      // emissão, então um usuário rebaixado seguiria com `userRole: "admin"`
+      // no contexto até a sessão expirar. Hoje nada decide privilégio por
+      // este campo (assertAdmin refaz a consulta via has_role), mas ele
+      // existe e seria uma armadilha para o próximo uso.
+      userRole: session.userRole,
+      userUsername: session.userUsername,
+      persistent: session.persistent,
+    },
+  };
+}
+
+function buildRequireAuth(allowPasswordChangeRequired: boolean) {
+  return createMiddleware({ type: "function" }).server(async ({ next }) => {
+    const { context, scope } = await resolveAuthContext(allowPasswordChangeRequired);
+    try {
+      return await next({ context });
+    } catch (err) {
+      scope.captureException(err);
+      markSentryReported(err);
+      throw err;
+    }
+  });
+}
+
+export const requireAuth = buildRequireAuth(false);
+
+/** Variante usada só por `changePassword`: a própria função que resolve
+ * `passwordChangeRequired` não pode ser bloqueada por ele, senão o usuário
+ * fica preso num estado sem saída (fluxo forçado por expiração vira um
+ * loop). Continua exigindo sessão válida (token, `is_active`, `token_version`)
+ * -- só não checa o status de senha. */
+export const requireAuthAllowExpiredPassword = buildRequireAuth(true);

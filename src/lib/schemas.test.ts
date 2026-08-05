@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { FilterSchema, AreaAnalysisSchema, EmailSchema, PasswordSchema } from "./schemas";
+import {
+  FilterSchema,
+  AreaAnalysisSchema,
+  UsernameSchema,
+  MatriculaSchema,
+  PasswordSchema,
+} from "./schemas";
 
 describe("FilterSchema", () => {
   it("parses valid input with defaults", () => {
@@ -45,13 +51,35 @@ describe("AreaAnalysisSchema", () => {
   });
 });
 
-describe("EmailSchema", () => {
-  it("accepts valid gpabr email", () => {
-    expect(EmailSchema.parse("user@gpabr.com")).toBe("user@gpabr.com");
+describe("UsernameSchema", () => {
+  it("accepts letters, digits, ._-", () => {
+    expect(UsernameSchema.parse("joao.silva-1")).toBe("joao.silva-1");
   });
 
-  it("rejects non-gpabr email", () => {
-    expect(() => EmailSchema.parse("user@gmail.com")).toThrow();
+  it("normaliza para minúsculas", () => {
+    expect(UsernameSchema.parse("Joao.Silva")).toBe("joao.silva");
+  });
+
+  it("rejeita string só de dígitos: ambiguidade com matrícula no login (WHERE username = ? OR matricula = ?)", () => {
+    expect(() => UsernameSchema.parse("12345")).toThrow();
+  });
+
+  it("rejeita caractere fora do charset", () => {
+    expect(() => UsernameSchema.parse("joao@silva")).toThrow();
+  });
+});
+
+describe("MatriculaSchema", () => {
+  it("aceita string só de dígitos", () => {
+    expect(MatriculaSchema.parse("12345")).toBe("12345");
+  });
+
+  it("preserva zero à esquerda (sem cast pra número)", () => {
+    expect(MatriculaSchema.parse("00099")).toBe("00099");
+  });
+
+  it("rejeita letra", () => {
+    expect(() => MatriculaSchema.parse("123a5")).toThrow();
   });
 });
 

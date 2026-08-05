@@ -21,7 +21,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, keywords: "início home" },
-  { to: "/produto", label: "Produto", icon: Package, keywords: "produto busca pesquisa" },
+  { to: "/product", label: "Produto", icon: Package, keywords: "produto busca pesquisa" },
   { to: "/area", label: "Área", icon: Layers, keywords: "área regional" },
   { to: "/upload", label: "Importar", icon: Upload, keywords: "upload importar planilha" },
   { to: "/admin", label: "Administração", icon: Shield, keywords: "admin administração" },
@@ -144,7 +144,7 @@ export function CommandPalette() {
                 <Command.Item
                   key={p.prod_code}
                   value={`prod:${p.prod_code} ${p.prod_name} ${p.prod_code}`}
-                  onSelect={() => run(`/produto?prodCode=${encodeURIComponent(p.prod_code)}`)}
+                  onSelect={() => run(`/product?prodCode=${encodeURIComponent(p.prod_code)}`)}
                   className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm aria-selected:bg-accent aria-selected:text-accent-foreground"
                 >
                   <Package className="size-4 text-muted-foreground" />

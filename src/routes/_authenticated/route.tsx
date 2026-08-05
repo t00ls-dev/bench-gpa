@@ -2,6 +2,7 @@ import {
   createFileRoute,
   Outlet,
   redirect,
+  isRedirect,
   Link,
   useRouter,
   useLocation,
@@ -19,6 +20,7 @@ import {
   BookText,
   HelpCircle,
   Loader2,
+  KeyRound,
 } from "lucide-react";
 import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 import { Button } from "@/components/ui/button";
@@ -53,7 +55,8 @@ const HelpOverlay = lazy(() =>
 
 interface UserProfile {
   id: string;
-  email: string;
+  username: string | null;
+  matricula: string | null;
   name: string;
   role: string;
 }
@@ -70,13 +73,28 @@ export const Route = createFileRoute("/_authenticated")({
         staleTime: QUERY_STALE_IDENTITY,
       });
       if (!user) throw new Error("not authenticated");
+      // Senha ainda não definida (primeiro acesso/reset por admin) ou
+      // expirada (30 dias): bloqueia todo o layout autenticado até resolver.
+      // requireAuth já bloqueia as server functions do mesmo jeito -- este
+      // redirect é só a metade client-side, pra não deixar a navegação
+      // renderizar telas que vão falhar em toda chamada.
+      if (user.passwordChangeRequired) {
+        const next = location.pathname + location.searchStr;
+        throw redirect({
+          to: "/change-password",
+          search: next && next !== "/" ? { next } : { next: undefined },
+        });
+      }
       // beforeLoad roda em server (SSR) e client (hidratação/navegação): cobre
       // erro de client daqui pra frente. Erro dentro de server function usa o
       // mesmo Sentry.setUser() em src/lib/auth-middleware.ts (requireAuth),
       // sem depender deste beforeLoad já ter rodado.
-      Sentry.setUser({ id: user.id, email: user.email, name: user.name });
+      Sentry.setUser({ id: user.id, username: user.username ?? undefined, name: user.name });
       return { user: user as UserProfile };
-    } catch {
+    } catch (err) {
+      // Redirect já resolvido acima (passwordChangeRequired): relança direto,
+      // senão viraria "não autenticado" e mandaria pro /auth errado.
+      if (isRedirect(err)) throw err;
       const next = location.pathname + location.searchStr;
       throw redirect({
         to: "/auth",
@@ -136,8 +154,8 @@ function AuthedLayout() {
   // que garantidamente monta no navegador, que o Sentry do client fica
   // sabendo quem é o usuário.
   useEffect(() => {
-    Sentry.setUser({ id: user.id, email: user.email, name: user.name });
-  }, [user.id, user.email, user.name]);
+    Sentry.setUser({ id: user.id, username: user.username ?? undefined, name: user.name });
+  }, [user.id, user.username, user.name]);
 
   const signOut = async () => {
     const { logout } = await import("@/lib/auth-api");
@@ -158,7 +176,7 @@ function AuthedLayout() {
 
   useGotoHotkey("d", () => router.navigate({ to: "/" }));
   useGotoHotkey("p", () =>
-    router.navigate({ to: "/produto", search: { plu: undefined, store: undefined } }),
+    router.navigate({ to: "/product", search: { plu: undefined, store: undefined } }),
   );
   useGotoHotkey("a", () =>
     router.navigate({
@@ -181,7 +199,7 @@ function AuthedLayout() {
 
   const commonNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/produto", label: "Produto", icon: Package },
+    { to: "/product", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
     { to: "/howto", label: "Como usar", icon: HelpCircle },
   ] as const;
@@ -222,8 +240,19 @@ function AuthedLayout() {
           <SidebarFooter>
             <div className="flex items-center gap-1 px-3 py-2">
               <span className="flex-1 truncate text-xs text-sidebar-foreground/60">
-                {user.email}
+                {user.username ?? user.matricula ?? "-"}
               </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                aria-label="Trocar senha"
+                className="size-7"
+              >
+                <Link to="/change-password" search={{ next: undefined }}>
+                  <KeyRound className="size-4" />
+                </Link>
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -261,7 +290,11 @@ function AuthedLayout() {
             <AppFooter />
           </main>
         </SidebarInset>
-        <MobileNav isAdmin={isAdmin} userEmail={user.email} onSignOut={signOut} />
+        <MobileNav
+          isAdmin={isAdmin}
+          username={user.username ?? user.matricula}
+          onSignOut={signOut}
+        />
       </SidebarProvider>
       <Suspense fallback={null}>
         <CommandPalette />
