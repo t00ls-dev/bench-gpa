@@ -145,10 +145,14 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `instrument-server.ts`, `query-config.ts`, `pdf-download-store.ts`,
   `filter-cascade.ts`, `area.functions.ts`, `import-config.ts`, `csp.ts`.
   **`src/lib/` está completo.**
-- **Restante, não iniciado**: ~28 arquivos em `src/components/`, ~14 em
-  `src/routes/`, ~17 em `scripts/` (exceto as 5 migrations já aplicadas,
-  imutáveis por design), ~38 arquivos de teste (categoria própria,
-  tratamento a definir).
+- **Etapa 5** (concluída, PR #213): 8 arquivos de `src/routes/` com
+  comentários em português (`route.tsx`, `upload.page.tsx`, `__root.tsx`,
+  `index.page.tsx`, `product.page.tsx`, `admin.docs.page.tsx`,
+  `change-password.tsx`, `area.tsx`). Os demais arquivos de rota (wrappers
+  finos, sem lógica) não tinham comentários. **`src/routes/` está completo.**
+- **Restante, não iniciado**: ~28 arquivos em `src/components/`, ~17 em
+  `scripts/` (exceto as 5 migrations já aplicadas, imutáveis por design),
+  ~38 arquivos de teste (categoria própria, tratamento a definir).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

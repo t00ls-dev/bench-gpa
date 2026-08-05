@@ -10,17 +10,18 @@ import { fmtBRShort } from "@/lib/utils";
 import { Route } from "./admin.docs";
 
 /**
- * Data absoluta, não relativa: "última atualização" via git (`lastModified`)
- * conta byte alterado, não conteúdo relevante alterado (uma linha de título
- * já basta pra virar "agora"). `date`, extraída do texto do próprio doc,
- * é preferida por não sofrer desse problema; `lastModified` formatado como
- * data é só o fallback pros poucos docs sem data própria no conteúdo.
+ * Absolute date, not relative: "last updated" via git (`lastModified`)
+ * counts any byte changed, not relevant content changed (a single
+ * title-line edit is already enough to turn it into "now"). `date`,
+ * extracted from the doc's own text, is preferred since it doesn't suffer
+ * from that problem; `lastModified` formatted as a date is just the
+ * fallback for the few docs with no date of their own in the content.
  *
- * fmtBRShort (não date-fns) de propósito: reusa a mesma formatação com fuso
- * fixo do resto do app, em vez de outra biblioteca com o mesmo problema de
- * getters locais por baixo dos panos (era a causa real do Sentry
- * BENCH-GPA-Y continuar disparando em /admin/docs mesmo depois do fix do
- * fmtDT, 04/08/2026).
+ * fmtBRShort (not date-fns) on purpose: reuses the same fixed-timezone
+ * formatting as the rest of the app, instead of another library with the
+ * same local-getters-under-the-hood problem (that was the real cause of
+ * Sentry BENCH-GPA-Y still firing on /admin/docs even after the fmtDT fix,
+ * 08/04/2026).
  */
 function lastUpdated(date: string, lastModified: number | null): string | null {
   if (date) return date;

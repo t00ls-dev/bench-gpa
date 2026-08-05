@@ -6,11 +6,11 @@ export const Route = createFileRoute("/change-password")({
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
-  // Rota fora de _authenticated/ de propósito: um usuário com
-  // passwordChangeRequired ainda não pode navegar pra lugar nenhum do layout
-  // autenticado (o próprio requireAuth bloqueia toda server function até a
-  // senha ser trocada), então herdar aquele beforeLoad formaria um loop de
-  // redirect. Aqui só se exige uma sessão válida (getMe não nulo).
+  // Route deliberately outside _authenticated/: a user with
+  // passwordChangeRequired still can't navigate anywhere in the authenticated
+  // layout (requireAuth itself blocks every server function until the
+  // password is changed), so inheriting that beforeLoad would form a
+  // redirect loop. Here only a valid session is required (getMe not null).
   beforeLoad: async () => {
     try {
       const { getMe } = await import("@/lib/auth-api");
