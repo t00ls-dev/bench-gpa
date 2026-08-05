@@ -55,7 +55,7 @@ function EditUserIdentifiersForm({
   };
 
   return (
-    <DialogContent>
+    <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
       <DialogHeader>
         <DialogTitle>Editar usuário e matrícula</DialogTitle>
       </DialogHeader>
