@@ -41,7 +41,7 @@ const dbRow = (overrides: Record<string, unknown> = {}) => [
       is_active: true,
       token_version: 0,
       username: "test",
-      matricula: null,
+      employee_id: null,
       password_change_required: 0,
       ...overrides,
     },

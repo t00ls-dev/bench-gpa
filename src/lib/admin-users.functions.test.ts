@@ -101,7 +101,7 @@ beforeEach(() => {
 describe("createUser", () => {
   type CreateUserInput = {
     username?: string;
-    matricula?: string;
+    employeeId?: string;
     name: string;
     role: string;
   };
@@ -110,14 +110,14 @@ describe("createUser", () => {
   it("insere usuário sem senha (password fica NULL, sem bcrypt.hash neste caminho)", async () => {
     const result = await call({
       username: "novo.usuario",
-      matricula: "5001",
+      employeeId: "5001",
       name: "New User",
       role: "user",
     });
     expect(result.ok).toBe(true);
     expect(result.id).toBeDefined();
     expect(db.query).toHaveBeenCalledWith(
-      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
       [result.id, "novo.usuario", "5001", "New User", "user"],
     );
     expect(recordAudit).toHaveBeenCalledWith(
@@ -128,15 +128,15 @@ describe("createUser", () => {
   it("aceita só username (matrícula fica NULL, pendente de o admin completar depois)", async () => {
     const result = await call({ username: "novo.usuario", name: "New User", role: "user" });
     expect(db.query).toHaveBeenCalledWith(
-      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
       [result.id, "novo.usuario", null, "New User", "user"],
     );
   });
 
   it("aceita só matrícula (username fica NULL, pendente de o admin completar depois)", async () => {
-    const result = await call({ matricula: "5001", name: "New User", role: "user" });
+    const result = await call({ employeeId: "5001", name: "New User", role: "user" });
     expect(db.query).toHaveBeenCalledWith(
-      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
       [result.id, null, "5001", "New User", "user"],
     );
   });
@@ -169,12 +169,12 @@ describe("updateUserIdentifiers", () => {
       updateUserIdentifiers as (d: {
         userId: string;
         username: string;
-        matricula: string;
+        employeeId: string;
       }) => Promise<{ ok: boolean }>
-    )({ userId: "u1", username: "novo.nome", matricula: "9999" });
+    )({ userId: "u1", username: "novo.nome", employeeId: "9999" });
     expect(result.ok).toBe(true);
     expect(db.query).toHaveBeenCalledWith(
-      "UPDATE users SET username = ?, matricula = ? WHERE id = ?",
+      "UPDATE users SET username = ?, employee_id = ? WHERE id = ?",
       ["novo.nome", "9999", "u1"],
     );
     expect(recordAudit).toHaveBeenCalledWith(
@@ -190,9 +190,9 @@ describe("updateUserIdentifiers", () => {
         updateUserIdentifiers as (d: {
           userId: string;
           username: string;
-          matricula: string;
+          employeeId: string;
         }) => Promise<unknown>
-      )({ userId: "u1", username: "ja.existe", matricula: "1" }),
+      )({ userId: "u1", username: "ja.existe", employeeId: "1" }),
     ).rejects.toThrow("Username ou matrícula já usados por outra conta.");
   });
 });
