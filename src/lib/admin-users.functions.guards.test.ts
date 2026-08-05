@@ -64,7 +64,8 @@ describe("listUsers: guard de admin real (assertAdmin não mockado)", () => {
 
     await expect((listUsers as () => Promise<unknown>)()).rejects.toThrow("Apenas administradores");
     // Só a checagem do próprio assertAdmin rodou: o SELECT em `users` (que
-    // vazaria email/role de todo mundo) nunca chegou a ser disparado.
+    // vazaria username/matrícula/role de todo mundo) nunca chegou a ser
+    // disparado.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
   });

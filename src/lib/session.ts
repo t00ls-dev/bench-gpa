@@ -11,7 +11,6 @@ import {
 interface SessionPayload {
   userId: string;
   role: string;
-  email: string;
   tokenVersion?: number;
   loginAt?: number;
   persistent?: boolean;
@@ -23,13 +22,23 @@ interface AuthUserRow {
   role: string;
   is_active: boolean;
   token_version: number;
+  username: string | null;
+  matricula: string | null;
+  password_change_required: number | boolean;
 }
 
 export interface ResolvedSession {
   userId: string;
   userRole: string;
-  userEmail: string;
   userName: string;
+  userUsername: string | null;
+  userMatricula: string | null;
+  persistent: boolean;
+  /** true se a conta ainda não definiu senha (primeiro acesso/reset por
+   * admin) ou se a senha já passou de 30 dias sem trocar. Quem decide o que
+   * fazer com isto é cada chamador -- resolveSession nunca lança por causa
+   * dele (ver comentário em auth-middleware.ts sobre por quê). */
+  passwordChangeRequired: boolean;
 }
 
 function jwtSecret(): string {
@@ -39,14 +48,13 @@ function jwtSecret(): string {
 }
 
 function signSessionToken(
-  user: { id: string; role: string; email: string; tokenVersion: number },
+  user: { id: string; role: string; tokenVersion: number },
   opts: { persistent: boolean; loginAt: number },
 ): string {
   return jwt.sign(
     {
       userId: user.id,
       role: user.role,
-      email: user.email,
       tokenVersion: user.tokenVersion,
       loginAt: opts.loginAt,
       persistent: opts.persistent,
@@ -70,7 +78,7 @@ function writeSessionCookie(token: string, persistent: boolean): void {
  * "Manter conectado" (fixo, 7 dias) e o modo normal (desliza por atividade,
  * teto de 24h). */
 export function issueSession(
-  user: { id: string; role: string; email: string; tokenVersion: number },
+  user: { id: string; role: string; tokenVersion: number },
   persistent: boolean,
 ): void {
   const loginAt = Math.floor(Date.now() / 1000);
@@ -86,9 +94,13 @@ export function issueSession(
  * e cacheado por 60s) sem querer o efeito colateral de reemitir o cookie a
  * cada chamada.
  *
- * Lança em qualquer falha: cada mensagem começa com "Unauthorized" para quem
- * precisa distinguir o motivo (`requireAuth`); `getMe` só quer saber se deu
- * certo e converte qualquer exceção em `null`.
+ * Lança em qualquer falha de autenticação: cada mensagem começa com
+ * "Unauthorized" para quem precisa distinguir o motivo (`requireAuth`);
+ * `getMe` só quer saber se deu certo e converte qualquer exceção em `null`.
+ *
+ * NÃO lança por causa de `passwordChangeRequired`: isso não é uma falha de
+ * autenticação (a sessão é válida), é um estado que cada chamador decide como
+ * tratar -- ver auth-middleware.ts.
  */
 export async function resolveSession(
   token: string | undefined,
@@ -98,8 +110,21 @@ export async function resolveSession(
 
   const payload = jwt.verify(token, jwtSecret()) as SessionPayload;
 
+  // password_change_required calculado em SQL (não em JS): NOW() do servidor
+  // de banco é a única fonte de tempo que importa aqui, e comparar em SQL
+  // evita depender do fuso horário do processo Node.
+  //
+  // password_changed_at IS NULL trata ausência do timestamp como "precisa
+  // trocar" (fail-safe), não como "nunca expira" (fail-open): em SQL,
+  // qualquer comparação com NULL é NULL/falsy, então sem esse OR explícito
+  // uma conta cujo password_changed_at nunca foi preenchido ficaria isenta
+  // de expirar para sempre.
   const [rowsRaw] = await db.query(
-    "SELECT id, name, role, is_active, token_version FROM users WHERE id = ?",
+    `SELECT id, name, role, is_active, token_version, username, matricula,
+            (password IS NULL
+             OR password_changed_at IS NULL
+             OR password_changed_at < NOW() - INTERVAL 30 DAY) AS password_change_required
+     FROM users WHERE id = ?`,
     [payload.userId],
   );
   const rows = rowsRaw as unknown as AuthUserRow[];
@@ -108,9 +133,10 @@ export async function resolveSession(
   }
   const dbUser = rows[0];
 
-  // Revogação: resetPassword incrementa token_version, então todo token
-  // emitido antes para de valer aqui. `?? 0` cobre tokens emitidos antes desta
-  // coluna existir: nascem em 0 e seguem válidos até expirar naturalmente.
+  // Revogação: resetPassword/changePassword/logout incrementam token_version,
+  // então todo token emitido antes para de valer aqui. `?? 0` cobre tokens
+  // emitidos antes desta coluna existir: nascem em 0 e seguem válidos até
+  // expirar naturalmente.
   if ((payload.tokenVersion ?? 0) !== dbUser.token_version) {
     throw new Error("Unauthorized: session revoked");
   }
@@ -126,12 +152,7 @@ export async function resolveSession(
     }
     if (opts.slide) {
       const refreshed = signSessionToken(
-        {
-          id: dbUser.id,
-          role: dbUser.role,
-          email: payload.email,
-          tokenVersion: dbUser.token_version,
-        },
+        { id: dbUser.id, role: dbUser.role, tokenVersion: dbUser.token_version },
         { persistent: false, loginAt },
       );
       writeSessionCookie(refreshed, false);
@@ -141,7 +162,10 @@ export async function resolveSession(
   return {
     userId: payload.userId,
     userRole: dbUser.role,
-    userEmail: payload.email,
     userName: dbUser.name,
+    userUsername: dbUser.username,
+    userMatricula: dbUser.matricula,
+    persistent: payload.persistent ?? false,
+    passwordChangeRequired: Boolean(dbUser.password_change_required),
   };
 }

@@ -165,12 +165,18 @@ export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.s
  * é conter quem já sabe qual conta está mirando, mesmo trocando de IP a cada
  * request. `maxGlobal` como `Number.MAX_SAFE_INTEGER` desliga de propósito o
  * segundo tier da classe (o disjuntor de carga agregada já existe no
- * authLimiter); este balde só precisa do teto por chave (e-mail).
+ * authLimiter); este balde só precisa do teto por chave.
+ *
+ * A chave é `user:<id>` quando a conta é resolvida (não a string digitada):
+ * alternar entre login por username e por matrícula da MESMA conta não pode
+ * resetar o balde, e `id` nunca muda mesmo que o admin edite o username
+ * depois. Conta não encontrada usa `identifier:<bruto>` como chave, mantendo
+ * a mesma cobertura contra brute-force de conta inexistente.
  */
 const AUTH_ACCOUNT_WINDOW_MS = 15 * 60_000;
-const AUTH_ACCOUNT_MAX_PER_EMAIL = 5;
+const AUTH_ACCOUNT_MAX_PER_KEY = 5;
 export const authAccountLimiter = new RateLimiter(
   AUTH_ACCOUNT_WINDOW_MS,
-  AUTH_ACCOUNT_MAX_PER_EMAIL,
+  AUTH_ACCOUNT_MAX_PER_KEY,
   Number.MAX_SAFE_INTEGER,
 );
