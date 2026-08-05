@@ -1,21 +1,22 @@
-// Lógica de cascata compartilhada entre FilterBar/index.page (Dashboard) e
-// AreaFilters/area.page (Área). As duas telas usam estratégias DIFERENTES
-// para calcular as OPÇÕES disponíveis em cada nível: FilterBar busca em
-// cascata via query no servidor (dashboard não carrega a hierarquia inteira,
-// pelo custo de agregação); AreaFilters recebe a hierarquia completa já
-// carregada e cascateia em memória. Essa parte não é unificada de propósito
-// (ver docs/continuar.md, item 4): fundir trocaria uma decisão de
-// performance deliberada por uma abstração.
+// Cascade logic shared between FilterBar/index.page (Dashboard) and
+// AreaFilters/area.page (Área). The two screens use DIFFERENT strategies to
+// compute the available OPTIONS at each level: FilterBar cascades via a
+// server query (the dashboard doesn't load the whole hierarchy, due to
+// aggregation cost); AreaFilters receives the full hierarchy already
+// loaded and cascades in memory. This part is deliberately not unified
+// (see docs/continuar.md, item 4): merging them would trade a deliberate
+// performance decision for an abstraction.
 //
-// O que É idêntico nas duas telas, e por isso vive aqui: ao trocar um nível,
-// zerar os níveis dependentes (trocar de loja não deixa filtro de subgrupo
-// órfão apontando pra uma combinação que não existe mais).
+// What IS identical on both screens, and therefore lives here: when a
+// level changes, zero out the levels below it in the cascade (switching
+// stores doesn't leave a stale subgroup filter pointing at a combination
+// that no longer exists).
 
 const CASCADE_LEVELS = ["stores", "deptos", "secoes", "grupos", "subgrupos"] as const;
 type CascadeLevel = (typeof CASCADE_LEVELS)[number];
 type CascadeFilters = Record<CascadeLevel, string[]>;
 
-/** Ao setar `level`, devolve o patch que zera todo nível abaixo dele na cascata. */
+/** When setting `level`, returns the patch that zeroes out every level below it in the cascade. */
 export function cascadePatch(level: CascadeLevel, value: string[]): Partial<CascadeFilters> {
   const idx = CASCADE_LEVELS.indexOf(level);
   const patch: Partial<CascadeFilters> = { [level]: value };
@@ -43,9 +44,10 @@ interface AreaCascadeOptions {
 }
 
 /**
- * Cascata em memória do AreaFilters: cada nível filtra o subconjunto da
- * hierarquia que casa com os níveis já selecionados acima dele, e as opções
- * do próprio nível saem desse subconjunto, nunca da hierarquia inteira.
+ * AreaFilters' in-memory cascade: each level filters the subset of the
+ * hierarchy that matches the levels already selected above it, and that
+ * level's own options come from that subset, never from the entire
+ * hierarchy.
  */
 export function computeAreaCascadeOptions(
   hierarchy: HierarchyItem[],

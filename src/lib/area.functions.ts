@@ -16,9 +16,10 @@ import { AreaAnalysisSchema } from "./schemas";
 import { CACHE_TTL_LONG, CACHE_TTL_SHORT } from "./cache";
 
 /**
- * Acima deste tamanho de página a resposta não entra no cache: é o caminho do
- * export para PDF. Ver a nota de invariante no corpo de getAreaAnalysis e o
- * EXPORT_PAGE_SIZE em schemas.ts, que precisa ser maior que este valor.
+ * Above this page size the response doesn't get cached: this is the PDF
+ * export path. See the invariant note in getAreaAnalysis's body and
+ * EXPORT_PAGE_SIZE in schemas.ts, which needs to be greater than this
+ * value.
  */
 export const CACHE_BYPASS_PAGE_SIZE = 1000;
 
@@ -26,13 +27,14 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
-    // "dias sem vender" não é coluna: ordena-se por last_sale_date INVERTIDO,
-    // mais dias parado = venda mais antiga. A tradução precisa acontecer no
-    // servidor porque a listagem é paginada: antes o sortBy 'daysSince' era
-    // mapeado para 'val' e o cliente reordenava só a página recebida, o que
-    // ficou francamente errado quando os PLUs sem venda entraram na lista:
-    // eles têm val = 0, caem no fim da ordenação por venda e nunca chegariam
-    // à primeira página, justamente sendo eles o alvo dessa ordenação.
+    // "days without a sale" isn't a column: it's sorted by last_sale_date
+    // INVERTED, more days idle = older sale. The translation has to happen
+    // on the server because the listing is paginated: sortBy 'daysSince'
+    // used to be mapped to 'val' and the client would only reorder the
+    // received page, which was flatly wrong once PLUs without a sale
+    // entered the list: they have val = 0, land at the end of the sale
+    // ordering, and would never reach the first page -- even though
+    // they're exactly what this sort is meant to surface.
     const byDays = data.sortBy === "daysSince";
     const sortBy = byDays ? "last_sale_date" : data.sortBy;
     const sortDir = byDays ? (data.sortDir === "desc" ? "asc" : "desc") : data.sortDir;
@@ -82,24 +84,25 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       };
     };
 
-    // Esta era a tela mais cara do sistema sem nenhum cache. Medido em prod:
-    // 2,1s na janela padrão de 7 dias e 23,0s quando o usuário abre para 28
-    // (medido com scripts/bench-procs.sh), a cada troca de página, de ordenação
-    // ou de filtro, tudo repetido do zero. Esta proc segue varrendo o agregado
-    // três vezes: reduzir isso foi tentado e regrediu, ver o aviso no cabeçalho
-    // de area_analysis em scripts/migrate-schema.sql.
+    // This used to be the most expensive screen in the system with no
+    // cache at all. Measured in prod: 2.1s on the default 7-day window and
+    // 23.0s when the user opens it for 28 (measured with
+    // scripts/bench-procs.sh), on every page change, sort, or filter, all
+    // repeated from scratch. This proc still scans the aggregate three
+    // times: reducing that was tried and regressed, see the warning at the
+    // top of area_analysis in scripts/migrate-schema.sql.
     //
-    // O export para PDF é a exceção deliberada: ele pede a lista inteira
-    // (EXPORT_PAGE_SIZE), o que dá megabytes por entrada, e é um clique isolado
-    // que raramente se repete com os mesmos filtros. Cachear isso encheria a
-    // memória do processo: a VPS tem 1,9 GB e o SimpleCache não tem teto de
-    // tamanho, só TTL.
+    // The PDF export is the deliberate exception: it requests the entire
+    // list (EXPORT_PAGE_SIZE), which comes out to megabytes per entry, and
+    // is an isolated click that rarely repeats with the same filters.
+    // Caching that would fill up the process's memory: the VPS has 1.9 GB
+    // and SimpleCache has no size cap, only a TTL.
     //
-    // INVARIANTE: CACHE_BYPASS_PAGE_SIZE < EXPORT_PAGE_SIZE <= o teto do
-    // AreaAnalysisSchema (schemas.ts). Se o export deixar de superar este
-    // limiar, a listagem inteira volta a ser cacheada silenciosamente e o
-    // consumo de memória do processo passa a crescer com o uso do PDF.
-    // Coberto por teste em area.functions.test.ts.
+    // INVARIANT: CACHE_BYPASS_PAGE_SIZE < EXPORT_PAGE_SIZE <= the
+    // AreaAnalysisSchema cap (schemas.ts). If the export ever stops
+    // exceeding this threshold, the entire listing silently starts getting
+    // cached again and the process's memory usage grows with PDF usage.
+    // Covered by a test in area.functions.test.ts.
     const { cache } = await import("./cache");
     if ((data.pageSize ?? 0) > CACHE_BYPASS_PAGE_SIZE) return query();
 

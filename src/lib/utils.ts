@@ -14,10 +14,10 @@ export function fmtInt(n: number): string {
 }
 
 /**
- * Humaniza um tamanho em bytes com unidades binárias (1024), escalando até a
- * maior unidade em que o valor fica >= 1, logo 1024 MB = 1 GB (GiB, rotulado
- * "GB" pela convenção de ferramentas de banco). Casas decimais crescem com a
- * unidade: 0 para B/kB, 1 para MB, 2 para GB/TB.
+ * Humanizes a byte size using binary units (1024), scaling up to the
+ * largest unit where the value stays >= 1, so 1024 MB = 1 GB (GiB, labeled
+ * "GB" per database-tooling convention). Decimal places grow with the
+ * unit: 0 for B/kB, 1 for MB, 2 for GB/TB.
  */
 export function fmtBytes(bytes: number): string {
   if (!bytes || bytes < 0) return "0 kB";
@@ -32,17 +32,17 @@ export function fmtBytes(bytes: number): string {
   return `${v.toFixed(decimals)} ${units[i]}`;
 }
 
-// Fuso fixo (America/Sao_Paulo) em vez do fuso ambiente de onde o código
-// roda: mesma filosofia de fmtBRL/fmtInt, que já fixam "pt-BR" em vez de
-// depender do locale do navegador. Sem isto, `new Date(iso).getHours()`
-// (getters locais) lê o horário do fuso de quem está rodando o código —
-// servidor (UTC) no SSR, navegador do usuário (Brasil, UTC-3) na
-// hidratação — produzindo strings diferentes pro mesmo instante e um erro
-// real de hidratação no React (Sentry BENCH-GPA-Y, achado em 04/08/2026,
-// ~4h depois de outro bug de hidratação distinto no mesmo dia). `iso` já
-// chega sempre com sufixo "Z" (dateTimeStr() em api-types.ts usa
-// toISOString()), então o parsing do instante em si nunca foi ambíguo —
-// só a formatação dependia de onde o código roda.
+// Fixed timezone (America/Sao_Paulo) instead of the runtime environment's
+// timezone: same philosophy as fmtBRL/fmtInt, which already fix "pt-BR"
+// instead of depending on the browser's locale. Without this,
+// `new Date(iso).getHours()` (local getters) reads the timezone of whoever
+// is running the code -- server (UTC) during SSR, the user's browser
+// (Brazil, UTC-3) during hydration -- producing different strings for the
+// same instant and a real React hydration error (Sentry BENCH-GPA-Y, found
+// on 08/04/2026, ~4h after a distinct hydration bug on the same day).
+// `iso` always arrives with a "Z" suffix already (dateTimeStr() in
+// api-types.ts uses toISOString()), so parsing the instant itself was
+// never ambiguous -- only the formatting depended on where the code runs.
 const dtFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
   day: "2-digit",
@@ -69,14 +69,15 @@ const todayFormatter = new Intl.DateTimeFormat("pt-BR", {
 });
 
 /**
- * "Hoje" (YYYY-MM-DD) no fuso de Brasília, nunca no fuso de onde o código
- * roda — mesmo motivo do fmtDT acima: `new Date().getDate()` (getters
- * locais) lido no servidor (UTC) e no cliente (Brasil) pode divergir por um
- * dia inteiro numa janela diária (~21h-00h de Brasília, quando UTC já virou
- * o dia seguinte). Risco real só se algum componente que compara contra
- * "hoje" renderizar durante SSR/hidratação; hoje nenhum renderiza (ver
- * import-calendar.tsx), mas fixar o fuso aqui evita a pegadinha se isso
- * mudar no futuro (ex.: aba virar deep-link por URL).
+ * "Today" (YYYY-MM-DD) in the Brasília timezone, never the runtime
+ * environment's timezone -- same reason as fmtDT above:
+ * `new Date().getDate()` (local getters) read on the server (UTC) and on
+ * the client (Brazil) can diverge by a full day during a daily window
+ * (~9pm-midnight Brasília time, when UTC has already rolled over to the
+ * next day). Real risk only if some component that compares against
+ * "today" renders during SSR/hydration; today none do (see
+ * import-calendar.tsx), but fixing the timezone here avoids the trap if
+ * that changes in the future (e.g. a tab becoming a URL deep-link).
  */
 export function todayISOBrazil(): string {
   const parts = Object.fromEntries(
@@ -85,10 +86,6 @@ export function todayISOBrazil(): string {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-/**
- * Formato compacto padrão para exibição visual: DD/MM/AA.
- * Aceita string ISO (YYYY-MM-DD) ou Date.
- */
 export function fmtBRL(n: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -97,6 +94,10 @@ export function fmtBRL(n: number) {
   }).format(n);
 }
 
+/**
+ * Standard compact format for visual display: DD/MM/YY.
+ * Accepts an ISO string (YYYY-MM-DD) or a Date.
+ */
 export function fmtBRShort(input: string | Date | number | null | undefined): string {
   if (!input && input !== 0) return "(sem)";
   let y: number, m: number, d: number;
@@ -110,12 +111,13 @@ export function fmtBRShort(input: string | Date | number | null | undefined): st
     m = Number(M);
     d = Number(D);
   } else if (input instanceof Date || typeof input === "number") {
-    // Fuso fixo (todayFormatter, já usado por todayISOBrazil acima), não
-    // getters locais: Date/number aqui é sempre um instante absoluto (ex.:
-    // new Date(u.created_at) em admin-user-management.tsx), e getFullYear()/
-    // getMonth()/getDate() leem no fuso de quem roda o código — mesma classe
-    // de bug do fmtDT (Sentry BENCH-GPA-Y), só que neste ramo específico
-    // (o ramo `string`, acima, já era seguro por não passar por Date algum).
+    // Fixed timezone (todayFormatter, already used by todayISOBrazil
+    // above), not local getters: Date/number here is always an absolute
+    // instant (e.g. new Date(u.created_at) in admin-user-management.tsx),
+    // and getFullYear()/getMonth()/getDate() read in the timezone of
+    // whoever runs the code -- the same class of bug as fmtDT (Sentry
+    // BENCH-GPA-Y), just in this specific branch (the `string` branch
+    // above was already safe since it never goes through a Date at all).
     const dt = input instanceof Date ? input : new Date(input);
     if (isNaN(dt.getTime())) return "(sem)";
     const parts = Object.fromEntries(

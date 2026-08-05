@@ -1,34 +1,36 @@
 /**
- * Janela de datas que as telas abrem por padrão.
+ * Default date window screens open with.
  *
- * O `7` estava escrito em dois lugares (`filter-bar.tsx` e `area.page.tsx`), e
- * junto com ele a lógica de recortar as últimas N datas disponíveis, quase
- * igual nos dois, com uma diferença sutil que só se percebia comparando os
- * arquivos lado a lado. Aqui vira uma função só, no modelo de `retention.ts`:
- * a constante e a decisão que depende dela moram juntas.
+ * The `7` used to be written in two places (`filter-bar.tsx` and
+ * `area.page.tsx`), and along with it the logic for slicing the last N
+ * available dates, nearly identical in both, with a subtle difference only
+ * noticeable comparing the files side by side. Here it becomes a single
+ * function, following the `retention.ts` model: the constant and the
+ * decision that depends on it live together.
  *
- * O valor não é estético. Agregar a tabela de detalhe inteira (~3M linhas) a
- * cada carga do dashboard levava ~20s; a janela de 7 dias mantém abaixo de 1s.
- * O seletor de período continua permitindo qualquer intervalo: isto é só o
- * ponto de partida.
+ * The value isn't cosmetic. Aggregating the entire detail table (~3M rows)
+ * on every dashboard load took ~20s; the 7-day window keeps it under 1s.
+ * The period picker still allows any range: this is just the starting point.
  *
- * NÃO confundir com o `7` de `shiftPeriod` (api-types.ts), que é "dias numa
- * semana" para o período de comparação. Mesmo número, conceito diferente:
- * mudar a janela padrão não deve mexer na comparação semanal.
+ * Do NOT confuse this with the `7` in `shiftPeriod` (api-types.ts), which is
+ * "days in a week" for the comparison period. Same number, different
+ * concept: changing the default window must not affect the weekly
+ * comparison.
  */
 export const DEFAULT_WINDOW_DAYS = 7;
 
 /**
- * Últimas `DEFAULT_WINDOW_DAYS` datas com dado, dentre as disponíveis.
+ * Last `DEFAULT_WINDOW_DAYS` dates with data, among the available ones.
  *
- * `available` precisa estar em ordem crescente: é a garantia que
- * `getFilterOptions`/`getAreaFilterHierarchy` firmam ao ordenar na borda (há um
- * comentário longo lá explicando por quê: uma proc antiga em produção devolvia
- * DESC e produzia um intervalo invertido que não carregava dado nenhum).
+ * `available` must be in ascending order: that's the guarantee
+ * `getFilterOptions`/`getAreaFilterHierarchy` establish by sorting at the
+ * boundary (there's a long comment there explaining why: an old prod proc
+ * returned DESC and produced an inverted range that loaded no data).
  *
- * `latest` limita o fim da janela à última data importada: a tela Área usa
- * isso; o dashboard não passa e pega tudo o que existe. Devolve `null` quando
- * não há data alguma, para o chamador decidir o que fazer.
+ * `latest` caps the end of the window to the last imported date: the Área
+ * screen uses this; the dashboard doesn't pass it and gets everything that
+ * exists. Returns `null` when there's no date at all, leaving it to the
+ * caller to decide what to do.
  */
 export function defaultDateWindow(
   available: readonly string[],
@@ -37,8 +39,9 @@ export function defaultDateWindow(
   const upTo = latest ? available.filter((d) => d <= latest) : available;
 
   if (upTo.length === 0) {
-    // Sem nenhuma data até o limite: o único recorte possível é o próprio
-    // limite, se houver. É o caso de borda que a tela Área já tratava.
+    // No date at all up to the limit: the only possible slice is the limit
+    // itself, if there is one. This is the edge case the Área screen
+    // already handled.
     return latest ? { from: latest, to: latest } : null;
   }
 
