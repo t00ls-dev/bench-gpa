@@ -147,21 +147,28 @@ continuidade aceitável nos agrupamentos históricos do Sentry, não é bug.
 
 **PR 1 — schema + migração de dados (aditiva, não quebra nada ainda; `email` continua em uso)**
 - `scripts/migrate-schema.sql`: novas colunas (`username`, `matricula` NULL
-  UNIQUE; `password` passa a NULL; `password_changed_at`); `audit_log`
-  nasce com `actor_username` no baseline.
-- `scripts/migrations/000N_users_username_matricula.sql`: `ALTER TABLE`
+  UNIQUE; `password` passa a NULL; `password_changed_at`). A definição de
+  `audit_log` no baseline já nasce com `actor_username` (só afeta instalação
+  nova — ver correção abaixo sobre por que o rename em si só roda no PR 2).
+- `scripts/migrations/0006_users_username_matricula.sql`: `ALTER TABLE`
   idempotente (`ADD COLUMN IF NOT EXISTS`) + backfill
   `UPDATE users SET password_changed_at = NOW() WHERE password IS NOT NULL AND password_changed_at IS NULL`
   (dá 30 dias cheios de folga a partir do rollout em vez de forçar troca em
   massa no primeiro login pós-deploy — sinalizando como default proposto,
   não decisão fechada: se preferir forçar todo mundo a trocar a senha já no
   primeiro login pós-deploy, é só não fazer esse backfill).
-- `scripts/migrations/000N_audit_log_actor_username.sql`: rename
-  `actor_email` -> `actor_username`, protegido por checagem em
-  `information_schema.columns` antes do rename (MariaDB não tem `RENAME
-  COLUMN IF EXISTS`) — mesma classe de bug que o comentário de
-  `0003_token_version.sql` já documenta ("instalação nova sempre quebrava
-  aqui").
+- **Correção feita durante a implementação (não estava no desenho original)**:
+  a migration `0007_audit_log_actor_username.sql` (rename de `actor_email` ->
+  `actor_username`) foi escrita junto com o PR 1, mas **movida para o PR 2**
+  antes do merge. Motivo: `recordAudit()` (`src/lib/audit.ts`) é chamado em
+  todo login/logout/ação administrativa e ainda faz
+  `INSERT INTO audit_log (..., actor_email, ...)` até o código do PR 2 landar.
+  Se o rename rodasse no deploy do PR 1, toda gravação de auditoria falharia
+  (coluna inexistente) no intervalo entre os dois deploys — `recordAudit` é
+  best-effort e nunca lança (não quebraria login), mas deixaria um buraco
+  silencioso na trilha de auditoria, incluindo de logins, até o PR 2 mergear.
+  Rename e código que depende do nome novo precisam landar no mesmo deploy;
+  arquivo com o mesmo conteúdo guardado para reintroduzir no PR 2.
 - `scripts/migrate-users-to-username.ts` (novo, padrão de
   `create-test-admin.ts`: pool `mysql2/promise`, credenciais via `.env`,
   `bun run`), com dois modos:
