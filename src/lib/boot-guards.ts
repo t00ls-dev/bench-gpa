@@ -1,12 +1,12 @@
 /**
- * Checagens que devem impedir o processo de subir, não só logar um aviso.
- * `TURNSTILE_BYPASS=true` desliga o CAPTCHA do login inteiro: é uma flag de
- * dev/teste (ver .claude/skills/run) que nunca deveria vazar pra produção,
- * mas hoje passa direto do `.env` pro processo do PM2
- * (`ecosystem.config.cjs`) sem nenhuma validação. Chamado uma vez, no
- * carregamento do módulo de entrada do servidor (`src/server.ts`): se
- * lançar, o processo nem chega a subir, em vez de rodar em produção com o
- * CAPTCHA desligado silenciosamente.
+ * Checks that must stop the process from booting, not just log a warning.
+ * `TURNSTILE_BYPASS=true` disables the entire login CAPTCHA: it's a dev/test
+ * flag (see .claude/skills/run) that should never leak into production, but
+ * today it flows straight from `.env` into the PM2 process
+ * (`ecosystem.config.cjs`) with no validation. Called once, when the
+ * server's entry module loads (`src/server.ts`): if it throws, the process
+ * never even boots, instead of running in production with the CAPTCHA
+ * silently disabled.
  */
 export function assertSafeBoot(env: { NODE_ENV?: string; TURNSTILE_BYPASS?: string }): void {
   if (env.NODE_ENV === "production" && env.TURNSTILE_BYPASS === "true") {

@@ -1,18 +1,18 @@
-// Layout de colunas da tabela staging_sales, compartilhado pelo import via CLI
-// (scripts/import.ts). O default de cada coluna ausente na linha de origem é
-// crítico para a integridade dos dados:
+// Column layout of the staging_sales table, shared with the CLI import
+// (scripts/import.ts). The default for each column missing from the source
+// row is critical to data integrity:
 //
-//   - coluna numérica (val_vda)            -> 0
-//   - colunas de texto (nomes/categorias)  -> NULL
+//   - numeric column (val_vda)             -> 0
+//   - text columns (names/categories)      -> NULL
 //
-// Um depto/secao/grupo/subgrupo nulo TEM de permanecer NULL. Se cair num
-// default `0`, o MariaDB coage o número para a string "0" no VARCHAR e esse
-// "0" vaza para a filter_hierarchy e para os rankings (bySubgrupo etc.) como
-// se fosse uma categoria real.
+// A null depto/secao/grupo/subgrupo MUST stay NULL. If it falls back to `0`,
+// MariaDB coerces the number to the string "0" in the VARCHAR, and that "0"
+// leaks into filter_hierarchy and the rankings (bySubgrupo etc.) as if it
+// were a real category.
 //
-// val_vda é a única medida: o export do GPA não traz quantidade, custo,
-// devolução nem margem (verificado nas 68 planilhas de data/). As colunas
-// correspondentes foram removidas na migration 0002.
+// val_vda is the only measure: the GPA export doesn't carry quantity, cost,
+// returns, or margin (verified across the 68 spreadsheets in data/). The
+// corresponding columns were removed in migration 0002.
 
 export const STAGING_COLS = [
   "sale_date",
@@ -28,17 +28,17 @@ export const STAGING_COLS = [
   "val_vda",
 ] as const;
 
-// Colunas numéricas: default 0 quando ausentes. Todo o resto é texto (default NULL).
+// Numeric columns: default to 0 when missing. Everything else is text (default NULL).
 const NUMERIC_COLS = new Set<string>(["val_vda"]);
 
-/** Valor default de uma coluna do staging quando ela está ausente/nula na origem. */
+/** Default value for a staging column when it's missing/null in the source. */
 export function stagingCellDefault(col: string): 0 | null {
   return NUMERIC_COLS.has(col) ? 0 : null;
 }
 
 /**
- * Monta a linha posicional para o INSERT em staging_sales, preenchendo
- * sale_date/batch_id e aplicando o default correto por tipo de coluna.
+ * Builds the positional row for the staging_sales INSERT, filling in
+ * sale_date/batch_id and applying the correct default per column type.
  */
 export function toStagingRow(
   row: Record<string, unknown>,

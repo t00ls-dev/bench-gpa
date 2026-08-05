@@ -123,7 +123,7 @@ export interface AuditRow {
   action: string;
   target_type: string | null;
   target_id: string | null;
-  /** Username atual do usuário-alvo (JOIN em `users`), null se o alvo não for um usuário ou não existir mais. */
+  /** Target user's current username (JOIN on `users`), null if the target isn't a user or no longer exists. */
   target_username: string | null;
   detail: string | null;
   ip: string | null;
@@ -145,10 +145,10 @@ export const getAuditLog = createServerFn({ method: "POST" })
     const offset = data.offset ?? 0;
     const [[rows], [countRows]] = await Promise.all([
       db.query(
-        // LEFT JOIN em vez de confiar em texto gravado no `detail`: resolve o
-        // username do alvo pelo target_id pra qualquer linha, inclusive as
-        // gravadas antes de existir esse recurso. Sempre o username ATUAL
-        // (updateUserIdentifiers permite editar depois do evento gravado).
+        // LEFT JOIN instead of relying on text stored in `detail`: resolves
+        // the target's username by target_id for any row, including ones
+        // recorded before this feature existed. Always the CURRENT username
+        // (updateUserIdentifiers allows editing after the event was recorded).
         `SELECT a.id, a.created_at, a.actor_username, a.action, a.target_type, a.target_id,
                 u.username AS target_username, a.detail, a.ip
            FROM audit_log a
@@ -177,35 +177,36 @@ export const getAuditLog = createServerFn({ method: "POST" })
   });
 
 /**
- * Jobs de cron conhecidos + prazo (horas) além do qual são considerados atrasados.
+ * Known cron jobs + deadline (hours) beyond which they're considered overdue.
  *
- * O rótulo da purga interpola RETENTION_DAYS em vez de trazer o número escrito.
- * Antes era a string fixa "Purga (180 dias)", no MESMO arquivo que já importa a
- * constante e a usa corretamente em purgeOldAggs. Bastava mudar a retenção para
- * o painel admin passar a exibir um prazo que não é o praticado. `schedule` e
- * `maxHours` seguem o mesmo raciocínio, agora como PURGE_CRON_LABEL e
- * PURGE_MAX_HOURS_OVERDUE em retention.ts: ver lá o porquê de cada valor.
+ * The purge label interpolates RETENTION_DAYS instead of a hardcoded number.
+ * It used to be the fixed string "Purga (180 dias)", in the SAME file that
+ * already imports the constant and uses it correctly in purgeOldAggs. All
+ * it took was changing the retention for the admin panel to show a deadline
+ * that no longer matched reality. `schedule` and `maxHours` follow the same
+ * reasoning, now as PURGE_CRON_LABEL and PURGE_MAX_HOURS_OVERDUE in
+ * retention.ts: see there for why each value is what it is.
  *
- * `import-watch` saiu desta lista em 2026-07-26, quando o cron dele foi
- * desligado (a importação passou a ser pela tela /upload ou sob demanda no
- * servidor). Um job SEM cron aqui fica com o último heartbeat parado no tempo e
- * é exibido como ATRASADO para sempre: alarme falso permanente, o oposto do que
- * este painel serve. A linha antiga continua na tabela cron_heartbeat como
- * registro histórico, apenas não é mais lida. Ao reativar o cron, reintroduzir o
- * job aqui E a linha em scripts/setup-crons.sh.
+ * `import-watch` left this list on 2026-07-26, when its cron was turned off
+ * (importing moved to the /upload screen or on-demand on the server). A job
+ * with NO cron here has its last heartbeat frozen in time and shows up as
+ * OVERDUE forever: a permanent false alarm, the opposite of what this panel
+ * is for. The old row still lives in the cron_heartbeat table as a
+ * historical record, it just isn't read anymore. If the cron is reactivated,
+ * reintroduce the job here AND the line in scripts/setup-crons.sh.
  */
 const KNOWN_JOBS: {
   job: string;
   label: string;
-  /** Texto completo pro tooltip, quando o label abrevia (ver HeartbeatCard). */
+  /** Full text for the tooltip, when the label is abbreviated (see HeartbeatCard). */
   hint?: string;
   maxHours: number;
   schedule: string;
 }[] = [
   {
     job: "purge",
-    // Curto de propósito: o rótulo completo (no hint) quebrava o badge de
-    // status ao lado no card (ver admin-audit-panel.tsx).
+    // Deliberately short: the full label (in hint) broke the status badge
+    // next to it on the card (see admin-audit-panel.tsx).
     label: "Limpeza de dados antigos",
     hint: `Remove agregados de vendas (diários e por produto) e logs de importação com mais de ${RETENTION_DAYS} dias, mantendo o banco otimizado sem afetar dados recentes.`,
     maxHours: PURGE_MAX_HOURS_OVERDUE,
@@ -229,7 +230,7 @@ export interface HeartbeatRow {
   last_status: string | null;
   last_detail: string | null;
   last_duration_ms: number | null;
-  /** true = nunca rodou ou passou do prazo esperado. */
+  /** true = never ran, or past the expected deadline. */
   overdue: boolean;
 }
 

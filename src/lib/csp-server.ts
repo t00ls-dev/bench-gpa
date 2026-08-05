@@ -1,21 +1,22 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
- * Implementação real do nonce por requisição, isolada num arquivo que só o
- * server entry (src/server.ts) importa. `node:async_hooks` não existe no
- * navegador: um import estático dele aqui, se este arquivo fosse importado
- * por código compartilhado com o client (como router.tsx, via getCspNonce),
- * já quebra a avaliação do módulo assim que o bundle do client carrega —
- * regressão real, achada em produção em 04/08/2026, poucas horas depois
- * desta mudança ir pro ar (ver histórico de src/lib/csp.ts). Por isso a
- * leitura do nonce (getCspNonce, chamada por router.tsx nos dois lados) mora
- * num arquivo à parte, sem nenhum import do Node, que só enxerga isto via
- * globalThis — nunca precisa importar este módulo.
+ * Real implementation of the per-request nonce, isolated in a file that
+ * only the server entry (src/server.ts) imports. `node:async_hooks` doesn't
+ * exist in the browser: a static import of it here, if this file were
+ * imported by code shared with the client (like router.tsx, via
+ * getCspNonce), would break module evaluation as soon as the client bundle
+ * loads -- a real regression, found in production on 08/04/2026, a few
+ * hours after this change shipped (see the history in src/lib/csp.ts).
+ * That's why reading the nonce (getCspNonce, called by router.tsx on both
+ * sides) lives in a separate file, with no Node import at all, which only
+ * ever sees this through globalThis -- it never needs to import this
+ * module.
  *
- * AsyncLocalStorage isola por cadeia de execução assíncrona, não por módulo:
- * cada chamada a runWithCspNonce tem seu próprio valor, mesmo entrelaçada com
- * outras no mesmo processo (requisições concorrentes não vazam nonce uma pra
- * outra).
+ * AsyncLocalStorage isolates by async execution chain, not by module: each
+ * call to runWithCspNonce has its own value, even interleaved with others
+ * in the same process (concurrent requests don't leak a nonce into each
+ * other).
  */
 const nonceStorage = new AsyncLocalStorage<string>();
 
