@@ -9,10 +9,11 @@ e como executar quando for a vez.
 ## Status
 
 - `matricula` -> `employee_id`: **concluído** (PR 1 #203 schema aditivo, PR
-  2 corte de aplicação, PR 3 limpeza/DROP COLUMN pendente). Dividido do
+  2 #204 corte de aplicação, PR 3 limpeza/DROP COLUMN). Dividido do
   restante desta Fase 2 por decisão do usuário: escopo contido (só a
   tabela `users`, zero stored procedure envolvida, confirmado lendo o
-  `migrate-schema.sql` inteiro).
+  `migrate-schema.sql` inteiro). Coluna `matricula` removida do banco,
+  `employee_id` é a única fonte de verdade.
 - `depto/secao/grupo/subgrupo/val_vda`: ainda não iniciado. Ver seção
   "Fase 2" abaixo.
 
