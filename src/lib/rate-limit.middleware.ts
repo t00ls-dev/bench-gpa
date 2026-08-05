@@ -3,10 +3,10 @@ import { getRequest } from "@tanstack/react-start/server";
 import { apiLimiter, uploadLimiter, authLimiter, getClientIp } from "./rate-limit";
 
 export function requireRateLimit(tier: "api" | "upload" | "auth" = "api") {
-  // "auth": mesmo teto do login (10/IP, 40 global) -- changePassword faz um
-  // bcrypt.compare tão caro em CPU quanto um login (ver BCRYPT_COST em
-  // auth-config.ts), o tier "api" genérico (300/min) seria um vetor de DoS de
-  // CPU numa VPS de um núcleo só.
+  // "auth": same ceiling as login (10/IP, 40 global) -- changePassword does a
+  // bcrypt.compare just as CPU-expensive as a login (see BCRYPT_COST in
+  // auth-config.ts), the generic "api" tier (300/min) would be a CPU DoS
+  // vector on a single-core VPS.
   const limiter = tier === "upload" ? uploadLimiter : tier === "auth" ? authLimiter : apiLimiter;
 
   return createMiddleware({ type: "function" }).server(async ({ next }) => {

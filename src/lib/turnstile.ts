@@ -1,10 +1,9 @@
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 /**
- * Turnstile está ativo (e portanto obrigatório) quando há uma secret
- * configurada e o bypass não está ligado. Serve para o login exigir o token:
- * fail-closed: quando ativo, uma requisição sem token deve ser recusada, não
- * ignorada.
+ * Turnstile is active (and therefore required) when a secret is configured
+ * and bypass isn't on. Used so login requires the token: fail-closed, when
+ * active a request without a token must be rejected, not ignored.
  */
 export function isTurnstileEnabled(): boolean {
   return process.env.TURNSTILE_BYPASS !== "true" && !!process.env.TURNSTILE_SECRET_KEY;

@@ -18,18 +18,22 @@ function setCachedAdmin(userId: string, result: boolean): void {
 }
 
 /**
- * Descarta o veredito cacheado de um usuário. Precisa ser chamado sempre que
- * `role` ou `is_active` mudarem: `has_role` filtra pelos dois, então ambos
- * alteram o resultado.
+ * Discards a user's cached verdict. Must be called whenever `role` or
+ * `is_active` change: `has_role` filters on both, so both affect the result.
  *
- * Sem isso o TTL de 5 min valia nos dois sentidos: um admin rebaixado ou
- * inativado seguia com privilégio por até 5 minutos, e (o que aparecia bem
- * mais no uso diário) promover alguém a admin não surtia efeito nenhum
- * durante esse tempo, porque o `false` também ficava cacheado.
+ * Without this the 5min TTL cut both ways: a demoted or deactivated admin
+ * kept the privilege for up to 5 minutes, and (the one that showed up more
+ * in daily use) promoting someone to admin had no effect during that
+ * window, because the `false` was cached too.
  *
- * O cache é por processo. Hoje o PM2 roda `instances: 1` em modo fork, então há
- * um só; se um dia virar cluster, isto precisa virar invalidação compartilhada
- * (o TTL de 5 min continua sendo o piso de garantia).
+ * The cache is per process. PM2 runs `instances: 2` in cluster mode (see
+ * docs/medicao-performance.md, 2026-08-04), so invalidating in one worker
+ * does NOT clear the other's cache: a stale verdict can still serve from
+ * the second worker for up to 5 minutes after a role/is_active change.
+ * Known, accepted gap for now (see the cluster-mode rate-limit dilution
+ * entry in the same doc for the reasoning); revisit with a shared
+ * invalidation mechanism (Redis, DB-backed flag) if this TTL window turns
+ * out to matter in practice.
  */
 export function invalidateAdminCache(userId: string): void {
   adminCache.delete(userId);

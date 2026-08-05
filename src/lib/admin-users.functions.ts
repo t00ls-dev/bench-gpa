@@ -24,18 +24,18 @@ export const listUsers = createServerFn({ method: "GET" })
         name: String(rec.name ?? ""),
         role: String(rec.role ?? ""),
         is_active: Boolean(rec.is_active),
-        // true enquanto a conta não concluiu o primeiro acesso (ou foi
-        // resetada por um admin, mesmo estado -- ver setInitialPassword em
-        // auth-api.ts). Calculado no SELECT em vez de reimplicar a mesma
-        // regra no client.
+        // true while the account hasn't completed first access (or was
+        // reset by an admin, same state -- see setInitialPassword in
+        // auth-api.ts). Computed in the SELECT instead of duplicating the
+        // same rule on the client.
         pending: Boolean(rec.pending),
         created_at: dateTimeStr(rec.created_at),
       };
     });
   });
 
-// "" e ausente são tratados como "não informado": o formulário manda string
-// vazia para o campo que o admin deixou em branco, não `undefined`.
+// "" and absent are both treated as "not provided": the form sends an empty
+// string for the field the admin left blank, not `undefined`.
 const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
 
 export const createUser = createServerFn({ method: "POST" })
@@ -48,9 +48,10 @@ export const createUser = createServerFn({ method: "POST" })
         name: z.string().trim().min(1, "Nome obrigatório").max(120),
         role: RoleEnum,
       })
-      // Só 1 dos dois basta -- o outro fica NULL, mesmo estado "pendente de
-      // completar" que já existe para os usuários migrados do e-mail antigo
-      // (ver updateUserIdentifiers, edit-user-identifiers-dialog.tsx).
+      // Only 1 of the two is required -- the other stays NULL, the same
+      // "pending completion" state that already exists for users migrated
+      // from the old email model (see updateUserIdentifiers,
+      // edit-user-identifiers-dialog.tsx).
       .refine((d) => d.username !== undefined || d.employeeId !== undefined, {
         message: "Informe usuário ou matrícula.",
         path: ["username"],
@@ -60,9 +61,9 @@ export const createUser = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const id = crypto.randomUUID();
-    // password nasce NULL: a conta só ganha senha no primeiro acesso
-    // (setInitialPassword, auth-api.ts). Admin não define senha nenhuma
-    // aqui -- zero bcrypt.hash neste caminho.
+    // password is born NULL: the account only gets a password on first
+    // access (setInitialPassword, auth-api.ts). Admin doesn't set any
+    // password here -- zero bcrypt.hash in this path.
     await db.query(
       "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
       [id, data.username ?? null, data.employeeId ?? null, data.name, data.role],
@@ -126,11 +127,13 @@ export const resetPassword = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => z.object({ userId: UserIdSchema }).parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    // Zera password e password_changed_at: mesmo estado de uma conta recém
-    // criada, reusando o fluxo de primeiro acesso (setInitialPassword) em vez
-    // de o admin definir uma senha temporária. token_version + 1 derruba as
-    // sessões já abertas com a senha antiga -- sem isto, o JWT continuaria
-    // aceito até expirar sozinho (até 7 dias numa sessão "manter conectado").
+    // Zeroes out password and password_changed_at: same state as a
+    // freshly created account, reusing the first-access flow
+    // (setInitialPassword) instead of the admin setting a temporary
+    // password. token_version + 1 revokes sessions already open with the
+    // old password -- without this, the JWT would keep being accepted
+    // until it expired on its own (up to 7 days on a "keep me signed in"
+    // session).
     await db.query(
       "UPDATE users SET password = NULL, password_changed_at = NULL, token_version = token_version + 1 WHERE id = ?",
       [data.userId],

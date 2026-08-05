@@ -14,14 +14,15 @@ export interface AuthContext {
   persistent: boolean;
 }
 
-// Marca o erro como já reportado ao Sentry: sentryFunctionErrorMiddleware
-// (src/start.ts), por estar fora de requireAuth na cadeia de middleware,
-// recaptura qualquer erro relançado daqui, duplicando o evento. A captura
-// daqui usa Scope explícito (contexto de usuário), a de lá não — mantém a
-// captura mais rica e faz a outra pular quando já aconteceu. Também usado
-// para o caso de PasswordChangeRequired abaixo, que nunca é de fato
-// reportado (não é um erro, é um estado de fluxo esperado), só marcado como
-// "já visto" para a outra camada não reportar por engano.
+// Marks the error as already reported to Sentry: sentryFunctionErrorMiddleware
+// (src/start.ts), being outside requireAuth in the middleware chain,
+// recaptures any error re-thrown from here, duplicating the event. The
+// capture here uses an explicit Scope (user context), the one there doesn't
+// -- keeps the richer capture and makes the other one skip when it already
+// happened. Also used for the PasswordChangeRequired case below, which is
+// never actually reported (it's not an error, it's an expected flow state),
+// just marked "already seen" so the other layer doesn't report it by
+// mistake.
 const SENTRY_REPORTED = Symbol("sentryReported");
 
 export function isSentryReported(error: unknown): boolean {
@@ -46,15 +47,17 @@ async function resolveAuthContext(
 
   let session;
   try {
-    // slide: true: toda chamada autenticada renova a sessão "normal" por mais
-    // INACTIVITY_TIMEOUT_SECONDS, é isso que dá o comportamento de expiração
-    // por inatividade em vez de um prazo fixo desde o login.
+    // slide: true: every authenticated call renews the "normal" session for
+    // another INACTIVITY_TIMEOUT_SECONDS, that's what gives the
+    // inactivity-based expiration behavior instead of a fixed deadline from
+    // login.
     session = await resolveSession(token, { slide: true });
   } catch (err) {
-    // Escopo estreito de propósito: só cobre a resolução da sessão. Um catch
-    // amplo (incluindo o next() abaixo) mascararia qualquer erro real de
-    // dentro do handler como "Unauthorized: invalid token", perdendo o erro
-    // original (mesmo indo pro .cause, é o tipo de bug que confunde debug).
+    // Narrow scope on purpose: only covers session resolution. A broad
+    // catch (including the next() below) would mask any real error inside
+    // the handler as "Unauthorized: invalid token", losing the original
+    // error (even going to .cause, it's the kind of bug that confuses
+    // debugging).
     sentryServerClient?.captureException(err);
     if (err instanceof Error && err.message.startsWith("Unauthorized")) {
       markSentryReported(err);
@@ -65,13 +68,13 @@ async function resolveAuthContext(
     throw wrapped;
   }
 
-  // Fora do try/catch acima de propósito: se entrasse ali, cairia no ramo
-  // "else" (mensagem não começa com "Unauthorized") e seria embrulhado em
-  // "Unauthorized: invalid token", destruindo a distinção que o client
-  // precisa pra redirecionar pra /change-password em vez de deslogar. Não é
-  // reportado ao Sentry como erro de verdade: é um estado de fluxo esperado,
-  // só marcado como "já visto" pra sentryFunctionErrorMiddleware não
-  // reportar por engano.
+  // Outside the try/catch above on purpose: if it were inside, it'd fall
+  // into the "else" branch (message doesn't start with "Unauthorized") and
+  // get wrapped as "Unauthorized: invalid token", destroying the distinction
+  // the client needs to redirect to /change-password instead of logging
+  // out. Not reported to Sentry as a real error: it's an expected flow
+  // state, just marked "already seen" so sentryFunctionErrorMiddleware
+  // doesn't report it by mistake.
   if (!allowPasswordChangeRequired && session.passwordChangeRequired) {
     const err = new Error(
       "PasswordChangeRequired: a senha precisa ser definida ou atualizada antes de continuar.",
@@ -80,10 +83,10 @@ async function resolveAuthContext(
     throw err;
   }
 
-  // Referência explícita ao client (ver comentário em instrument-server.ts):
-  // Sentry.setUser() ambiente não é confiável dentro da execução de server
-  // function do TanStack Start, então usa-se a API de escopo isolado, que
-  // não depende de lookup implícito.
+  // Explicit reference to the client (see comment in instrument-server.ts):
+  // ambient Sentry.setUser() isn't reliable inside a TanStack Start server
+  // function's execution, so the isolated-scope API is used instead, which
+  // doesn't depend on implicit lookup.
   const ip = getClientIp(request);
   const scope = new Sentry.Scope();
   scope.setClient(sentryServerClient);
@@ -97,11 +100,12 @@ async function resolveAuthContext(
     scope,
     context: {
       userId: session.userId,
-      // role vem do BANCO, não do payload: o JWT carrega o papel congelado na
-      // emissão, então um usuário rebaixado seguiria com `userRole: "admin"`
-      // no contexto até a sessão expirar. Hoje nada decide privilégio por
-      // este campo (assertAdmin refaz a consulta via has_role), mas ele
-      // existe e seria uma armadilha para o próximo uso.
+      // role comes from the DATABASE, not the payload: the JWT carries the
+      // role frozen at issuance, so a demoted user would keep
+      // `userRole: "admin"` in the context until the session expired.
+      // Nothing decides privilege from this field today (assertAdmin
+      // re-runs the query via has_role), but it exists and would be a trap
+      // for the next use.
       userRole: session.userRole,
       userUsername: session.userUsername,
       persistent: session.persistent,
@@ -124,9 +128,9 @@ function buildRequireAuth(allowPasswordChangeRequired: boolean) {
 
 export const requireAuth = buildRequireAuth(false);
 
-/** Variante usada só por `changePassword`: a própria função que resolve
- * `passwordChangeRequired` não pode ser bloqueada por ele, senão o usuário
- * fica preso num estado sem saída (fluxo forçado por expiração vira um
- * loop). Continua exigindo sessão válida (token, `is_active`, `token_version`)
- * -- só não checa o status de senha. */
+/** Variant used only by `changePassword`: the function that resolves
+ * `passwordChangeRequired` itself can't be blocked by it, or the user gets
+ * stuck in a dead end (the forced-expiry flow turns into a loop). Still
+ * requires a valid session (token, `is_active`, `token_version`) -- just
+ * doesn't check password status. */
 export const requireAuthAllowExpiredPassword = buildRequireAuth(true);

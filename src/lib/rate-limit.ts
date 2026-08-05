@@ -18,20 +18,21 @@ export class RateLimiter {
   }
 
   /**
-   * A ordem dos dois orçamentos importa: o teto por IP é avaliado PRIMEIRO e,
-   * se já reprovar, a requisição sai sem tocar o contador global.
+   * The order of the two budgets matters: the per-IP ceiling is evaluated
+   * FIRST, and if it already fails, the request leaves without touching the
+   * global counter.
    *
-   * Antes os dois contadores eram incrementados de uma vez, antes de qualquer
-   * veredito: então as rejeições do próprio abusador continuavam empurrando o
-   * contador compartilhado. Com o authLimiter (10/IP, 40 global), bastava um
-   * curl em loop de um único IP: as 10 primeiras passavam, da 11ª em diante
-   * eram rejeitadas mas seguiam somando, e ao chegar em 41 o login caía para
-   * TODOS os usuários: um atacante amplificado para 100% da base, sem botnet.
+   * Both counters used to be incremented at once, before any verdict: so
+   * the abuser's own rejections kept pushing the shared counter. With
+   * authLimiter (10/IP, 40 global), a single-IP curl loop was enough: the
+   * first 10 passed, from the 11th on they were rejected but kept adding
+   * up, and on reaching 41 login went down for EVERYONE: an attacker
+   * amplified to 100% of the user base, no botnet needed.
    *
-   * Com o curto-circuito, a contribuição máxima de um IP para o orçamento
-   * global é maxPerIp. O teto global volta a ser o que deveria ser: um
-   * disjuntor de carga agregada, que só dispara com tráfego de fato
-   * distribuído.
+   * With the short-circuit, an IP's maximum contribution to the global
+   * budget is maxPerIp. The global ceiling goes back to being what it
+   * should be: an aggregate-load circuit breaker, that only trips with
+   * traffic that's actually distributed.
    */
   check(ip: string): { allowed: boolean; remaining: number; resetAt: number } {
     const now = Date.now();
@@ -84,33 +85,33 @@ export class RateLimiter {
   }
 }
 
-/** Normaliza um IP: tira espaços, porta (1.2.3.4:5678) e prefixo IPv4-mapeado. */
+/** Normalizes an IP: strips spaces, port (1.2.3.4:5678), and the IPv4-mapped prefix. */
 function normalizeIp(raw: string | null | undefined): string | null {
   if (!raw) return null;
   let ip = raw.trim();
   if (!ip) return null;
-  // IPv4-mapeado em IPv6: ::ffff:1.2.3.4 → 1.2.3.4
+  // IPv4-mapped in IPv6: ::ffff:1.2.3.4 → 1.2.3.4
   ip = ip.replace(/^::ffff:/i, "");
-  // Remove porta de IPv4 (1.2.3.4:5678); IPv6 fica intacto (contém vários ":").
+  // Strips the IPv4 port (1.2.3.4:5678); IPv6 stays intact (contains several ":").
   if (ip.includes(".") && ip.includes(":")) ip = ip.split(":")[0];
   return ip || null;
 }
 
 /**
- * IP real do cliente cobrindo múltiplos cenários de proxy.
+ * Client's real IP, covering multiple proxy scenarios.
  *
- * Ordem de confiança (atrás do Cloudflare, X-Forwarded-For[0] é FALSIFICÁVEL,
- * já que o CF apenas acrescenta o IP do visitante, então o primeiro salto pode ser
- * forjado pelo cliente; por isso os headers do próprio CF vêm primeiro):
- *   1. CF-Connecting-IP: Cloudflare padrão (sobrescrito pelo CF)
+ * Trust order (behind Cloudflare, X-Forwarded-For[0] is SPOOFABLE, since CF
+ * only appends the visitor's IP, so the first hop can be forged by the
+ * client; that's why CF's own headers come first):
+ *   1. CF-Connecting-IP: Cloudflare default (overwritten by CF)
  *   2. True-Client-IP: Cloudflare Enterprise
- *   3. X-Real-IP: nginx de origem, acesso direto sem CF
- *   4. X-Forwarded-For: último recurso (primeiro salto)
+ *   3. X-Real-IP: origin nginx, direct access without CF
+ *   4. X-Forwarded-For: last resort (first hop)
  *
- * Observação de infra: para confiar plenamente no CF-Connecting-IP, a origem
- * deve aceitar tráfego só do Cloudflare (allowlist de faixas de IP do CF ou
- * Authenticated Origin Pulls); caso contrário, um acesso direto à VPS poderia
- * forjar esse header.
+ * Infra note: to fully trust CF-Connecting-IP, the origin must only accept
+ * traffic from Cloudflare (allowlist of CF IP ranges, or Authenticated
+ * Origin Pulls); otherwise, direct access to the VPS could forge this
+ * header.
  */
 export function getClientIp(request?: Request): string {
   if (!request) return "unknown";
@@ -124,35 +125,37 @@ export function getClientIp(request?: Request): string {
 }
 
 /**
- * Janela de contagem dos quatro tiers. Um minuto em todos: o valor estava
- * repetido literal em cada construção, dando a impressão de serem ajustáveis
- * separadamente quando na prática nunca divergiram.
+ * Counting window for the four tiers. One minute for all of them: the value
+ * used to be repeated literally in each construction, giving the impression
+ * they were separately adjustable when in practice they never diverged.
  */
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
 /**
- * Tetos por tier: `[porIp, global]`.
+ * Ceilings per tier: `[perIp, global]`.
  *
- * Não afrouxar sem medir: a VPS tem um núcleo e dois usuários reais. O teto do
- * `auth` é o mais sensível: cada tentativa de login custa um bcrypt de custo 12
- * (ver BCRYPT_COST em auth-config.ts), que satura o núcleo sozinho.
+ * Don't loosen without measuring: the VPS has one core and two real users.
+ * The `auth` ceiling is the most sensitive: every login attempt costs a
+ * cost-12 bcrypt (see BCRYPT_COST in auth-config.ts), which saturates the
+ * core by itself.
  *
- * O teto global é um disjuntor de carga agregada, não um limite por usuário: a
- * contribuição máxima de um IP para ele é o próprio teto por IP, graças ao
- * curto-circuito documentado em `check()`.
+ * The global ceiling is an aggregate-load circuit breaker, not a per-user
+ * limit: an IP's maximum contribution to it is its own per-IP ceiling,
+ * thanks to the short-circuit documented in `check()`.
  *
- * `auth` afrouxado de [10, 40] para [15, 60] (mesma proporção ~4x): as duas
- * rotas que recebem tráfego anônimo neste tier (login, primeiro acesso) já
- * exigem Turnstile antes de aceitar a tentativa, cobrindo a parte
- * automatizada do problema -- este teto por IP é a defesa que sobra. Também
- * apoiado no que já está registrado em docs/medicao-performance.md (entrada
- * de 2026-08-04): em cluster mode (2 workers) o contador já é diluído por
- * processo e o gargalo real continua sendo a CPU compartilhada, não o
- * contador -- subir o teto não aumenta o número de bcrypt/s que a VPS
- * consegue de fato processar. `changePassword` também usa este tier mas só é
- * alcançável por quem já tem sessão válida (`requireAuthAllowExpiredPassword`
- * roda antes do rate limit no middleware), então o afrouxamento não abre
- * superfície nova para tráfego anônimo ali.
+ * `auth` loosened from [10, 40] to [15, 60] (same ~4x ratio): the two routes
+ * that receive anonymous traffic in this tier (login, first access) already
+ * require Turnstile before accepting the attempt, covering the automated
+ * part of the problem -- this per-IP ceiling is the defense that's left.
+ * Also backed by what's already recorded in docs/medicao-performance.md
+ * (2026-08-04 entry): in cluster mode (2 workers) the counter is already
+ * diluted per process and the real bottleneck stays the shared CPU, not the
+ * counter -- raising the ceiling doesn't increase the bcrypt/s the VPS can
+ * actually process. `changePassword` also uses this tier but is only
+ * reachable by someone who already has a valid session
+ * (`requireAuthAllowExpiredPassword` runs before the rate limit in the
+ * middleware), so the loosening doesn't open new surface to anonymous
+ * traffic there.
  */
 const RATE_LIMITS = {
   api: [300, 1000],
@@ -167,30 +170,32 @@ export const uploadLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMIT
 export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.ssr);
 
 /**
- * Balde por conta, independente do `authLimiter` acima (que é por IP). Cobre
- * o caso em que um ataque de credential stuffing distribui as tentativas
- * contra UMA conta por vários IPs: cada IP isolado nunca estoura o teto de
- * 10/min do authLimiter, mas a conta-alvo continua recebendo tentativa atrás
- * de tentativa.
+ * Bucket per account, independent from the `authLimiter` above (which is per
+ * IP). Covers the case where a credential-stuffing attack distributes
+ * attempts against ONE account across several IPs: each isolated IP never
+ * hits the authLimiter's 10/min ceiling, but the target account keeps
+ * getting attempt after attempt.
  *
- * Janela deliberadamente mais longa (15min) que os outros tiers: o objetivo
- * aqui não é o throughput agregado da VPS (isso já é papel do authLimiter):
- * é conter quem já sabe qual conta está mirando, mesmo trocando de IP a cada
- * request. `maxGlobal` como `Number.MAX_SAFE_INTEGER` desliga de propósito o
- * segundo tier da classe (o disjuntor de carga agregada já existe no
- * authLimiter); este balde só precisa do teto por chave.
+ * Deliberately longer window (15min) than the other tiers: the goal here
+ * isn't the VPS's aggregate throughput (that's already authLimiter's job):
+ * it's containing someone who already knows which account they're
+ * targeting, even switching IPs on every request. `maxGlobal` as
+ * `Number.MAX_SAFE_INTEGER` deliberately turns off the class's second tier
+ * (the aggregate-load circuit breaker already exists in authLimiter); this
+ * bucket only needs the per-key ceiling.
  *
- * A chave é `user:<id>` quando a conta é resolvida (não a string digitada):
- * alternar entre login por username e por matrícula da MESMA conta não pode
- * resetar o balde, e `id` nunca muda mesmo que o admin edite o username
- * depois. Conta não encontrada usa `identifier:<bruto>` como chave, mantendo
- * a mesma cobertura contra brute-force de conta inexistente.
+ * The key is `user:<id>` when the account is resolved (not the string typed
+ * in): switching between login by username and by employee_id for the SAME
+ * account can't reset the bucket, and `id` never changes even if the admin
+ * edits the username later. Account not found uses `identifier:<raw>` as
+ * the key, keeping the same coverage against brute-force of a nonexistent
+ * account.
  *
- * 10 (não menos): tanto login quanto primeiro acesso já exigem Turnstile
- * antes de aceitar a tentativa, o que cobre a parte automatizada do
- * problema; este balde é a defesa que sobra contra um humano/script
- * insistindo numa conta específica. 10/15min dá folga real para erro de
- * digitação sem abrir mão dessa contenção.
+ * 10 (not less): both login and first access already require Turnstile
+ * before accepting the attempt, which covers the automated part of the
+ * problem; this bucket is the defense that's left against a human/script
+ * insisting on a specific account. 10/15min gives real slack for a typo
+ * without giving up this containment.
  */
 const AUTH_ACCOUNT_WINDOW_MS = 15 * 60_000;
 const AUTH_ACCOUNT_MAX_PER_KEY = 10;
