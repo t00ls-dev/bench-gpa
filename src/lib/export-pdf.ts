@@ -2,8 +2,8 @@ import type jsPDF from "jspdf";
 
 const COMBINING_DIACRITICS = new RegExp("[\\u0300-\\u036f]", "g");
 
-/** Deixa uma string segura pra usar como nome de arquivo: sem acento, sem
- * espaço, sem caractere que o sistema de arquivos rejeite. */
+/** Makes a string safe to use as a filename: no accents, no spaces, no
+ * character the filesystem would reject. */
 export function slugifyFilename(s: string): string {
   return s
     .normalize("NFD")
@@ -13,10 +13,10 @@ export function slugifyFilename(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// Anchor persistente só pro caminho de preview (abrir em nova aba): nunca
-// teve o bug de nome de arquivo, então continua com blob: URL local. O
-// caminho de download forçado (com filename) não usa mais anchor nenhum, ver
-// openPdfBlob abaixo.
+// Persistent anchor only for the preview path (open in a new tab): it never
+// had the filename bug, so it keeps using a local blob: URL. The forced
+// download path (with filename) no longer uses any anchor at all, see
+// openPdfBlob below.
 let previewAnchor: HTMLAnchorElement | undefined;
 
 function getPreviewAnchor(): HTMLAnchorElement {
@@ -29,20 +29,20 @@ function getPreviewAnchor(): HTMLAnchorElement {
 }
 
 /**
- * Sem `filename`: abre o PDF numa aba nova pra preview (blob: URL local,
- * como sempre funcionou).
+ * Without `filename`: opens the PDF in a new tab for preview (local blob:
+ * URL, as it always worked).
  *
- * Com `filename`: passa pelo servidor (`/api/pdf-download` em src/server.ts)
- * pra baixar com `Content-Disposition: attachment` de verdade, em vez de
- * confiar no atributo `download` numa blob: URL do lado do cliente. Duas
- * correções anteriores (anchor anexado ao DOM antes do clique;
- * `dispatchEvent(MouseEvent)` em vez de `.click()`) não bastaram. O
- * problema real é mais fundo: o gerenciador de download do Firefox não
- * confia no atributo `download` pra blob: URLs em vários casos, caindo pro
- * UUID da própria blob URL como nome (Mozilla Bugzilla #1282407).
- * Content-Disposition é metadado de uma resposta HTTP real, respeitado de
- * forma confiável por todo navegador, sem depender de nenhum truque de
- * anchor/blob do lado do cliente.
+ * With `filename`: goes through the server (`/api/pdf-download` in
+ * src/server.ts) to download with a real `Content-Disposition: attachment`,
+ * instead of relying on the `download` attribute on a client-side blob:
+ * URL. Two earlier fixes (anchor attached to the DOM before the click;
+ * `dispatchEvent(MouseEvent)` instead of `.click()`) weren't enough. The
+ * real problem runs deeper: Firefox's download manager doesn't trust the
+ * `download` attribute for blob: URLs in several cases, falling back to the
+ * blob URL's own UUID as the name (Mozilla Bugzilla #1282407).
+ * Content-Disposition is metadata on a real HTTP response, reliably
+ * honored by every browser, without depending on any client-side
+ * anchor/blob trick.
  */
 export async function openPdfBlob(doc: jsPDF, filename?: string): Promise<void> {
   const blob = doc.output("blob");

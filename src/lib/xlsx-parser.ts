@@ -47,23 +47,25 @@ function splitCodeName(s: unknown): { code: string; name: string } | null {
 }
 
 /**
- * Converte uma célula em número, assumindo o formato pt-BR do export do GPA:
- * ponto separa milhar, vírgula separa decimal ("1.234,56" → 1234.56).
+ * Converts a cell to a number, assuming the GPA export's pt-BR format: dot
+ * separates thousands, comma separates decimals ("1.234,56" -> 1234.56).
  *
- * Na prática o XLSX quase sempre entrega `number` (lemos com `raw: true`), e é
- * por isso que o bug do `.replace(",", ".")` (que só trocava a PRIMEIRA
- * vírgula e deixava os pontos de milhar, transformando "1.234,56" em 1.234)
- * nunca apareceu. Basta uma coluna formatada como texto na origem para os
- * valores chegarem como string e o total do dia sair mil vezes menor.
+ * In practice XLSX almost always delivers a `number` (we read with
+ * `raw: true`), which is why the `.replace(",", ".")` bug (which only
+ * swapped the FIRST comma and left the thousands dots in place, turning
+ * "1.234,56" into 1.234) never showed up. All it takes is one column
+ * formatted as text at the source for values to arrive as strings and the
+ * day's total to come out a thousand times smaller.
  *
- * Exportado para teste direto: as combinações de milhar/decimal são muitas para
- * cobrir só através de `parseAnyWorkbook`.
+ * Exported for direct testing: there are too many thousands/decimal
+ * combinations to cover through `parseAnyWorkbook` alone.
  */
 export function parseCellNumber(v: unknown): number {
   if (v == null || v === "") return 0;
   if (typeof v === "number") return isFinite(v) ? v : 0;
 
-  // Descarta o que não compõe o número: "R$", espaços (inclusive NBSP), etc.
+  // Discards anything that isn't part of the number: "R$", spaces
+  // (including NBSP), etc.
   const s = String(v)
     .trim()
     .replace(/[^\d,.-]/g, "");
@@ -71,13 +73,13 @@ export function parseCellNumber(v: unknown): number {
 
   let normalized = s;
   if (s.includes(",")) {
-    // Há vírgula → ela é o decimal (a última, se houver mais de uma) e todo
-    // ponto antes dela é separador de milhar.
+    // Has a comma -> it's the decimal (the last one, if there's more than
+    // one) and every dot before it is a thousands separator.
     const dec = s.lastIndexOf(",");
     normalized = s.slice(0, dec).replace(/[.,]/g, "") + "." + s.slice(dec + 1);
   } else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) {
-    // Só pontos, todos delimitando grupos de exatamente 3 dígitos → milhar.
-    // "1.234" é 1234; já "1.23" e "1.2345" continuam sendo decimais.
+    // Only dots, all delimiting groups of exactly 3 digits -> thousands.
+    // "1.234" is 1234; but "1.23" and "1.2345" are still decimals.
     normalized = s.replace(/\./g, "");
   }
 

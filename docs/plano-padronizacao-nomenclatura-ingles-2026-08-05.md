@@ -134,7 +134,16 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `auth-middleware.ts`, `rate-limit.middleware.ts`, `rate-limit.ts`,
   `schemas.ts`, `session.ts`, `turnstile.ts`).
 - **Etapa 2** (concluída, PR #209): 9 arquivos não-teste de `src/hooks/`.
-- **Restante, não iniciado**: ~21 arquivos não-teste de `src/lib/`, ~28 em
+- **Etapa 3** (concluída, PR #211): 12 arquivos não-teste de `src/lib/`
+  (parte 1, os menores por volume de comentário): `heartbeat.ts`,
+  `upload.functions.ts`, `sanitize-next.ts`, `boot-guards.ts`,
+  `dashboard.functions.ts`, `content-disposition.ts`, `staging-row.ts`,
+  `cache.ts`, `export-pdf.ts`, `csp-server.ts`, `xlsx-parser.ts`,
+  `admin-system.functions.ts`.
+- **Restante, não iniciado**: ~10 arquivos maiores de `src/lib/`
+  (`retention.ts`, `utils.ts`, `date-window.ts`, `instrument-server.ts`,
+  `query-config.ts`, `pdf-download-store.ts`, `filter-cascade.ts`,
+  `area.functions.ts`, `import-config.ts`, `csp.ts`), ~28 em
   `src/components/`, ~14 em `src/routes/`, ~17 em `scripts/` (exceto as 5
   migrations já aplicadas, imutáveis por design), ~38 arquivos de teste
   (categoria própria, tratamento a definir).
