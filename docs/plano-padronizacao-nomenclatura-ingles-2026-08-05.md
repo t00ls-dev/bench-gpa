@@ -175,7 +175,18 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   - `scripts/migrations/*.sql`: forward-only, imutáveis por design mesmo
     para comentários (ver exceção documentada na seção "Idioma" do
     `AGENTS.md`) -- não aplicável, não uma pendência.
-  - ~38 arquivos de teste (categoria própria, tratamento a definir).
+  - **Etapa 8** (concluída, PR #216): 16 arquivos de teste com mais linhas
+    de comentário em português (`auth-api.test.ts`, `xlsx-parser.test.ts`,
+    `utils.test.ts`, `pdf-download-store.test.ts`, `csp.test.ts`,
+    `auth-middleware.test.ts`, `upload.functions.test.ts`,
+    `rate-limit.middleware.test.ts`, `export-pdf.test.ts`,
+    `upload.functions.guards.test.ts`, `area.functions.test.ts`,
+    `admin-user-management.test.tsx`, `use-wake-lock.test.ts`,
+    `retention.test.ts`, `admin-users.functions.guards.test.ts`,
+    `admin-docs.functions.guards.test.ts`).
+  - Restam ~16 arquivos de teste menores para a etapa 9; strings de
+    descrição `it("...")`/`describe("...")` em português continuam fora de
+    escopo (categoria própria, ainda não iniciada).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

@@ -105,7 +105,7 @@ const call = (d: Partial<AreaInput>) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Sem isto um caso vaza resultado para o outro pela chave de cache.
+  // Without this one case leaks its result into another via the cache key.
   cache.destroy();
   (cache as unknown as { store: Map<string, unknown> }).store.clear();
   vi.mocked(db.query).mockResolvedValue(PROC_RESULT as never);
@@ -119,8 +119,8 @@ describe("getAreaAnalysis", () => {
     expect(r.products[0]).toMatchObject({ prod_code: "1", val: 1000, lastSaleDate: "2026-07-20" });
   });
 
-  // A tela mede 2,1s em prod na janela padrão e 23,0s em 28 dias, e batia no
-  // banco a cada troca de página, ordenação ou filtro.
+  // The screen measures 2.1s in prod on the default window and 23.0s at 28
+  // days, and used to hit the database on every page, sort, or filter change.
   describe("cache", () => {
     it("serve a segunda chamada igual sem tocar no banco", async () => {
       const a = await call({});
@@ -149,8 +149,8 @@ describe("getAreaAnalysis", () => {
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    // O export para PDF pede a lista inteira: megabytes por entrada, num clique
-    // que raramente se repete. Cachear encheria a memória do processo.
+    // The PDF export requests the entire list: megabytes per entry, in a
+    // click that rarely repeats. Caching it would fill the process's memory.
     it("não cacheia o caminho do export", async () => {
       await call({ pageSize: EXPORT_PAGE_SIZE });
       await call({ pageSize: EXPORT_PAGE_SIZE });
@@ -164,10 +164,10 @@ describe("getAreaAnalysis", () => {
     });
   });
 
-  // Três constantes em dois arquivos precisam concordar. Se o export deixar de
-  // superar o limiar, a listagem inteira volta a ser cacheada em silêncio e a
-  // memória do processo passa a crescer com o uso do PDF; se passar do teto do
-  // schema, o export quebra com erro de validação.
+  // Three constants across two files need to agree. If the export ever
+  // stops exceeding the threshold, the entire listing silently starts
+  // getting cached again and the process's memory grows with PDF usage; if
+  // it exceeds the schema's cap, the export breaks with a validation error.
   describe("invariante entre o export, o limiar de cache e o teto do schema", () => {
     it("o export supera o limiar de bypass do cache", () => {
       expect(EXPORT_PAGE_SIZE).toBeGreaterThan(CACHE_BYPASS_PAGE_SIZE);

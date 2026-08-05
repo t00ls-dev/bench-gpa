@@ -29,9 +29,9 @@ import jwt from "jsonwebtoken";
 import { setCookie } from "@tanstack/react-start/server";
 import { SESSION_ABSOLUTE_CAP_SECONDS } from "./auth-config";
 
-// password_change_required: 0 no default: a maioria dos testes aqui só quer
-// validar o resto do fluxo (revogação, slide, role do banco), não o gate de
-// senha (coberto em sua própria describe abaixo).
+// password_change_required: 0 by default: most tests here only want to
+// validate the rest of the flow (revocation, sliding, role from the
+// database), not the password gate (covered in its own describe block below).
 const dbRow = (overrides: Record<string, unknown> = {}) => [
   [
     {
@@ -96,9 +96,9 @@ describe("requireAuth", () => {
     await expect(call()).rejects.toThrow("Unauthorized");
   });
 
-  // Revogação de sessão: resetPassword/changePassword/logout incrementam
-  // users.token_version, e todo token emitido antes precisa parar de valer
-  // no request seguinte.
+  // Session revocation: resetPassword/changePassword/logout increment
+  // users.token_version, and every token issued before that must stop
+  // being valid on the next request.
   describe("token_version", () => {
     it("rejeita token emitido antes do reset de senha", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
@@ -120,9 +120,10 @@ describe("requireAuth", () => {
       await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
     });
 
-    // Transição: os tokens já em circulação quando a coluna foi criada não têm
-    // o campo no payload. Como a coluna nasce em 0, eles seguem válidos até
-    // expirar, o deploy não desloga ninguém.
+    // Transition: tokens already in circulation when the column was
+    // created don't have the field in their payload. Since the column
+    // starts at 0, they stay valid until they expire, the deploy doesn't
+    // log anyone out.
     it("aceita token legado sem tokenVersion enquanto a coluna estiver em 0", async () => {
       vi.mocked(jwt.verify).mockReturnValue({ userId: "u1", role: "admin" } as never);
       await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
@@ -135,16 +136,17 @@ describe("requireAuth", () => {
     });
   });
 
-  // O papel no contexto tem que sair do banco: o JWT carrega o que valia na
-  // emissão, e um usuário rebaixado seguiria "admin" no contexto por até 7 dias.
+  // The role in the context must come from the database: the JWT carries
+  // what was true when it was issued, and a demoted user would keep
+  // "admin" in the context for up to 7 days.
   it("usa o role do banco, não o congelado no token", async () => {
     vi.mocked(db.query).mockResolvedValue(dbRow({ role: "user" }) as never);
     await expect(call()).resolves.toMatchObject({ context: { userRole: "user" } });
   });
 
-  // Estado de senha (primeiro acesso pendente ou expirada há 30+ dias):
-  // calculado em SQL (ver session.ts), requireAuth bloqueia todas as server
-  // functions exceto changePassword (que usa requireAuthAllowExpiredPassword).
+  // Password state (first access pending or expired 30+ days ago):
+  // computed in SQL (see session.ts), requireAuth blocks every server
+  // function except changePassword (which uses requireAuthAllowExpiredPassword).
   describe("passwordChangeRequired", () => {
     it("bloqueia com um erro distinto, não prefixado com 'Unauthorized'", async () => {
       vi.mocked(db.query).mockResolvedValue(dbRow({ password_change_required: 1 }) as never);
@@ -174,8 +176,9 @@ describe("requireAuth", () => {
     });
   });
 
-  // Expiração por inatividade: cada request autenticado renova a sessão
-  // "normal": sem isso, a sessão teria que ter prazo fixo desde o login.
+  // Expiration by inactivity: every authenticated request renews a
+  // "normal" session: without this, the session would need a fixed
+  // deadline from login.
   describe("sliding session", () => {
     it("reemite o cookie a cada request de uma sessão normal (não persistente)", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
@@ -219,8 +222,8 @@ describe("requireAuth", () => {
       expect(setCookie).not.toHaveBeenCalled();
     });
 
-    // Transição: tokens emitidos antes desta mudança não têm `loginAt`, em
-    // vez de expirar todo mundo no deploy, tratamos como login agora.
+    // Transition: tokens issued before this change don't have `loginAt`;
+    // instead of expiring everyone on deploy, treat it as a login now.
     it("trata token legado sem loginAt como login agora, sem expirar na hora", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
@@ -232,9 +235,9 @@ describe("requireAuth", () => {
     });
   });
 
-  // sentryFunctionErrorMiddleware (src/start.ts) recaptura qualquer erro que
-  // saia daqui, já que fica fora de requireAuth na cadeia de middleware: sem
-  // a marca, o mesmo erro vira dois eventos no Sentry.
+  // sentryFunctionErrorMiddleware (src/start.ts) recaptures any error that
+  // escapes here, since it sits outside requireAuth in the middleware
+  // chain: without the mark, the same error becomes two events in Sentry.
   describe("marca de erro já reportado ao Sentry", () => {
     it("marca o erro de sessão inválida (JWT expirado)", async () => {
       vi.mocked(jwt.verify).mockImplementation(() => {
