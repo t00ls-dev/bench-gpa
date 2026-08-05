@@ -11,8 +11,8 @@ export function useElapsedSeconds(active: boolean): number {
   useEffect(() => {
     if (!active) return;
     const start = Date.now();
-    // Zera antes de iniciar a contagem: parte da coreografia do timer que a
-    // linha seguinte agenda, não estado derivado de uma prop.
+    // Resets before starting the count: part of the timer choreography that
+    // the next line schedules, not state derived from a prop.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeconds(0);
     const id = setInterval(() => setSeconds(Math.floor((Date.now() - start) / 1000)), 1000);

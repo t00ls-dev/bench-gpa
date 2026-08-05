@@ -120,15 +120,33 @@ rollback.
 
 ## Fase 3: tradução de comentários em português
 
-Sem PR dedicado de varredura total. Estratégia: cada vez que um arquivo for
-tocado por qualquer outro motivo, traduzir os comentários em português que
-existirem nele (já em vigor, ver `AGENTS.md`). Revisitar esta decisão só se
-o usuário pedir explicitamente um esforço dedicado.
+Revisão: o usuário pediu explicitamente um esforço dedicado, por etapas
+("vamos traduzir os comentários por etapa. você decide onde começar."),
+substituindo a estratégia original de "só quando o arquivo for tocado por
+outro motivo". Cada etapa é um PR próprio, escopo por diretório, só
+comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
+`git diff` linha a linha.
+
+### Status
+- **Etapa 1** (concluída, PR #207): 12 arquivos não-teste de `src/lib/`
+  (auth/segurança: `admin-users.functions.ts`, `admin-utils.ts`,
+  `audit-tooltip.ts`, `audit.ts`, `auth-api.ts`, `auth-config.ts`,
+  `auth-middleware.ts`, `rate-limit.middleware.ts`, `rate-limit.ts`,
+  `schemas.ts`, `session.ts`, `turnstile.ts`).
+- **Etapa 2** (concluída, PR #209): 9 arquivos não-teste de `src/hooks/`.
+- **Restante, não iniciado**: ~21 arquivos não-teste de `src/lib/`, ~28 em
+  `src/components/`, ~14 em `src/routes/`, ~17 em `scripts/` (exceto as 5
+  migrations já aplicadas, imutáveis por design), ~38 arquivos de teste
+  (categoria própria, tratamento a definir).
+
+Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
+mantidos como estão em qualquer etapa, mesmo dentro de comentários --
+critério fixado na etapa 1.
 
 O mesmo vale para strings de descrição de teste (`it("...")`,
 `describe("...")`) em português, encontradas durante a auditoria mas fora
 do escopo original do pedido (fala de "nomenclatura", não de descrições de
-teste): tratamento incremental, mesmo critério.
+teste): tratamento incremental, mesmo critério, ainda não iniciado.
 
 ## Verificação (quando a Fase 2 for executada)
 

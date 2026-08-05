@@ -51,12 +51,12 @@ function sanitizeAF(f: AreaFilters): AreaFilters {
 }
 
 /**
- * Estado de filtros, hierarquia, busca/ordenação/paginação e a query de
- * produtos da tela de Área, tudo que não é exportação de PDF nem JSX.
- * Extraído de `area.page.tsx` (auditoria técnica de 31/07, item "4
- * responsabilidades"); `getArea`/`useServerFn` fica de fora porque o export de
- * PDF em `useAreaPdfExport` também precisa dele, evitando dois server-fn
- * distintos para a mesma rota.
+ * Filter/hierarchy/search/sort/pagination state and the products query for
+ * the Área screen — everything that isn't PDF export or JSX. Extracted from
+ * `area.page.tsx` (technical audit 07/31, "4 responsibilities" item);
+ * `getArea`/`useServerFn` stays out because the PDF export in
+ * `useAreaPdfExport` also needs it, avoiding two distinct server-fns for the
+ * same route.
  */
 export function useAreaProductsView(
   getArea: ReturnType<typeof useServerFn<typeof getAreaAnalysis>>,
@@ -77,13 +77,13 @@ export function useAreaProductsView(
     },
     sanitizeAF,
   );
-  // Atualização funcional de propósito: se dois efeitos chamarem patch() no
-  // mesmo commit (ex.: hierarquia já em cache faz o efeito de período padrão
-  // e o de click-through do Dashboard disputarem o primeiro render), cada
-  // `setAf({...af, ...p})` calculado a partir do MESMO `af` (fechamento
-  // parado no render anterior) apaga o patch do outro: só o último a
-  // "vencer" sobrevive. `setAf(prev => ...)` sempre parte do estado mais
-  // recente, mesmo entre updates do mesmo commit.
+  // Deliberately functional update: if two effects call patch() in the same
+  // commit (e.g. hierarchy already cached makes the default-period effect
+  // and the Dashboard click-through effect race for the first render), each
+  // `setAf({...af, ...p})` computed from the SAME `af` (closure frozen at
+  // the previous render) wipes out the other's patch: only the last one to
+  // "win" survives. `setAf(prev => ...)` always starts from the freshest
+  // state, even across updates within the same commit.
   const patch = (p: Partial<AreaFilters>) => setAf((prev) => ({ ...prev, ...p }));
   const setStores = (v: string[]) => patch(cascadePatch("stores", v));
   const setDeptos = (v: string[]) => patch(cascadePatch("deptos", v));
@@ -92,10 +92,10 @@ export function useAreaProductsView(
   const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
   const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
 
-  // Click-through do ranking do Dashboard (?store=&depto=&secao=&grupo=&subgrupo=):
-  // substitui os filtros de categoria persistidos pelo nível clicado, uma
-  // única vez por navegação, não deve reaplicar se o usuário mudar os
-  // filtros depois (por isso o guard em ref em vez de rodar a cada render).
+  // Dashboard ranking click-through (?store=&depto=&secao=&grupo=&subgrupo=):
+  // replaces the persisted category filters with the clicked level, once
+  // per navigation. Must not reapply if the user changes the filters
+  // afterward (hence the ref guard instead of running on every render).
   const appliedSearchRef = useRef(false);
   useEffect(() => {
     if (appliedSearchRef.current) return;
@@ -129,14 +129,15 @@ export function useAreaProductsView(
     gcTime: QUERY_GC_REFERENCE,
   });
   const hierData = hierQ.data;
-  // useMemo porque o `?? []` criava um array novo a cada render, e `hierarchy` é
-  // dependência do useMemo de `stores`, que portanto recalculava sempre.
+  // useMemo because the `?? []` created a new array on every render, and
+  // `hierarchy` is a dependency of the `stores` useMemo, which therefore
+  // always recalculated.
   const hierarchy = useMemo(() => hierData?.hierarchy ?? [], [hierData]);
   const opts = hierData;
 
   const baseDateIso = dateTo || opts?.latestDate || undefined;
-  // useCallback para poder entrar como dependência do useMemo de `products` sem
-  // recriar a função (e invalidar o memo) a cada render.
+  // useCallback so it can be a dependency of the `products` useMemo without
+  // recreating the function (and invalidating the memo) on every render.
   const daysSinceNum = useCallback(
     (iso: string | null): number | null => {
       if (!iso || !baseDateIso) return null;

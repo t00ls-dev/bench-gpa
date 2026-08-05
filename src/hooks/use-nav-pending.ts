@@ -3,16 +3,16 @@
 import { useRouterState } from "@tanstack/react-router";
 
 /**
- * Caminho de destino de uma navegação em andamento, ou null quando ocioso.
- * Durante o pending, `location` já aponta (otimista) para o destino, enquanto
- * `resolvedLocation` ainda é a página renderizada.
+ * Destination path of an in-progress navigation, or null when idle. While
+ * pending, `location` already points (optimistically) to the destination,
+ * while `resolvedLocation` is still the rendered page.
  *
- * `resolvedLocation` também fica ausente durante a resolução inicial da rota
- * no SSR (nada foi resolvido ainda): sem essa checagem, o servidor sempre
- * desenha o item ativo com spinner (status "pending" = a própria carga
- * inicial), e o cliente já termina de hidratar com o status resolvido,
- * gerando mismatch de hidratação (ícone spinner vs ícone real) em toda
- * página, sempre no item ativo do menu.
+ * `resolvedLocation` is also absent during the route's initial SSR
+ * resolution (nothing has resolved yet): without this check, the server
+ * would always draw the active item with a spinner (status "pending" = the
+ * initial load itself), and the client would already finish hydrating with
+ * the resolved status, causing a hydration mismatch (spinner icon vs. real
+ * icon) on every page, always on the active menu item.
  */
 export function useNavPendingPath(): string | null {
   return useRouterState({
@@ -26,9 +26,10 @@ export function useNavPendingPath(): string | null {
 }
 
 /**
- * True se a navegação pendente é para `to` (ou uma subrota dele, a menos que
- * `exact` seja true). Sem `exact`, "/admin" seria prefixo de "/admin/docs":
- * navegar para Documentação marcava Administração como pendente também.
+ * True if the pending navigation is to `to` (or a subroute of it, unless
+ * `exact` is true). Without `exact`, "/admin" would be a prefix of
+ * "/admin/docs": navigating to Documentação would also mark Administração
+ * as pending.
  */
 export function isNavPendingTo(pending: string | null, to: string, exact = false): boolean {
   if (pending == null) return false;

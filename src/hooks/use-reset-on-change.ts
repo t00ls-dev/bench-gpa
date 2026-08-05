@@ -1,11 +1,12 @@
 import { useState } from "react";
 
 /**
- * Chama `onChange` durante o render (não em efeito) sempre que algum item de
- * `deps` mudar desde o último render, o padrão que o próprio React recomenda
- * para "ajustar estado quando uma prop muda", sem o round-trip extra de um
- * `useEffect` (que causaria um commit visível com o estado antigo antes de
- * corrigir). Comparação rasa por item, igual a `useEffect`'s deps array.
+ * Calls `onChange` during render (not in an effect) whenever any item in
+ * `deps` has changed since the last render — the pattern React itself
+ * recommends for "adjusting state when a prop changes", without the extra
+ * round-trip of a `useEffect` (which would cause a visible commit with the
+ * stale state before correcting). Shallow per-item comparison, same as
+ * `useEffect`'s deps array.
  */
 export function useResetOnChange(deps: readonly unknown[], onChange: () => void): void {
   const [prev, setPrev] = useState(deps);

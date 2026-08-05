@@ -25,10 +25,10 @@ interface Params {
 }
 
 /**
- * Export de PDF da tela de Área, extraído de `area.page.tsx` (auditoria
- * técnica de 31/07, item "4 responsabilidades"). Busca a listagem inteira
- * (não a página exibida) direto do servidor, monta as duas tabelas
- * (KPIs + produtos) e abre o blob numa aba nova.
+ * PDF export for the Área screen, extracted from `area.page.tsx` (technical
+ * audit 07/31, "4 responsibilities" item). Fetches the entire listing (not
+ * the displayed page) directly from the server, builds the two tables
+ * (KPIs + products), and opens the blob in a new tab.
  */
 export function useAreaPdfExport({
   getArea,
@@ -75,10 +75,11 @@ export function useAreaPdfExport({
           sortBy: sortKey,
           sortDir,
           page: 1,
-          // O PDF precisa da listagem inteira, não da página exibida. O valor
-          // vem de schemas.ts porque três coisas dependem dele ao mesmo tempo:
-          // o teto do AreaAnalysisSchema, o limiar que mantém esta resposta
-          // fora do cache (area.functions.ts) e o tamanho do universo de PLUs.
+          // The PDF needs the entire listing, not the displayed page. The
+          // value comes from schemas.ts because three things depend on it at
+          // once: the AreaAnalysisSchema cap, the threshold that keeps this
+          // response out of the cache (area.functions.ts), and the size of
+          // the PLU universe.
           pageSize: EXPORT_PAGE_SIZE,
         },
       });
@@ -125,8 +126,8 @@ export function useAreaPdfExport({
       doc.text("Período: " + fmtBRShort(dateFrom) + " - " + fmtBRShort(dateTo), mX, 22.5);
       doc.text("Produtos listados: " + filtered.length, mX, 27);
 
-      // Experimental (item 6 do backlog de UX): mesmos 5 números do
-      // AreaKpiCards no topo da tela, só que impressos no PDF.
+      // Experimental (UX backlog item 6): the same 5 numbers from
+      // AreaKpiCards at the top of the screen, just printed in the PDF.
       autoTable(doc, {
         startY: 31,
         margin: { left: mX, right: mX },
@@ -220,9 +221,9 @@ export function useAreaPdfExport({
         },
       });
 
-      // Timestamp no fim: sem ele, exportar o mesmo período duas vezes gera o
-      // mesmo nome de arquivo, e o navegador/visualizador reaproveita a
-      // versão antiga em vez de mostrar o PDF recém-gerado.
+      // Timestamp at the end: without it, exporting the same period twice
+      // generates the same filename, and the browser/viewer reuses the old
+      // version instead of showing the freshly generated PDF.
       const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
       const filename = `analise-area-${slugifyFilename(area)}-${dateFrom}-a-${dateTo}-${timestamp}.pdf`;
       await openPdfBlob(doc, filename);
