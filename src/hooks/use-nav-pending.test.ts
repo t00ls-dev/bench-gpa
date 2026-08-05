@@ -8,7 +8,7 @@ describe("isNavPendingTo", () => {
 
   it("matches the exact root path only", () => {
     expect(isNavPendingTo("/", "/")).toBe(true);
-    expect(isNavPendingTo("/produto", "/")).toBe(false);
+    expect(isNavPendingTo("/product", "/")).toBe(false);
   });
 
   it("matches a subroute by prefix when not exact", () => {

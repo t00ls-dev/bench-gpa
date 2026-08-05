@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { setUserRole, setUserActive } from "@/lib/admin-users.functions";
+import { setUserRole, setUserActive, resetPassword } from "@/lib/admin-users.functions";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   ShieldOff,
   KeyRound,
+  Pencil,
   Loader2,
   Search,
   ChevronLeft,
@@ -37,15 +38,22 @@ import {
 import { fmtBRShort, fmtInt } from "@/lib/utils";
 import { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { CreateUserDialog } from "@/components/create-user-dialog";
-import { ResetPasswordDialog } from "@/components/reset-password-dialog";
+import { EditUserIdentifiersDialog } from "@/components/edit-user-identifiers-dialog";
 
 interface User {
   id: string;
-  email: string;
+  username: string | null;
+  matricula: string | null;
   name: string;
   role: string;
   is_active: boolean;
+  /** Conta ainda sem senha (primeiro acesso pendente ou resetada por admin). */
+  pending: boolean;
   created_at: string;
+}
+
+function displayIdentifier(u: User): string {
+  return u.username ?? u.matricula ?? "-";
 }
 
 export function AdminUserManagement({
@@ -57,18 +65,17 @@ export function AdminUserManagement({
 }) {
   const setRole = useServerFn(setUserRole);
   const setActive = useServerFn(setUserActive);
+  const resetPw = useServerFn(resetPassword);
   const qc = useQueryClient();
 
-  const [resetTarget, setResetTarget] = useState<{ id: string; email: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<User | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
   const [pending, setPending] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{
-    type: "role" | "active";
-    user: User;
-    newValue: boolean;
-  } | null>(null);
+  const [confirm, setConfirm] = useState<
+    { type: "role" | "active"; user: User; newValue: boolean } | { type: "password"; user: User }
+  >();
 
   const action = async (fn: Promise<unknown>, msg: string, key: string) => {
     setPending(key);
@@ -83,15 +90,15 @@ export function AdminUserManagement({
     }
   };
 
-  const filtered = useMemo(
-    () =>
-      (data ?? []).filter(
-        (u) =>
-          u.email.toLowerCase().includes(search.toLowerCase()) ||
-          u.name.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [data, search],
-  );
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return (data ?? []).filter(
+      (u) =>
+        (u.username ?? "").toLowerCase().includes(q) ||
+        (u.matricula ?? "").includes(q) ||
+        u.name.toLowerCase().includes(q),
+    );
+  }, [data, search]);
 
   // Busca/tamanho de página novos podem deixar a página atual fora do range
   // (ex.: filtrar de 3 páginas pra 1), volta pra 1 em vez de mostrar vazio.
@@ -112,8 +119,8 @@ export function AdminUserManagement({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Buscar por email ou nome…"
-            aria-label="Buscar por email ou nome"
+            placeholder="Buscar por usuário, matrícula ou nome…"
+            aria-label="Buscar por usuário, matrícula ou nome"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -149,7 +156,8 @@ export function AdminUserManagement({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3">E-mail</th>
+                <th className="px-4 py-3">Usuário</th>
+                <th className="px-4 py-3">Matrícula</th>
                 <th className="px-4 py-3">Nome</th>
                 <th className="px-4 py-3">Papel</th>
                 <th className="px-4 py-3">Ativo</th>
@@ -160,9 +168,22 @@ export function AdminUserManagement({
             <tbody>
               {paged.map((u) => {
                 const isAdmin = u.role === "admin";
+                const label = displayIdentifier(u);
                 return (
                   <tr key={u.id} className="border-b border-border/60">
-                    <td className="px-4 py-3 font-medium">{u.email}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <div className="flex items-center gap-2">
+                        {u.username ?? <span className="text-muted-foreground">-</span>}
+                        {u.pending && (
+                          <span className="inline-block rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-warning">
+                            Primeiro acesso pendente
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      {u.matricula ?? <span className="text-muted-foreground">-</span>}
+                    </td>
                     <td className="px-4 py-3">{u.name}</td>
                     <td className="px-4 py-3 text-xs">{isAdmin ? "Administrador" : "Usuário"}</td>
                     <td className="px-4 py-3">
@@ -170,7 +191,7 @@ export function AdminUserManagement({
                         <Switch
                           checked={u.is_active}
                           disabled={pending === `active:${u.id}`}
-                          aria-label={u.is_active ? `Desativar ${u.email}` : `Ativar ${u.email}`}
+                          aria-label={u.is_active ? `Desativar ${label}` : `Ativar ${label}`}
                           onCheckedChange={(v) =>
                             setConfirm({ type: "active", user: u, newValue: v })
                           }
@@ -208,13 +229,25 @@ export function AdminUserManagement({
                         <Button
                           size="sm"
                           variant="outline"
+                          title="Editar usuário e matrícula"
+                          aria-label="Editar usuário e matrícula"
+                          onClick={() => setEditTarget(u)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           title="Redefinir senha"
                           aria-label="Redefinir senha"
-                          onClick={() => {
-                            setResetTarget({ id: u.id, email: u.email });
-                          }}
+                          disabled={pending === `password:${u.id}`}
+                          onClick={() => setConfirm({ type: "password", user: u })}
                         >
-                          <KeyRound className="size-3.5" />
+                          {pending === `password:${u.id}` ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <KeyRound className="size-3.5" />
+                          )}
                         </Button>
                       </div>
                     </td>
@@ -223,7 +256,7 @@ export function AdminUserManagement({
               })}
               {filtered.length === 0 && !isLoading && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                     {search ? "Nenhum usuário encontrado." : "Nenhum usuário cadastrado."}
                   </td>
                 </tr>
@@ -265,7 +298,7 @@ export function AdminUserManagement({
         </div>
       )}
 
-      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+      <AlertDialog open={confirm !== undefined} onOpenChange={(o) => !o && setConfirm(undefined)}>
         {confirm && (
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -274,38 +307,47 @@ export function AdminUserManagement({
                   ? confirm.newValue
                     ? "Promover a administrador?"
                     : "Remover administrador?"
-                  : confirm.newValue
-                    ? "Ativar usuário?"
-                    : "Inativar usuário?"}
+                  : confirm.type === "active"
+                    ? confirm.newValue
+                      ? "Ativar usuário?"
+                      : "Inativar usuário?"
+                    : "Redefinir senha?"}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {confirm.type === "role"
                   ? confirm.newValue
-                    ? `Tem certeza que deseja tornar "${confirm.user.email}" administrador?`
-                    : `Tem certeza que deseja remover "${confirm.user.email}" do papel de administrador?`
-                  : confirm.newValue
-                    ? `Tem certeza que deseja ativar "${confirm.user.email}"?`
-                    : `Tem certeza que deseja inativar "${confirm.user.email}"? O usuário não poderá acessar o sistema.`}
+                    ? `Tem certeza que deseja tornar "${displayIdentifier(confirm.user)}" administrador?`
+                    : `Tem certeza que deseja remover "${displayIdentifier(confirm.user)}" do papel de administrador?`
+                  : confirm.type === "active"
+                    ? confirm.newValue
+                      ? `Tem certeza que deseja ativar "${displayIdentifier(confirm.user)}"?`
+                      : `Tem certeza que deseja inativar "${displayIdentifier(confirm.user)}"? O usuário não poderá acessar o sistema.`
+                    : `Tem certeza que deseja zerar a senha de "${displayIdentifier(confirm.user)}"? A conta ficará com primeiro acesso pendente e as sessões abertas serão encerradas.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={async () => {
-                  if (!confirm) return;
                   const c = confirm;
-                  setConfirm(null);
+                  setConfirm(undefined);
                   if (c.type === "role") {
                     await action(
                       setRole({ data: { userId: c.user.id, role: c.newValue ? "admin" : "user" } }),
                       c.newValue ? "Promovido a admin" : "Admin removido",
                       `role:${c.user.id}`,
                     );
-                  } else {
+                  } else if (c.type === "active") {
                     await action(
                       setActive({ data: { userId: c.user.id, isActive: c.newValue } }),
                       c.newValue ? "Usuário ativado" : "Usuário inativado",
                       `active:${c.user.id}`,
+                    );
+                  } else {
+                    await action(
+                      resetPw({ data: { userId: c.user.id } }),
+                      "Senha zerada. Primeiro acesso obrigatório no próximo login.",
+                      `password:${c.user.id}`,
                     );
                   }
                 }}
@@ -317,10 +359,10 @@ export function AdminUserManagement({
         )}
       </AlertDialog>
 
-      <ResetPasswordDialog
-        target={resetTarget}
-        onClose={() => setResetTarget(null)}
-        onReset={() => qc.invalidateQueries({ queryKey: ["admin-users"] })}
+      <EditUserIdentifiersDialog
+        target={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["admin-users"] })}
       />
     </div>
   );

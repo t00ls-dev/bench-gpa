@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ChangePasswordRouteImport } from './routes/change-password'
+import { Route as FirstAccessRouteImport } from './routes/first-access'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAreaRouteImport } from './routes/_authenticated/area'
 import { Route as AuthenticatedHowtoRouteImport } from './routes/_authenticated/howto'
-import { Route as AuthenticatedProdutoRouteImport } from './routes/_authenticated/produto'
+import { Route as AuthenticatedProductRouteImport } from './routes/_authenticated/product'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminDocsRouteImport } from './routes/_authenticated/admin.docs'
@@ -27,6 +29,16 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangePasswordRoute = ChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FirstAccessRoute = FirstAccessRouteImport.update({
+  id: '/first-access',
+  path: '/first-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -49,9 +61,9 @@ const AuthenticatedHowtoRoute = AuthenticatedHowtoRouteImport.update({
   path: '/howto',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedProdutoRoute = AuthenticatedProdutoRouteImport.update({
-  id: '/produto',
-  path: '/produto',
+const AuthenticatedProductRoute = AuthenticatedProductRouteImport.update({
+  id: '/product',
+  path: '/product',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUploadRoute = AuthenticatedUploadRouteImport.update({
@@ -73,19 +85,23 @@ const AuthenticatedAdminDocsRoute = AuthenticatedAdminDocsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/first-access': typeof FirstAccessRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/area': typeof AuthenticatedAreaRoute
   '/howto': typeof AuthenticatedHowtoRoute
-  '/produto': typeof AuthenticatedProdutoRoute
+  '/product': typeof AuthenticatedProductRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/admin/docs': typeof AuthenticatedAdminDocsRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/first-access': typeof FirstAccessRoute
   '/area': typeof AuthenticatedAreaRoute
   '/howto': typeof AuthenticatedHowtoRoute
-  '/produto': typeof AuthenticatedProdutoRoute
+  '/product': typeof AuthenticatedProductRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/docs': typeof AuthenticatedAdminDocsRoute
@@ -95,10 +111,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/first-access': typeof FirstAccessRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/area': typeof AuthenticatedAreaRoute
   '/_authenticated/howto': typeof AuthenticatedHowtoRoute
-  '/_authenticated/produto': typeof AuthenticatedProdutoRoute
+  '/_authenticated/product': typeof AuthenticatedProductRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/docs': typeof AuthenticatedAdminDocsRoute
@@ -109,19 +127,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/change-password'
+    | '/first-access'
     | '/admin'
     | '/area'
     | '/howto'
-    | '/produto'
+    | '/product'
     | '/upload'
     | '/admin/docs'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/change-password'
+    | '/first-access'
     | '/area'
     | '/howto'
-    | '/produto'
+    | '/product'
     | '/upload'
     | '/'
     | '/admin/docs'
@@ -130,10 +152,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/change-password'
+    | '/first-access'
     | '/_authenticated/admin'
     | '/_authenticated/area'
     | '/_authenticated/howto'
-    | '/_authenticated/produto'
+    | '/_authenticated/product'
     | '/_authenticated/upload'
     | '/_authenticated/'
     | '/_authenticated/admin/docs'
@@ -143,6 +167,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ChangePasswordRoute: typeof ChangePasswordRoute
+  FirstAccessRoute: typeof FirstAccessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -159,6 +185,20 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/change-password': {
+      id: '/change-password'
+      path: '/change-password'
+      fullPath: '/change-password'
+      preLoaderRoute: typeof ChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/first-access': {
+      id: '/first-access'
+      path: '/first-access'
+      fullPath: '/first-access'
+      preLoaderRoute: typeof FirstAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -189,11 +229,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHowtoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/produto': {
-      id: '/_authenticated/produto'
-      path: '/produto'
-      fullPath: '/produto'
-      preLoaderRoute: typeof AuthenticatedProdutoRouteImport
+    '/_authenticated/product': {
+      id: '/_authenticated/product'
+      path: '/product'
+      fullPath: '/product'
+      preLoaderRoute: typeof AuthenticatedProductRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/upload': {
@@ -237,7 +277,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAreaRoute: typeof AuthenticatedAreaRoute
   AuthenticatedHowtoRoute: typeof AuthenticatedHowtoRoute
-  AuthenticatedProdutoRoute: typeof AuthenticatedProdutoRoute
+  AuthenticatedProductRoute: typeof AuthenticatedProductRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
@@ -246,7 +286,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAreaRoute: AuthenticatedAreaRoute,
   AuthenticatedHowtoRoute: AuthenticatedHowtoRoute,
-  AuthenticatedProdutoRoute: AuthenticatedProdutoRoute,
+  AuthenticatedProductRoute: AuthenticatedProductRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
@@ -257,6 +297,8 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ChangePasswordRoute: ChangePasswordRoute,
+  FirstAccessRoute: FirstAccessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

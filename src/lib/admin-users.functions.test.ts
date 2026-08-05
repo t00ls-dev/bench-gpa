@@ -59,7 +59,7 @@ vi.mock("./auth-middleware", () => ({
         ...(context as object),
         userId: "admin-u1",
         userRole: "admin",
-        userEmail: "admin@gpabr.com",
+        userUsername: "admin",
       },
     }),
   ),
@@ -79,64 +79,99 @@ vi.mock("./admin-utils", () => ({
 }));
 
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
-vi.mock("bcrypt", () => ({ default: { hash: vi.fn() } }));
 vi.mock("./audit", () => ({ recordAudit: vi.fn() }));
 
-import { createUser, resetPassword, setUserRole, setUserActive } from "./admin-users.functions";
+import {
+  createUser,
+  resetPassword,
+  setUserRole,
+  setUserActive,
+  updateUserIdentifiers,
+} from "./admin-users.functions";
 import { invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import db from "./db";
-import bcrypt from "bcrypt";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(bcrypt.hash).mockResolvedValue("$2b$12$mockedhash" as never);
   vi.mocked(db.query).mockResolvedValue([{ affectedRows: 1 }] as never);
   vi.mocked(recordAudit).mockResolvedValue(undefined);
 });
 
 describe("createUser", () => {
-  it("inserts user with bcrypt hash and returns id", async () => {
+  it("insere usuário sem senha (password fica NULL, sem bcrypt.hash neste caminho)", async () => {
     const result = await (
       createUser as (d: {
-        email: string;
+        username: string;
+        matricula: string;
         name: string;
-        password: string;
         role: string;
       }) => Promise<{ ok: boolean; id: string }>
-    )({ email: "newuser@gpabr.com", name: "New User", password: "Str0ng!Pass", role: "analyst" });
+    )({ username: "novo.usuario", matricula: "5001", name: "New User", role: "user" });
     expect(result.ok).toBe(true);
     expect(result.id).toBeDefined();
-    expect(bcrypt.hash).toHaveBeenCalledWith("Str0ng!Pass", 12);
     expect(db.query).toHaveBeenCalledWith(
-      "INSERT INTO users (id, email, name, password, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
-      [result.id, "newuser@gpabr.com", "New User", "$2b$12$mockedhash", "analyst"],
+      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      [result.id, "novo.usuario", "5001", "New User", "user"],
     );
     expect(recordAudit).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "user.create", detail: "papel: analyst" }),
+      expect.objectContaining({ action: "user.create", detail: "papel: user" }),
     );
   });
 });
 
 describe("resetPassword", () => {
-  it("updates user password with bcrypt hash", async () => {
-    const result = await (
-      resetPassword as (d: { userId: string; password: string }) => Promise<{ ok: boolean }>
-    )({ userId: "u1", password: "N3w!Str0ng" });
+  it("zera password e password_changed_at, incrementa token_version, sem receber senha nova", async () => {
+    const result = await (resetPassword as (d: { userId: string }) => Promise<{ ok: boolean }>)({
+      userId: "u1",
+    });
     expect(result.ok).toBe(true);
-    expect(bcrypt.hash).toHaveBeenCalledWith("N3w!Str0ng", 12);
-    // O incremento de token_version no MESMO update é o que derruba as sessões
-    // abertas com a senha antiga; sem ele o JWT seguiria válido por até 7 dias.
+    // Reusa o estado de "primeiro acesso pendente" em vez de definir uma senha
+    // temporária: mesma coluna zerada da criação de usuário nova.
     expect(db.query).toHaveBeenCalledWith(
-      "UPDATE users SET password = ?, token_version = token_version + 1 WHERE id = ?",
-      ["$2b$12$mockedhash", "u1"],
+      "UPDATE users SET password = NULL, password_changed_at = NULL, token_version = token_version + 1 WHERE id = ?",
+      ["u1"],
     );
     expect(recordAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "user.password_reset",
-        detail: "sessões anteriores revogadas",
+        detail: "senha zerada, primeiro acesso obrigatório no próximo login",
       }),
     );
+  });
+});
+
+describe("updateUserIdentifiers", () => {
+  it("atualiza username e matrícula", async () => {
+    const result = await (
+      updateUserIdentifiers as (d: {
+        userId: string;
+        username: string;
+        matricula: string;
+      }) => Promise<{ ok: boolean }>
+    )({ userId: "u1", username: "novo.nome", matricula: "9999" });
+    expect(result.ok).toBe(true);
+    expect(db.query).toHaveBeenCalledWith(
+      "UPDATE users SET username = ?, matricula = ? WHERE id = ?",
+      ["novo.nome", "9999", "u1"],
+    );
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "user.identifiers_update" }),
+    );
+  });
+
+  it("traduz conflito de unicidade (ER_DUP_ENTRY) numa mensagem amigável", async () => {
+    const dupError = Object.assign(new Error("Duplicate entry"), { code: "ER_DUP_ENTRY" });
+    vi.mocked(db.query).mockRejectedValueOnce(dupError);
+    await expect(
+      (
+        updateUserIdentifiers as (d: {
+          userId: string;
+          username: string;
+          matricula: string;
+        }) => Promise<unknown>
+      )({ userId: "u1", username: "ja.existe", matricula: "1" }),
+    ).rejects.toThrow("Username ou matrícula já usados por outra conta.");
   });
 });
 

@@ -165,11 +165,11 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
 
 function ActionBadge({
   action,
-  targetEmail,
+  targetUsername,
   detail,
 }: {
   action: string;
-  targetEmail: string | null;
+  targetUsername: string | null;
   detail: string | null;
 }) {
   const meta = ACTION_META[action] ?? {
@@ -183,7 +183,7 @@ function ActionBadge({
       {meta.label}
     </span>
   );
-  const tooltip = buildAuditTooltip(action, targetEmail, detail);
+  const tooltip = buildAuditTooltip(action, targetUsername, detail);
   if (!tooltip) return badge;
   return (
     <Popover>
@@ -267,11 +267,11 @@ export function AuditLogSection({
                     <td className="py-1.5 pr-3">
                       <ActionBadge
                         action={ev.action}
-                        targetEmail={ev.target_email}
+                        targetUsername={ev.target_username}
                         detail={ev.detail}
                       />
                     </td>
-                    <td className="py-1.5 pr-3">{ev.actor_email ?? "-"}</td>
+                    <td className="py-1.5 pr-3">{ev.actor_username ?? "-"}</td>
                     <td className="py-1.5 pl-3 text-right font-mono text-muted-foreground">
                       {ev.ip ?? "-"}
                     </td>

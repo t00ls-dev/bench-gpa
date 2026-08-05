@@ -1,6 +1,6 @@
 import puppeteer from "puppeteer";
 
-const EMAIL = process.env.TEST_ADMIN_EMAIL || "admin@gpabr.com";
+const IDENTIFIER = process.env.TEST_ADMIN_USERNAME || "admin";
 const PASS = process.env.TEST_ADMIN_PASSWORD || "Gpa@Manca123";
 const URL = process.env.TEST_APP_URL || "http://localhost:3000";
 
@@ -123,8 +123,8 @@ await page.screenshot({ path: "/tmp/test-production/prod-00-auth.png", fullPage:
 
 // Login
 console.log("\nLogging in...");
-const emailInput = await page.waitForSelector("input[type=email]", { timeout: 30000 });
-await page.type("input[type=email]", EMAIL);
+await page.waitForSelector("#identifier", { timeout: 30000 });
+await page.type("#identifier", IDENTIFIER);
 await page.type("input[type=password]", PASS);
 await page.click('button[type="submit"]');
 

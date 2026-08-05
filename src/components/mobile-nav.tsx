@@ -19,7 +19,7 @@ import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 
 const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/produto", label: "Produto", icon: Package },
+  { to: "/product", label: "Produto", icon: Package },
   { to: "/area", label: "Área", icon: Layers },
 ] as const;
 
@@ -31,11 +31,11 @@ const ADMIN_ITEMS = [
 
 interface Props {
   isAdmin: boolean;
-  userEmail: string;
+  username: string | null;
   onSignOut: () => void;
 }
 
-export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
+export function MobileNav({ isAdmin, username, onSignOut }: Props) {
   const loc = useLocation();
   const pendingPath = useNavPendingPath();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -83,10 +83,10 @@ export function MobileNav({ isAdmin, userEmail, onSignOut }: Props) {
         <DrawerContent>
           <div className="flex flex-col items-center pt-6 pb-2">
             <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
-              {userEmail[0].toUpperCase()}
+              {(username ?? "?")[0].toUpperCase()}
             </div>
             <span className="mt-2 text-sm text-muted-foreground truncate max-w-[80%]">
-              {userEmail}
+              {username ?? "-"}
             </span>
           </div>
           <div className="space-y-1 px-2 pb-4">

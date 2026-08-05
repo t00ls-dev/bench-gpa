@@ -119,7 +119,7 @@ export function AreaTable({
 
   const openProduct = useCallback(
     (code: string) => {
-      navigate({ to: "/produto", search: { plu: code, store: storeCode ?? undefined } });
+      navigate({ to: "/product", search: { plu: code, store: storeCode ?? undefined } });
     },
     [navigate, storeCode],
   );

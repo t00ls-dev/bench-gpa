@@ -11,16 +11,20 @@ const pool = createPool({
   database: process.env.DB_NAME,
 });
 
-const email = "test@gpabr.com";
+const username = "test";
+const matricula = "00001";
 const name = "Teste";
 const password = "Gpa@Test1970";
 const hash = await bcrypt.hash(password, BCRYPT_COST);
 const id = randomUUID();
 
+// password_changed_at = NOW() explícito: sem isso a conta nasceria com senha
+// "expirada" (password_changed_at NULL), disparando o gate de troca
+// obrigatória em toda verificação manual/E2E que loga com este usuário.
 await pool.query(
-  "INSERT INTO users (id, email, name, password, role, is_active) VALUES (?, ?, ?, ?, 'admin', TRUE)",
-  [id, email, name, hash],
+  "INSERT INTO users (id, username, matricula, name, password, role, is_active, password_changed_at) VALUES (?, ?, ?, ?, ?, 'admin', TRUE, NOW())",
+  [id, username, matricula, name, hash],
 );
 
-console.log(`Admin criado: ${email} / ${password}`);
+console.log(`Admin criado: ${username} (matrícula ${matricula}) / ${password}`);
 await pool.end();
