@@ -35,8 +35,8 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
     if (creating) return;
     setCreating(true);
     try {
-      // Sem senha: a conta nasce sem senha definida, o próprio usuário
-      // define no primeiro acesso (ver /first-access).
+      // No password: the account is created without a password set, the
+      // user themself sets it on first access (see /first-access).
       await create({
         data: { username: username.trim(), employeeId: employeeId.trim(), name: name.trim(), role },
       });

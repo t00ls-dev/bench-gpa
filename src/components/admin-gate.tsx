@@ -9,8 +9,8 @@ export function AdminGate({
   children: React.ReactNode;
   isAdmin?: boolean;
 }) {
-  // Reusa o mesmo cache ["me"] populado pelo beforeLoad do layout autenticado,
-  // evitando uma segunda ida ao servidor só para checar a role.
+  // Reuses the same ["me"] cache populated by the authenticated layout's
+  // beforeLoad, avoiding a second round-trip to the server just to check the role.
   const {
     data: user,
     isLoading,

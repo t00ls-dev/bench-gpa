@@ -31,10 +31,10 @@ interface ProductChartsData {
   evolution?: SeriesPoint[];
 }
 
-// Hoisted para fora de ProductCharts (não pode ser recriado a cada render):
-// evolutionMaxIndex/evolutionMinIndex chegam como props extras no elemento
-// passado a `dot`, que o Recharts mescla com as próprias props internas
-// (cx, cy, index...) via cloneElement.
+// Hoisted out of ProductCharts (must not be recreated on every render):
+// evolutionMaxIndex/evolutionMinIndex arrive as extra props on the element
+// passed to `dot`, which Recharts merges with its own internal props (cx,
+// cy, index...) via cloneElement.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function EvolutionDot(props: any) {
   const { cx, cy, index, evolutionMaxIndex, evolutionMinIndex } = props;

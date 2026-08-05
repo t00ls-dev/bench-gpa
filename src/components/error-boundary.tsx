@@ -20,10 +20,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    // Reporta sempre, não só quando quem usa passa onError: sem isto, um
-    // erro de render pego aqui não ia pra lugar nenhum, nem console. Os 6
-    // usos atuais (Dashboard) não passavam onError, então ficavam 100%
-    // silenciosos.
+    // Always reports, not only when the caller passes onError: without
+    // this, a render error caught here went nowhere, not even the
+    // console. The 6 current usages (Dashboard) didn't pass onError, so
+    // they were 100% silent.
     Sentry.captureException(error, {
       contexts: { react: { componentStack: info.componentStack } },
     });

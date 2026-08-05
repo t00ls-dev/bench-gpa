@@ -47,7 +47,7 @@ interface User {
   name: string;
   role: string;
   is_active: boolean;
-  /** Conta ainda sem senha (primeiro acesso pendente ou resetada por admin). */
+  /** Account still without a password (first-access pending or reset by an admin). */
   pending: boolean;
   created_at: string;
 }
@@ -100,8 +100,8 @@ export function AdminUserManagement({
     );
   }, [data, search]);
 
-  // Busca/tamanho de página novos podem deixar a página atual fora do range
-  // (ex.: filtrar de 3 páginas pra 1), volta pra 1 em vez de mostrar vazio.
+  // A new search/page size can leave the current page out of range (e.g.
+  // filtering from 3 pages down to 1); goes back to 1 instead of showing empty.
   useResetOnChange([search, pageSize], () => setPage(1));
 
   const totalRows = filtered.length;

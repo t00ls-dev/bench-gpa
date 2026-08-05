@@ -25,9 +25,9 @@ interface Props {
   to: string;
   onChange: (range: { from: string; to: string }) => void;
   /** Reference date for relative presets (last7/last30/month). Defaults to actual today.
-   *  "Ontem" sempre usa o dia anterior ao dia atual real, ignorando esta referência. */
+   *  "Yesterday" always uses the day before the real current day, ignoring this reference. */
   reference?: string;
-  /** Datas (ISO YYYY-MM-DD) que possuem dados disponíveis. Demais datas ficam desabilitadas. */
+  /** Dates (ISO YYYY-MM-DD) that have data available. Other dates are disabled. */
   availableDates?: string[];
 }
 
