@@ -9,13 +9,25 @@ e como executar quando for a vez.
 ## Status
 
 - `matricula` -> `employee_id`: **concluído** (PR 1 #203 schema aditivo, PR
-  2 #204 corte de aplicação, PR 3 limpeza/DROP COLUMN). Dividido do
+  2 #204 corte de aplicação, PR 3 #205 limpeza/DROP COLUMN). Dividido do
   restante desta Fase 2 por decisão do usuário: escopo contido (só a
   tabela `users`, zero stored procedure envolvida, confirmado lendo o
   `migrate-schema.sql` inteiro). Coluna `matricula` removida do banco,
   `employee_id` é a única fonte de verdade.
-- `depto/secao/grupo/subgrupo/val_vda`: ainda não iniciado. Ver seção
-  "Fase 2" abaixo.
+- `depto/secao/grupo/subgrupo/val_vda`: **não aplicável, decisão do
+  usuário 2026-08-05**. Não é nomenclatura arbitrária escolhida pelo time:
+  transcreve quase literalmente os cabeçalhos reais da planilha de
+  exportação da GPA (`NOM_DEPTO | NOM_SECAO | NOM_GRUPO | NOM_SUBGRUPO |
+  NOM_PROD | VAL_VDA`, ver comentário em `scripts/migrate-schema.sql:108`).
+  Diferente de `matricula` (conceito só interno, sem contrato externo
+  nenhum ditando o nome), traduzir aqui criaria uma camada permanente de
+  tradução mental entre o que a planilha manda e o que o banco guarda, sem
+  ganho real, para um risco desproporcional: 9 stored procedures com
+  histórico documentado de regressão real de performance quando mexidas
+  sem medir (PR #9, 23,0s -> 30,6s, revertido). Regra registrada em
+  `AGENTS.md` (seção "Idioma", exceção de domínio). O plano detalhado que
+  chegou a ser desenhado para este rename fica preservado abaixo como
+  registro histórico, não como pendência.
 
 ## Por que não entrou na Fase 1
 
@@ -37,9 +49,12 @@ para uma rodada só, cada um com seu próprio risco:
    por arquivo, conforme forem tocados por outro motivo (regra já em
    `AGENTS.md`).
 
-## Fase 2: rename de vocabulário de domínio (banco + app)
+## Fase 2 (histórico, não aplicável): plano que chegou a ser desenhado para depto/secao/grupo/subgrupo/val_vda
 
-### Nomes de destino (decididos)
+Preservado como registro de por que a ideia foi avaliada e descartada (ver
+"Status" acima), não como trabalho pendente.
+
+### Nomes de destino que tinham sido cogitados
 
 | Atual | Novo |
 |---|---|
