@@ -99,15 +99,21 @@ beforeEach(() => {
 });
 
 describe("createUser", () => {
+  type CreateUserInput = {
+    username?: string;
+    matricula?: string;
+    name: string;
+    role: string;
+  };
+  const call = createUser as (d: CreateUserInput) => Promise<{ ok: boolean; id: string }>;
+
   it("insere usuário sem senha (password fica NULL, sem bcrypt.hash neste caminho)", async () => {
-    const result = await (
-      createUser as (d: {
-        username: string;
-        matricula: string;
-        name: string;
-        role: string;
-      }) => Promise<{ ok: boolean; id: string }>
-    )({ username: "novo.usuario", matricula: "5001", name: "New User", role: "user" });
+    const result = await call({
+      username: "novo.usuario",
+      matricula: "5001",
+      name: "New User",
+      role: "user",
+    });
     expect(result.ok).toBe(true);
     expect(result.id).toBeDefined();
     expect(db.query).toHaveBeenCalledWith(
@@ -116,6 +122,22 @@ describe("createUser", () => {
     );
     expect(recordAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: "user.create", detail: "papel: user" }),
+    );
+  });
+
+  it("aceita só username (matrícula fica NULL, pendente de o admin completar depois)", async () => {
+    const result = await call({ username: "novo.usuario", name: "New User", role: "user" });
+    expect(db.query).toHaveBeenCalledWith(
+      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      [result.id, "novo.usuario", null, "New User", "user"],
+    );
+  });
+
+  it("aceita só matrícula (username fica NULL, pendente de o admin completar depois)", async () => {
+    const result = await call({ matricula: "5001", name: "New User", role: "user" });
+    expect(db.query).toHaveBeenCalledWith(
+      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      [result.id, null, "5001", "New User", "user"],
     );
   });
 });

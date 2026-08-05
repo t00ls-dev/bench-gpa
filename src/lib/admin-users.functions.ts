@@ -34,15 +34,26 @@ export const listUsers = createServerFn({ method: "GET" })
     });
   });
 
+// "" e ausente são tratados como "não informado": o formulário manda string
+// vazia para o campo que o admin deixou em branco, não `undefined`.
+const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
+
 export const createUser = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) =>
     z
       .object({
-        username: UsernameSchema,
-        matricula: MatriculaSchema,
+        username: z.preprocess(emptyToUndefined, UsernameSchema.optional()),
+        matricula: z.preprocess(emptyToUndefined, MatriculaSchema.optional()),
         name: z.string().trim().min(1, "Nome obrigatório").max(120),
         role: RoleEnum,
+      })
+      // Só 1 dos dois basta -- o outro fica NULL, mesmo estado "pendente de
+      // completar" que já existe para os usuários migrados do e-mail antigo
+      // (ver updateUserIdentifiers, edit-user-identifiers-dialog.tsx).
+      .refine((d) => d.username !== undefined || d.matricula !== undefined, {
+        message: "Informe usuário ou matrícula.",
+        path: ["username"],
       })
       .parse(data),
   )
@@ -54,7 +65,7 @@ export const createUser = createServerFn({ method: "POST" })
     // aqui -- zero bcrypt.hash neste caminho.
     await db.query(
       "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
-      [id, data.username, data.matricula, data.name, data.role],
+      [id, data.username ?? null, data.matricula ?? null, data.name, data.role],
     );
     await recordAudit({
       action: "user.create",

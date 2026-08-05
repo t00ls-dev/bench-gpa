@@ -54,12 +54,6 @@ export function MultiSelect({
   }, [options, q, searchable]);
   const allSelected = !single && options.length > 0 && value.length === options.length;
 
-  useEffect(() => {
-    if (open && searchable && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [open, searchable, options]);
-
   useResetOnChange([open, searchable, options], () => {
     if (!open) {
       setFocusedIdx(-1);
@@ -219,7 +213,6 @@ export function MultiSelect({
             <Search className="size-3.5 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              autoFocus
               placeholder="Buscar…"
               aria-label="Buscar opções"
               value={q}

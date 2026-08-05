@@ -55,7 +55,7 @@ bun run lint
 | Rota            | Path               | Auth  | Descrição                                                 |
 | --------------- | ------------------ | ----- | --------------------------------------------------------- |
 | Login           | `/auth`            | Não   | Login usuário ou matrícula + senha, Turnstile CAPTCHA     |
-| Primeiro acesso | `/first-access`    | Não   | Define a senha inicial (username + matrícula), auto-login |
+| Primeiro acesso | `/first-access`    | Não   | Define a senha inicial (usuário ou matrícula), auto-login |
 | Trocar senha    | `/change-password` | Sim   | Troca voluntária ou forçada (senha expirada há 30+ dias)  |
 | Dashboard       | `/`                | Sim   | KPIs, evolução diária, top lojas, rankings, PDF export    |
 | Produto         | `/product`         | Sim   | Análise de produto com weekday-aware, PDF export          |

@@ -383,17 +383,20 @@ describe("logout", () => {
 });
 
 describe("setInitialPassword", () => {
-  it("username + matrícula corretos: define a senha e auto-loga (issueSession)", async () => {
+  it("identificador (username OU matrícula) correto: define a senha e auto-loga (issueSession)", async () => {
     vi.mocked(db.query).mockResolvedValue([
-      [{ id: "u1", role: "user", password: null, token_version: 0 }],
+      [{ id: "u1", username: "novo", role: "user", password: null, token_version: 0 }],
     ] as never);
     const result = await setInitialPassword({
-      username: "novo",
-      matricula: "5001",
+      identifier: "novo",
       newPassword: "Str0ng!Pass",
       confirmPassword: "Str0ng!Pass",
     } as never);
     expect(result).toEqual({ ok: true });
+    expect(db.query).toHaveBeenCalledWith(
+      "SELECT id, username, role, password, token_version FROM users WHERE username = ? OR matricula = ?",
+      ["novo", "novo"],
+    );
     expect(bcrypt.hash).toHaveBeenCalledWith("Str0ng!Pass", 12);
     expect(db.query).toHaveBeenCalledWith(
       "UPDATE users SET password = ?, password_changed_at = NOW() WHERE id = ?",
@@ -402,31 +405,50 @@ describe("setInitialPassword", () => {
     expect(setCookie).toHaveBeenCalled();
   });
 
+  it("também resolve pela matrícula, mesma resolução do login", async () => {
+    vi.mocked(db.query).mockResolvedValue([
+      [{ id: "u1", username: null, role: "user", password: null, token_version: 0 }],
+    ] as never);
+    const result = await setInitialPassword({
+      identifier: "5001",
+      newPassword: "Str0ng!Pass",
+      confirmPassword: "Str0ng!Pass",
+    } as never);
+    expect(result).toEqual({ ok: true });
+    expect(setCookie).toHaveBeenCalled();
+  });
+
   it("rejeita quando a conta já tem senha (mensagem genérica, não confirma existência)", async () => {
     vi.mocked(db.query).mockResolvedValue([
-      [{ id: "u1", role: "user", password: "$2b$12$jatemsenha", token_version: 0 }],
+      [
+        {
+          id: "u1",
+          username: "novo",
+          role: "user",
+          password: "$2b$12$jatemsenha",
+          token_version: 0,
+        },
+      ],
     ] as never);
     await expect(
       setInitialPassword({
-        username: "novo",
-        matricula: "5001",
+        identifier: "novo",
         newPassword: "Str0ng!Pass",
         confirmPassword: "Str0ng!Pass",
       } as never),
-    ).rejects.toThrow("Combinação de usuário e matrícula inválida");
+    ).rejects.toThrow("Usuário ou matrícula inválidos");
     expect(setCookie).not.toHaveBeenCalled();
   });
 
-  it("rejeita quando username e matrícula não casam a mesma conta", async () => {
+  it("rejeita quando o identificador não corresponde a nenhuma conta", async () => {
     vi.mocked(db.query).mockResolvedValue([[]] as never);
     await expect(
       setInitialPassword({
-        username: "novo",
-        matricula: "0000",
+        identifier: "inexistente",
         newPassword: "Str0ng!Pass",
         confirmPassword: "Str0ng!Pass",
       } as never),
-    ).rejects.toThrow("Combinação de usuário e matrícula inválida");
+    ).rejects.toThrow("Usuário ou matrícula inválidos");
   });
 
   it("protegido por rate limit de IP, igual ao login", async () => {
@@ -437,8 +459,7 @@ describe("setInitialPassword", () => {
     });
     await expect(
       setInitialPassword({
-        username: "novo",
-        matricula: "5001",
+        identifier: "novo",
         newPassword: "Str0ng!Pass",
         confirmPassword: "Str0ng!Pass",
       } as never),
