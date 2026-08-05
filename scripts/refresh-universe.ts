@@ -5,9 +5,9 @@ import db from "../src/lib/db";
 import { recordHeartbeat } from "../src/lib/heartbeat";
 
 const MONITOR_SLUG = "refresh-universe";
-// Schedule espelha scripts/setup-crons.sh ("30 3 * * *"), mesma ressalva de
-// lá: se o horário real (HestiaCP em produção) mudar, mudar aqui também,
-// senão o Sentry passa a marcar execuções normais como atrasadas.
+// Schedule mirrors scripts/setup-crons.sh ("30 3 * * *"), same caveat as
+// there: if the real schedule (HestiaCP in production) changes, change it
+// here too, otherwise Sentry starts marking normal runs as overdue.
 const MONITOR_CONFIG = {
   schedule: { type: "crontab", value: "30 3 * * *" },
   timezone: "Etc/UTC",

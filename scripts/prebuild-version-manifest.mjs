@@ -2,20 +2,21 @@ import { execSync } from "child_process";
 import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
-// Precisa rodar ANTES de `vite build`, não depois: o Nitro embute um mapa de
-// assets estáticos (size/etag/mtime) direto no bundle do server a partir do
-// conteúdo de public/ NO MOMENTO DO BUILD. Editar .output/public/manifest.json
-// depois (postbuild) deixa o Content-Length declarado dessincronizado do
-// arquivo real, truncando a resposta em produção. Por isso versiona a fonte
-// (public/manifest.json) antes do build e scripts/postbuild-restore-manifest.mjs
-// devolve ela ao estado original depois, pra não sujar o working tree local.
+// Needs to run BEFORE `vite build`, not after: Nitro embeds a static-asset
+// map (size/etag/mtime) directly into the server bundle from public/'s
+// content AT BUILD TIME. Editing .output/public/manifest.json afterward
+// (postbuild) leaves the declared Content-Length out of sync with the real
+// file, truncating the response in production. That's why it versions the
+// source (public/manifest.json) before the build and
+// scripts/postbuild-restore-manifest.mjs restores it to its original state
+// afterward, so it doesn't leave the local working tree dirty.
 const manifestPath = resolve(import.meta.dir, "../public/manifest.json");
 
 let commitHash = "dev";
 try {
   commitHash = execSync("git rev-parse --short HEAD").toString().trim();
 } catch {
-  // sem git disponível: mantém "dev", igual ao fallback do vite.config.ts
+  // no git available: keeps "dev", same as vite.config.ts's fallback
 }
 
 const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));

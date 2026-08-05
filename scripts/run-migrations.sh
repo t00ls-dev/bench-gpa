@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 #
-# Aplica o schema do banco durante o deploy. Dois níveis:
+# Applies the database schema during deploy. Two levels:
 #
-#   1. BASELINE idempotente (migrate-schema.sql), re-aplicado a TODO deploy.
-#      Mantém tabelas (CREATE TABLE IF NOT EXISTS) e, sobretudo, TODAS as
-#      stored procedures (DROP IF EXISTS + CREATE) em sincronia com o
-#      repositório. É isto que elimina a defasagem de procedures entre o
-#      arquivo versionado e o banco em produção: a causa do bug de datas
-#      invertidas: a proc filter_options em prod ainda retornava
-#      `sale_date DESC` (revisão anterior à correção `ASC`), porque editar o
-#      .sql nunca re-executa CREATE PROCEDURE no banco já rodando.
+#   1. Idempotent BASELINE (migrate-schema.sql), re-applied on EVERY deploy.
+#      Keeps tables (CREATE TABLE IF NOT EXISTS) and, above all, ALL stored
+#      procedures (DROP IF EXISTS + CREATE) in sync with the repository.
+#      This is what eliminates procedure drift between the versioned file
+#      and the production database: the cause of the inverted-dates bug was
+#      that the filter_options proc in prod still returned `sale_date DESC`
+#      (the revision before the `ASC` fix), because editing the .sql file
+#      never re-runs CREATE PROCEDURE against the already-running database.
 #
-#   2. MIGRATIONS versionadas forward-only (migrations/NNNN_*.sql), aplicadas
-#      UMA vez e registradas em `schema_migrations`. Para mudanças que o
-#      baseline idempotente não cobre: ALTER TABLE, backfills, etc.
-#      (CREATE TABLE IF NOT EXISTS não altera tabela já existente).
+#   2. Forward-only versioned MIGRATIONS (migrations/NNNN_*.sql), applied
+#      ONCE and recorded in `schema_migrations`. For changes the idempotent
+#      baseline doesn't cover: ALTER TABLE, backfills, etc. (CREATE TABLE IF
+#      NOT EXISTS doesn't alter an already-existing table).
 #
-# Uso:
-#   scripts/run-migrations.sh [caminho-do-.env]
-# O .env (default: ../.env relativo a este script) precisa de
+# Usage:
+#   scripts/run-migrations.sh [path-to-.env]
+# The .env (default: ../.env relative to this script) needs
 # DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS.
 set -euo pipefail
 
@@ -40,11 +40,12 @@ set +a
 : "${DB_USER:?DB_USER ausente no .env}"
 : "${DB_PASS:?DB_PASS ausente no .env}"
 
-# MYSQL_PWD mantém a senha fora da lista de processos (ps).
+# MYSQL_PWD keeps the password out of the process list (ps).
 export MYSQL_PWD="$DB_PASS"
-# Cliente `mariadb`: `mysql` é um alias deprecado no MariaDB 11.4. `--skip-ssl`
-# porque a conexão é local (localhost/socket Unix), onde TLS não agrega; sem essa
-# flag o client polui o log de deploy com "insecure passwordless login".
+# `mariadb` client: `mysql` is a deprecated alias on MariaDB 11.4. `--skip-ssl`
+# because the connection is local (localhost/Unix socket), where TLS adds
+# nothing; without this flag the client pollutes the deploy log with
+# "insecure passwordless login".
 MYSQL=(mariadb --skip-ssl --host="$DB_HOST" --port="${DB_PORT:-3306}" --user="$DB_USER" "$DB_NAME")
 
 echo "==> [1/3] Baseline idempotente (tabelas + procedures)"
@@ -59,8 +60,8 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 SQL
 
 echo "==> [3/3] Migrations versionadas (forward-only)"
-# nullglob: sem arquivos, o loop simplesmente não executa. O glob do bash já
-# vem ordenado lexicograficamente (LC_COLLATE): o prefixo NNNN garante a ordem.
+# nullglob: with no files, the loop simply doesn't run. Bash's glob already
+# comes lexicographically sorted (LC_COLLATE): the NNNN prefix guarantees the order.
 shopt -s nullglob
 applied_any=0
 for f in "$DIR"/migrations/*.sql; do

@@ -158,9 +158,24 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `upload-dropzone.tsx`, `create-user-dialog.tsx`, `command-palette.tsx`,
   `admin-gate.tsx`). Os demais arquivos do diretório não tinham comentários
   em português. **`src/components/` está completo.**
-- **Restante, não iniciado**: ~17 arquivos em `scripts/` (exceto as 5
-  migrations já aplicadas, imutáveis por design), ~38 arquivos de teste
-  (categoria própria, tratamento a definir).
+- **Etapa 7** (concluída, PR #215): 15 scripts não-SQL de `scripts/` com
+  comentários em português (`bench-procs.sh`, `import-watch.ts`,
+  `validate-procs.sh`, `setup-crons.sh`, `coverage-thresholds.ts`,
+  `run-migrations.sh`, `lib/sentry-cron.ts`, `bench-experiment-rankings.sh`,
+  `backfill-null-categories.ts`, `prebuild-version-manifest.mjs`,
+  `purge-aggs.ts`, `refresh-universe.ts`, `postbuild-restore-manifest.mjs`,
+  `create-test-admin.ts`, `import.ts`). Mensagens de log/console (saída de
+  operador) mantidas em português, mesmo critério das etapas anteriores.
+- **Restante, não iniciado**:
+  - `scripts/migrate-schema.sql`: 209 linhas de comentário SQL, majoritariamente
+    dentro das stored procedures. Deixado de fora da etapa 7 de propósito,
+    dado o histórico de cautela desta sessão com mudanças nessas procedures
+    (ver Fase 2 acima); fica para uma etapa dedicada, com o mesmo cuidado de
+    validação (`schema-check` do CI, `validate-procs.sh`).
+  - `scripts/migrations/*.sql`: forward-only, imutáveis por design mesmo
+    para comentários (ver exceção documentada na seção "Idioma" do
+    `AGENTS.md`) -- não aplicável, não uma pendência.
+  - ~38 arquivos de teste (categoria própria, tratamento a definir).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

@@ -1,17 +1,17 @@
-// Init do Sentry pros scripts de cron (purge-aggs, refresh-universe): rodam
-// como processo bun avulso disparado pelo crontab, não pelo build da Vite/
-// Nitro, então não tem acesso a __COMMIT_HASH__/__COMMIT_DATE__ (globals só
-// existem via `define` do vite.config.ts) nem passam pelo pipeline de server
-// function do TanStack Start onde a captura ambiente do Sentry é quebrada
-// (ver src/lib/instrument-server.ts). Aqui é um script linear sem
-// middleware aninhado, então Sentry.withMonitor()/captureCheckIn() (que usam
-// getClient() por baixo) funcionam normalmente.
+// Sentry init for the cron scripts (purge-aggs, refresh-universe): they run
+// as a standalone bun process fired by crontab, not through the Vite/Nitro
+// build, so they have no access to __COMMIT_HASH__/__COMMIT_DATE__ (those
+// globals only exist via vite.config.ts's `define`) and don't go through
+// TanStack Start's server-function pipeline where Sentry's ambient capture
+// is broken (see src/lib/instrument-server.ts). Here it's a linear script
+// with no nested middleware, so Sentry.withMonitor()/captureCheckIn()
+// (which use getClient() under the hood) work normally.
 //
-// @sentry/node direto (não @sentry/tanstackstart-react): é o pacote que
-// exporta withMonitor/captureCheckIn, o outro não reexporta a API de Cron
-// Monitors. Adicionado como dependência direta no package.json apesar de já
-// vir transitivo (via @sentry/tanstackstart-react) pra não depender de hoist
-// implícito do lockfile.
+// @sentry/node directly (not @sentry/tanstackstart-react): it's the
+// package that exports withMonitor/captureCheckIn, the other one doesn't
+// re-export the Cron Monitors API. Added as a direct dependency in
+// package.json even though it already comes in transitively (via
+// @sentry/tanstackstart-react) to avoid depending on implicit lockfile hoisting.
 import * as Sentry from "@sentry/node";
 
 Sentry.init({

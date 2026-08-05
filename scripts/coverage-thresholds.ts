@@ -1,30 +1,30 @@
 /**
- * Pisos de cobertura, fonte única para o Vitest e para o gerador do resumo.
+ * Coverage floors, single source for both Vitest and the summary generator.
  *
- * Os dois liam o mesmo objeto escrito duas vezes: uma em `vitest.config.ts`
- * (onde faz o teste falhar) e outra em `generate-coverage-summary.ts` (onde
- * decide o status de cada linha do relatório). O próprio script admitia a
- * duplicação num comentário ("Kept in sync with the coverage.thresholds block
- * in vitest.config.ts"), o que já denunciava que a sincronia dependia de
- * alguém lembrar.
+ * The two used to read the same object written twice: once in
+ * `vitest.config.ts` (where it fails the build) and once in
+ * `generate-coverage-summary.ts` (where it decides each report line's
+ * status). The script itself admitted the duplication in a comment ("Kept
+ * in sync with the coverage.thresholds block in vitest.config.ts"), which
+ * already gave away that staying in sync depended on someone remembering.
  *
- * O sintoma de esquecer não seria um erro, e sim um relatório mentindo: arquivo
- * marcado como ok enquanto o CI reprova por estar abaixo do piso real.
+ * The symptom of forgetting wouldn't be an error, it would be a report
+ * lying: a file marked ok while CI fails it for being below the real floor.
  *
- * São PISOS, não metas: existem para impedir regressão, não para descrever a
- * cobertura desejada. Subir só faz sentido depois que a cobertura real subiu e
- * se manteve, caso contrário o CI quebra em quem mexeu por último, não em quem
- * baixou a cobertura.
+ * These are FLOORS, not targets: they exist to prevent regression, not to
+ * describe the desired coverage. Raising them only makes sense after real
+ * coverage has gone up and stayed there, otherwise CI breaks for whoever
+ * touched the code last, not for whoever actually dropped coverage.
  *
- * Recalibrados em 01/08/2026 (auditoria de QA, item 2): `vitest.config.ts`
- * passou a incluir `.tsx` em `test.include`/`coverage.include`. Antes,
- * `*.test.tsx` era silenciosamente ignorado (nunca rodava, nem dava erro), e
- * cobertura de componente/página não aparecia nem a 0% no relatório. Isso
- * praticamente dobrou o denominador (117 arquivos fonte contra ~49 antes) com
- * dezenas de componentes ainda sem teste, não é regressão de cobertura real,
- * é o relatório passando a contar honestamente o que sempre existiu. Os pisos
- * antigos (40/40/30/25) mediam só `.ts`; os novos guardam a mesma folga
- * relativa que os antigos tinham contra a cobertura real da época.
+ * Recalibrated on 08/01/2026 (QA audit, item 2): `vitest.config.ts` started
+ * including `.tsx` in `test.include`/`coverage.include`. Before that,
+ * `*.test.tsx` was silently ignored (never ran, never errored), and
+ * component/page coverage didn't even show up as 0% in the report. This
+ * nearly doubled the denominator (117 source files vs. ~49 before) with
+ * dozens of components still untested -- not a real coverage regression,
+ * it's the report starting to honestly count what always existed. The old
+ * floors (40/40/30/25) only measured `.ts`; the new ones keep the same
+ * relative slack the old ones had against the real coverage of that time.
  */
 export const COVERAGE_THRESHOLDS = {
   lines: 20,

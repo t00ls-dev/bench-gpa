@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
-// Contraparte de scripts/prebuild-version-manifest.mjs: depois que o Nitro já
-// leu e embutiu public/manifest.json no bundle do build, remove o `?v=` de
-// volta da fonte versionada em git, pra não deixar o working tree local sujo
-// depois de um `bun run build`.
+// Counterpart to scripts/prebuild-version-manifest.mjs: after Nitro has
+// already read and embedded public/manifest.json into the build bundle,
+// removes the `?v=` back from the git-versioned source, so it doesn't
+// leave the local working tree dirty after a `bun run build`.
 const manifestPath = resolve(import.meta.dir, "../public/manifest.json");
 
 const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
