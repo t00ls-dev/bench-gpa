@@ -18,9 +18,9 @@ const password = "Gpa@Test1970";
 const hash = await bcrypt.hash(password, BCRYPT_COST);
 const id = randomUUID();
 
-// password_changed_at = NOW() explícito: sem isso a conta nasceria com senha
-// "expirada" (password_changed_at NULL), disparando o gate de troca
-// obrigatória em toda verificação manual/E2E que loga com este usuário.
+// Explicit password_changed_at = NOW(): without this the account would be
+// created with an "expired" password (password_changed_at NULL), triggering
+// the mandatory-change gate on every manual/E2E check that logs in with this user.
 await pool.query(
   "INSERT INTO users (id, username, employee_id, name, password, role, is_active, password_changed_at) VALUES (?, ?, ?, ?, ?, 'admin', TRUE, NOW())",
   [id, username, employeeId, name, hash],

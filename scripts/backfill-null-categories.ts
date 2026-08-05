@@ -1,19 +1,19 @@
 #!/usr/bin/env bun
 /**
- * Backfill: converte categorias gravadas como a string "0" de volta para NULL.
+ * Backfill: converts categories written as the string "0" back to NULL.
  *
- * Contexto: o import via CLI (scripts/import.ts) gravava `0` para
- * depto/secao/grupo/subgrupo nulos (bug do `?? 0`, corrigido em staging-row.ts).
- * O MariaDB coagia esse 0 para a string "0" no VARCHAR, poluindo a
- * filter_hierarchy e os rankings com uma categoria fantasma "0".
+ * Context: the CLI import (scripts/import.ts) used to write `0` for null
+ * depto/secao/grupo/subgrupo (the `?? 0` bug, fixed in staging-row.ts).
+ * MariaDB coerced that 0 into the string "0" in the VARCHAR, polluting
+ * filter_hierarchy and the rankings with a phantom "0" category.
  *
- * Este script é idempotente: rodar de novo com tudo limpo não faz nada.
- * Um nome real de depto/secao/grupo/subgrupo nunca é literalmente "0"
- * (são textos como "MERCEARIA"), então NULLIF(col, '0') é seguro.
+ * This script is idempotent: running it again once everything is clean does
+ * nothing. A real depto/secao/grupo/subgrupo name is never literally "0"
+ * (they're text like "MERCEARIA"), so NULLIF(col, '0') is safe.
  *
- * Uso:
- *   bun run scripts/backfill-null-categories.ts --dry-run   # só diagnostica
- *   bun run scripts/backfill-null-categories.ts             # aplica
+ * Usage:
+ *   bun run scripts/backfill-null-categories.ts --dry-run   # diagnose only
+ *   bun run scripts/backfill-null-categories.ts             # apply
  */
 import db from "../src/lib/db";
 
@@ -65,9 +65,9 @@ async function main() {
     process.exit(0);
   }
 
-  // O UPDATE é um único statement atômico por si só. A filter_hierarchy é
-  // derivada, então é regenerada do zero pelo proc (não editada diretamente):
-  // isso também remove eventuais linhas que fiquem totalmente nulas.
+  // The UPDATE is a single atomic statement on its own. filter_hierarchy is
+  // derived, so it's regenerated from scratch by the proc (not edited
+  // directly): that also removes any rows that end up entirely null.
   if (total(beforeAgg) > 0) {
     const [res] = await db.query(
       `UPDATE sales_prod_daily_agg

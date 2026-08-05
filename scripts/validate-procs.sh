@@ -1,43 +1,45 @@
 #!/usr/bin/env bash
 #
-# Prova que uma mudança nas procs de análise NÃO alterou o resultado.
+# Proves that a change to the analysis procs did NOT alter the result.
 #
-# É a metade que falta do `scripts/bench-procs.sh`: aquele mede tempo, este mede
-# correção. Tempo sem correção não vale nada: uma proc mais rápida que devolve
-# outro número é um bug mais rápido.
+# This is the missing other half of `scripts/bench-procs.sh`: that one
+# measures time, this one measures correctness. Time without correctness is
+# worthless: a faster proc that returns a different number is just a faster bug.
 #
-# COMO USAR
+# HOW TO USE
 #
-#   1. Antes de mexer, com o schema atual aplicado:
+#   1. Before making a change, with the current schema applied:
 #        scripts/validate-procs.sh /tmp/antes.txt
-#   2. Edite migrate-schema.sql e reaplique no banco local:
+#   2. Edit migrate-schema.sql and reapply to the local database:
 #        mariadb -h "$DB_HOST" -u "$DB_USER" -p "$DB_NAME" < scripts/migrate-schema.sql
-#   3. Capture de novo e compare:
+#   3. Capture again and compare:
 #        scripts/validate-procs.sh /tmp/depois.txt
 #        diff /tmp/antes.txt /tmp/depois.txt
 #
-# Um `diff` vazio é a aprovação. Qualquer linha diferente significa que a
-# mudança alterou o que o usuário vê, e aí o ganho de tempo é irrelevante.
+# An empty `diff` is the approval. Any differing line means the change
+# altered what the user sees, and then the time gain is irrelevant.
 #
-# OS DOIS HASHES
+# THE TWO HASHES
 #
-# Cada cenário gera dois: `ordem` é da saída como veio (pega mudança de ORDER BY)
-# e `conjunto` é da saída ordenada por fora. A distinção existe porque empate de
-# ordenação é não-determinístico: duas linhas com o mesmo valor podem trocar de
-# lugar entre execuções sem nada estar errado. Se `ordem` divergir mas `conjunto`
-# bater, é empate; se `conjunto` divergir, é dado diferente, e isso é sério.
+# Each scenario generates two: `ordem` is of the output as it came (catches
+# an ORDER BY change) and `conjunto` is of the externally sorted output. The
+# distinction exists because a sort tie is non-deterministic: two rows with
+# the same value can swap places between runs with nothing being wrong. If
+# `ordem` diverges but `conjunto` matches, it's a tie; if `conjunto`
+# diverges, the data is different, and that's serious.
 #
-# POR QUE ESTES CENÁRIOS
+# WHY THESE SCENARIOS
 #
-# Não são "alguns casos": cada um cobre um caminho que já quebrou ou que a
-# reescrita de 2026-07-26 tocou. Datas nulas e período vazio exercitam os ramos
-# `p_date IS NULL` e o conjunto vazio (onde COALESCE decide entre 0 e NULL). As
-# quatro ordenações mais um `p_sort_by` inválido cobrem a whitelist da proc.
-# Busca com e sem match cobre os DOIS ramos do PREPARE de area_analysis, que têm
-# contagens de placeholder diferentes, e contagem de placeholder é erro de
-# execução, não de compilação, então só aparece rodando.
+# They aren't "a few cases": each one covers a path that has broken before
+# or that the 2026-07-26 rewrite touched. Null dates and an empty period
+# exercise the `p_date IS NULL` branches and the empty set (where COALESCE
+# decides between 0 and NULL). The four sort orders plus an invalid
+# `p_sort_by` cover the proc's whitelist. Search with and without a match
+# covers BOTH branches of area_analysis's PREPARE, which have different
+# placeholder counts, and a placeholder-count mismatch is a runtime error,
+# not a compile-time one, so it only shows up when actually run.
 #
-# Roda no banco local por padrão (lê o .env do repo). Somente leitura.
+# Runs against the local database by default (reads the repo's .env). Read-only.
 #
 set -euo pipefail
 
@@ -52,15 +54,17 @@ set -a; . "$ENV_FILE"; set +a
 : "${DB_HOST:?}" "${DB_NAME:?}" "${DB_USER:?}" "${DB_PASS:?}"
 
 CLIENT="$(command -v mariadb || command -v mysql)"
-# --skip-ssl-verify-server-cert: sem ele o cliente emite um aviso por invocação.
-# Com stderr indo para o hash, esse aviso viraria parte do que se está comparando.
+# --skip-ssl-verify-server-cert: without it the client emits a warning per
+# invocation. With stderr feeding the hash, that warning would become part
+# of what's being compared.
 M() {
   MYSQL_PWD="$DB_PASS" "$CLIENT" --skip-ssl-verify-server-cert \
     -h "$DB_HOST" -P "${DB_PORT:-3306}" -u "$DB_USER" -N -B "$DB_NAME" "$@"
 }
 
-# As dimensões saem do próprio banco: um depto hardcoded envelhece junto com o
-# dataset, e aí o cenário deixa de exercitar o filtro sem ninguém perceber.
+# The dimensions come straight from the database: a hardcoded depto goes
+# stale along with the dataset, and then the scenario stops exercising the
+# filter without anyone noticing.
 LAST=$(M -e "SELECT MAX(sale_date) FROM sales_prod_daily_agg;")
 [ -n "$LAST" ] || { echo "ERRO: sales_prod_daily_agg vazia, nada a validar" >&2; exit 1; }
 D7=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 6 DAY);")
@@ -121,7 +125,7 @@ ERRF="$(mktemp)"; trap 'rm -f "$ERRF"' EXIT
 falhas=0
 for c in "${CASES[@]}"; do
   nome="${c%%|*}"; call="${c#*|}"
-  # stderr separado do stdout de propósito: só o resultado entra no hash.
+  # stderr deliberately separate from stdout: only the result goes into the hash.
   if ! saida="$(M -e "$call" 2>"$ERRF")"; then
     printf '%-18s ERRO %s\n' "$nome" "$(head -1 "$ERRF")" >> "$OUT"
     falhas=$((falhas + 1))

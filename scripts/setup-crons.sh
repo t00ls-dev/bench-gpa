@@ -1,53 +1,56 @@
 #!/bin/bash
-# setup-crons.sh: instala/atualiza as crons do Bench GPA
-# Uso: bash scripts/setup-crons.sh
+# setup-crons.sh: installs/updates Bench GPA's crons
+# Usage: bash scripts/setup-crons.sh
 #
-# ATENÇÃO: NÃO RODE ISTO EM PRODUÇÃO. Lá quem é dono do crontab é o HestiaCP: a
-# fonte de verdade é /usr/local/hestia/data/users/admin/cron.conf, e o crontab
-# cru é gerado a partir dela. Este script escreve direto com `crontab`, então
-# mexeria só no lado gerado, que o Hestia sobrescreve na próxima alteração,
-# desfazendo a mudança sem avisar.
+# WARNING: DO NOT RUN THIS IN PRODUCTION. There, HestiaCP owns the crontab:
+# the source of truth is /usr/local/hestia/data/users/admin/cron.conf, and
+# the raw crontab is generated from it. This script writes directly with
+# `crontab`, so it would only touch the generated side, which Hestia
+# overwrites on its next change, silently undoing the modification.
 #
-# Em produção, usar as ferramentas do Hestia:
+# In production, use Hestia's own tools:
 #   sudo /usr/local/hestia/bin/v-add-cron-job admin '0' '3' '*' '*' '*' '<cmd>'
 #   sudo /usr/local/hestia/bin/v-change-cron-job / v-delete-cron-job
 #
-# Este script serve para ambiente próprio (dev, ou uma VPS sem painel).
+# This script is for a standalone environment (dev, or a VPS with no panel).
 
 set -euo pipefail
 
 BENCH_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUN_DIR="$(dirname "$(command -v bun 2>/dev/null)" 2>/dev/null || echo /root/.bun/bin)"
 
-# A importação NÃO tem cron. Ela acontece pela tela /upload do app, que é o
-# caminho normal, ou sob demanda no servidor com `bun run cli:import <arquivo>`
-# (um arquivo) ou `bun run cli:watch` (varre o inbox em data/).
+# Importing has NO cron. It happens through the app's /upload screen, which
+# is the normal path, or on demand on the server with
+# `bun run cli:import <file>` (a single file) or `bun run cli:watch`
+# (scans the inbox in data/).
 #
-# O cron do cli:watch existia porque as planilhas chegavam pelo git e alguém
-# precisava reagir a elas; foi desligado em 2026-07-26 junto com a saída dos
-# dados do versionamento. Os scripts continuam disponíveis para uso manual, se
-# um dia voltar a fazer sentido automatizar, reintroduzir a linha aqui E o job
-# em KNOWN_JOBS (src/lib/admin-system.functions.ts), senão o painel admin não
-# monitora.
+# The cli:watch cron existed because spreadsheets arrived via git and
+# someone had to react to them; it was turned off on 2026-07-26 along with
+# data leaving version control. The scripts remain available for manual
+# use; if automating this ever makes sense again, reintroduce the line
+# here AND the job in KNOWN_JOBS (src/lib/admin-system.functions.ts),
+# otherwise the admin panel doesn't monitor it.
 #
-# O "0 3"/"30 3" abaixo são a fonte real dos horários de purge e
-# refresh-universe. TS não lê bash, então o painel admin mostra um texto solto
-# (PURGE_CRON_LABEL/REFRESH_UNIVERSE_CRON_LABEL em src/lib/retention.ts)
-# descrevendo o mesmo horário. Mudar aqui (ou no v-add-cron-job do Hestia em
-# produção) sem mudar lá deixa o painel exibindo um horário que não é o real.
+# The "0 3"/"30 3" below are the real source of the purge and
+# refresh-universe schedules. TS doesn't read bash, so the admin panel
+# shows a separate piece of text (PURGE_CRON_LABEL/REFRESH_UNIVERSE_CRON_LABEL
+# in src/lib/retention.ts) describing the same schedule. Changing it here
+# (or in Hestia's v-add-cron-job in production) without changing it there
+# leaves the panel showing a schedule that isn't the real one.
 #
-# refresh-universe roda 30min DEPOIS do purge de propósito: regenera
-# product_universe/filter_hierarchy já enxergando o agg pós-poda numa única
-# passada. Até 30/07/2026 esse refresh rodava síncrono a cada import e a cada
-# purge com linha removida; passou a ser um cron dedicado (item 5 de
-# docs/continuar.md) porque cada regeneração custa ~30-36s e PLU/categoria
-# novos são raros o bastante para não justificar pagar isso em toda importação.
+# refresh-universe deliberately runs 30min AFTER the purge: it regenerates
+# product_universe/filter_hierarchy already seeing the post-purge agg in a
+# single pass. Until 07/30/2026 this refresh ran synchronously on every
+# import and every purge that removed a row; it became a dedicated cron
+# (docs/continuar.md item 5) because each regeneration costs ~30-36s and
+# new PLUs/categories are rare enough not to justify paying that cost on
+# every import.
 CRONS=(
 	"0 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:purge >> logs/purge.log 2>&1"
 	"30 3 * * * cd $BENCH_DIR && PATH=$BUN_DIR:\$PATH $BUN_DIR/bun run cli:refresh-universe >> logs/refresh-universe.log 2>&1"
 )
 
-# Remove linhas antigas do bench-gpa e reinstala
+# Removes old bench-gpa lines and reinstalls
 (crontab -l 2>/dev/null | grep -v "$BENCH_DIR" || true) > /tmp/crontab-new
 for cron in "${CRONS[@]}"; do
   echo "$cron"

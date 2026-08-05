@@ -47,11 +47,11 @@ async function main() {
   const batchId = randomUUID();
   const totalRows = parsed.sales.length;
 
-  // Mesma checagem de upload.functions.ts:beginImport: um arquivo com o
-  // marcador de data mas zero linhas de produto (planilha vazia, exportada
-  // errada) chegaria intacto até aqui e só estouraria dentro de
-  // finalize_import (SIGNAL SQLSTATE '45000' de staging_count=0), um erro cru
-  // de banco em vez desta mensagem.
+  // Same check as upload.functions.ts:beginImport: a file with the date
+  // marker but zero product rows (an empty spreadsheet, exported wrong)
+  // would arrive here intact and only blow up inside finalize_import
+  // (SIGNAL SQLSTATE '45000' from staging_count=0), a raw database error
+  // instead of this message.
   if (totalRows === 0) {
     throw new Error("Nenhuma linha de venda para importar.");
   }
