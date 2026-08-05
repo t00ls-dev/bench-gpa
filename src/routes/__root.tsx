@@ -34,9 +34,9 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useState(() => {
-    // Error boundary de rota do TanStack Router: intercepta antes do erro
-    // chegar no onCaughtError/onUncaughtError do React (hydrateRoot, em
-    // client.tsx), então precisa do próprio report, não é redundante.
+    // TanStack Router's route error boundary: intercepts before the error
+    // reaches React's onCaughtError/onUncaughtError (hydrateRoot, in
+    // client.tsx), so it needs its own report, this isn't redundant.
     console.error("Root error boundary caught:", error);
     Sentry.captureException(error);
   });
@@ -60,14 +60,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  // App interno, atrás de autenticação: não há público externo a atrair, então
-  // metadado de indexação e de preview social é anti-feature aqui. Foram
-  // removidos daqui `description`, `og:title`, `og:description`, `twitter:title`
-  // e `twitter:description`: não reintroduzir. O `public/robots.txt` continua
-  // com `Disallow: /` de propósito: ele bloqueia indexação, que é o que
-  // queremos.
+  // Internal app, behind authentication: there's no external audience to
+  // attract, so indexing and social-preview metadata are an anti-feature
+  // here. `description`, `og:title`, `og:description`, `twitter:title`, and
+  // `twitter:description` were removed from here: don't reintroduce them.
+  // `public/robots.txt` deliberately keeps `Disallow: /`: it blocks
+  // indexing, which is what we want.
   //
-  // O que fica é funcional: charset, viewport e o título da aba.
+  // What remains is functional: charset, viewport, and the tab title.
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -76,14 +76,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Bench GPA" },
     ],
     links: [
-      // `?v=` amarra a URL ao commit do build: cada deploy vira uma URL nova,
-      // o que invalida cache de navegador e de CDN (Cloudflare) sem precisar
-      // de purge manual. Os ícones referenciados de dentro do manifest.json
-      // levam o mesmo tratamento no prebuild (scripts/prebuild-version-manifest.mjs).
+      // `?v=` ties the URL to the build's commit: every deploy becomes a new
+      // URL, which invalidates browser and CDN (Cloudflare) cache without
+      // needing a manual purge. The icons referenced from inside
+      // manifest.json get the same treatment during the prebuild
+      // (scripts/prebuild-version-manifest.mjs).
       { rel: "icon", type: "image/x-icon", href: `/favicon.ico?v=${__COMMIT_HASH__}` },
-      // PNG explícito ao lado do .ico: navegadores modernos preferem PNG
-      // quando disponível, e este arquivo tem transparência confirmada
-      // (mesmo mark do favicon, exportado direto como PNG sem contêiner ICO).
+      // Explicit PNG alongside the .ico: modern browsers prefer PNG when
+      // available, and this file has confirmed transparency (same mark as
+      // the favicon, exported directly as PNG without an ICO container).
       {
         rel: "icon",
         type: "image/png",

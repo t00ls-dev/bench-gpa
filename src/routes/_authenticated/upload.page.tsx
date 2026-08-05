@@ -49,9 +49,9 @@ interface ProcessingState {
   currentDate: string;
 }
 
-// Tentativas extras além da original (3 no total), reiniciando o arquivo do
-// zero a cada uma. Ver comentário em processOne sobre por que não é retry
-// por chunk.
+// Extra attempts beyond the original (3 total), restarting the file from
+// scratch each time. See the comment in processOne for why this isn't a
+// per-chunk retry.
 const MAX_FILE_RETRIES = 2;
 const FILE_RETRY_DELAY_MS = 1500;
 
@@ -161,16 +161,17 @@ export default function UploadPage() {
       })
       .map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
 
-    // Retry no nível do arquivo inteiro, não do chunk. insertSalesChunk faz um
-    // INSERT simples sem proteção contra duplicata (sem ON DUPLICATE KEY, sem
-    // coluna de sequência de chunk): reenviar só o chunk que falhou arrisca
-    // duplicar linhas na staging_sales se o INSERT já tiver sido gravado no
-    // servidor e só a resposta tiver se perdido na rede. finalize_import agrega
-    // via GROUP BY/SUM direto da staging (não valida contagem de linhas), então
-    // duplicata vira venda inflada silenciosamente, não um erro visível.
-    // Reiniciar o arquivo é seguro porque beginImport começa com
-    // DELETE FROM staging_sales WHERE sale_date = ?: cada tentativa parte de
-    // uma staging limpa para aquela data, sem risco de duplicata.
+    // Retry at the whole-file level, not per chunk. insertSalesChunk does a
+    // plain INSERT with no duplicate protection (no ON DUPLICATE KEY, no
+    // chunk-sequence column): resending just the chunk that failed risks
+    // duplicating rows in staging_sales if the INSERT had already been
+    // written on the server and only the response got lost on the network.
+    // finalize_import aggregates via GROUP BY/SUM straight from staging (it
+    // doesn't validate row counts), so a duplicate silently turns into an
+    // inflated sale, not a visible error. Restarting the file is safe
+    // because beginImport starts with
+    // DELETE FROM staging_sales WHERE sale_date = ?: every attempt starts
+    // from a clean staging for that date, with no risk of duplication.
     let lastError: unknown;
     for (let attempt = 0; attempt <= MAX_FILE_RETRIES; attempt++) {
       if (cancelRef.current) {
