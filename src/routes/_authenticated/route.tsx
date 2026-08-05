@@ -239,9 +239,14 @@ function AuthedLayout() {
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center gap-1 px-3 py-2">
-              <span className="flex-1 truncate text-xs text-sidebar-foreground/60">
-                {user.username ?? user.employeeId ?? "-"}
-              </span>
+              <div className="flex-1 truncate">
+                <div className="truncate text-xs text-sidebar-foreground/80">{user.name}</div>
+                {user.employeeId && (
+                  <div className="truncate text-[10px] text-sidebar-foreground/50">
+                    {user.employeeId}
+                  </div>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -292,7 +297,8 @@ function AuthedLayout() {
         </SidebarInset>
         <MobileNav
           isAdmin={isAdmin}
-          username={user.username ?? user.employeeId}
+          name={user.name}
+          employeeId={user.employeeId}
           onSignOut={signOut}
         />
       </SidebarProvider>
