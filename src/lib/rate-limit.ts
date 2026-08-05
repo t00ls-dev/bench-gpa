@@ -172,9 +172,15 @@ export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.s
  * resetar o balde, e `id` nunca muda mesmo que o admin edite o username
  * depois. Conta não encontrada usa `identifier:<bruto>` como chave, mantendo
  * a mesma cobertura contra brute-force de conta inexistente.
+ *
+ * 10 (não menos): tanto login quanto primeiro acesso já exigem Turnstile
+ * antes de aceitar a tentativa, o que cobre a parte automatizada do
+ * problema; este balde é a defesa que sobra contra um humano/script
+ * insistindo numa conta específica. 10/15min dá folga real para erro de
+ * digitação sem abrir mão dessa contenção.
  */
 const AUTH_ACCOUNT_WINDOW_MS = 15 * 60_000;
-const AUTH_ACCOUNT_MAX_PER_KEY = 5;
+const AUTH_ACCOUNT_MAX_PER_KEY = 10;
 export const authAccountLimiter = new RateLimiter(
   AUTH_ACCOUNT_WINDOW_MS,
   AUTH_ACCOUNT_MAX_PER_KEY,
