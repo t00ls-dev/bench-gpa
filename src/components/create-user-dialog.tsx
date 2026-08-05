@@ -26,7 +26,7 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
   const create = useServerFn(createUser);
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState("");
-  const [matricula, setMatricula] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [creating, setCreating] = useState(false);
@@ -38,12 +38,12 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
       // Sem senha: a conta nasce sem senha definida, o próprio usuário
       // define no primeiro acesso (ver /first-access).
       await create({
-        data: { username: username.trim(), matricula: matricula.trim(), name: name.trim(), role },
+        data: { username: username.trim(), employeeId: employeeId.trim(), name: name.trim(), role },
       });
       toast.success("Usuário criado. Aguardando primeiro acesso.");
       setOpen(false);
       setUsername("");
-      setMatricula("");
+      setEmployeeId("");
       setName("");
       setRole("user");
       onCreated();
@@ -80,13 +80,13 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
             />
           </div>
           <div>
-            <Label htmlFor="create-matricula">Matrícula</Label>
+            <Label htmlFor="create-employee-id">Matrícula</Label>
             <Input
-              id="create-matricula"
+              id="create-employee-id"
               className="mt-1.5"
               inputMode="numeric"
-              value={matricula}
-              onChange={(e) => setMatricula(e.target.value)}
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
               autoComplete="off"
             />
           </div>
@@ -116,7 +116,7 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
           <Button variant="outline" onClick={() => setOpen(false)} disabled={creating}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={creating || (!username && !matricula) || !name}>
+          <Button onClick={submit} disabled={creating || (!username && !employeeId) || !name}>
             {creating ? <Loader2 className="size-4 animate-spin" /> : "Criar"}
           </Button>
         </DialogFooter>

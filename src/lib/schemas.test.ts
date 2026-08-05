@@ -3,7 +3,7 @@ import {
   FilterSchema,
   AreaAnalysisSchema,
   UsernameSchema,
-  MatriculaSchema,
+  EmployeeIdSchema,
   PasswordSchema,
 } from "./schemas";
 
@@ -60,7 +60,7 @@ describe("UsernameSchema", () => {
     expect(UsernameSchema.parse("Joao.Silva")).toBe("joao.silva");
   });
 
-  it("rejeita string só de dígitos: ambiguidade com matrícula no login (WHERE username = ? OR matricula = ?)", () => {
+  it("rejeita string só de dígitos: ambiguidade com matrícula no login (WHERE username = ? OR employee_id = ?)", () => {
     expect(() => UsernameSchema.parse("12345")).toThrow();
   });
 
@@ -69,17 +69,17 @@ describe("UsernameSchema", () => {
   });
 });
 
-describe("MatriculaSchema", () => {
+describe("EmployeeIdSchema", () => {
   it("aceita string só de dígitos", () => {
-    expect(MatriculaSchema.parse("12345")).toBe("12345");
+    expect(EmployeeIdSchema.parse("12345")).toBe("12345");
   });
 
   it("preserva zero à esquerda (sem cast pra número)", () => {
-    expect(MatriculaSchema.parse("00099")).toBe("00099");
+    expect(EmployeeIdSchema.parse("00099")).toBe("00099");
   });
 
   it("rejeita letra", () => {
-    expect(() => MatriculaSchema.parse("123a5")).toThrow();
+    expect(() => EmployeeIdSchema.parse("123a5")).toThrow();
   });
 });
 

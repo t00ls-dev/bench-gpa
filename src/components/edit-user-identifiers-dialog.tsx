@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 interface Target {
   id: string;
   username: string | null;
-  matricula: string | null;
+  employeeId: string | null;
 }
 
 function EditUserIdentifiersForm({
@@ -34,7 +34,7 @@ function EditUserIdentifiersForm({
   // no chamador) sempre que o alvo muda, então isto nunca fica desatualizado
   // sem precisar de useEffect pra sincronizar estado derivado de prop.
   const [username, setUsername] = useState(target.username ?? "");
-  const [matricula, setMatricula] = useState(target.matricula ?? "");
+  const [employeeId, setEmployeeId] = useState(target.employeeId ?? "");
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
@@ -42,7 +42,7 @@ function EditUserIdentifiersForm({
     setSaving(true);
     try {
       await update({
-        data: { userId: target.id, username: username.trim(), matricula: matricula.trim() },
+        data: { userId: target.id, username: username.trim(), employeeId: employeeId.trim() },
       });
       toast.success("Usuário atualizado.");
       onSaved();
@@ -71,13 +71,13 @@ function EditUserIdentifiersForm({
           />
         </div>
         <div>
-          <Label htmlFor="edit-matricula">Matrícula</Label>
+          <Label htmlFor="edit-employee-id">Matrícula</Label>
           <Input
-            id="edit-matricula"
+            id="edit-employee-id"
             className="mt-1.5"
             inputMode="numeric"
-            value={matricula}
-            onChange={(e) => setMatricula(e.target.value)}
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
             autoComplete="off"
           />
         </div>
@@ -86,7 +86,7 @@ function EditUserIdentifiersForm({
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancelar
         </Button>
-        <Button onClick={submit} disabled={saving || !username || !matricula}>
+        <Button onClick={submit} disabled={saving || !username || !employeeId}>
           {saving ? <Loader2 className="size-4 animate-spin" /> : "Salvar"}
         </Button>
       </DialogFooter>
@@ -95,11 +95,11 @@ function EditUserIdentifiersForm({
 }
 
 /**
- * Fecha o ciclo da migração de e-mail para username/matrícula: usuários
- * legados podem ter chegado com só um dos dois campos preenchido (a parte
- * local do e-mail antigo já era um ou outro, nunca os dois -- ver
- * scripts/migrate-users-to-username.ts). Sem esta tela o admin não teria
- * como completar o campo faltante pela interface.
+ * Closes the loop of the email -> username/employee_id migration: legacy
+ * users may have arrived with only one of the two fields filled in (the
+ * local part of the old email was already one or the other, never both --
+ * see scripts/migrate-users-to-username.ts). Without this screen the admin
+ * would have no way to complete the missing field through the UI.
  */
 export function EditUserIdentifiersDialog({
   target,

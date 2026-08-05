@@ -43,7 +43,7 @@ import { EditUserIdentifiersDialog } from "@/components/edit-user-identifiers-di
 interface User {
   id: string;
   username: string | null;
-  matricula: string | null;
+  employeeId: string | null;
   name: string;
   role: string;
   is_active: boolean;
@@ -53,7 +53,7 @@ interface User {
 }
 
 function displayIdentifier(u: User): string {
-  return u.username ?? u.matricula ?? "-";
+  return u.username ?? u.employeeId ?? "-";
 }
 
 export function AdminUserManagement({
@@ -95,7 +95,7 @@ export function AdminUserManagement({
     return (data ?? []).filter(
       (u) =>
         (u.username ?? "").toLowerCase().includes(q) ||
-        (u.matricula ?? "").includes(q) ||
+        (u.employeeId ?? "").includes(q) ||
         u.name.toLowerCase().includes(q),
     );
   }, [data, search]);
@@ -182,7 +182,7 @@ export function AdminUserManagement({
                       </div>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs">
-                      {u.matricula ?? <span className="text-muted-foreground">-</span>}
+                      {u.employeeId ?? <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-4 py-3">{u.name}</td>
                     <td className="px-4 py-3 text-xs">{isAdmin ? "Administrador" : "Usuário"}</td>

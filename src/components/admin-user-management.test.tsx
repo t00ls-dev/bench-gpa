@@ -16,7 +16,7 @@ import { AdminUserManagement } from "./admin-user-management";
 interface TestUser {
   id: string;
   username: string | null;
-  matricula: string | null;
+  employeeId: string | null;
   name: string;
   role: string;
   is_active: boolean;
@@ -56,7 +56,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
   return {
     id: "u1",
     username: "ana",
-    matricula: "1001",
+    employeeId: "1001",
     name: "Ana Silva",
     role: "user",
     is_active: true,
@@ -93,11 +93,11 @@ describe("AdminUserManagement", () => {
 
   it("renderiza username, matrícula, nome, papel e status de cada usuário", () => {
     const data = [
-      user({ id: "u1", username: "ana", matricula: "1001", name: "Ana Silva", role: "admin" }),
+      user({ id: "u1", username: "ana", employeeId: "1001", name: "Ana Silva", role: "admin" }),
       user({
         id: "u2",
         username: "bruno",
-        matricula: "1002",
+        employeeId: "1002",
         name: "Bruno Costa",
         role: "user",
         is_active: false,
@@ -122,8 +122,8 @@ describe("AdminUserManagement", () => {
 
   it("filtra por busca (username, matrícula ou nome, case-insensitive) e reseta a página", () => {
     const data = [
-      user({ id: "u1", username: "ana", matricula: "1001", name: "Ana Silva" }),
-      user({ id: "u2", username: "bruno", matricula: "1002", name: "Bruno Costa" }),
+      user({ id: "u1", username: "ana", employeeId: "1001", name: "Ana Silva" }),
+      user({ id: "u2", username: "bruno", employeeId: "1002", name: "Bruno Costa" }),
     ];
     renderWithClient(<AdminUserManagement data={data} isLoading={false} />);
 
@@ -140,7 +140,7 @@ describe("AdminUserManagement", () => {
       user({
         id: `u${i}`,
         username: `user${i}`,
-        matricula: String(1000 + i),
+        employeeId: String(1000 + i),
         name: `Usuário ${i}`,
       }),
     );

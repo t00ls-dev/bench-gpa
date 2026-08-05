@@ -12,7 +12,7 @@ const pool = createPool({
 });
 
 const username = "test";
-const matricula = "00001";
+const employeeId = "00001";
 const name = "Teste";
 const password = "Gpa@Test1970";
 const hash = await bcrypt.hash(password, BCRYPT_COST);
@@ -22,9 +22,9 @@ const id = randomUUID();
 // "expirada" (password_changed_at NULL), disparando o gate de troca
 // obrigatória em toda verificação manual/E2E que loga com este usuário.
 await pool.query(
-  "INSERT INTO users (id, username, matricula, name, password, role, is_active, password_changed_at) VALUES (?, ?, ?, ?, ?, 'admin', TRUE, NOW())",
-  [id, username, matricula, name, hash],
+  "INSERT INTO users (id, username, employee_id, name, password, role, is_active, password_changed_at) VALUES (?, ?, ?, ?, ?, 'admin', TRUE, NOW())",
+  [id, username, employeeId, name, hash],
 );
 
-console.log(`Admin criado: ${username} (matrícula ${matricula}) / ${password}`);
+console.log(`Admin criado: ${username} (matrícula ${employeeId}) / ${password}`);
 await pool.end();

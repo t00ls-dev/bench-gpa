@@ -18,7 +18,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 interface UserRow {
   id: string;
   username: string | null;
-  matricula: string | null;
+  employee_id: string | null;
   name: string;
   password: string | null;
   role: string;
@@ -81,7 +81,7 @@ export const login = createServerFn({ method: "POST" })
     }
 
     const [rowsRaw] = await db.query(
-      "SELECT id, username, matricula, name, password, role, is_active, token_version FROM users WHERE username = ? OR matricula = ?",
+      "SELECT id, username, employee_id, name, password, role, is_active, token_version FROM users WHERE username = ? OR employee_id = ?",
       [identifier, identifier],
     );
     const rows = rowsRaw as unknown as UserRow[];
@@ -159,7 +159,7 @@ export const getMe = createServerFn({ method: "GET" }).handler(async () => {
     return {
       id: session.userId,
       username: session.userUsername,
-      matricula: session.userMatricula,
+      employeeId: session.userEmployeeId,
       name: session.userName,
       role: session.userRole,
       passwordChangeRequired: session.passwordChangeRequired,
@@ -231,7 +231,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
     }
 
     const [rowsRaw] = await db.query(
-      "SELECT id, username, role, password, token_version FROM users WHERE username = ? OR matricula = ?",
+      "SELECT id, username, role, password, token_version FROM users WHERE username = ? OR employee_id = ?",
       [identifier, identifier],
     );
     const rows = rowsRaw as unknown as {

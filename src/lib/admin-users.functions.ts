@@ -5,7 +5,7 @@ import { assertAdmin, invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import { z } from "zod";
 import db from "./db";
-import { UsernameSchema, MatriculaSchema, RoleEnum, UserIdSchema } from "./schemas";
+import { UsernameSchema, EmployeeIdSchema, RoleEnum, UserIdSchema } from "./schemas";
 import { asArray, asRecord, dateTimeStr } from "./api-types";
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -13,14 +13,14 @@ export const listUsers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rows] = await db.query(
-      "SELECT id, username, matricula, name, role, is_active, created_at, password IS NULL AS pending FROM users ORDER BY created_at DESC",
+      "SELECT id, username, employee_id, name, role, is_active, created_at, password IS NULL AS pending FROM users ORDER BY created_at DESC",
     );
     return asArray(rows).map((r) => {
       const rec = asRecord(r);
       return {
         id: String(rec.id ?? ""),
         username: rec.username == null ? null : String(rec.username),
-        matricula: rec.matricula == null ? null : String(rec.matricula),
+        employeeId: rec.employee_id == null ? null : String(rec.employee_id),
         name: String(rec.name ?? ""),
         role: String(rec.role ?? ""),
         is_active: Boolean(rec.is_active),
@@ -44,14 +44,14 @@ export const createUser = createServerFn({ method: "POST" })
     z
       .object({
         username: z.preprocess(emptyToUndefined, UsernameSchema.optional()),
-        matricula: z.preprocess(emptyToUndefined, MatriculaSchema.optional()),
+        employeeId: z.preprocess(emptyToUndefined, EmployeeIdSchema.optional()),
         name: z.string().trim().min(1, "Nome obrigatório").max(120),
         role: RoleEnum,
       })
       // Só 1 dos dois basta -- o outro fica NULL, mesmo estado "pendente de
       // completar" que já existe para os usuários migrados do e-mail antigo
       // (ver updateUserIdentifiers, edit-user-identifiers-dialog.tsx).
-      .refine((d) => d.username !== undefined || d.matricula !== undefined, {
+      .refine((d) => d.username !== undefined || d.employeeId !== undefined, {
         message: "Informe usuário ou matrícula.",
         path: ["username"],
       })
@@ -64,8 +64,8 @@ export const createUser = createServerFn({ method: "POST" })
     // (setInitialPassword, auth-api.ts). Admin não define senha nenhuma
     // aqui -- zero bcrypt.hash neste caminho.
     await db.query(
-      "INSERT INTO users (id, username, matricula, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
-      [id, data.username ?? null, data.matricula ?? null, data.name, data.role],
+      "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
+      [id, data.username ?? null, data.employeeId ?? null, data.name, data.role],
     );
     await recordAudit({
       action: "user.create",
@@ -150,19 +150,19 @@ export const updateUserIdentifiers = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((data: unknown) =>
     z
-      .object({ userId: UserIdSchema, username: UsernameSchema, matricula: MatriculaSchema })
+      .object({ userId: UserIdSchema, username: UsernameSchema, employeeId: EmployeeIdSchema })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     try {
-      await db.query("UPDATE users SET username = ?, matricula = ? WHERE id = ?", [
+      await db.query("UPDATE users SET username = ?, employee_id = ? WHERE id = ?", [
         data.username,
-        data.matricula,
+        data.employeeId,
         data.userId,
       ]);
     } catch (err) {
-      // ER_DUP_ENTRY: username ou matrícula já usados por outra conta.
+      // ER_DUP_ENTRY: username or employee_id already used by another account.
       if (err && typeof err === "object" && "code" in err && err.code === "ER_DUP_ENTRY") {
         throw new Error("Username ou matrícula já usados por outra conta.", { cause: err });
       }
@@ -174,7 +174,7 @@ export const updateUserIdentifiers = createServerFn({ method: "POST" })
       actorUsername: context.userUsername,
       targetType: "user",
       targetId: data.userId,
-      detail: `novo username: ${data.username}, nova matrícula: ${data.matricula}`,
+      detail: `novo username: ${data.username}, nova matrícula: ${data.employeeId}`,
     });
     return { ok: true };
   });

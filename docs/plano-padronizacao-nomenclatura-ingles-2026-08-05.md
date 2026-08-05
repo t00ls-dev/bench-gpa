@@ -6,6 +6,16 @@ nomenclatura técnica em inglês (regra completa em `AGENTS.md`, seção
 mesmo dia. Este documento cobre o que ficou de fora dessa rodada, por quê,
 e como executar quando for a vez.
 
+## Status
+
+- `matricula` -> `employee_id`: **concluído** (PR 1 #203 schema aditivo, PR
+  2 corte de aplicação, PR 3 limpeza/DROP COLUMN pendente). Dividido do
+  restante desta Fase 2 por decisão do usuário: escopo contido (só a
+  tabela `users`, zero stored procedure envolvida, confirmado lendo o
+  `migrate-schema.sql` inteiro).
+- `depto/secao/grupo/subgrupo/val_vda`: ainda não iniciado. Ver seção
+  "Fase 2" abaixo.
+
 ## Por que não entrou na Fase 1
 
 Auditoria (2 agentes de exploração, cobrindo código-fonte, banco de dados,

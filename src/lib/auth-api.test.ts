@@ -110,7 +110,7 @@ const dbRow = (overrides: Record<string, unknown> = {}) => [
   {
     id: "u1",
     username: "test",
-    matricula: null,
+    employee_id: null,
     name: "Teste",
     password: "$2b$12$hash",
     role: "admin",
@@ -199,7 +199,7 @@ describe("login", () => {
 
   it("autentica por matrícula (não só por username)", async () => {
     vi.mocked(db.query).mockResolvedValue([
-      dbRow({ username: "test", matricula: "5001" }),
+      dbRow({ username: "test", employee_id: "5001" }),
     ] as never);
     const result = await login({
       identifier: "5001",
@@ -208,7 +208,7 @@ describe("login", () => {
     } as never);
     expect(result).toEqual({ ok: true });
     expect(db.query).toHaveBeenCalledWith(
-      expect.stringContaining("WHERE username = ? OR matricula = ?"),
+      expect.stringContaining("WHERE username = ? OR employee_id = ?"),
       ["5001", "5001"],
     );
   });
@@ -301,7 +301,7 @@ describe("getMe", () => {
     expect(user).toEqual({
       id: "u1",
       username: "test",
-      matricula: null,
+      employeeId: null,
       name: "Teste",
       role: "admin",
       passwordChangeRequired: false,
@@ -394,7 +394,7 @@ describe("setInitialPassword", () => {
     } as never);
     expect(result).toEqual({ ok: true });
     expect(db.query).toHaveBeenCalledWith(
-      "SELECT id, username, role, password, token_version FROM users WHERE username = ? OR matricula = ?",
+      "SELECT id, username, role, password, token_version FROM users WHERE username = ? OR employee_id = ?",
       ["novo", "novo"],
     );
     expect(bcrypt.hash).toHaveBeenCalledWith("Str0ng!Pass", 12);
