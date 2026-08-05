@@ -3,29 +3,29 @@ import db from "./db";
 import { getClientIp } from "./rate-limit";
 
 /**
- * Limite do campo `detail`. Espelha `VARCHAR(500)` no schema, tanto em
- * `audit_log` quanto em `cron_heartbeat`, que truncavam com o mesmo 500 escrito
- * à mão em arquivos diferentes. Truncar aqui evita que um detalhe longo derrube
- * a gravação inteira por "Data too long".
+ * `detail` field limit. Mirrors `VARCHAR(500)` in the schema, both in
+ * `audit_log` and `cron_heartbeat`, which used the same 500 hand-written in
+ * different files. Truncating here keeps a long detail from failing the
+ * whole write with "Data too long".
  */
 export const DETAIL_MAX_LENGTH = 500;
 
 export interface AuditEntry {
-  /** Ação no formato "dominio.verbo", ex.: "auth.login", "user.role_change". */
+  /** Action in "domain.verb" format, e.g. "auth.login", "user.role_change". */
   action: string;
   actorId?: string | null;
   actorUsername?: string | null;
   targetType?: string | null;
   targetId?: string | null;
-  /** Resumo legível do que mudou. Truncado em 500 chars. */
+  /** Human-readable summary of what changed. Truncated to 500 chars. */
   detail?: string | null;
-  /** IP do ator. Se omitido, tenta extrair da request atual. */
+  /** Actor's IP. If omitted, tries to extract it from the current request. */
   ip?: string | null;
 }
 
 /**
- * Grava um evento na trilha de auditoria. É best-effort: NUNCA lança.
- * uma falha ao auditar não pode derrubar a operação real que a originou.
+ * Records an event in the audit trail. Best-effort: NEVER throws. A failure
+ * to audit can't take down the real operation that triggered it.
  */
 export async function recordAudit(entry: AuditEntry): Promise<void> {
   try {
@@ -51,7 +51,7 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
       ],
     );
   } catch (err) {
-    // Só loga: auditoria não deve interromper o fluxo principal.
+    // Only logs: auditing must not interrupt the main flow.
     console.error("[audit] falha ao registrar evento:", err instanceof Error ? err.message : err);
   }
 }

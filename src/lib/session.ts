@@ -34,10 +34,11 @@ export interface ResolvedSession {
   userUsername: string | null;
   userEmployeeId: string | null;
   persistent: boolean;
-  /** true se a conta ainda não definiu senha (primeiro acesso/reset por
-   * admin) ou se a senha já passou de 30 dias sem trocar. Quem decide o que
-   * fazer com isto é cada chamador -- resolveSession nunca lança por causa
-   * dele (ver comentário em auth-middleware.ts sobre por quê). */
+  /** true if the account hasn't set a password yet (first access/admin
+   * reset) or if the password has gone more than 30 days without being
+   * changed. Deciding what to do with this is up to each caller --
+   * resolveSession never throws because of it (see the comment in
+   * auth-middleware.ts for why). */
   passwordChangeRequired: boolean;
 }
 
@@ -74,9 +75,9 @@ function writeSessionCookie(token: string, persistent: boolean): void {
   });
 }
 
-/** Emite a sessão inicial no login: único ponto que decide entre o modo
- * "Manter conectado" (fixo, 7 dias) e o modo normal (desliza por atividade,
- * teto de 24h). */
+/** Issues the initial session on login: the one place that decides between
+ * "keep me signed in" mode (fixed, 7 days) and normal mode (slides by
+ * activity, 24h cap). */
 export function issueSession(
   user: { id: string; role: string; tokenVersion: number },
   persistent: boolean,
@@ -87,20 +88,21 @@ export function issueSession(
 }
 
 /**
- * Valida o cookie de sessão e, se `slide` for true e a sessão for do tipo
- * "normal" (não persistente), reemite o cookie com um novo prazo: é o que dá
- * o comportamento de expiração por inatividade. `slide: false` é usado por
- * quem só precisa checar a identidade (ex.: `getMe`, chamado a cada navegação
- * e cacheado por 60s) sem querer o efeito colateral de reemitir o cookie a
- * cada chamada.
+ * Validates the session cookie and, if `slide` is true and the session is
+ * "normal" (not persistent), re-issues the cookie with a new deadline:
+ * that's what gives the inactivity-based expiration behavior. `slide: false`
+ * is used by callers that only need to check identity (e.g. `getMe`, called
+ * on every navigation and cached for 60s) without wanting the side effect of
+ * re-issuing the cookie on every call.
  *
- * Lança em qualquer falha de autenticação: cada mensagem começa com
- * "Unauthorized" para quem precisa distinguir o motivo (`requireAuth`);
- * `getMe` só quer saber se deu certo e converte qualquer exceção em `null`.
+ * Throws on any authentication failure: every message starts with
+ * "Unauthorized" for callers that need to distinguish the reason
+ * (`requireAuth`); `getMe` only wants to know if it succeeded and converts
+ * any exception into `null`.
  *
- * NÃO lança por causa de `passwordChangeRequired`: isso não é uma falha de
- * autenticação (a sessão é válida), é um estado que cada chamador decide como
- * tratar -- ver auth-middleware.ts.
+ * Does NOT throw because of `passwordChangeRequired`: that isn't an
+ * authentication failure (the session is valid), it's a state each caller
+ * decides how to handle -- see auth-middleware.ts.
  */
 export async function resolveSession(
   token: string | undefined,
@@ -110,15 +112,15 @@ export async function resolveSession(
 
   const payload = jwt.verify(token, jwtSecret()) as SessionPayload;
 
-  // password_change_required calculado em SQL (não em JS): NOW() do servidor
-  // de banco é a única fonte de tempo que importa aqui, e comparar em SQL
-  // evita depender do fuso horário do processo Node.
+  // password_change_required computed in SQL (not JS): the database
+  // server's NOW() is the only source of time that matters here, and
+  // comparing in SQL avoids depending on the Node process's timezone.
   //
-  // password_changed_at IS NULL trata ausência do timestamp como "precisa
-  // trocar" (fail-safe), não como "nunca expira" (fail-open): em SQL,
-  // qualquer comparação com NULL é NULL/falsy, então sem esse OR explícito
-  // uma conta cujo password_changed_at nunca foi preenchido ficaria isenta
-  // de expirar para sempre.
+  // password_changed_at IS NULL treats a missing timestamp as "needs to
+  // change" (fail-safe), not as "never expires" (fail-open): in SQL, any
+  // comparison with NULL is NULL/falsy, so without this explicit OR an
+  // account whose password_changed_at was never filled in would be exempt
+  // from ever expiring.
   const [rowsRaw] = await db.query(
     `SELECT id, name, role, is_active, token_version, username, employee_id,
             (password IS NULL
@@ -133,18 +135,18 @@ export async function resolveSession(
   }
   const dbUser = rows[0];
 
-  // Revogação: resetPassword/changePassword/logout incrementam token_version,
-  // então todo token emitido antes para de valer aqui. `?? 0` cobre tokens
-  // emitidos antes desta coluna existir: nascem em 0 e seguem válidos até
-  // expirar naturalmente.
+  // Revocation: resetPassword/changePassword/logout increment token_version,
+  // so every token issued before that stops being valid here. `?? 0` covers
+  // tokens issued before this column existed: they're born at 0 and stay
+  // valid until they expire naturally.
   if ((payload.tokenVersion ?? 0) !== dbUser.token_version) {
     throw new Error("Unauthorized: session revoked");
   }
 
   if (!payload.persistent) {
-    // Tokens emitidos antes desta mudança não têm `loginAt`: tratamos como se
-    // o login fosse agora, dando um teto de 24h a partir do deploy em vez de
-    // expirar todo mundo de uma vez.
+    // Tokens issued before this change don't have `loginAt`: treated as if
+    // login were now, giving a 24h cap from the deploy instead of expiring
+    // everyone at once.
     const loginAt = payload.loginAt ?? Math.floor(Date.now() / 1000);
     const age = Math.floor(Date.now() / 1000) - loginAt;
     if (age > SESSION_ABSOLUTE_CAP_SECONDS) {
