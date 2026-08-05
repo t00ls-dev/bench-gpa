@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 //
-// Primeiro teste de componente real (`render()`, não `renderHook`) do
-// repositório, prova que a correção do glob de `.test.tsx` em
-// vitest.config.ts realmente desbloqueou essa frente (ver
-// docs/auditoria-qa-2026-08-01.md, itens 2 e 9). Escolhido por ser o maior
-// risco de negócio sem teste nenhum: alimenta o path de `listUsers`/
-// `setUserRole`/`setUserActive`/`resetPassword`, que também não tinham
-// cobertura de UI.
+// First real component test (`render()`, not `renderHook`) in the
+// repository, proves that fixing the `.test.tsx` glob in
+// vitest.config.ts actually unblocked this front (see
+// docs/auditoria-qa-2026-08-01.md, items 2 and 9). Chosen for being the
+// biggest business risk with zero test coverage: it drives the
+// `listUsers`/`setUserRole`/`setUserActive`/`resetPassword` path, which
+// also had no UI coverage.
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -37,10 +37,10 @@ vi.mock("@/lib/admin-users.functions", () => ({
   resetPassword: (...args: unknown[]) => resetPasswordMock(...args),
 }));
 
-// CreateUserDialog/EditUserIdentifiersDialog têm as próprias dependências de
-// servidor e o próprio escopo de teste, substituídos por um stub simples
-// pra manter este arquivo focado na tabela/busca/paginação/toggles, que é o
-// que pertence a AdminUserManagement.
+// CreateUserDialog/EditUserIdentifiersDialog have their own server
+// dependencies and their own test scope, replaced with a simple stub to
+// keep this file focused on the table/search/pagination/toggles, which is
+// what belongs to AdminUserManagement.
 vi.mock("@/components/create-user-dialog", () => ({
   CreateUserDialog: () => <button>+ Novo usuário (stub)</button>,
 }));
@@ -146,7 +146,7 @@ describe("AdminUserManagement", () => {
     );
     renderWithClient(<AdminUserManagement data={data} isLoading={false} />);
 
-    expect(screen.getAllByRole("row")).toHaveLength(1 + 25); // header + 25 linhas
+    expect(screen.getAllByRole("row")).toHaveLength(1 + 25); // header + 25 rows
     expect(screen.getByText("Página 1 de 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Página anterior")).toBeDisabled();
     expect(screen.getByLabelText("Próxima página")).not.toBeDisabled();
@@ -154,7 +154,7 @@ describe("AdminUserManagement", () => {
     fireEvent.click(screen.getByLabelText("Próxima página"));
 
     expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
-    expect(screen.getAllByRole("row")).toHaveLength(1 + 5); // header + 5 restantes
+    expect(screen.getAllByRole("row")).toHaveLength(1 + 5); // header + 5 remaining
     expect(screen.getByLabelText("Próxima página")).toBeDisabled();
   });
 

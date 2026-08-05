@@ -26,10 +26,10 @@ describe("csp", () => {
     });
   });
 
-  // Regressão do bug real (04/08/2026): variável de módulo comum deixava uma
-  // requisição concorrente sobrescrever o nonce da outra antes dela terminar
-  // de renderizar. Simula duas "requisições" entrelaçadas (a segunda começa
-  // no meio da primeira) e confirma que cada uma só enxerga o próprio nonce.
+  // Regression from a real bug (08/04/2026): a plain module-level variable
+  // let a concurrent request overwrite another's nonce before it finished
+  // rendering. Simulates two interleaved "requests" (the second starts in
+  // the middle of the first) and confirms each one only sees its own nonce.
   it("duas execuções concorrentes não vazam o nonce uma pra outra", async () => {
     const seenByFirst: (string | undefined)[] = [];
     const seenBySecond: (string | undefined)[] = [];
@@ -54,17 +54,18 @@ describe("csp", () => {
     expect(seenBySecond).toEqual(["nonce-2", "nonce-2"]);
   });
 
-  // Regressão real (04/08/2026, poucas horas em produção): csp.ts é
-  // importado por router.tsx, que roda no bundle do client também.
-  // `node:async_hooks` não existe no navegador — um import estático dele
-  // aqui, mesmo sem nunca ser chamado, já quebrava a hidratação da aplicação
-  // inteira assim que o bundle do client carregava (Vite externaliza o
-  // import, acessar o nome exportado do stub já lança). Este teste roda em
-  // Node (onde node:async_hooks existe e o import não falharia), então não
-  // reproduz o erro do navegador — só garante, por inspeção estática do
-  // arquivo fonte, que ninguém reintroduza um import de módulo do Node aqui.
-  // A implementação real fica em csp-server.ts, importado só por
-  // src/server.ts (nunca por código compartilhado com o client).
+  // Real regression (08/04/2026, a few hours in production): csp.ts is
+  // imported by router.tsx, which also runs in the client bundle.
+  // `node:async_hooks` doesn't exist in the browser -- a static import of
+  // it here, even if never called, already broke hydration for the entire
+  // application as soon as the client bundle loaded (Vite externalizes the
+  // import, and accessing the stub's exported name throws immediately).
+  // This test runs on Node (where node:async_hooks exists and the import
+  // wouldn't fail), so it doesn't reproduce the browser error -- it only
+  // guarantees, via static inspection of the source file, that no one
+  // reintroduces a Node module import here. The real implementation lives
+  // in csp-server.ts, imported only by src/server.ts (never by code shared
+  // with the client).
   it("csp.ts não importa nenhum módulo do Node (mantém o arquivo seguro pro bundle do client)", () => {
     const source = readFileSync(new URL("./csp.ts", import.meta.url), "utf-8");
     const importLines = source.split("\n").filter((line) => line.trimStart().startsWith("import "));

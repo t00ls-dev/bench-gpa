@@ -42,19 +42,20 @@ describe("fmtInt", () => {
 
 describe("fmtDT", () => {
   it("formats ISO date string, convertendo pro fuso de Brasília", () => {
-    // 14:30 UTC = 11:30 em America/Sao_Paulo (UTC-3, sem horário de verão
-    // desde 2019). String com "Z" porque é o formato real que dateTimeStr()
-    // (api-types.ts) produz — nunca sem sufixo de fuso.
+    // 14:30 UTC = 11:30 in America/Sao_Paulo (UTC-3, no daylight saving
+    // since 2019). String with "Z" because that's the real format
+    // dateTimeStr() (api-types.ts) produces -- never without a timezone suffix.
     const result = fmtDT("2024-03-15T14:30:00.000Z");
     expect(result).toBe("15/03/24 11:30");
   });
 
-  // Regressão do bug real (04/08/2026, Sentry BENCH-GPA-Y): getters locais
-  // (getHours/getDate) liam o fuso de onde o código roda, produzindo strings
-  // diferentes no SSR (servidor em UTC) e na hidratação (navegador do
-  // usuário) para o mesmo instante — erro de hidratação no React. Fuso fixo
-  // via Intl.DateTimeFormat elimina a dependência do ambiente: simula "rodar
-  // em outro fuso" trocando TZ do processo e confirma que a saída não muda.
+  // Regression from a real bug (08/04/2026, Sentry BENCH-GPA-Y): local
+  // getters (getHours/getDate) read the timezone of wherever the code
+  // runs, producing different strings during SSR (server on UTC) and
+  // hydration (user's browser) for the same instant -- a React hydration
+  // error. A fixed timezone via Intl.DateTimeFormat eliminates the
+  // dependency on the environment: this simulates "running in another
+  // timezone" by swapping the process's TZ and confirms the output doesn't change.
   it("independe do fuso do processo que roda o código (server vs. client)", () => {
     const originalTz = process.env.TZ;
     try {
@@ -97,9 +98,9 @@ describe("fmtBRShort", () => {
   });
 
   it("formats Date object", () => {
-    // Meio-dia UTC, não meia-noite: fora de qualquer zona de ambiguidade de
-    // fuso, testa só a formatação em si, não a conversão de fuso (isso tem
-    // teste dedicado logo abaixo).
+    // Noon UTC, not midnight: outside any timezone ambiguity zone, this
+    // tests only the formatting itself, not the timezone conversion (that
+    // has a dedicated test right below).
     const d = new Date("2024-03-15T12:00:00.000Z");
     expect(fmtBRShort(d)).toBe("15/03/24");
   });
@@ -108,15 +109,15 @@ describe("fmtBRShort", () => {
     expect(fmtBRShort("not-a-date")).toBe("(sem)");
   });
 
-  // Regressão do bug real (04/08/2026, Sentry BENCH-GPA-Y): só o ramo
-  // `string` de fmtBRShort era seguro pra hidratação (parsing manual, sem
-  // Date). Os ramos Date/number liam getFullYear()/getMonth()/getDate()
-  // (getters locais) — mesma classe de bug do fmtDT, ativa de verdade em
-  // admin-user-management.tsx (new Date(u.created_at), aba padrão de
-  // /admin, sempre visível) e em admin.docs.page.tsx (via date-fns antes
-  // desta correção).
+  // Regression from a real bug (08/04/2026, Sentry BENCH-GPA-Y): only
+  // fmtBRShort's `string` branch was safe for hydration (manual parsing,
+  // no Date). The Date/number branches read getFullYear()/getMonth()/
+  // getDate() (local getters) -- the same class of bug as fmtDT, actively
+  // triggered in admin-user-management.tsx (new Date(u.created_at),
+  // /admin's default tab, always visible) and in admin.docs.page.tsx (via
+  // date-fns before this fix).
   it("ramo Date: usa o dia em Brasília, não em UTC, perto da virada do dia", () => {
-    // 00:00 UTC de 15/03 = 21:00 de 14/03 em America/Sao_Paulo (UTC-3).
+    // 00:00 UTC on 03/15 = 21:00 on 03/14 in America/Sao_Paulo (UTC-3).
     const d = new Date("2024-03-15T00:00:00.000Z");
     expect(fmtBRShort(d)).toBe("14/03/24");
   });
@@ -148,8 +149,9 @@ describe("todayISOBrazil", () => {
   });
 
   it("usa o dia em Brasília, não em UTC, perto da virada do dia", () => {
-    // 01:00 UTC de 04/08 = 22:00 de 03/08 em America/Sao_Paulo (UTC-3): getters
-    // locais rodando num processo em UTC (o servidor) diriam "04", errado.
+    // 01:00 UTC on 08/04 = 22:00 on 08/03 in America/Sao_Paulo (UTC-3):
+    // local getters running in a process on UTC (the server) would say
+    // "04", which is wrong.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-04T01:00:00.000Z"));
     expect(todayISOBrazil()).toBe("2026-08-03");

@@ -3,12 +3,12 @@ import { existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// O estado agora é um diretório fixo em disco (precisa ser o mesmo caminho
-// entre processos/workers, ver comentário em pdf-download-store.ts), não mais
-// um Map de módulo: vi.resetModules() sozinho não isola mais um teste do
-// outro, então limpa o diretório antes de cada teste. Mantém o
-// resetModules()/import dinâmico mesmo assim, por consistência com o padrão
-// do projeto pra estado de módulo singleton.
+// The state is now a fixed directory on disk (needs to be the same path
+// across processes/workers, see the comment in pdf-download-store.ts), no
+// longer a module-level Map: vi.resetModules() alone no longer isolates
+// one test from another, so it clears the directory before each test.
+// Still keeps resetModules()/dynamic import, for consistency with the
+// project's pattern for singleton module state.
 const DIR = join(tmpdir(), "bench-gpa-pdf-downloads");
 
 async function freshStore() {
@@ -37,11 +37,12 @@ describe("pdf-download-store", () => {
     expect(entry?.filename).toBe("relatorio.pdf");
   });
 
-  // Regressão de um bug real (01/08/2026): o token já foi uso único, e o
-  // Firefox faz mais de uma requisição pra URL de download antes de salvar:
-  // a segunda leitura vinha vazia (404 "Not found" salvo como se fosse o
-  // PDF). TTL curto + isolamento por usuário já bastam como proteção; não
-  // precisa também matar o token na primeira leitura.
+  // Regression from a real bug (08/01/2026): the token used to be
+  // single-use, and Firefox makes more than one request to the download
+  // URL before saving: the second read came back empty (404 "Not found"
+  // saved as if it were the PDF). Short TTL + per-user isolation are
+  // already enough protection; the token doesn't also need to die on the
+  // first read.
   it("permite ler o mesmo token mais de uma vez dentro do TTL", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
@@ -55,8 +56,8 @@ describe("pdf-download-store", () => {
     expect(takePdf("token-que-nunca-existiu", "user-1")).toBeUndefined();
   });
 
-  // Isolamento por usuário: mesmo token, usuário errado, não é só teoria,
-  // é a única coisa que impede alguém de adivinhar o token de outro export.
+  // Per-user isolation: same token, wrong user, isn't just theory, it's
+  // the only thing stopping someone from guessing another export's token.
   it("não devolve nada pra um userId diferente do que gerou o token", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
@@ -66,8 +67,8 @@ describe("pdf-download-store", () => {
   it("uma tentativa com userId errado não invalida o token pro usuário certo depois", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
-    expect(takePdf(token, "user-2")).toBeUndefined(); // errado
-    expect(takePdf(token, "user-1")).toBeDefined(); // certo, continua valendo
+    expect(takePdf(token, "user-2")).toBeUndefined(); // wrong
+    expect(takePdf(token, "user-1")).toBeDefined(); // right, still valid
   });
 
   it("expira depois do TTL, token válido mas velho não devolve nada", async () => {
@@ -93,9 +94,9 @@ describe("pdf-download-store", () => {
     expect(takePdf(t2, "user-1")?.filename).toBe("b.pdf");
   });
 
-  // Cobre o próprio motivo da mudança: dois "processos" diferentes (aqui,
-  // duas instâncias de módulo via import dinâmico separado, sem
-  // resetModules() entre elas) enxergando o mesmo token pelo disco.
+  // Covers the very reason for the change: two different "processes"
+  // (here, two module instances via separate dynamic import, without
+  // resetModules() between them) seeing the same token through disk.
   it("um token gravado por uma instância do módulo é lido por outra", async () => {
     const store1 = await freshStore();
     const token = store1.storePdf("user-1", BYTES, "relatorio.pdf");

@@ -9,9 +9,9 @@ function createMockDoc(): jsPDF {
   } as unknown as jsPDF;
 }
 
-// openPdfBlob reusa um anchor de preview único, criado uma vez no módulo (ver
-// export-pdf.ts). vi.resetModules() + import dinâmico dá a cada teste um
-// módulo fresco, sem esse estado vazando de um teste pro outro.
+// openPdfBlob reuses a single preview anchor, created once at the module
+// level (see export-pdf.ts). vi.resetModules() + dynamic import gives each
+// test a fresh module, without that state leaking from one test to another.
 async function freshOpenPdfBlob() {
   vi.resetModules();
   const mod = await import("./export-pdf");
@@ -60,7 +60,7 @@ describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
 
   it("dispara um clique de verdade (dispatchEvent) com o anchor conectado ao documento", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
-    await openPdfBlob(mockDoc); // primeira chamada cria o anchor
+    await openPdfBlob(mockDoc); // first call creates the anchor
     const anchor = getAnchor();
     let connectedAtClickTime: boolean | undefined;
     let receivedEvent: MouseEvent | undefined;
@@ -106,8 +106,8 @@ describe("openPdfBlob: com filename (download forçado via servidor)", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(URL, "createObjectURL");
-    // window.location.href não é navegável no jsdom: sobrescreve pra
-    // conseguir espionar sem o "Not implemented: navigation" do jsdom.
+    // window.location.href isn't navigable in jsdom: overrides it so we
+    // can spy on it without jsdom's "Not implemented: navigation".
     delete (window as unknown as { location?: unknown }).location;
     (window as unknown as { location: { href: string } }).location = { href: "" };
   });
@@ -117,12 +117,13 @@ describe("openPdfBlob: com filename (download forçado via servidor)", () => {
     vi.unstubAllGlobals();
   });
 
-  // Regressão do bug real: blob: URL + atributo `download` não é confiável
-  // no gerenciador de download do Firefox (cai pro UUID da própria blob URL
-  // como nome, Mozilla Bugzilla #1282407), mesmo com o anchor conectado ao
-  // DOM e um MouseEvent de verdade disparado (as duas correções anteriores).
-  // Por isso o caminho de filename não cria blob: URL nem anchor nenhum.
-  // vai inteiro via POST pro servidor, que devolve Content-Disposition real.
+  // Regression from a real bug: blob: URL + the `download` attribute
+  // isn't reliable in Firefox's download manager (it falls back to the
+  // blob URL's own UUID as the name, Mozilla Bugzilla #1282407), even with
+  // the anchor connected to the DOM and a real MouseEvent dispatched (the
+  // two earlier fixes). That's why the filename path creates no blob: URL
+  // and no anchor at all: it goes entirely via POST to the server, which
+  // returns a real Content-Disposition.
   it("não cria nenhuma blob: URL nem anchor, vai direto pro servidor", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc, "relatorio.pdf");

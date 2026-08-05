@@ -115,7 +115,7 @@ describe("beginImport", () => {
 
   it("pula o INSERT de lojas quando stores está vazio", async () => {
     await (beginImport as (d: typeof baseInput) => Promise<unknown>)({ ...baseInput, stores: [] });
-    // Só DELETE (staging) + CALL upsert_products_bulk: nenhuma chamada com "INSERT INTO stores".
+    // Only DELETE (staging) + CALL upsert_products_bulk: no call with "INSERT INTO stores".
     expect(db.query).toHaveBeenCalledTimes(2);
     expect(db.query).not.toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO stores"),
@@ -159,7 +159,7 @@ describe("insertSalesChunk", () => {
     expect(result).toEqual({ inserted: 1 });
     expect(db.query).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO staging_sales"),
-      // toStagingRow: sale_date, batch_id primeiro, depois as colunas na ordem de STAGING_COLS.
+      // toStagingRow: sale_date, batch_id first, then the columns in STAGING_COLS order.
       [
         "2026-07-20",
         "b1",
@@ -195,7 +195,7 @@ describe("insertSalesChunk", () => {
     )({ sale_date: "2026-07-20", batch_id: "b1", rows });
 
     const [, values] = vi.mocked(db.query).mock.calls[0] as unknown as [string, unknown[]];
-    // Índices 6-9 de STAGING_COLS são depto/secao/grupo/subgrupo.
+    // Indexes 6-9 of STAGING_COLS are depto/secao/grupo/subgrupo.
     expect(values.slice(6, 10)).toEqual([null, null, null, null]);
   });
 });
@@ -223,17 +223,18 @@ describe("getImportedDates", () => {
 });
 
 describe("finalizeImport", () => {
-  // `row_count` aqui é só o parâmetro que o cliente MANDA (parsed.sales.length,
-  // calculado antes de qualquer chunk ser de fato inserido). Este teste prova
-  // que a função de servidor o repassa como veio, não que ele é confiável. A
-  // reconciliação real está dentro da procedure `finalize_import`
-  // (migrate-schema.sql): `import_log.row_count` grava `v_staging_count` (a
-  // contagem real da staging, já verificada > 0 na mesma procedure), não
-  // `p_row_count`: um `db.query` mockado não executa SQL de verdade, então
-  // essa parte foi validada manualmente contra MariaDB real (ver
+  // `row_count` here is just the parameter the client SENDS
+  // (parsed.sales.length, computed before any chunk has actually been
+  // inserted). This test proves the server function passes it through as
+  // received, not that it's trustworthy. The real reconciliation lives
+  // inside the `finalize_import` procedure (migrate-schema.sql):
+  // `import_log.row_count` records `v_staging_count` (the staging's real
+  // count, already verified > 0 in the same procedure), not
+  // `p_row_count`: a mocked `db.query` doesn't run real SQL, so this part
+  // was validated manually against real MariaDB (see
   // docs/auditoria-qa-2026-08-01.md, item 8): `CALL finalize_import(...,
-  // 999, ...)` com só 3 linhas reais na staging gravou `row_count = 3` em
-  // `import_log`, não 999.
+  // 999, ...)` with only 3 real rows in staging recorded `row_count = 3`
+  // in `import_log`, not 999.
   it("chama finalize_import com batch_id/sale_date/row_count/userId e retorna ok", async () => {
     const result = await (
       finalizeImport as (d: {
