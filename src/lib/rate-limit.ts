@@ -140,10 +140,23 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
  * O teto global é um disjuntor de carga agregada, não um limite por usuário: a
  * contribuição máxima de um IP para ele é o próprio teto por IP, graças ao
  * curto-circuito documentado em `check()`.
+ *
+ * `auth` afrouxado de [10, 40] para [15, 60] (mesma proporção ~4x): as duas
+ * rotas que recebem tráfego anônimo neste tier (login, primeiro acesso) já
+ * exigem Turnstile antes de aceitar a tentativa, cobrindo a parte
+ * automatizada do problema -- este teto por IP é a defesa que sobra. Também
+ * apoiado no que já está registrado em docs/medicao-performance.md (entrada
+ * de 2026-08-04): em cluster mode (2 workers) o contador já é diluído por
+ * processo e o gargalo real continua sendo a CPU compartilhada, não o
+ * contador -- subir o teto não aumenta o número de bcrypt/s que a VPS
+ * consegue de fato processar. `changePassword` também usa este tier mas só é
+ * alcançável por quem já tem sessão válida (`requireAuthAllowExpiredPassword`
+ * roda antes do rate limit no middleware), então o afrouxamento não abre
+ * superfície nova para tráfego anônimo ali.
  */
 const RATE_LIMITS = {
   api: [300, 1000],
-  auth: [10, 40],
+  auth: [15, 60],
   upload: [200, 500],
   ssr: [300, 1500],
 } as const;
