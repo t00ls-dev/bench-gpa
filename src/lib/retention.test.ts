@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { RETENTION_DAYS, daysSinceUtc, isWithinRetention } from "./retention";
 
-// Referência fixa: 2026-07-23 20:00 UTC. Usar um horário no meio do dia é de
-// propósito: daysSinceUtc conta dias de calendário, então o resultado não pode
-// depender da hora em que a cron roda.
+// Fixed reference: 2026-07-23 20:00 UTC. Using a time in the middle of the
+// day is deliberate: daysSinceUtc counts calendar days, so the result must
+// not depend on what time the cron runs.
 const NOW = Date.parse("2026-07-23T20:00:00Z");
 
-/** Data que fica exatamente `d` dias de calendário UTC atrás de NOW. */
+/** Date that sits exactly `d` UTC calendar days before NOW. */
 function daysAgo(d: number): string {
   return new Date(Date.parse("2026-07-23T00:00:00Z") - d * 86_400_000).toISOString().slice(0, 10);
 }
@@ -30,11 +30,11 @@ describe("daysSinceUtc", () => {
 });
 
 describe("isWithinRetention: borda casada com o purge_old_aggs", () => {
-  // O purge apaga `sale_date < CURRENT_DATE - RETENTION_DAYS` (estrito), então
-  // a data exatamente na borda é PRESERVADA. Se algum dia isto virar `<`, o
-  // import-watch passa a pular um dia que o purge ainda guarda, ou, pior no
-  // sentido inverso, a importar um dia que o purge apaga de madrugada,
-  // reabrindo o loop importar -> purgar -> reimportar.
+  // The purge deletes `sale_date < CURRENT_DATE - RETENTION_DAYS` (strict),
+  // so the date exactly on the boundary is PRESERVED. If this ever
+  // becomes `<`, import-watch starts skipping a day the purge still keeps,
+  // or, worse in the other direction, importing a day the purge deletes
+  // overnight, reopening the import -> purge -> reimport loop.
 
   it("preserva a data exatamente na borda", () => {
     expect(isWithinRetention(daysAgo(RETENTION_DAYS), NOW)).toBe(true);

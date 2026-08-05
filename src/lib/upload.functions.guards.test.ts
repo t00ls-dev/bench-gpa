@@ -1,7 +1,7 @@
-// Complementa upload.functions.test.ts, que mocka `assertAdmin` como no-op e
-// só confirma que foi *chamado*. Aqui o guard é o de verdade: prova que um
-// não-admin é de fato *bloqueado* antes de tocar em staging_sales (ver
-// docs/auditoria-qa-2026-08-01.md, item 3).
+// Complements upload.functions.test.ts, which mocks `assertAdmin` as a
+// no-op and only confirms it was *called*. Here the guard is the real
+// one: it proves a non-admin is actually *blocked* before touching
+// staging_sales (see docs/auditoria-qa-2026-08-01.md, item 3).
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 type Middleware = (opts: {
@@ -26,9 +26,9 @@ vi.mock("@tanstack/react-start", () => {
     return {
       middleware: (mw: Middleware[]) => {
         chain.middlewares = mw;
-        // A validação real do Zod não importa aqui: assertAdmin roda antes de
-        // qualquer uso de `data` no handler, então o input nunca chega a ser
-        // examinado de verdade, só precisa existir.
+        // The real Zod validation doesn't matter here: assertAdmin runs
+        // before any use of `data` in the handler, so the input is never
+        // actually examined, it just needs to exist.
         return {
           inputValidator: () => ({ handler: (fn: Handler) => run(fn) }),
           handler: (fn: Handler) => run(fn),
@@ -51,7 +51,7 @@ vi.mock("./rate-limit.middleware", () => ({
         next({ context }),
   ),
 }));
-// admin-utils NÃO é mockado: é exatamente o que esta suíte prova de verdade.
+// admin-utils is NOT mocked: it's exactly what this suite actually proves.
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
 import { beginImport } from "./upload.functions";
@@ -76,8 +76,8 @@ describe("beginImport: guard de admin real (assertAdmin não mockado)", () => {
         },
       }),
     ).rejects.toThrow("Apenas administradores");
-    // Só a checagem do próprio assertAdmin rodou: o DELETE em staging_sales
-    // (que apagaria dados do dia pra qualquer chamador) nunca foi disparado.
+    // Only assertAdmin's own check ran: the DELETE on staging_sales (which
+    // would wipe the day's data for any caller) never fired.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
   });

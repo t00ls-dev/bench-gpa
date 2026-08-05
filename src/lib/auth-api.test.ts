@@ -11,16 +11,16 @@ type Middleware = (opts: {
 }) => unknown;
 type Handler = (opts: { data?: unknown; context: unknown }) => unknown;
 
-// inputValidator vira um passthrough: o parser Zod real passado a
-// `.inputValidator(...)` nunca é chamado. Isso inclui os `.default(...)`
-// do schema: quem chama `login(...)`/`setInitialPassword(...)` nos testes
-// precisa passar o valor já "pós-parse" explicitamente (ex.: `rememberMe:
-// false`), porque a ausência do campo aqui não recebe o default que
-// receberia em produção.
+// inputValidator becomes a passthrough: the real Zod parser passed to
+// `.inputValidator(...)` is never called. That includes the schema's
+// `.default(...)`: whoever calls `login(...)`/`setInitialPassword(...)`
+// in the tests needs to pass the already "post-parse" value explicitly
+// (e.g. `rememberMe: false`), because the field's absence here doesn't get
+// the default it would get in production.
 //
-// Suporta `.middleware([...])` (usado só por `changePassword`) além do
-// caminho direto `.inputValidator()/.handler()` das demais funções deste
-// arquivo, que não passam por middleware nenhum.
+// Supports `.middleware([...])` (used only by `changePassword`) alongside
+// the other functions in this file's direct
+// `.inputValidator()/.handler()` path, which don't go through any middleware.
 vi.mock("@tanstack/react-start", () => {
   const buildChain = () => {
     const chain: {
@@ -78,9 +78,9 @@ vi.mock("./rate-limit.middleware", () => ({
         next({ context }),
   ),
 }));
-// requireAuthAllowExpiredPassword real (auth-middleware.ts) puxa
-// createMiddleware; mockado direto pra não precisar mockar isso também --
-// changePassword nos testes recebe o contexto que este mock injetar.
+// The real requireAuthAllowExpiredPassword (auth-middleware.ts) pulls in
+// createMiddleware; mocked directly so we don't have to mock that too --
+// changePassword in the tests receives whatever context this mock injects.
 vi.mock("./auth-middleware", () => ({
   requireAuthAllowExpiredPassword: vi.fn(
     ({ next, context }: { next: (ctx: unknown) => unknown; context: unknown }) =>
@@ -104,8 +104,8 @@ import jwt from "jsonwebtoken";
 import { verifyTurnstile, isTurnstileEnabled } from "./turnstile";
 import { authLimiter, authAccountLimiter } from "./rate-limit";
 
-// password_change_required: 0 no default -- os testes de login/getMe/logout
-// não são sobre expiração de senha (isso é coberto na sua própria describe).
+// password_change_required: 0 by default -- the login/getMe/logout tests
+// aren't about password expiration (that's covered in its own describe block).
 const dbRow = (overrides: Record<string, unknown> = {}) => [
   {
     id: "u1",
@@ -145,9 +145,9 @@ beforeEach(() => {
 
 describe("login", () => {
   it("sets an httpOnly session cookie and returns ok, never exposing the token to the caller", async () => {
-    // rememberMe: false explícito porque este mock de createServerFn nunca
-    // invoca o parser Zod real (ver comentário no topo do arquivo), em
-    // produção o default do schema cobriria a ausência do campo.
+    // rememberMe: false explicit because this createServerFn mock never
+    // invokes the real Zod parser (see the comment at the top of the
+    // file); in production the schema's default would cover the field's absence.
     const result = await login({
       identifier: "test",
       password: "correct",
@@ -155,11 +155,11 @@ describe("login", () => {
     } as never);
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
-    // tokenVersion vai no payload para que resetPassword/changePassword/logout
-    // consigam invalidar esta sessão depois. Sem "manter conectado", a sessão
-    // nasce como "normal" (não persistente, expira em 1h de inatividade), ver
-    // src/lib/auth-config.ts. Sem email no payload (session.ts relê
-    // username/matrícula do banco a cada request).
+    // tokenVersion goes in the payload so resetPassword/changePassword/logout
+    // can invalidate this session later. Without "remember me", the session
+    // is born "normal" (not persistent, expires after 1h of inactivity), see
+    // src/lib/auth-config.ts. No email in the payload (session.ts re-reads
+    // username/employee_id from the database on every request).
     expect(jwt.sign).toHaveBeenCalledWith(
       {
         userId: "u1",
@@ -265,8 +265,9 @@ describe("login", () => {
     );
   });
 
-  // Chave do balde de conta é o id resolvido, não a string digitada: alternar
-  // entre username e matrícula da MESMA conta não pode resetar o balde.
+  // The account bucket's key is the resolved id, not the typed string:
+  // switching between username and employee_id of the SAME account must
+  // not reset the bucket.
   it("chaveia o rate limit de conta pelo id resolvido", async () => {
     await login({ identifier: "test", password: "correct" } as never);
     expect(authAccountLimiter.check).toHaveBeenCalledWith("user:u1");
@@ -308,10 +309,10 @@ describe("getMe", () => {
     });
   });
 
-  // getMe roda a cada navegação (cacheado 60s no guard de rotas), não pode
-  // ter o efeito colateral de reemitir a sessão a cada chamada. Quem desliza
-  // a sessão por atividade é o requireAuth, chamado pelas funções que de fato
-  // buscam dados (ver auth-middleware.test.ts).
+  // getMe runs on every navigation (cached for 60s in the route guard), it
+  // can't have the side effect of reissuing the session on every call.
+  // Sliding the session on activity is requireAuth's job, called by the
+  // functions that actually fetch data (see auth-middleware.test.ts).
   it("não reemite o cookie (não desliza a sessão)", async () => {
     await getMe();
     expect(jwt.sign).not.toHaveBeenCalled();
@@ -472,7 +473,7 @@ describe("changePassword", () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([[{ password: "$2b$12$hash" }]] as never) // SELECT password
       .mockResolvedValueOnce([{ affectedRows: 1 }] as never) // UPDATE
-      .mockResolvedValueOnce([[{ token_version: 7 }]] as never); // SELECT token_version fresco
+      .mockResolvedValueOnce([[{ token_version: 7 }]] as never); // SELECT fresh token_version
 
     const result = await changePassword({
       currentPassword: "atual",
@@ -483,9 +484,10 @@ describe("changePassword", () => {
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("atual", "$2b$12$hash");
     expect(bcrypt.hash).toHaveBeenCalledWith("N0v@Senha!", 12);
-    // Prova que reemite com o valor da SEGUNDA consulta (pós-update), não um
-    // valor congelado de antes: sem isso, a própria aba que troca a senha se
-    // autodestruiria na chamada seguinte (token_version bateria errado).
+    // Proves it reissues with the value from the SECOND query (post-update),
+    // not a stale value from before: without this, the very tab that changes
+    // the password would self-destruct on the next call (token_version
+    // would come back wrong).
     expect(jwt.sign).toHaveBeenCalledWith(
       expect.objectContaining({ tokenVersion: 7 }),
       expect.any(String),

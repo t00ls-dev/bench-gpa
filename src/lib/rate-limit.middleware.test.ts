@@ -1,13 +1,14 @@
-// Cobre a peça que faltava: `requireRateLimit()` é o middleware que de fato
-// aplica o rate limit em toda função não-auth, mas em todo *.functions.test.ts
-// ele é mockado como passthrough: nada prova que ele bloqueia de verdade, nem
-// que os tetos reais de produção (apiLimiter 300/min, uploadLimiter 200/min)
-// estão ligados corretamente (ver docs/auditoria-qa-2026-08-01.md, item 4).
+// Covers the missing piece: `requireRateLimit()` is the middleware that
+// actually applies the rate limit on every non-auth function, but in every
+// *.functions.test.ts it's mocked as a passthrough: nothing proves it
+// actually blocks, or that the real production ceilings (apiLimiter
+// 300/min, uploadLimiter 200/min) are wired correctly (see
+// docs/auditoria-qa-2026-08-01.md, item 4).
 //
-// `vi.resetModules()` + import dinâmico por teste dá cada teste um
-// `apiLimiter`/`uploadLimiter` novo (singletons recriados do zero ao
-// reimportar "./rate-limit"). Sem isso, o orçamento GLOBAL de cada tier
-// (compartilhado entre todos os IPs) vazaria de um teste pro outro.
+// `vi.resetModules()` + a dynamic import per test gives each test a fresh
+// `apiLimiter`/`uploadLimiter` (singletons recreated from scratch on
+// reimporting "./rate-limit"). Without this, each tier's GLOBAL budget
+// (shared across every IP) would leak from one test into another.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-start", () => ({
@@ -54,7 +55,7 @@ describe("requireRateLimit", () => {
 
     for (let i = 0; i < 300; i++) await mw({ next });
     await expect(mw({ next })).rejects.toThrow("Muitas requisições");
-    expect(next).toHaveBeenCalledTimes(300); // a 301ª não chega a chamar next()
+    expect(next).toHaveBeenCalledTimes(300); // the 301st never gets to call next()
   });
 
   it("bloqueia a 201ª requisição do mesmo IP no tier upload (teto real: 200/min)", async () => {
@@ -71,10 +72,10 @@ describe("requireRateLimit", () => {
   it("usa o tier 'api' por padrão quando nenhum é informado", async () => {
     getRequestMock.mockReturnValue(requestFromIp("203.0.113.4"));
     const requireRateLimit = await freshRequireRateLimit();
-    const mw = requireRateLimit() as unknown as Middleware; // sem argumento
+    const mw = requireRateLimit() as unknown as Middleware; // no argument
     const next = vi.fn(async () => "ok");
 
-    // Se o default fosse "upload" (teto 200), isto já teria bloqueado.
+    // If the default were "upload" (ceiling 200), this would already have blocked.
     for (let i = 0; i < 250; i++) await mw({ next });
     await expect(mw({ next })).resolves.toBe("ok");
   });
@@ -102,7 +103,7 @@ describe("requireRateLimit", () => {
     for (let i = 0; i < 200; i++) await uploadMw({ next });
     await expect(uploadMw({ next })).rejects.toThrow("Muitas requisições");
 
-    // Mesmo IP, tier "api": não foi tocado pelo consumo acima.
+    // Same IP, "api" tier: untouched by the consumption above.
     const apiMw = requireRateLimit("api") as unknown as Middleware;
     await expect(apiMw({ next })).resolves.toBe("ok");
   });

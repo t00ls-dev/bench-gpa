@@ -4,11 +4,11 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { useWakeLock } from "./use-wake-lock";
 
 function mockWakeLockSupport() {
-  // EventTarget de verdade, não um objeto plano: o hook escuta o evento
-  // "release" do próprio sentinel (dispara tanto por release() manual quanto
-  // pelo navegador liberando sozinho ao esconder a aba) pra saber quando
-  // reobter o lock. Um mock sem addEventListener/dispatchEvent de verdade
-  // não exercitaria esse caminho.
+  // A real EventTarget, not a plain object: the hook listens for the
+  // sentinel's own "release" event (fired both by a manual release() and
+  // by the browser releasing it on its own when the tab is hidden) to know
+  // when to reacquire the lock. A mock without real
+  // addEventListener/dispatchEvent wouldn't exercise this path.
   class FakeSentinel extends EventTarget {
     release = vi.fn(async () => {
       this.dispatchEvent(new Event("release"));
@@ -71,8 +71,9 @@ describe("useWakeLock", () => {
     expect(release).toHaveBeenCalledTimes(1);
   });
 
-  // Navegador sem suporte (Safari antigo, Firefox sem a API, contexto não
-  // seguro): degrada bem, sem lançar erro nenhum que interrompesse o import.
+  // Unsupported browser (old Safari, Firefox without the API, insecure
+  // context): degrades gracefully, throwing no error that would interrupt
+  // the import.
   it("não lança erro em navegador sem suporte à Wake Lock API", async () => {
     delete (navigator as unknown as { wakeLock?: unknown }).wakeLock;
     expect(() => renderHook(() => useWakeLock(true))).not.toThrow();
@@ -84,9 +85,9 @@ describe("useWakeLock", () => {
     renderHook(() => useWakeLock(true));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
 
-    // Simula o navegador liberando o lock sozinho ao esconder a aba (nunca
-    // chamamos sentinel.release() nós mesmos aqui) — dispara o evento
-    // "release" real que o hook escuta pra saber que perdeu o lock.
+    // Simulates the browser releasing the lock on its own when the tab is
+    // hidden (we never call sentinel.release() ourselves here) -- fires
+    // the real "release" event the hook listens for to know it lost the lock.
     sentinel.dispatchEvent(new Event("release"));
 
     Object.defineProperty(document, "visibilityState", {
