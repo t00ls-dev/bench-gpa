@@ -38,14 +38,15 @@ describe("assertAdmin", () => {
 
 describe("invalidateAdminCache", () => {
   it("promoção passa a valer na hora, sem esperar o TTL de 5 min", async () => {
-    // Ainda não é admin: o `false` fica cacheado.
+    // Not yet an admin: the `false` gets cached.
     mockQuery.mockResolvedValue([[[{ has_role: 0 }]]]);
     await expect(assertAdmin({ userId: "u-promovido" })).rejects.toThrow("Apenas administradores");
     await expect(assertAdmin({ userId: "u-promovido" })).rejects.toThrow("Apenas administradores");
-    expect(mockQuery).toHaveBeenCalledTimes(1); // 2ª veio do cache negativo
+    expect(mockQuery).toHaveBeenCalledTimes(1); // 2nd call came from the negative cache
 
-    // Promovido no banco. Sem invalidar, o `false` cacheado seguiria negando
-    // acesso por até 5 minutos: o sintoma que mais aparecia no uso diário.
+    // Promoted in the database. Without invalidating, the cached `false`
+    // would keep denying access for up to 5 minutes: the symptom that
+    // showed up most in daily use.
     mockQuery.mockResolvedValue([[[{ has_role: 1 }]]]);
     invalidateAdminCache("u-promovido");
     await expect(assertAdmin({ userId: "u-promovido" })).resolves.toBeUndefined();
@@ -56,7 +57,7 @@ describe("invalidateAdminCache", () => {
     mockQuery.mockResolvedValue([[[{ has_role: 1 }]]]);
     await expect(assertAdmin({ userId: "u-revogado" })).resolves.toBeUndefined();
 
-    // has_role filtra por role E is_active, então inativar tem o mesmo efeito.
+    // has_role filters by role AND is_active, so deactivating has the same effect.
     mockQuery.mockResolvedValue([[[{ has_role: 0 }]]]);
     invalidateAdminCache("u-revogado");
     await expect(assertAdmin({ userId: "u-revogado" })).rejects.toThrow("Apenas administradores");
@@ -70,7 +71,7 @@ describe("invalidateAdminCache", () => {
     invalidateAdminCache("u-outro-qualquer");
 
     await expect(assertAdmin({ userId: "u-intocado" })).resolves.toBeUndefined();
-    expect(mockQuery).not.toHaveBeenCalled(); // seguiu vindo do cache
+    expect(mockQuery).not.toHaveBeenCalled(); // kept coming from cache
   });
 
   it("invalidar um usuário nunca visto é inofensivo", () => {

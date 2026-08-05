@@ -23,7 +23,7 @@ describe("defaultDateWindow", () => {
     expect(defaultDateWindow([])).toBeNull();
   });
 
-  // O comportamento que a tela Área tinha: nunca passar da última data importada.
+  // The behavior the Área screen used to have: never go past the last imported date.
   describe("com limite (latest)", () => {
     it("não ultrapassa o limite", () => {
       const r = defaultDateWindow(days(20), "2026-07-10");
@@ -35,7 +35,7 @@ describe("defaultDateWindow", () => {
       expect(r).toEqual({ from: "2026-07-01", to: "2026-07-02" });
     });
 
-    // Caso de borda que já existia na tela: nenhuma data disponível é <= latest.
+    // Edge case that already existed on the screen: no available date is <= latest.
     it("cai para o próprio limite quando nada é anterior a ele", () => {
       const r = defaultDateWindow(["2026-07-20", "2026-07-21"], "2026-07-01");
       expect(r).toEqual({ from: "2026-07-01", to: "2026-07-01" });
