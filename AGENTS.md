@@ -217,6 +217,19 @@ design (`scripts/run-migrations.sh` rastreia pelo nome do arquivo). Algumas
 das existentes nasceram em português antes desta regra existir; não
 renomeie. Migrations novas nascem em inglês.
 
+Exceção de domínio: campos que espelham 1:1 o nome de um contrato externo
+não são traduzidos. `depto`/`secao`/`grupo`/`subgrupo`/`val_vda` (colunas
+de `staging_sales`, `sales_daily_agg`, `sales_prod_daily_agg`,
+`filter_hierarchy`, `product_universe`) transcrevem os cabeçalhos reais da
+planilha de exportação da GPA (`NOM_DEPTO | NOM_SECAO | NOM_GRUPO |
+NOM_SUBGRUPO | NOM_PROD | VAL_VDA`, ver comentário em
+`scripts/migrate-schema.sql`). Traduzir criaria uma camada permanente de
+tradução mental entre o que a planilha manda e o que o banco guarda, sem
+ganho real, tocando 9 stored procedures com histórico documentado de
+regressão de performance (ver
+`docs/plano-padronizacao-nomenclatura-ingles-2026-08-05.md`). Decisão do
+usuário, 2026-08-05: não renomear.
+
 Ao tocar um arquivo por outro motivo, aproveite para traduzir os comentários
 em português que encontrar nele (tradução incremental, não uma varredura
 retroativa dedicada).
