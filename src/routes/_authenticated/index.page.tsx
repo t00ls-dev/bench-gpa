@@ -51,19 +51,20 @@ function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
-  // Só carrega a loja no click-through se o Dashboard já estava filtrado
-  // numa única loja: com múltiplas/nenhuma loja, o destino decide sozinho.
+  // Only carries the store over on click-through if the Dashboard was
+  // already filtered to a single store: with multiple/no stores, the
+  // destination decides on its own.
   const clickThroughStore = filters.stores.length === 1 ? filters.stores[0] : undefined;
   const goToArea = async (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
     if (!name) return;
-    // A Área exige Departamento pra mostrar qualquer coisa (`ready` em
-    // area.page.tsx): clicar em Seção/Grupo/Subgrupo sem resolver o
-    // Departamento-pai levava a uma tela vazia pedindo pra selecionar Loja e
-    // Departamento, com a Seção/Grupo/Subgrupo já aplicada por baixo dos
-    // panos mas sem nenhum dado visível. Busca a hierarquia (mesma query e
-    // mesmo cache (client e servidor) que a própria Área já usa; se a Área
-    // já foi visitada nesta sessão, isso não gera nenhum request novo) só
-    // quando precisa, pra achar o depto dono do nível clicado.
+    // Área requires Departamento to show anything at all (`ready` in
+    // area.page.tsx): clicking Seção/Grupo/Subgrupo without resolving the
+    // parent Departamento used to land on an empty screen asking to select
+    // Loja and Departamento, with the Seção/Grupo/Subgrupo already applied
+    // under the hood but no data visible. Fetches the hierarchy (same query
+    // and cache, client and server, that Área itself already uses; if Área
+    // was already visited this session, this generates no new request) only
+    // when needed, to find the depto that owns the clicked level.
     let depto: string | undefined;
     if (dim === "depto") {
       depto = name;

@@ -76,8 +76,8 @@ function ProductPage() {
 
   useEffect(() => {
     if (tRef.current) window.clearTimeout(tRef.current);
-    // 250ms: rápido o bastante para não atrasar a busca, alto o bastante para
-    // não disparar uma query por tecla enquanto o usuário ainda digita.
+    // 250ms: fast enough not to delay the search, high enough not to fire a
+    // query per keystroke while the user is still typing.
     tRef.current = window.setTimeout(() => setDebounced(query), SEARCH_DEBOUNCE_MS);
   }, [query]);
 
@@ -112,10 +112,11 @@ function ProductPage() {
     placeholderData: (prev) => prev,
   });
 
-  // byStore (result set 3 da proc) sempre traz TODAS as lojas: filtrar aqui
-  // pro gráfico de comparação refletir só o subconjunto escolhido, sem outra
-  // ida ao banco. Com 0 ou 1 loja selecionada não filtra (0 = todas; com 1 o
-  // gráfico fica escondido via hideStoreComp, então o filtro não importa).
+  // byStore (the proc's result set 3) always brings back ALL stores:
+  // filtering here makes the comparison chart reflect only the chosen
+  // subset, without another round-trip to the database. With 0 or 1 store
+  // selected it doesn't filter (0 = all; with 1 the chart is hidden via
+  // hideStoreComp, so the filter doesn't matter).
   const filteredAnalysisData = useMemo(() => {
     if (!analysisData || storeCodes.length < 2) return analysisData;
     return {
@@ -132,8 +133,9 @@ function ProductPage() {
   const refArticle =
     refWeekdayIdx != null ? (WEEKDAY_IS_MASC[refWeekdayIdx] ? "Últimos" : "Últimas") : "Últimas";
 
-  // As últimas 4 datas do mesmo dia da semana anteriores à referência, vêm da
-  // proc (result set lastFourSameWeekday), já excluindo a data de referência.
+  // The last 4 dates on the same weekday before the reference date come
+  // from the proc (result set lastFourSameWeekday), already excluding the
+  // reference date itself.
   const sameWeekdayDates = (analysisData?.lastFourSameWeekday ?? []) as SeriesPoint[];
 
   const avgSame = sameWeekdayDates.length
