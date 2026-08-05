@@ -194,16 +194,23 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     `use-nav-pending.test.ts`, `filter-cascade.test.ts`,
     `use-area-products-view.test.ts`). **Todos os arquivos de teste com
     comentário em português estão traduzidos.**
+  - **Etapa 10** (concluída, PR #218): `scripts/migrate-schema.sql`
+    inteiro -- comentários de tabela e os 16 blocos de comentário das
+    stored procedures. Validado além do lint/typecheck/test padrão: cadeia
+    completa de migrations do zero com reexecução (idempotência) e
+    `scripts/validate-procs.sh` (37 cenários) rodado contra ~2M linhas de
+    dados reais antes/depois de reaplicar o schema, hash de ordem e de
+    conjunto idênticos nos 37 cenários. **`scripts/migrate-schema.sql` está
+    completo.**
   - Strings de descrição `it("...")`/`describe("...")` em português
     continuam fora de escopo (categoria própria, ainda não iniciada).
   - **Estado geral da tradução de comentários (Fase 3)**: `src/lib/`,
-    `src/hooks/`, `src/routes/`, `src/components/`, `scripts/` (não-SQL) e
-    todos os arquivos de teste estão completos (Etapas 1-9, PRs #207, #209,
-    #211-#217). Só restam `scripts/migrate-schema.sql` (209 linhas de
-    comentário SQL, majoritariamente dentro das stored procedures --
-    etapa dedicada futura, dado o histórico de cautela desta sessão com
-    essas procedures) e as strings de descrição de teste (categoria à
-    parte, ver acima).
+    `src/hooks/`, `src/routes/`, `src/components/`, `scripts/` (todos,
+    incluindo `migrate-schema.sql`) e todos os arquivos de teste estão
+    completos (Etapas 1-10, PRs #207, #209, #211-#218). **A tradução de
+    comentários técnicos do projeto inteiro está concluída.** Resta só a
+    categoria à parte de strings de descrição de teste
+    `it("...")`/`describe("...")` em português.
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --
