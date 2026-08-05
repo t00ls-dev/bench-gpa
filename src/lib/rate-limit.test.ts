@@ -118,12 +118,12 @@ describe("RateLimiter: orçamento global não é armável por um IP só", () => 
   it("requisição já barrada por IP não consome o orçamento global", () => {
     const l = new RateLimiter(60_000, 5, 20);
 
-    // Atacante dispara 25x; só as 5 primeiras passam pelo limite por IP.
+    // Attacker fires 25x; only the first 5 pass the per-IP limit.
     for (let i = 0; i < 25; i++) l.check("6.6.6.6");
 
-    // Vítima na primeira requisição da vida dela: tem que passar. Antes, as 20
-    // rejeições do atacante também incrementavam o contador global e estouravam
-    // o teto de 20, um curl em loop derrubava o login de todo mundo.
+    // Victim on the first request of her life: it has to pass. Before,
+    // the attacker's 20 rejections also incremented the global counter and
+    // blew past the ceiling of 20, so a curl loop could take down login for everyone.
     expect(l.check("10.0.0.1").allowed).toBe(true);
 
     l.destroy();
@@ -134,7 +134,7 @@ describe("RateLimiter: orçamento global não é armável por um IP só", () => 
 
     for (let i = 0; i < 100; i++) l.check("6.6.6.6");
 
-    // Sobram 15 do teto global (20 - 5 do atacante) para IPs distintos.
+    // 15 left of the global ceiling (20 - 5 from the attacker) for distinct IPs.
     for (let i = 1; i <= 15; i++) {
       expect(l.check(`10.0.0.${i}`).allowed).toBe(true);
     }
@@ -145,7 +145,7 @@ describe("RateLimiter: orçamento global não é armável por um IP só", () => 
   it("ainda dispara o disjuntor quando a carga é de fato distribuída", () => {
     const l = new RateLimiter(60_000, 5, 20);
 
-    // 20 IPs distintos, 1 requisição cada → esgota o teto global legitimamente.
+    // 20 distinct IPs, 1 request each -> legitimately exhausts the global ceiling.
     for (let i = 1; i <= 20; i++) {
       expect(l.check(`10.0.1.${i}`).allowed).toBe(true);
     }

@@ -23,8 +23,8 @@ describe("buildAuditTooltip", () => {
   });
 
   it("ignora o detail de user.activate/user.deactivate mesmo quando gravado (texto antigo)", () => {
-    // Linhas gravadas antes do JOIN por target_id existir têm detail solto
-    // tipo "reativou a conta"/"inativou a conta", que não deve mais aparecer.
+    // Rows recorded before the target_id JOIN existed have a free-standing
+    // detail like "reativou a conta"/"inativou a conta", which shouldn't show up anymore.
     expect(buildAuditTooltip("user.deactivate", "ana", "inativou a conta")).toBe("ana");
     expect(buildAuditTooltip("user.activate", "ana", "reativou a conta")).toBe("ana");
   });

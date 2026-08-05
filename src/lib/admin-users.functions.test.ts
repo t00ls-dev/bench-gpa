@@ -148,8 +148,8 @@ describe("resetPassword", () => {
       userId: "u1",
     });
     expect(result.ok).toBe(true);
-    // Reusa o estado de "primeiro acesso pendente" em vez de definir uma senha
-    // temporária: mesma coluna zerada da criação de usuário nova.
+    // Reuses the "first access pending" state instead of setting a
+    // temporary password: same column zeroed out as when a new user is created.
     expect(db.query).toHaveBeenCalledWith(
       "UPDATE users SET password = NULL, password_changed_at = NULL, token_version = token_version + 1 WHERE id = ?",
       ["u1"],
@@ -257,7 +257,7 @@ describe("invalidação do cache de admin", () => {
   });
 
   it("não invalida nada quando a própria ação é recusada", async () => {
-    // Auto-rebaixamento é barrado antes do UPDATE; o cache não pode ser mexido.
+    // Self-demotion is blocked before the UPDATE; the cache must not be touched.
     await expect(
       (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
         userId: "admin-u1",

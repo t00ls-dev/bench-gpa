@@ -46,10 +46,10 @@ vi.mock("./admin-utils", () => ({ assertAdmin: vi.fn() }));
 import { listDocs, getDocContent } from "./admin-docs.functions";
 import { assertAdmin } from "./admin-utils";
 
-// import.meta.glob roda de verdade (é transform do Vite, não dá pra mockar
-// como db.query), os testes usam a pasta docs/ real do repo em vez de um
-// fixture, com asserções estruturais (não conteúdo exato) pra não acoplar
-// nos textos dos docs, que mudam.
+// import.meta.glob actually runs (it's a Vite transform, can't be mocked
+// like db.query), the tests use the repo's real docs/ folder instead of a
+// fixture, with structural assertions (not exact content) to avoid
+// coupling to the docs' text, which changes.
 
 interface DocEntry {
   slug: string;

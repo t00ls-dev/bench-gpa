@@ -5,8 +5,8 @@ const idx = (col: string) => STAGING_COLS.indexOf(col as (typeof STAGING_COLS)[n
 
 describe("staging-row", () => {
   it("mantém categorias nulas como NULL (não vira 0)", () => {
-    // Regressão do bug do import via CLI: depto/secao/grupo/subgrupo nulos
-    // caíam em `?? 0` e viravam a string "0" no VARCHAR.
+    // Regression from the CLI import bug: null depto/secao/grupo/subgrupo
+    // fell into `?? 0` and became the string "0" in the VARCHAR.
     const row = {
       store_code: "001",
       store_name: "CENTRO",
@@ -24,7 +24,7 @@ describe("staging-row", () => {
     expect(out[idx("grupo")]).toBeNull();
     expect(out[idx("subgrupo")]).toBeNull();
     expect(out[idx("depto")]).toBe("MERCEARIA");
-    // Garante que não é o número/string 0.
+    // Ensures it isn't the number/string 0.
     expect(out[idx("subgrupo")]).not.toBe(0);
     expect(out[idx("subgrupo")]).not.toBe("0");
   });
@@ -41,7 +41,7 @@ describe("staging-row", () => {
   });
 
   it("preserva valor 0 explícito da origem", () => {
-    // `?? default` só troca null/undefined: um 0 de verdade passa direto.
+    // `?? default` only replaces null/undefined: a real 0 passes straight through.
     const out = toStagingRow({ val_vda: 0 }, "b", "2024-01-01");
     expect(out[idx("val_vda")]).toBe(0);
   });
