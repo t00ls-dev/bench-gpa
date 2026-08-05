@@ -1,56 +1,58 @@
 #!/usr/bin/env bash
 #
-# Protocolo de medição das procedures de análise.
+# Measurement protocol for the analysis procedures.
 #
-# POR QUE ESTE SCRIPT EXISTE
+# WHY THIS SCRIPT EXISTS
 #
-# A tentativa de otimizar `area_analysis` esbarrou num problema anterior ao
-# código: não havia como medir. No MariaDB local o mesmo bloco variou de 8,6s a
-# 0,9s entre execuções (buffer pool), um índice de teste apareceu sem ter sido
-# criado, e um índice de cobertura em `depto` não mudou nada. Sem número
-# confiável, qualquer reescrita de proc é chute, e "ficou mais rápido" vira
-# opinião.
+# The attempt to optimize `area_analysis` ran into a problem upstream of the
+# code: there was no way to measure it. On local MariaDB the same block
+# varied from 8.6s to 0.9s between runs (buffer pool), a test index showed up
+# without ever having been created, and a covering index on `depto` changed
+# nothing. Without a reliable number, any proc rewrite is a guess, and "it
+# got faster" turns into opinion.
 #
-# O que este script garante, e que faltava:
+# What this script guarantees, and what was missing:
 #
-#   1. Mede em PRODUÇÃO. É o único ambiente cujo dataset, hardware (1 núcleo,
-#      1,9 GB) e buffer pool são os de verdade. Local não reproduz nenhum dos
-#      três.
-#   2. Mede o SERVIDOR, não a rede: o cronômetro (NOW(6)) roda dentro da mesma
-#      sessão SQL, antes e depois do CALL. Latência de SSH e de conexão ficam
-#      de fora.
-#   3. Descarta o primeiro tiro. Buffer pool frio mede o disco, não a query.
-#      Todas as medidas são de estado quente, que é o estado em que a tela
-#      real roda depois do primeiro acesso do dia.
-#   4. Repete N vezes e reporta a DISPERSÃO junto com a mediana. A dispersão é
-#      o número mais importante do relatório: se max/min passar de ~1,3, a
-#      medição não vale e o resto do relatório deve ser ignorado.
-#   5. Registra a impressão digital do ambiente (versão, buffer pool, contagem
-#      das tabelas, carga) no arquivo de saída. Comparar duas medições feitas
-#      com datasets ou buffer pools diferentes é comparar coisa nenhuma.
-#   6. Guarda o HASH DO RESULTADO de cada cenário. Performance não pode custar
-#      correção: depois de mexer numa proc, o hash tem de bater com o baseline.
-#      São dois hashes: um da saída na ordem em que veio (pega mudança de
-#      ORDER BY) e um da saída ordenada externamente (pega perda ou ganho de
-#      linha mesmo quando há empate de ordenação, que é não-determinístico).
-#   7. Recusa-se a rodar sob carga. O app tem 2 usuários e 1 núcleo: medir
-#      enquanto alguém usa contamina a medida E piora a vida de quem está
-#      usando. Ver [[prod-capacidade-1-core-2-usuarios]].
+#   1. Measures in PRODUCTION. It's the only environment whose dataset,
+#      hardware (1 core, 1.9 GB), and buffer pool are the real ones. Local
+#      reproduces none of the three.
+#   2. Measures the SERVER, not the network: the stopwatch (NOW(6)) runs
+#      inside the same SQL session, before and after the CALL. SSH and
+#      connection latency stay out of it.
+#   3. Discards the first shot. A cold buffer pool measures the disk, not
+#      the query. Every measurement is of the warm state, which is the state
+#      the real screen runs in after the first access of the day.
+#   4. Repeats N times and reports the SPREAD alongside the median. The
+#      spread is the most important number in the report: if max/min goes
+#      above ~1.3, the measurement isn't trustworthy and the rest of the
+#      report should be ignored.
+#   5. Records the environment's fingerprint (version, buffer pool, table
+#      counts, load) in the output file. Comparing two measurements taken
+#      with different datasets or buffer pools compares nothing meaningful.
+#   6. Keeps the RESULT HASH for each scenario. Performance can't come at
+#      the cost of correctness: after touching a proc, the hash has to match
+#      the baseline. There are two hashes: one of the output in the order it
+#      came in (catches an ORDER BY change) and one of the externally sorted
+#      output (catches a lost or gained row even when there's a sort tie,
+#      which is non-deterministic).
+#   7. Refuses to run under load. The app has 2 users and 1 core: measuring
+#      while someone is using it contaminates the measurement AND makes life
+#      worse for whoever is using it. See [[prod-capacidade-1-core-2-usuarios]].
 #
-# O script é SOMENTE LEITURA: só executa CALL das procs de análise e SELECTs de
-# metadado. Não cria índice, não altera proc, não escreve em tabela.
+# The script is READ-ONLY: it only runs CALL on the analysis procs and
+# metadata SELECTs. It creates no index, alters no proc, writes no table.
 #
-# USO
+# USAGE
 #
-#   Direto no servidor:
+#   Directly on the server:
 #     scripts/bench-procs.sh --out /tmp/bench-antes
 #
-#   Da máquina de desenvolvimento (o script não precisa estar no servidor):
+#   From the dev machine (the script doesn't need to live on the server):
 #     ssh -i ~/.ssh/gpa-key -p 9767 debian@sv1.t00ls.dev \
 #       'sudo -u admin bash -s -- --out /tmp/bench-antes' < scripts/bench-procs.sh
 #
-# Opções: --runs N (default 5), --warmup N (default 1), --out DIR,
-#         --env ARQUIVO, --max-load X (default 0.7), --force, --scenario NOME
+# Options: --runs N (default 5), --warmup N (default 1), --out DIR,
+#          --env FILE, --max-load X (default 0.7), --force, --scenario NAME
 #
 set -euo pipefail
 
@@ -75,9 +77,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# O .env de produção vive na raiz do app. Quando o script chega por stdin
-# (`bash -s`), BASH_SOURCE não aponta para lugar nenhum útil, então há um
-# caminho padrão explícito.
+# Production's .env lives at the app root. When the script arrives via
+# stdin (`bash -s`), BASH_SOURCE doesn't point anywhere useful, so there's
+# an explicit default path.
 if [ -z "$ENV_FILE" ]; then
   for cand in "/home/admin/web/gpa.t00ls.dev/public_html/.env" \
               "$(dirname "${BASH_SOURCE[0]:-.}")/../.env" \
@@ -97,15 +99,16 @@ CLIENT="$(command -v mariadb || command -v mysql)" || {
 OUT_DIR="${OUT_DIR:-/tmp/bench-procs-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$OUT_DIR"
 
-# -N: sem cabeçalho de coluna, para a linha do cronômetro ser fácil de isolar.
-# --skip-ssl-verify-server-cert: sem ele o cliente emite um aviso por invocação
-# (são centenas numa bateria) que iria parar dentro dos arquivos de saída.
+# -N: no column header, so the stopwatch line is easy to isolate.
+# --skip-ssl-verify-server-cert: without it the client emits a warning per
+# invocation (there are hundreds in a batch) that would end up inside the
+# output files.
 sql() {
   MYSQL_PWD="$DB_PASS" "$CLIENT" --skip-ssl-verify-server-cert \
     -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -N -B "$DB_NAME" "$@"
 }
 
-# ---------------------------------------------------------------- guarda-corpo
+# ------------------------------------------------------------------ guard rail
 LOAD1="$(awk '{print $1}' /proc/loadavg)"
 ACTIVE="$(sql -e "SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE COMMAND NOT IN ('Sleep','Daemon') AND ID != CONNECTION_ID();")"
 if [ "$FORCE" -eq 0 ]; then
@@ -121,7 +124,7 @@ if [ "$FORCE" -eq 0 ]; then
   fi
 fi
 
-# ------------------------------------------------------- impressão digital
+# ------------------------------------------------------------- fingerprint
 FP="$OUT_DIR/environment.txt"
 {
   echo "quando_utc=$(date -u +%FT%TZ)"
@@ -146,27 +149,28 @@ FP="$OUT_DIR/environment.txt"
           GROUP BY TABLE_NAME, INDEX_NAME ORDER BY TABLE_NAME, INDEX_NAME;"
 } > "$FP"
 
-# ------------------------------------------------------------------ cenários
-# Os valores de dimensão saem do próprio banco: o script tem de funcionar em
-# qualquer dataset, e um depto hardcoded envelhece.
+# ------------------------------------------------------------------ scenarios
+# The dimension values come straight from the database: the script has to
+# work on any dataset, and a hardcoded depto goes stale.
 LAST="$(sql -e "SELECT MAX(sale_date) FROM sales_prod_daily_agg;")"
 D7="$(sql -e "SELECT DATE_SUB('$LAST', INTERVAL 6 DAY);")"
 D28="$(sql -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")"
 DEPTO="$(sql -e "SELECT depto FROM sales_prod_daily_agg WHERE sale_date>='$D28' GROUP BY depto ORDER BY COUNT(*) DESC LIMIT 1;")"
 STORE="$(sql -e "SELECT store_code FROM sales_prod_daily_agg WHERE sale_date>='$D28' GROUP BY store_code ORDER BY COUNT(*) DESC LIMIT 1;")"
-# product_analysis (item 3 de docs/continuar.md) faz 7 varreduras de
-# sales_prod_daily_agg, todas filtradas por prod_code = ?, inclusive
-# lastFourSameWeekday/lastFourAll, que não têm limite de data além de
-# v_ref_date, ou seja, varrem o histórico inteiro daquele produto. O custo
-# esperado escala com o volume do produto, não com o período, daí os dois
-# extremos: o produto com mais linhas na tabela toda e o com menos.
+# product_analysis (docs/continuar.md item 3) does 7 scans of
+# sales_prod_daily_agg, all filtered by prod_code = ?, including
+# lastFourSameWeekday/lastFourAll, which have no date limit beyond
+# v_ref_date, i.e. they scan that product's entire history. The expected
+# cost scales with the product's volume, not the period, hence the two
+# extremes: the product with the most rows in the whole table and the one
+# with the fewest.
 PROD_HIGH="$(sql -e "SELECT prod_code FROM sales_prod_daily_agg GROUP BY prod_code ORDER BY COUNT(*) DESC LIMIT 1;")"
 PROD_LOW="$(sql -e "SELECT prod_code FROM sales_prod_daily_agg GROUP BY prod_code ORDER BY COUNT(*) ASC LIMIT 1;")"
 J_DEPTO="[\"$(printf '%s' "$DEPTO" | sed 's/"/\\"/g')\"]"
 J_STORE="[\"$STORE\"]"
 NUL="JSON_ARRAY()"
 
-# nome | chamada SQL completa
+# name | full SQL call
 SCENARIOS=(
 "area_7d_sem_filtro|CALL area_analysis('$D7','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
 "area_28d_sem_filtro|CALL area_analysis('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
@@ -193,8 +197,8 @@ for entry in "${SCENARIOS[@]}"; do
   name="${entry%%|*}"; call="${entry#*|}"
   [ -n "$ONLY" ] && [ "$ONLY" != "$name" ] && continue
 
-  # Passe de correção: guarda a saída inteira para hash. Roda antes das
-  # medições e também serve de aquecimento adicional.
+  # Correctness pass: keeps the entire output for hashing. Runs before the
+  # measurements and also serves as extra warmup.
   raw="$OUT_DIR/$name.out"
   if ! sql -e "$call" > "$raw" 2> "$OUT_DIR/$name.err"; then
     echo "  $name: FALHOU, ver $OUT_DIR/$name.err"
@@ -208,8 +212,9 @@ for entry in "${SCENARIOS[@]}"; do
 
   samples=()
   for _ in $(seq 1 "$RUNS"); do
-    # Sem tab no marcador: o modo batch do cliente escapa tab e newline da
-    # saída como "\t" e "\n" literais, então um separador tab não sobrevive.
+    # No tab in the marker: the client's batch mode escapes tabs and
+    # newlines in the output as literal "\t" and "\n", so a tab separator
+    # doesn't survive.
     us="$(sql -e "SET @t0=NOW(6); $call; SELECT CONCAT('##T##', TIMESTAMPDIFF(MICROSECOND,@t0,NOW(6)));" \
           2>/dev/null | sed -n 's/^##T##//p' | tail -1)"
     samples+=("$(( ${us:-0} / 1000 ))")

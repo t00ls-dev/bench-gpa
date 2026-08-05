@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 #
-# ATENÇÃO: NÃO COPIE ESTE MÉTODO. Ele está aqui como registro do experimento de
-# 2026-07-26, não como modelo.
+# WARNING: DO NOT COPY THIS METHOD. It's here as a record of the
+# 2026-07-26 experiment, not as a template.
 #
-# O script compara SQL avulso que IMITA a proc, em vez de medir a proc. Isso
-# funcionou para dashboard_rankings por sorte, e FALHOU para area_analysis: a
-# variante candidata e a de controle omitiam os mesmos cinco predicados
-# NOT EXISTS/OR de filtro, o controle bateu com a proc real dentro de 7% no
-# cenário onde as duas versões se comportam igual, e eu li isso como prova de
-# fidelidade. A reescrita foi para produção e deixou a tela Área 32% mais lenta.
+# This script compares standalone SQL that MIMICS the proc, instead of
+# measuring the proc itself. That worked for dashboard_rankings by luck,
+# and FAILED for area_analysis: the candidate and control variants both
+# omitted the same five NOT EXISTS/OR filter predicates, the control
+# matched the real proc within 7% in the scenario where the two versions
+# behave the same, and I read that as proof of fidelity. The rewrite went
+# to production and made the Área screen 32% slower.
 #
-# O jeito certo de testar uma variante de proc:
-#   1. criar a proc candidata com OUTRO NOME, com o corpo completo;
-#   2. medir com scripts/bench-procs.sh (que aceita --scenario);
-#   3. provar correção com scripts/validate-procs.sh;
-#   4. derrubar a candidata.
-# Ver docs/medicao-performance.md.
+# The right way to test a proc variant:
+#   1. create the candidate proc under ANOTHER NAME, with the full body;
+#   2. measure it with scripts/bench-procs.sh (which accepts --scenario);
+#   3. prove correctness with scripts/validate-procs.sh;
+#   4. drop the candidate.
+# See docs/medicao-performance.md.
 #
-# Experimento READ-ONLY: "uma varredura + rollups" vs "cinco varreduras".
-# Só usa TEMPORARY TABLE (escopo de sessão, some ao desconectar). Não cria
-# índice, não altera proc, não escreve em tabela persistente.
+# READ-ONLY experiment: "one scan + rollups" vs. "five scans".
+# Only uses TEMPORARY TABLE (session-scoped, disappears on disconnect). It
+# creates no index, alters no proc, writes no persistent table.
 set -euo pipefail
 set -a; . /home/admin/web/gpa.t00ls.dev/public_html/.env; set +a
 M() { MYSQL_PWD="$DB_PASS" mariadb --skip-ssl-verify-server-cert -h "$DB_HOST" -u "$DB_USER" -N -B "$DB_NAME" "$@"; }
@@ -28,7 +29,7 @@ LAST=$(M -e "SELECT MAX(sale_date) FROM sales_prod_daily_agg;")
 D28=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")
 echo "janela: $D28 .. $LAST"
 
-# --- A: como a proc faz hoje (5 varreduras, predicado (? IS NULL OR ...)) ---
+# --- A: how the proc does it today (5 scans, predicate (? IS NULL OR ...)) ---
 A_SQL="
 SET @f='$D28'; SET @t='$LAST';
 SELECT depto AS name, SUM(val_vda) v FROM sales_prod_daily_agg a
@@ -48,10 +49,10 @@ SELECT prod_code, prod_name, SUM(val_vda) v FROM sales_prod_daily_agg a
   GROUP BY a.prod_code, a.prod_name ORDER BY v DESC LIMIT 10;
 "
 
-# --- B: predicado direto, ainda 5 varreduras (isola o ganho do sargable) ---
+# --- B: direct predicate, still 5 scans (isolates the sargable gain) ---
 B_SQL="$(printf '%s' "$A_SQL" | sed "s/(@f IS NULL OR a.sale_date>=@f)/a.sale_date>='$D28'/g; s/(@t IS NULL OR a.sale_date<=@t)/a.sale_date<='$LAST'/g")"
 
-# --- C: uma varredura para uma temporária no grão fino + 5 rollups baratos ---
+# --- C: one scan into a fine-grained temp table + 5 cheap rollups ---
 C_SQL="
 DROP TEMPORARY TABLE IF EXISTS t_per;
 CREATE TEMPORARY TABLE t_per ENGINE=InnoDB AS
@@ -69,7 +70,7 @@ DROP TEMPORARY TABLE t_per;
 
 run() { # nome, sql
   local nome="$1" sql="$2" out us
-  # aquecimento descartado
+  # discarded warmup
   M -e "$sql" > /dev/null 2>&1 || { echo "  $nome: FALHOU"; return; }
   for i in 1 2 3; do
     us=$(M -e "SET @t0=NOW(6); $sql SELECT CONCAT('##T##', TIMESTAMPDIFF(MICROSECOND,@t0,NOW(6)));" \
