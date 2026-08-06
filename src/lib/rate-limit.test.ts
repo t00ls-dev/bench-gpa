@@ -6,15 +6,15 @@ function req(headers: Record<string, string>): Request {
 }
 
 describe("getClientIp", () => {
-  it("retorna 'unknown' sem request", () => {
+  it("returns 'unknown' with no request", () => {
     expect(getClientIp(undefined)).toBe("unknown");
   });
 
-  it("retorna 'unknown' sem headers de IP", () => {
+  it("returns 'unknown' with no IP headers", () => {
     expect(getClientIp(req({}))).toBe("unknown");
   });
 
-  it("prioriza CF-Connecting-IP mesmo com X-Forwarded-For forjado", () => {
+  it("prioritizes CF-Connecting-IP even with a forged X-Forwarded-For", () => {
     expect(
       getClientIp(
         req({ "x-forwarded-for": "9.9.9.9, 203.0.113.7", "cf-connecting-ip": "203.0.113.7" }),
@@ -22,26 +22,26 @@ describe("getClientIp", () => {
     ).toBe("203.0.113.7");
   });
 
-  it("usa True-Client-IP (CF Enterprise) quando não há CF-Connecting-IP", () => {
+  it("uses True-Client-IP (CF Enterprise) when there's no CF-Connecting-IP", () => {
     expect(getClientIp(req({ "true-client-ip": "198.51.100.4", "x-real-ip": "10.0.0.1" }))).toBe(
       "198.51.100.4",
     );
   });
 
-  it("usa X-Real-IP em acesso direto ao nginx (sem Cloudflare)", () => {
+  it("uses X-Real-IP on direct nginx access (no Cloudflare)", () => {
     expect(getClientIp(req({ "x-real-ip": "192.0.2.5" }))).toBe("192.0.2.5");
   });
 
-  it("cai para o primeiro salto do X-Forwarded-For como último recurso", () => {
+  it("falls back to X-Forwarded-For's first hop as a last resort", () => {
     expect(getClientIp(req({ "x-forwarded-for": "192.0.2.9, 10.0.0.1" }))).toBe("192.0.2.9");
   });
 
-  it("normaliza porta e IPv4-mapeado em IPv6", () => {
+  it("normalizes port and IPv4-mapped-in-IPv6", () => {
     expect(getClientIp(req({ "cf-connecting-ip": "::ffff:203.0.113.7" }))).toBe("203.0.113.7");
     expect(getClientIp(req({ "x-real-ip": "192.0.2.5:54321" }))).toBe("192.0.2.5");
   });
 
-  it("ignora header vazio e segue para o próximo candidato", () => {
+  it("ignores an empty header and moves to the next candidate", () => {
     expect(getClientIp(req({ "cf-connecting-ip": "  ", "x-real-ip": "192.0.2.5" }))).toBe(
       "192.0.2.5",
     );
@@ -111,11 +111,11 @@ describe("RateLimiter", () => {
   });
 });
 
-describe("RateLimiter: orçamento global não é armável por um IP só", () => {
+describe("RateLimiter: the global budget can't be weaponized by a single IP", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("requisição já barrada por IP não consome o orçamento global", () => {
+  it("a request already blocked by IP does not consume the global budget", () => {
     const l = new RateLimiter(60_000, 5, 20);
 
     // Attacker fires 25x; only the first 5 pass the per-IP limit.
@@ -129,7 +129,7 @@ describe("RateLimiter: orçamento global não é armável por um IP só", () => 
     l.destroy();
   });
 
-  it("um IP consome no máximo maxPerIp do orçamento global", () => {
+  it("a single IP consumes at most maxPerIp of the global budget", () => {
     const l = new RateLimiter(60_000, 5, 20);
 
     for (let i = 0; i < 100; i++) l.check("6.6.6.6");
@@ -142,7 +142,7 @@ describe("RateLimiter: orçamento global não é armável por um IP só", () => 
     l.destroy();
   });
 
-  it("ainda dispara o disjuntor quando a carga é de fato distribuída", () => {
+  it("still trips the breaker when the load is genuinely distributed", () => {
     const l = new RateLimiter(60_000, 5, 20);
 
     // 20 distinct IPs, 1 request each -> legitimately exhausts the global ceiling.
@@ -154,7 +154,7 @@ describe("RateLimiter: orçamento global não é armável por um IP só", () => 
     l.destroy();
   });
 
-  it("o orçamento global se recupera quando a janela expira", () => {
+  it("the global budget recovers when the window expires", () => {
     const l = new RateLimiter(60_000, 5, 20);
 
     for (let i = 1; i <= 20; i++) l.check(`10.0.1.${i}`);

@@ -100,7 +100,7 @@ describe("requireAuth", () => {
   // users.token_version, and every token issued before that must stop
   // being valid on the next request.
   describe("token_version", () => {
-    it("rejeita token emitido antes do reset de senha", async () => {
+    it("rejects a token issued before the password reset", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
         role: "admin",
@@ -110,7 +110,7 @@ describe("requireAuth", () => {
       await expect(call()).rejects.toThrow("Unauthorized: session revoked");
     });
 
-    it("aceita token emitido depois do reset", async () => {
+    it("accepts a token issued after the reset", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
         role: "admin",
@@ -124,12 +124,12 @@ describe("requireAuth", () => {
     // created don't have the field in their payload. Since the column
     // starts at 0, they stay valid until they expire, the deploy doesn't
     // log anyone out.
-    it("aceita token legado sem tokenVersion enquanto a coluna estiver em 0", async () => {
+    it("accepts a legacy token without tokenVersion while the column is at 0", async () => {
       vi.mocked(jwt.verify).mockReturnValue({ userId: "u1", role: "admin" } as never);
       await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
     });
 
-    it("rejeita token legado assim que a senha for redefinida uma vez", async () => {
+    it("rejects a legacy token as soon as the password is reset once", async () => {
       vi.mocked(jwt.verify).mockReturnValue({ userId: "u1", role: "admin" } as never);
       vi.mocked(db.query).mockResolvedValue(dbRow({ token_version: 1 }) as never);
       await expect(call()).rejects.toThrow("Unauthorized: session revoked");
@@ -139,7 +139,7 @@ describe("requireAuth", () => {
   // The role in the context must come from the database: the JWT carries
   // what was true when it was issued, and a demoted user would keep
   // "admin" in the context for up to 7 days.
-  it("usa o role do banco, não o congelado no token", async () => {
+  it("uses the role from the database, not the one frozen in the token", async () => {
     vi.mocked(db.query).mockResolvedValue(dbRow({ role: "user" }) as never);
     await expect(call()).resolves.toMatchObject({ context: { userRole: "user" } });
   });
@@ -148,24 +148,24 @@ describe("requireAuth", () => {
   // computed in SQL (see session.ts), requireAuth blocks every server
   // function except changePassword (which uses requireAuthAllowExpiredPassword).
   describe("passwordChangeRequired", () => {
-    it("bloqueia com um erro distinto, não prefixado com 'Unauthorized'", async () => {
+    it("blocks with a distinct error, not prefixed with 'Unauthorized'", async () => {
       vi.mocked(db.query).mockResolvedValue(dbRow({ password_change_required: 1 }) as never);
       await expect(call()).rejects.toThrow("PasswordChangeRequired");
     });
 
-    it("o erro não é embrulhado em 'Unauthorized: invalid token' (fora do catch de resolveSession)", async () => {
+    it("the error is not wrapped in 'Unauthorized: invalid token' (outside resolveSession's catch)", async () => {
       vi.mocked(db.query).mockResolvedValue(dbRow({ password_change_required: 1 }) as never);
       await expect(call()).rejects.toSatisfy(
         (err: unknown) => err instanceof Error && !err.message.startsWith("Unauthorized"),
       );
     });
 
-    it("marca o erro como já reportado (não é um bug de verdade, não deve duplicar no Sentry)", async () => {
+    it("marks the error as already reported (not a real bug, must not duplicate in Sentry)", async () => {
       vi.mocked(db.query).mockResolvedValue(dbRow({ password_change_required: 1 }) as never);
       await expect(call()).rejects.toSatisfy((err: unknown) => isSentryReported(err));
     });
 
-    it("requireAuthAllowExpiredPassword NÃO bloqueia, mesmo com passwordChangeRequired", async () => {
+    it("requireAuthAllowExpiredPassword does NOT block, even with passwordChangeRequired", async () => {
       vi.mocked(db.query).mockResolvedValue(dbRow({ password_change_required: 1 }) as never);
       const result = await (
         requireAuthAllowExpiredPassword as unknown as (opts: {
@@ -180,7 +180,7 @@ describe("requireAuth", () => {
   // "normal" session: without this, the session would need a fixed
   // deadline from login.
   describe("sliding session", () => {
-    it("reemite o cookie a cada request de uma sessão normal (não persistente)", async () => {
+    it("reissues the cookie on every request of a normal (non-persistent) session", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
         role: "admin",
@@ -197,7 +197,7 @@ describe("requireAuth", () => {
       expect(setCookie).toHaveBeenCalledWith("session", "reissued-jwt", expect.any(Object));
     });
 
-    it("não reemite o cookie de uma sessão 'manter conectado' (persistent)", async () => {
+    it("does not reissue the cookie for a 'remember me' (persistent) session", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
         role: "admin",
@@ -210,7 +210,7 @@ describe("requireAuth", () => {
       expect(setCookie).not.toHaveBeenCalled();
     });
 
-    it("rejeita sessão normal que passou do teto absoluto, mesmo com token ainda válido", async () => {
+    it("rejects a normal session past the absolute cap, even with a still-valid token", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
         role: "admin",
@@ -224,7 +224,7 @@ describe("requireAuth", () => {
 
     // Transition: tokens issued before this change don't have `loginAt`;
     // instead of expiring everyone on deploy, treat it as a login now.
-    it("trata token legado sem loginAt como login agora, sem expirar na hora", async () => {
+    it("treats a legacy token without loginAt as logging in now, without expiring immediately", async () => {
       vi.mocked(jwt.verify).mockReturnValue({
         userId: "u1",
         role: "admin",
@@ -238,15 +238,15 @@ describe("requireAuth", () => {
   // sentryFunctionErrorMiddleware (src/start.ts) recaptures any error that
   // escapes here, since it sits outside requireAuth in the middleware
   // chain: without the mark, the same error becomes two events in Sentry.
-  describe("marca de erro já reportado ao Sentry", () => {
-    it("marca o erro de sessão inválida (JWT expirado)", async () => {
+  describe("marking an error as already reported to Sentry", () => {
+    it("marks the invalid-session error (expired JWT)", async () => {
       vi.mocked(jwt.verify).mockImplementation(() => {
         throw new Error("jwt expired");
       });
       await expect(call()).rejects.toSatisfy((err: unknown) => isSentryReported(err));
     });
 
-    it("marca o erro relançado de dentro de next()", async () => {
+    it("marks the error rethrown from inside next()", async () => {
       const boom = new Error("boom dentro do handler");
       await expect(
         (requireAuth as unknown as (opts: { next: (ctx: unknown) => unknown }) => Promise<unknown>)(
