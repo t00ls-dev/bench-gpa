@@ -25,4 +25,4 @@ for (const icon of manifest.icons ?? []) {
 }
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
-console.log(`manifest.json: ícones versionados com ?v=${commitHash} (pré-build)`);
+console.log(`manifest.json: icons versioned with ?v=${commitHash} (pre-build)`);

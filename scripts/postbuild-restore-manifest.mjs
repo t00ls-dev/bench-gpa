@@ -13,4 +13,4 @@ for (const icon of manifest.icons ?? []) {
 }
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
-console.log("manifest.json: restaurado ao estado sem versão (pós-build)");
+console.log("manifest.json: restored to unversioned state (post-build)");
