@@ -39,12 +39,12 @@ describe("xlsx-parser", () => {
     expect(() => parseAnyWorkbook(buf)).toThrow("DTA_VENDA");
   });
 
-  it("lança um erro (não trava, não devolve lixo) para um arquivo corrompido/não-xlsx", () => {
+  it("throws an error (doesn't hang, doesn't return garbage) for a corrupted/non-xlsx file", () => {
     const garbage = new TextEncoder().encode("isto não é um arquivo xlsx válido").buffer;
     expect(() => parseAnyWorkbook(garbage)).toThrow();
   });
 
-  it("não lança para um arquivo com o marcador de data mas zero linhas de produto", () => {
+  it("does not throw for a file with the date marker but zero product rows", () => {
     // Important difference from the "corrupted file" case: here the file is
     // valid and the marker exists: there's just no product after it. The
     // parser returns empty lists instead of throwing; deciding whether this
@@ -83,7 +83,7 @@ describe("xlsx-parser", () => {
   // the EXACT adjacent "Total" label (see `isVal`/checks in
   // xlsx-parser.ts). This block covers the path product categorization
   // actually uses.
-  it("atribui depto/seção/grupo/subgrupo reais quando o rótulo 'Total' vem exatamente adjacente", () => {
+  it("assigns real depto/seção/grupo/subgrupo when the 'Total' label is exactly adjacent", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
       ["DTA_VENDA é 01/07/2024"],
@@ -103,7 +103,7 @@ describe("xlsx-parser", () => {
     });
   });
 
-  it("reseta seção/grupo/subgrupo ao entrar num novo depto", () => {
+  it("resets seção/grupo/subgrupo on entering a new depto", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
       ["DTA_VENDA é 01/07/2024"],
@@ -133,7 +133,7 @@ describe("xlsx-parser", () => {
     expect(item2.subgrupo).toBeNull();
   });
 
-  it("reseta só grupo/subgrupo ao entrar numa nova seção, mantendo o depto", () => {
+  it("resets only grupo/subgrupo on entering a new seção, keeping the depto", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
       ["DTA_VENDA é 01/07/2024"],
@@ -201,7 +201,7 @@ describe("xlsx-parser", () => {
     expect(result.sales[0].val_vda).toBe(1500.5);
   });
 
-  it("preserva o separador de milhar pt-BR ponta a ponta", () => {
+  it("preserves the pt-BR thousands separator end to end", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
       ["DTA_VENDA é 01/01/2024"],
@@ -211,7 +211,7 @@ describe("xlsx-parser", () => {
     expect(result.sales[0].val_vda).toBe(1234567.89);
   });
 
-  it("emite categorias nulas quando não há hierarquia (gatilho do bug do staging '0')", () => {
+  it("emits null categories when there is no hierarchy (trigger for the staging '0' bug)", () => {
     // Produto sem nenhuma linha de Total de hierarquia acima dele: depto/secao/
     // grupo/subgrupo devem sair NULL, nunca "" nem 0.
     const buf = makeWorkbook([
@@ -239,7 +239,7 @@ describe("xlsx-parser", () => {
     expect(result.products.find((p) => p.prod_code === "001")?.prod_name).toBe("PROD A");
   });
 
-  it("lê corretamente um arquivo .xls legado (binário BIFF8), não só .xlsx", () => {
+  it("correctly reads a legacy .xls file (binary BIFF8), not just .xlsx", () => {
     // The dropzone accepts the extension (upload-dropzone.tsx:
     // accept=".xlsx,.xls"), but nothing tested this format:
     // parseAnyWorkbook uses the same XLSX.read() for both, which detects
@@ -257,7 +257,7 @@ describe("xlsx-parser", () => {
     expect(result.sales[0].val_vda).toBe(42);
   });
 
-  it("preserva acentos e emoji em nome de loja/produto sem corromper", () => {
+  it("preserves accents and emoji in store/product names without corrupting them", () => {
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - AÇAÍ 🎉 SHOPPING"],
       ["DTA_VENDA é 01/01/2024"],
@@ -268,7 +268,7 @@ describe("xlsx-parser", () => {
     expect(result.products[0].prod_name).toBe("PÃO DE AÇÚCAR ñoño 日本語");
   });
 
-  it("lê só a primeira planilha quando o arquivo tem múltiplas abas", () => {
+  it("reads only the first sheet when the file has multiple tabs", () => {
     const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.aoa_to_sheet([
       [null, null, null, null, null, "001 - CENTRO"],
@@ -290,7 +290,7 @@ describe("xlsx-parser", () => {
     expect(result.products.map((p) => p.prod_code)).not.toContain("222");
   });
 
-  it("não funde linhas duplicadas do mesmo produto/loja, cada linha vira uma venda", () => {
+  it("does not merge duplicate rows for the same product/store, each row becomes a sale", () => {
     // finalize_import (migrate-schema.sql) is what sums via GROUP BY/SUM in
     // the database; the parser itself doesn't dedupe or merge anything, it
     // just passes each row through as a separate sale.
@@ -311,13 +311,13 @@ describe("xlsx-parser", () => {
 });
 
 describe("parseCellNumber", () => {
-  it("passa números adiante sem tocar", () => {
+  it("passes numbers through untouched", () => {
     expect(parseCellNumber(1234.56)).toBe(1234.56);
     expect(parseCellNumber(0)).toBe(0);
     expect(parseCellNumber(-42)).toBe(-42);
   });
 
-  it("trata vazio, nulo e lixo não numérico como 0", () => {
+  it("treats empty, null, and non-numeric garbage as 0", () => {
     expect(parseCellNumber(null)).toBe(0);
     expect(parseCellNumber(undefined)).toBe(0);
     expect(parseCellNumber("")).toBe(0);
@@ -327,13 +327,13 @@ describe("parseCellNumber", () => {
     expect(parseCellNumber(Infinity)).toBe(0);
   });
 
-  it("lê decimal pt-BR com vírgula", () => {
+  it("reads pt-BR decimal with a comma", () => {
     expect(parseCellNumber("1500,50")).toBe(1500.5);
     expect(parseCellNumber("0,99")).toBe(0.99);
     expect(parseCellNumber("-12,5")).toBe(-12.5);
   });
 
-  it("combina milhar e decimal pt-BR (a regressão do bug)", () => {
+  it("combines pt-BR thousands and decimal (the bug's regression)", () => {
     // Before: .replace(",", ".") only swapped the first comma and kept the
     // thousands dots -> "1.234,56" became 1.234, a thousand times smaller.
     expect(parseCellNumber("1.234,56")).toBe(1234.56);
@@ -341,20 +341,20 @@ describe("parseCellNumber", () => {
     expect(parseCellNumber("-1.234,56")).toBe(-1234.56);
   });
 
-  it("entende ponto como milhar quando não há vírgula", () => {
+  it("understands a dot as thousands when there's no comma", () => {
     expect(parseCellNumber("1.234")).toBe(1234);
     expect(parseCellNumber("12.345")).toBe(12345);
     expect(parseCellNumber("1.234.567")).toBe(1234567);
   });
 
-  it("mantém o ponto como decimal quando não delimita grupos de 3", () => {
+  it("keeps the dot as decimal when it doesn't delimit groups of 3", () => {
     expect(parseCellNumber("1.23")).toBe(1.23);
     expect(parseCellNumber("1.2345")).toBe(1.2345);
     expect(parseCellNumber("1234.56")).toBe(1234.56);
     expect(parseCellNumber("0.5")).toBe(0.5);
   });
 
-  it("ignora símbolo de moeda e espaços ao redor do número", () => {
+  it("ignores currency symbol and surrounding whitespace around the number", () => {
     expect(parseCellNumber("R$ 1.234,56")).toBe(1234.56);
     expect(parseCellNumber("  789,10  ")).toBe(789.1);
     expect(parseCellNumber("R$ 2.500,00")).toBe(2500);
