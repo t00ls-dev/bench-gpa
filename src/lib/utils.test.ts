@@ -41,7 +41,7 @@ describe("fmtInt", () => {
 });
 
 describe("fmtDT", () => {
-  it("formats ISO date string, convertendo pro fuso de Brasília", () => {
+  it("formats ISO date string, converting to Brasília time", () => {
     // 14:30 UTC = 11:30 in America/Sao_Paulo (UTC-3, no daylight saving
     // since 2019). String with "Z" because that's the real format
     // dateTimeStr() (api-types.ts) produces -- never without a timezone suffix.
@@ -56,7 +56,7 @@ describe("fmtDT", () => {
   // error. A fixed timezone via Intl.DateTimeFormat eliminates the
   // dependency on the environment: this simulates "running in another
   // timezone" by swapping the process's TZ and confirms the output doesn't change.
-  it("independe do fuso do processo que roda o código (server vs. client)", () => {
+  it("does not depend on the timezone of the process running the code (server vs. client)", () => {
     const originalTz = process.env.TZ;
     try {
       process.env.TZ = "UTC";
@@ -116,18 +116,18 @@ describe("fmtBRShort", () => {
   // triggered in admin-user-management.tsx (new Date(u.created_at),
   // /admin's default tab, always visible) and in admin.docs.page.tsx (via
   // date-fns before this fix).
-  it("ramo Date: usa o dia em Brasília, não em UTC, perto da virada do dia", () => {
+  it("Date branch: uses the day in Brasília, not UTC, near the day boundary", () => {
     // 00:00 UTC on 03/15 = 21:00 on 03/14 in America/Sao_Paulo (UTC-3).
     const d = new Date("2024-03-15T00:00:00.000Z");
     expect(fmtBRShort(d)).toBe("14/03/24");
   });
 
-  it("ramo number: mesma conversão de fuso, mesmo instante como timestamp ms", () => {
+  it("number branch: same timezone conversion, same instant as a ms timestamp", () => {
     const ms = new Date("2024-03-15T00:00:00.000Z").getTime();
     expect(fmtBRShort(ms)).toBe("14/03/24");
   });
 
-  it("ramos Date e number independem do fuso do processo", () => {
+  it("Date and number branches don't depend on the process's timezone", () => {
     const originalTz = process.env.TZ;
     try {
       const instant = new Date("2026-08-04T09:30:00.000Z");
@@ -148,7 +148,7 @@ describe("todayISOBrazil", () => {
     vi.useRealTimers();
   });
 
-  it("usa o dia em Brasília, não em UTC, perto da virada do dia", () => {
+  it("uses the day in Brasília, not UTC, near the day boundary", () => {
     // 01:00 UTC on 08/04 = 22:00 on 08/03 in America/Sao_Paulo (UTC-3):
     // local getters running in a process on UTC (the server) would say
     // "04", which is wrong.
@@ -157,7 +157,7 @@ describe("todayISOBrazil", () => {
     expect(todayISOBrazil()).toBe("2026-08-03");
   });
 
-  it("independe do fuso do processo, igual fmtDT", () => {
+  it("does not depend on the process's timezone, same as fmtDT", () => {
     const originalTz = process.env.TZ;
     try {
       vi.useFakeTimers();

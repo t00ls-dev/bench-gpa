@@ -58,8 +58,8 @@ beforeEach(() => {
   vi.mocked(db.query).mockReset();
 });
 
-describe("listDocs: guard de admin real (assertAdmin não mockado)", () => {
-  it("rejeita usuário não-admin sem devolver a lista de documentos", async () => {
+describe("listDocs: real admin guard (assertAdmin not mocked)", () => {
+  it("rejects a non-admin user without returning the document list", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[[{ has_role: 0 }]]] as never); // CALL has_role
 
     await expect((listDocs as () => Promise<unknown>)()).rejects.toThrow("Apenas administradores");

@@ -38,20 +38,20 @@ describe("useWakeLock", () => {
     vi.restoreAllMocks();
   });
 
-  it("pede o wake lock quando active é true", async () => {
+  it("requests the wake lock when active is true", async () => {
     const { request } = mockWakeLockSupport();
     renderHook(() => useWakeLock(true));
     await waitFor(() => expect(request).toHaveBeenCalledWith("screen"));
   });
 
-  it("não pede nada quando active é false", async () => {
+  it("requests nothing when active is false", async () => {
     const { request } = mockWakeLockSupport();
     renderHook(() => useWakeLock(false));
     await Promise.resolve();
     expect(request).not.toHaveBeenCalled();
   });
 
-  it("libera o lock quando active volta a false", async () => {
+  it("releases the lock when active goes back to false", async () => {
     const { request, release } = mockWakeLockSupport();
     const { rerender } = renderHook(({ active }) => useWakeLock(active), {
       initialProps: { active: true },
@@ -62,7 +62,7 @@ describe("useWakeLock", () => {
     expect(release).toHaveBeenCalledTimes(1);
   });
 
-  it("libera o lock ao desmontar", async () => {
+  it("releases the lock on unmount", async () => {
     const { request, release } = mockWakeLockSupport();
     const { unmount } = renderHook(() => useWakeLock(true));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
@@ -74,13 +74,13 @@ describe("useWakeLock", () => {
   // Unsupported browser (old Safari, Firefox without the API, insecure
   // context): degrades gracefully, throwing no error that would interrupt
   // the import.
-  it("não lança erro em navegador sem suporte à Wake Lock API", async () => {
+  it("throws no error in a browser without Wake Lock API support", async () => {
     delete (navigator as unknown as { wakeLock?: unknown }).wakeLock;
     expect(() => renderHook(() => useWakeLock(true))).not.toThrow();
     await Promise.resolve();
   });
 
-  it("reobtém o lock quando a aba volta a ficar visível depois do navegador liberar sozinho", async () => {
+  it("reacquires the lock when the tab becomes visible again after the browser released it on its own", async () => {
     const { request, sentinel } = mockWakeLockSupport();
     renderHook(() => useWakeLock(true));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));

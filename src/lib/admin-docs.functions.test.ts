@@ -63,7 +63,7 @@ beforeEach(() => {
 });
 
 describe("listDocs", () => {
-  it("lista os docs reais (lista única, sem categoria) ordenados por título (pt-BR)", async () => {
+  it("lists the real docs (single list, no category) sorted by title (pt-BR)", async () => {
     const result = await (listDocs as () => Promise<DocEntry[]>)();
 
     expect(assertAdmin).toHaveBeenCalled();
@@ -80,7 +80,7 @@ describe("listDocs", () => {
     expect(titles).toEqual(sorted);
   });
 
-  it("extrai o título do primeiro cabeçalho `# ...` do markdown", async () => {
+  it("extracts the title from the markdown's first `# ...` heading", async () => {
     const result = await (listDocs as () => Promise<DocEntry[]>)();
     const continuar = result.find((d) => d.slug === "continuar");
     expect(continuar?.title).toBe("Estado do projeto e itens em aberto (30/07/2026, histórico)");
@@ -88,7 +88,7 @@ describe("listDocs", () => {
 });
 
 describe("getDocContent", () => {
-  it("devolve o conteúdo cru e o lastModified de um doc que existe", async () => {
+  it("returns the raw content and lastModified of a doc that exists", async () => {
     const result = await (
       getDocContent as (d: { slug: string }) => Promise<{
         content: string;
@@ -103,7 +103,7 @@ describe("getDocContent", () => {
     expect(typeof result.lastModified === "number" || result.lastModified === null).toBe(true);
   });
 
-  it("rejeita slug que não corresponde a nenhum doc", async () => {
+  it("rejects a slug that doesn't match any doc", async () => {
     await expect(
       (getDocContent as (d: { slug: string }) => Promise<unknown>)({
         slug: "este-doc-nao-existe-xyz",

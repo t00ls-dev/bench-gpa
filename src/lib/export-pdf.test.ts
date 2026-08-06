@@ -24,7 +24,7 @@ function getAnchor(): HTMLAnchorElement {
   return a;
 }
 
-describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
+describe("openPdfBlob: without filename (preview in a new tab)", () => {
   let mockDoc: ReturnType<typeof createMockDoc>;
 
   beforeEach(() => {
@@ -42,13 +42,13 @@ describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
     vi.useRealTimers();
   });
 
-  it("nunca chama fetch, preview fica só no cliente, sem passar pelo servidor", async () => {
+  it("never calls fetch, preview stays entirely client-side, without going through the server", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc);
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("cria um anchor com blob: URL, target=_blank, sem download", async () => {
+  it("creates an anchor with a blob: URL, target=_blank, no download attribute", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc);
     const anchor = getAnchor();
@@ -58,7 +58,7 @@ describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
     expect(anchor.hasAttribute("download")).toBe(false);
   });
 
-  it("dispara um clique de verdade (dispatchEvent) com o anchor conectado ao documento", async () => {
+  it("fires a real click (dispatchEvent) with the anchor connected to the document", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc); // first call creates the anchor
     const anchor = getAnchor();
@@ -75,7 +75,7 @@ describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
     expect(receivedEvent).toBeInstanceOf(MouseEvent);
   });
 
-  it("reusa o mesmo anchor entre chamadas em vez de criar um novo a cada preview", async () => {
+  it("reuses the same anchor across calls instead of creating a new one on every preview", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc);
     const first = getAnchor();
@@ -93,7 +93,7 @@ describe("openPdfBlob: sem filename (preview numa aba nova)", () => {
   });
 });
 
-describe("openPdfBlob: com filename (download forçado via servidor)", () => {
+describe("openPdfBlob: with filename (forced download via server)", () => {
   let mockDoc: ReturnType<typeof createMockDoc>;
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -124,14 +124,14 @@ describe("openPdfBlob: com filename (download forçado via servidor)", () => {
   // two earlier fixes). That's why the filename path creates no blob: URL
   // and no anchor at all: it goes entirely via POST to the server, which
   // returns a real Content-Disposition.
-  it("não cria nenhuma blob: URL nem anchor, vai direto pro servidor", async () => {
+  it("creates no blob: URL and no anchor, goes straight to the server", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc, "relatorio.pdf");
     expect(document.body.querySelector("a")).toBeNull();
     expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
-  it("faz POST pra /api/pdf-download com o blob no corpo e o filename no header", async () => {
+  it("POSTs to /api/pdf-download with the blob in the body and the filename in a header", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc, "analise-area-mercearia-2026-07-14-a-2026-07-20.pdf");
 
@@ -147,13 +147,13 @@ describe("openPdfBlob: com filename (download forçado via servidor)", () => {
     );
   });
 
-  it("navega (window.location.href) pra URL de download devolvida pelo servidor", async () => {
+  it("navigates (window.location.href) to the download URL returned by the server", async () => {
     const openPdfBlob = await freshOpenPdfBlob();
     await openPdfBlob(mockDoc, "relatorio.pdf");
     expect(window.location.href).toBe("/api/pdf-download/tok-123");
   });
 
-  it("lança um erro claro se o POST falhar, sem navegar", async () => {
+  it("throws a clear error if the POST fails, without navigating", async () => {
     fetchMock.mockResolvedValue({ ok: false, json: () => Promise.resolve({}) });
     const openPdfBlob = await freshOpenPdfBlob();
     await expect(openPdfBlob(mockDoc, "relatorio.pdf")).rejects.toThrow(
