@@ -143,23 +143,21 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
  * limit: an IP's maximum contribution to it is its own per-IP ceiling,
  * thanks to the short-circuit documented in `check()`.
  *
- * `auth` loosened from [10, 40] to [15, 60] (same ~4x ratio): the two routes
- * that receive anonymous traffic in this tier (login, first access) already
- * require Turnstile before accepting the attempt, covering the automated
- * part of the problem -- this per-IP ceiling is the defense that's left.
- * Also backed by what's already recorded in docs/medicao-performance.md
- * (2026-08-04 entry): in cluster mode (2 workers) the counter is already
- * diluted per process and the real bottleneck stays the shared CPU, not the
- * counter -- raising the ceiling doesn't increase the bcrypt/s the VPS can
- * actually process. `changePassword` also uses this tier but is only
- * reachable by someone who already has a valid session
- * (`requireAuthAllowExpiredPassword` runs before the rate limit in the
- * middleware), so the loosening doesn't open new surface to anonymous
- * traffic there.
+ * `auth` was loosened to [15, 60] from 2026-08-05 to 2026-08-06 to
+ * compensate for cluster mode's per-worker dilution (2 processes, each with
+ * its own counter). Reverted back to [10, 40] when PM2 went back to fork/1
+ * instance (see docs/medicao-performance.md, 2026-08-06 entry): with a
+ * single process there's no dilution left to compensate for, and this
+ * ceiling is the real per-IP defense (Turnstile already covers the
+ * automated part of the problem on the two routes that receive anonymous
+ * traffic in this tier -- login, first access). `changePassword` also uses
+ * this tier but is only reachable by someone who already has a valid
+ * session (`requireAuthAllowExpiredPassword` runs before the rate limit in
+ * the middleware), so this ceiling doesn't gate anonymous traffic there.
  */
 const RATE_LIMITS = {
   api: [300, 1000],
-  auth: [15, 60],
+  auth: [10, 40],
   upload: [200, 500],
   ssr: [300, 1500],
 } as const;
