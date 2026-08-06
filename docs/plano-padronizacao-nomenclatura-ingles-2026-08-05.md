@@ -371,6 +371,27 @@ nenhuma tela nem resposta HTTP:
   `package.json`), nunca auditadas antes por serem `.mjs`, fora do
   escopo `scripts/*.ts` da etapa 18. Achado numa nova varredura de
   conferência em 2026-08-06.
+- **Correção pontual** (PR #232): comentários em `scripts/migrations/
+  0001` a `0008` (a Etapa 10 cobriu só `migrate-schema.sql`, o baseline
+  idempotente, nunca as migrations versionadas). `0009`-`0011` já
+  estavam em inglês.
+
+  **Exceção deliberada à regra "forward-only"** de
+  `scripts/migrations/README.md` ("nunca edite, nem renomeie, uma
+  migration já aplicada em produção"): perguntado explicitamente ao
+  usuário antes de executar, que aprovou. A regra existe porque o
+  runner (`scripts/run-migrations.sh`) rastreia cada migration pelo
+  NOME DO ARQUIVO em `schema_migrations` e nunca reexecuta o conteúdo
+  -- editar só comentário não muda esse comportamento, mesmo
+  raciocínio já documentado (e já praticado duas vezes antes) dentro
+  dos próprios arquivos `0002` e `0003` ("EDITADO em 01/08/2026,
+  auditoria de QA, item 10"). Zero linha de SQL tocada. `matricula`/
+  `username` mantidos como identificador literal onde o comentário
+  descreve a coluna SQL real daquele momento histórico (`0006`,
+  `0007`), não traduzidos para `employee_id` -- coluna diferente,
+  adicionada só em `0009`. Validado com a cadeia completa `0001`-`0011`
+  aplicada do zero + reaplicação confirmando idempotência (mesmo teste
+  do job `schema-check` do CI).
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
