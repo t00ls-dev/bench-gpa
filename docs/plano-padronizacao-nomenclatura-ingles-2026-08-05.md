@@ -364,6 +364,13 @@ nenhuma tela nem resposta HTTP:
 - **Correção pontual** (PR #230): 2 linhas de comentário em
   `src/lib/xlsx-parser.test.ts` que escaparam das etapas 8/9 (Fase 3),
   achadas numa varredura de conferência pós Fase 5.
+- **Correção pontual** (PR #231): 2 mensagens de `console.log` em
+  `scripts/prebuild-version-manifest.mjs`/
+  `scripts/postbuild-restore-manifest.mjs` -- rodam só dentro do
+  pipeline `bun run build` (hooks `prebuild`/`postbuild` do
+  `package.json`), nunca auditadas antes por serem `.mjs`, fora do
+  escopo `scripts/*.ts` da etapa 18. Achado numa nova varredura de
+  conferência em 2026-08-06.
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
