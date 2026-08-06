@@ -27,7 +27,7 @@ export async function recordHeartbeat(
     );
   } catch (err) {
     console.error(
-      "[heartbeat] falha ao registrar:",
+      "[heartbeat] failed to record:",
       err instanceof Error ? err.message : String(err),
     );
   }
