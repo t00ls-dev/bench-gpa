@@ -392,6 +392,13 @@ nenhuma tela nem resposta HTTP:
   adicionada só em `0009`. Validado com a cadeia completa `0001`-`0011`
   aplicada do zero + reaplicação confirmando idempotência (mesmo teste
   do job `schema-check` do CI).
+- **Correção pontual**: 2 comentários CSS em `src/styles.css` (linhas 53,
+  63, 67, 70 -- descrição da paleta de cores), nunca cobertos por nenhuma
+  etapa anterior. Achado numa varredura final que expôs uma lacuna
+  metodológica: as varreduras de conferência anteriores buscavam só
+  caracteres acentuados; "azul executivo" (linha 67, sem acento) só
+  apareceu numa segunda passada com lista de palavras comuns em
+  português sem acento.
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
