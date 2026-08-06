@@ -21,24 +21,26 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
 });
 
 /**
- * Sentry.tanstackstart-react's próprio sentryGlobalFunctionMiddleware não
- * funciona aqui: confirmado (log + beforeSend nunca chamado, mesmo
- * esperando de sobra pro transporte assíncrono) que Sentry.captureException()
- * ambiente não acha client nenhum dentro da execução de server function do
- * TanStack Start, resultado, nenhum erro de dentro de nenhuma das 35 server
- * functions do app chegava no Sentry. Referência explícita ao client (mesma
- * lição de src/lib/auth-middleware.ts e do tunnel em src/server.ts) resolve.
+ * @sentry/tanstackstart-react's own sentryGlobalFunctionMiddleware doesn't
+ * work here: confirmed (log + beforeSend never called, even waiting well
+ * beyond the async transport's timing) that Sentry.captureException()'s
+ * ambient lookup finds no client at all inside a TanStack Start server
+ * function's execution, with the result that no error from any of the
+ * app's 35 server functions ever reached Sentry. An explicit reference to
+ * the client (the same lesson from src/lib/auth-middleware.ts and the
+ * tunnel in src/server.ts) fixes it.
  */
 const sentryFunctionErrorMiddleware = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
     try {
       return await next();
     } catch (error) {
-      // requireAuth (src/lib/auth-middleware.ts) já captura com Scope próprio
-      // (contexto de usuário) para o caso comum de server function autenticada:
-      // sem este check, o mesmo erro é reportado duas vezes ao Sentry, aqui
-      // sem contexto nenhum. Só captura o que ainda não passou por lá (ex.:
-      // erro dentro de server function pública, sem requireAuth).
+      // requireAuth (src/lib/auth-middleware.ts) already captures with its
+      // own Scope (user context) for the common case of an authenticated
+      // server function: without this check, the same error gets reported
+      // to Sentry twice, here with no context at all. This only captures
+      // what hasn't already gone through there (e.g. an error inside a
+      // public server function, without requireAuth).
       if (!isSentryReported(error)) {
         sentryServerClient?.captureException(error);
       }

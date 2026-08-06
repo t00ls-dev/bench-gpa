@@ -22,24 +22,24 @@ import { contentDispositionHeader } from "./lib/content-disposition";
 import { ServerResponse } from "node:http";
 
 /**
- * Tunnel same-origin do Sentry: /monitoring recebe o envelope do navegador e
- * repassa pro Sentry a partir do próprio servidor, em vez do client falar
- * direto com *.sentry.io. Mantém o CSP com connect-src só 'self' (sem expor
- * domínio de terceiro, sem risco de ad-blocker bloquear).
+ * Sentry's same-origin tunnel: /monitoring receives the browser's envelope
+ * and forwards it to Sentry from the server itself, instead of the client
+ * talking directly to *.sentry.io. Keeps the CSP's connect-src at just
+ * 'self' (no third-party domain exposed, no risk of an ad blocker blocking it).
  *
- * Implementação própria em vez de Sentry.createSentryTunnelRoute() por dois
- * motivos: (1) allowedDsns explícito em vez de getClient(), que em runtime
- * Node com instrumentação HTTP automática pode ler o escopo isolado errado;
- * (2) dá pra corrigir o IP do evento antes de repassar. Sem isso, o Sentry
- * geolocalizava pelo IP de quem *conecta com ele* (a própria VPS, sempre a
- * mesma cidade), não de quem gerou o erro no navegador: o tunnel esconde o
- * IP real do usuário do Sentry por natureza, então é preciso injetar de
- * volta manualmente.
+ * A custom implementation instead of Sentry.createSentryTunnelRoute() for
+ * two reasons: (1) explicit allowedDsns instead of getClient(), which in a
+ * Node runtime with automatic HTTP instrumentation can read the wrong
+ * isolated scope; (2) it lets us fix the event's IP before forwarding it.
+ * Without that, Sentry would geolocate by the IP of whoever *connects to
+ * it* (the VPS itself, always the same city), not whoever generated the
+ * error in the browser: the tunnel hides the user's real IP from Sentry by
+ * nature, so it has to be injected back manually.
  *
- * parseEnvelope/serializeEnvelope (do próprio @sentry/core, usadas
- * internamente por handleTunnelRequest) preservam item binário intacto
- * (payload de Session Replay, comprimido): só o item "event" (JSON) é
- * tocado, tudo mais passa direto sem decodificar.
+ * parseEnvelope/serializeEnvelope (from @sentry/core itself, used
+ * internally by handleTunnelRequest) preserve binary items intact (Session
+ * Replay payload, compressed): only the "event" item (JSON) is touched,
+ * everything else passes through undecoded.
  */
 async function handleSentryTunnel(request: Request, realIp: string): Promise<Response> {
   const bytes = new Uint8Array(await request.arrayBuffer());
@@ -62,10 +62,11 @@ async function handleSentryTunnel(request: Request, realIp: string): Promise<Res
     return new Response("Invalid DSN", { status: 403 });
   }
 
-  // getClientIp() cai em "unknown" quando nenhum header de proxy chega
-  // (Cloudflare/nginx): nunca manda isso como se fosse IP, o Sentry valida o
-  // formato e rejeita ("expected an ip address"), então é melhor deixar o
-  // campo de fora (evento sem geolocalização) do que mandar lixo.
+  // getClientIp() falls back to "unknown" when no proxy header arrives
+  // (Cloudflare/nginx): never send that as if it were an IP, Sentry
+  // validates the format and rejects it ("expected an ip address"), so
+  // it's better to leave the field out (an event with no geolocation) than
+  // to send garbage.
   if (realIp !== "unknown") {
     for (const [itemHeader, payload] of items) {
       if (itemHeader.type === "event" && payload && typeof payload === "object") {
@@ -116,14 +117,14 @@ async function getServerEntry(): Promise<ServerEntry> {
 }
 
 /**
- * Ponte pra `Content-Disposition: attachment` de verdade (ver
- * src/lib/pdf-download-store.ts pro porquê): o cliente gera o PDF
- * (jsPDF, área.page) e passa por aqui só pra pegar o header de download
- * confiável; a montagem do PDF em si continua inteiramente no navegador.
+ * Bridge to a real `Content-Disposition: attachment` (see
+ * src/lib/pdf-download-store.ts for why): the client generates the PDF
+ * (jsPDF, area.page) and comes through here just to get the reliable
+ * download header; assembling the PDF itself stays entirely in the browser.
  *
- * Fora do fluxo normal de server functions (`/_serverFn/`) de propósito:
- * precisa de controle total do `Response` (corpo binário, header custom),
- * que o envelope RPC de createServerFn não permite.
+ * Deliberately outside the normal server-function flow (`/_serverFn/`):
+ * needs full control over the `Response` (binary body, custom header),
+ * which createServerFn's RPC envelope doesn't allow.
  */
 async function handlePdfDownload(request: Request, url: URL): Promise<Response> {
   const token = parseCookie(request.headers.get("cookie") ?? "")[SESSION_COOKIE];
@@ -146,18 +147,19 @@ async function handlePdfDownload(request: Request, url: URL): Promise<Response> 
       headers: {
         "content-type": "application/pdf",
         "content-disposition": contentDispositionHeader(entry.filename),
-        // no-transform: instrui proxy/CDN no meio do caminho (Nginx, Cloudflare)
-        // a não recomprimir/reescrever o corpo. Um PDF já é internamente
-        // comprimido (streams FlateDecode): uma recompressão gzip/brotli por
-        // um proxy no meio do caminho, se mal aplicada de volta pro cliente,
-        // corrompe os bytes internos sem quebrar o tamanho total nem disparar
-        // erro nenhum: o arquivo abre, mas o conteúdo sai ilegível/preto.
+        // no-transform: tells any proxy/CDN along the way (Nginx,
+        // Cloudflare) not to recompress/rewrite the body. A PDF is already
+        // internally compressed (FlateDecode streams): a gzip/brotli
+        // recompression by a proxy in the middle, if applied back to the
+        // client incorrectly, corrupts the internal bytes without breaking
+        // the total size or throwing any error: the file opens, but the
+        // content comes out unreadable/black.
         "cache-control": "no-store, no-transform",
         "x-content-type-options": "nosniff",
-        // Explícito em vez de deixar o proxy calcular sozinho: outra fonte
-        // documentada de corrupção é um Content-Length que não bate com o
-        // corpo real depois de alguma etapa no meio do caminho recalcular
-        // errado.
+        // Explicit instead of letting the proxy calculate it on its own:
+        // another documented source of corruption is a Content-Length that
+        // doesn't match the real body after some step along the way
+        // recalculates it wrong.
         "content-length": String(entry.bytes.byteLength),
       },
     });
@@ -175,12 +177,13 @@ function applySecurityHeaders(
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    // style-src usa unsafe-inline (não nonce) porque Radix UI (Popover, Select,
-    // Tooltip, DropdownMenu) e Recharts injetam `style` inline via JS em tempo de
-    // execução pra posicionamento/renderização, sem suportar nonce de CSP. Nonce
-    // aqui quebraria posicionamento desses componentes. Risco residual é baixo:
-    // diferente de script-src, unsafe-inline em style-src não permite executar JS,
-    // só CSS. Ver auditoria MDN Observatory de 30/07/2026 (nota A+/115).
+    // style-src uses unsafe-inline (not a nonce) because Radix UI (Popover,
+    // Select, Tooltip, DropdownMenu) and Recharts inject inline `style` via
+    // JS at runtime for positioning/rendering, with no CSP nonce support. A
+    // nonce here would break those components' positioning. The residual
+    // risk is low: unlike script-src, unsafe-inline in style-src doesn't
+    // allow executing JS, only CSS. See the MDN Observatory audit from
+    // 07/30/2026 (A+/115 grade).
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://challenges.cloudflare.com",
     "font-src 'self'",
@@ -242,9 +245,9 @@ const serverEntry: ServerEntry = {
 
       const nonce = crypto.randomUUID();
       const handler = await getServerEntry();
-      // runWithCspNonce, não setCspNonce solto: isola o nonce por cadeia
-      // assíncrona (ver comentário em src/lib/csp.ts), então requisições
-      // concorrentes não pisam uma na outra durante o SSR.
+      // runWithCspNonce, not a bare setCspNonce: isolates the nonce per
+      // async chain (see the comment in src/lib/csp.ts), so concurrent
+      // requests don't step on each other during SSR.
       const response = await runWithCspNonce(nonce, () => handler.fetch(request, env, ctx));
 
       if (response.status < 500) {
@@ -281,12 +284,12 @@ const serverEntry: ServerEntry = {
   },
 };
 
-// wrapFetchWithSentry tipa o parâmetro como (request, opts?): genérico o
-// bastante pra cobrir handler de fetch de qualquer runtime, não só o formato
-// (request, env, ctx) que o node-server preset da Nitro realmente usa aqui.
-// Na prática ela embrulha `.fetch` num Proxy que repassa `arguments` inteiro
-// pro handler original, então os 3 argumentos reais chegam normalmente; o
-// cast é só pra bater com essa assinatura mais genérica do tipo.
+// wrapFetchWithSentry types the parameter as (request, opts?): generic
+// enough to cover a fetch handler for any runtime, not just the
+// (request, env, ctx) shape Nitro's node-server preset actually uses here.
+// In practice it wraps `.fetch` in a Proxy that forwards the entire
+// `arguments` object to the original handler, so the 3 real arguments
+// arrive normally; the cast is just to match that more generic type signature.
 Sentry.wrapFetchWithSentry(
   serverEntry as unknown as {
     fetch: (request: Request, opts?: unknown) => Response | Promise<Response>;
