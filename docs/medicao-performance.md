@@ -630,3 +630,25 @@ sentido de verdade) ou se o tráfego real algum dia justificar zero-downtime
 como requisito, caso em que vale investir em blue-green de verdade (subir a
 release nova sob um nome de app separado, validar, só depois trocar) em vez
 de reabrir o cluster mode e seus bugs conhecidos.
+
+**Execução em produção, achado operacional novo.** O deploy via CI/CD
+(PR #234) rodou normal e passou no healthcheck, mas `pm2 startOrReload`
+**não muda a topologia** de um app já em execução: o log mostrou os dois
+processos antigos (ids 17, 18) continuando em `mode: cluster` depois do
+reload, mesmo com `ecosystem.config.cjs` já atualizado no servidor pra
+`instances: 1`/`exec_mode: "fork"`. `reload`/`startOrReload` só troca
+código e env dos workers que já existem; mudar `instances`/`exec_mode`
+exige recriar o processo do zero (`pm2 delete` + `pm2 start`).
+
+Corrigido manualmente via SSH, com autorização explícita, fora do fluxo
+normal de deploy (é uma transição pontual — deploys futuros fork→fork
+continuam funcionando com `reload` normalmente, sem precisar disso de
+novo). Um primeiro comando (`pm2 start ecosystem.config.cjs` sem `cd` pro
+`$APPDIR` antes) causou uma janela real de indisponibilidade: o `script`
+relativo (`current/server/index.mjs`) resolveu contra o `$HOME` do usuário
+SSH (`/home/debian`) em vez do diretório do app, e o `pm2 start` falhou
+com "Script not found" logo depois do `pm2 delete` ter removido os
+processos antigos — o app ficou fora do ar até o comando ser refeito com
+`cd /home/admin/web/gpa.t00ls.dev/public_html &&` antes. O script de
+deploy do `ci.yml` já faz esse `cd` (por isso nunca pegou esse problema em
+deploy normal); só faltou no comando manual.
