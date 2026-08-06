@@ -58,5 +58,5 @@ done >> /tmp/crontab-new
 crontab /tmp/crontab-new
 rm /tmp/crontab-new
 
-echo "Crons instaladas:"
+echo "Installed crons:"
 crontab -l | grep "$BENCH_DIR"

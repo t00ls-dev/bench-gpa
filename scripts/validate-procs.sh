@@ -44,11 +44,11 @@
 set -euo pipefail
 
 OUT="${1:-}"
-[ -n "$OUT" ] || { echo "uso: $0 <arquivo-de-saida> [caminho-do-.env]" >&2; exit 2; }
+[ -n "$OUT" ] || { echo "usage: $0 <output-file> [path-to-.env]" >&2; exit 2; }
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${2:-$DIR/../.env}"
-[ -f "$ENV_FILE" ] || { echo "ERRO: .env não encontrado em $ENV_FILE" >&2; exit 1; }
+[ -f "$ENV_FILE" ] || { echo "ERROR: .env not found at $ENV_FILE" >&2; exit 1; }
 
 set -a; . "$ENV_FILE"; set +a
 : "${DB_HOST:?}" "${DB_NAME:?}" "${DB_USER:?}" "${DB_PASS:?}"
@@ -66,7 +66,7 @@ M() {
 # stale along with the dataset, and then the scenario stops exercising the
 # filter without anyone noticing.
 LAST=$(M -e "SELECT MAX(sale_date) FROM sales_prod_daily_agg;")
-[ -n "$LAST" ] || { echo "ERRO: sales_prod_daily_agg vazia, nada a validar" >&2; exit 1; }
+[ -n "$LAST" ] || { echo "ERROR: sales_prod_daily_agg is empty, nothing to validate" >&2; exit 1; }
 D7=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 6 DAY);")
 D28=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")
 DEPTO=$(M -e "SELECT depto FROM sales_prod_daily_agg WHERE depto IS NOT NULL GROUP BY depto ORDER BY COUNT(*) DESC LIMIT 1;")
@@ -127,16 +127,16 @@ for c in "${CASES[@]}"; do
   nome="${c%%|*}"; call="${c#*|}"
   # stderr deliberately separate from stdout: only the result goes into the hash.
   if ! saida="$(M -e "$call" 2>"$ERRF")"; then
-    printf '%-18s ERRO %s\n' "$nome" "$(head -1 "$ERRF")" >> "$OUT"
+    printf '%-18s ERROR %s\n' "$nome" "$(head -1 "$ERRF")" >> "$OUT"
     falhas=$((falhas + 1))
     continue
   fi
   ho=$(printf '%s' "$saida" | md5sum | cut -c1-12)
   hs=$(printf '%s' "$saida" | LC_ALL=C sort | md5sum | cut -c1-12)
-  printf '%-18s ordem=%s conjunto=%s linhas=%s\n' \
+  printf '%-18s order=%s set=%s rows=%s\n' \
     "$nome" "$ho" "$hs" "$(printf '%s' "$saida" | wc -l)" >> "$OUT"
 done
 
-echo "$OUT: ${#CASES[@]} cenários, $falhas falha(s)"
-echo "janela 7d=$D7..$LAST  28d=$D28..$LAST  depto='$DEPTO' secao='$SECAO' loja='$STORE'"
+echo "$OUT: ${#CASES[@]} scenarios, $falhas failure(s)"
+echo "window 7d=$D7..$LAST  28d=$D28..$LAST  depto='$DEPTO' secao='$SECAO' loja='$STORE'"
 [ "$falhas" -eq 0 ] || exit 1
