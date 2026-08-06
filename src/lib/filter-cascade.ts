@@ -1,5 +1,5 @@
 // Cascade logic shared between FilterBar/index.page (Dashboard) and
-// AreaFilters/area.page (Área). The two screens use DIFFERENT strategies to
+// AreaFilters/area.page (Area). The two screens use DIFFERENT strategies to
 // compute the available OPTIONS at each level: FilterBar cascades via a
 // server query (the dashboard doesn't load the whole hierarchy, due to
 // aggregation cost); AreaFilters receives the full hierarchy already

@@ -27,7 +27,7 @@ export const DEFAULT_WINDOW_DAYS = 7;
  * boundary (there's a long comment there explaining why: an old prod proc
  * returned DESC and produced an inverted range that loaded no data).
  *
- * `latest` caps the end of the window to the last imported date: the Área
+ * `latest` caps the end of the window to the last imported date: the Area
  * screen uses this; the dashboard doesn't pass it and gets everything that
  * exists. Returns `null` when there's no date at all, leaving it to the
  * caller to decide what to do.
@@ -40,7 +40,7 @@ export function defaultDateWindow(
 
   if (upTo.length === 0) {
     // No date at all up to the limit: the only possible slice is the limit
-    // itself, if there is one. This is the edge case the Área screen
+    // itself, if there is one. This is the edge case the Area screen
     // already handled.
     return latest ? { from: latest, to: latest } : null;
   }

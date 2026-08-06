@@ -57,12 +57,12 @@ function Dashboard() {
   const clickThroughStore = filters.stores.length === 1 ? filters.stores[0] : undefined;
   const goToArea = async (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
     if (!name) return;
-    // Área requires Departamento to show anything at all (`ready` in
+    // Area requires Departamento to show anything at all (`ready` in
     // area.page.tsx): clicking Seção/Grupo/Subgrupo without resolving the
     // parent Departamento used to land on an empty screen asking to select
-    // Loja and Departamento, with the Seção/Grupo/Subgrupo already applied
+    // Store and Departamento, with the Seção/Grupo/Subgrupo already applied
     // under the hood but no data visible. Fetches the hierarchy (same query
-    // and cache, client and server, that Área itself already uses; if Área
+    // and cache, client and server, that Area itself already uses; if Area
     // was already visited this session, this generates no new request) only
     // when needed, to find the depto that owns the clicked level.
     let depto: string | undefined;

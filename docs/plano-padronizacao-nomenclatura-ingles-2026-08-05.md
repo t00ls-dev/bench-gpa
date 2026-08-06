@@ -247,6 +247,55 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     `.md` e as 5 migrations já aplicadas, exceção documentada por
     design do próprio mecanismo de migration.**
 
+### Reavaliação dos nomes próprios de tela (2026-08-06)
+
+Depois da etapa 15, o usuário pediu para revisitar item a item as
+exceções fixadas ao longo da iniciativa. Decisões:
+
+- **`depto`/`secao`/`grupo`/`subgrupo`/`val_vda`**: mantido em português
+  (confirmado). Continua vocabulário de domínio externo (cabeçalho da
+  planilha da GPA), não nomenclatura arbitrária.
+- **Nomes de arquivo das 5 migrations já aplicadas**: mantido (confirmado).
+  Não é escolha de estilo, é limitação do próprio mecanismo do runner
+  (`schema_migrations` rastreia por nome de arquivo).
+- **Nomes próprios de tela** (`Área`, `Documentação`, `Administração`,
+  `Loja`): diferente de `depto` etc., são nomes inventados pelo próprio
+  time (sem contrato externo ditando o termo) -- **traduzidos** dentro de
+  comentários/JSDoc para `Area`, `Docs`, `Admin`, `Store` (Etapa 16, PR
+  #226). O texto de UI renderizado ao usuário (labels de navegação,
+  títulos de tela, PDF) **não muda**, continua em português. `Brasília`
+  (nome de cidade real) e `Loja` quando usado como dado literal em
+  fixtures de teste (ex. `"Loja Centro"`, simulando `store_name` real do
+  banco) **mantidos** -- não são nomes inventados pelo time, são
+  vocabulário/dado externo.
+- **Etapa 16** (concluída, PR #226): `Área` -> `Area`, `Documentação`/
+  `Administração` -> `Docs`/`Admin`, `Loja` -> `Store`, só onde a palavra
+  aparece como referência técnica dentro de comentário/JSDoc já em
+  inglês (11 ocorrências em 11 arquivos, incluindo 4 linhas de
+  `scripts/migrate-schema.sql`, validado com o mesmo rigor da etapa 10).
+- **Strings voltadas a operador/usuário** (`echo`, `console.log/error`,
+  mensagens de `Error`, texto de audit-log, validação Zod, corpo de
+  resposta HTTP de erro): o usuário definiu o critério -- fica em
+  português tudo que é visível a qualquer usuário do próprio app,
+  **inclusive as telas de Admin** (usuário admin conta como "usuário
+  comum" para este critério, não como público técnico separado). Só vira
+  inglês o que é puramente log/terminal, nunca renderizado em nenhuma
+  tela do app (saída de `echo` em scripts de deploy/CI, `console.log/
+  error/warn`, `Error` interna que nunca chega a uma resposta HTTP
+  exibida). Etapa de mapeamento em andamento -- ver Fase 5 abaixo.
+
+## Fase 5: strings de log/operador (não renderizadas em nenhuma tela do app)
+
+Categoria nova, definida a partir do critério acima. Diferente das Fases
+3/4 (comentários e descrições de teste, sempre seguras de traduzir), aqui
+cada ocorrência exige checar o destino real da string antes de traduzir:
+`console.log`/`console.error`/`console.warn` e `echo` de scripts nunca
+chegam ao navegador, mas uma mensagem de `Error`/`throw` pode ou não ser
+capturada e reexibida ao usuário numa tela ou resposta HTTP -- errar essa
+checagem faria um usuário comum ver texto em inglês onde deveria ver
+português (regressão real de UX), então cada string é confirmada
+individualmente pelo ponto onde é consumida antes de entrar numa etapa.
+
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
 Categoria explicitamente deixada de fora do escopo original ("nomenclatura",
