@@ -361,6 +361,9 @@ nenhuma tela nem resposta HTTP:
   `throw new Error` capturado por server functions, o campo `detail` de
   `recordHeartbeat`, mensagens de auditoria, validação Zod -- ficam em
   português por regra, mesmo nas telas de Admin).
+- **Correção pontual** (PR #230): 2 linhas de comentário em
+  `src/lib/xlsx-parser.test.ts` que escaparam das etapas 8/9 (Fase 3),
+  achadas numa varredura de conferência pós Fase 5.
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
