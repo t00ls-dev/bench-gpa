@@ -19,19 +19,19 @@ dist-ssr
 # Environment (secrets — never commit)
 .env
 
-# Inbox de planilhas — dados operacionais do GPA, nada aqui é versionado.
-# O git chegou a ser o meio de transporte destes arquivos (subida pela interface
-# do GitHub + `git pull` no servidor), o que inchou o repositório e impedia
-# proteger a branch main: o import-watch commitava e pushava sozinho, e qualquer
-# regra de "exigir pull request" faria esse push ser recusado em silêncio.
-# Agora `data/` é um inbox local do servidor, alimentado por scp/rsync ou pela
-# tela /upload do app, e o watcher apaga a planilha depois de importar.
+# Spreadsheet inbox, operational GPA data, nothing here is versioned.
+# Git used to be the transport for these files (uploaded via the GitHub
+# interface, plus `git pull` on the server), which bloated the repo and
+# blocked protecting the main branch: import-watch would commit and push on
+# its own, and any "require pull request" rule would silently reject that
+# push. Now `data/` is a local inbox on the server, fed by scp/rsync or the
+# app's /upload screen, and the watcher deletes the spreadsheet after
+# importing it.
 #
-# O diretório inteiro é ignorado de propósito, não só *.xlsx: é uma pasta de
-# trabalho, e qualquer coisa deixada nela (planilha, imagem, rascunho) não tem
-# por que entrar no repositório. O import-watch cria o diretório se não existir.
-# As imagens da identidade visual vivem em public/, que é de onde a aplicação as
-# serve.
+# The whole directory is ignored on purpose, not just *.xlsx: it's a working
+# folder, and anything left in it (spreadsheet, image, draft) has no business
+# entering the repo. import-watch creates the directory if it doesn't exist.
+# Brand images live in public/, which is where the app serves them from.
 data/
 
 # Wrangler / Cloudflare
@@ -52,5 +52,5 @@ data/
 # Coverage reports
 coverage/
 
-# Saída local de scripts/bench-procs.sh (medição ad-hoc, não é fonte)
+# Local output of scripts/bench-procs.sh (ad-hoc measurement, not source)
 .bench-local/
