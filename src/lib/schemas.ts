@@ -16,7 +16,7 @@ export const FilterSchema = DateRangeSchema.extend({
 export type Filters = z.infer<typeof FilterSchema>;
 
 /**
- * Items-per-page options for the Área screen's pagination selector. The one
+ * Items-per-page options for the Area screen's pagination selector. The one
  * place this list exists: the selector's state (`useState<25 | 50 | 100 |
  * 250>`) and the dropdown options derive from it, instead of repeating the
  * four numbers.

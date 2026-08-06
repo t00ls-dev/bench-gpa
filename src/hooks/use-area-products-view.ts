@@ -52,7 +52,7 @@ function sanitizeAF(f: AreaFilters): AreaFilters {
 
 /**
  * Filter/hierarchy/search/sort/pagination state and the products query for
- * the Área screen — everything that isn't PDF export or JSX. Extracted from
+ * the Area screen, everything that isn't PDF export or JSX. Extracted from
  * `area.page.tsx` (technical audit 07/31, "4 responsibilities" item);
  * `getArea`/`useServerFn` stays out because the PDF export in
  * `useAreaPdfExport` also needs it, avoiding two distinct server-fns for the

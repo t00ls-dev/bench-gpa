@@ -23,7 +23,7 @@ describe("defaultDateWindow", () => {
     expect(defaultDateWindow([])).toBeNull();
   });
 
-  // The behavior the Área screen used to have: never go past the last imported date.
+  // The behavior the Area screen used to have: never go past the last imported date.
   describe("with a limit (latest)", () => {
     it("does not exceed the limit", () => {
       const r = defaultDateWindow(days(20), "2026-07-10");

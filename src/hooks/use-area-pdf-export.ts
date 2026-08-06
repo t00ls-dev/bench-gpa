@@ -25,7 +25,7 @@ interface Params {
 }
 
 /**
- * PDF export for the Área screen, extracted from `area.page.tsx` (technical
+ * PDF export for the Area screen, extracted from `area.page.tsx` (technical
  * audit 07/31, "4 responsibilities" item). Fetches the entire listing (not
  * the displayed page) directly from the server, builds the two tables
  * (KPIs + products), and opens the blob in a new tab.

@@ -44,7 +44,7 @@ export const PURGE_MAX_HOURS_OVERDUE = 26;
  * day. Until 07/30/2026 this refresh ran synchronously inside
  * finalize_import (every import) and purge_old_aggs (every purge that
  * removed a row): docs/continuar.md item 5: a new PLU/category now only
- * shows up in Área after this cron, not on the same day as the import.
+ * shows up in Area after this cron, not on the same day as the import.
  * Accepted because it's rare.
  */
 export const REFRESH_UNIVERSE_CRON_LABEL = "diária, 03h30";
