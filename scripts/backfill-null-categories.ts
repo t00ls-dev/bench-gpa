@@ -44,23 +44,23 @@ function total(rec: Record<string, number>): number {
 
 async function main() {
   const dry = process.argv.includes("--dry-run");
-  console.log(`\n== Backfill categorias "0" → NULL${dry ? "  (DRY RUN)" : ""} ==\n`);
+  console.log(`\n== Backfill categories "0" -> NULL${dry ? "  (DRY RUN)" : ""} ==\n`);
 
   const beforeAgg = await countAggZeros();
   const beforeHier = await countHierZeros();
-  console.log("sales_prod_daily_agg (linhas com '0' por coluna):");
+  console.log("sales_prod_daily_agg (rows with '0' per column):");
   console.table(beforeAgg);
-  console.log(`filter_hierarchy (linhas com algum '0'): ${beforeHier}`);
+  console.log(`filter_hierarchy (rows with any '0'): ${beforeHier}`);
 
   if (total(beforeAgg) === 0 && beforeHier === 0) {
-    console.log('\nNada a fazer: nenhuma categoria "0" encontrada.');
+    console.log('\nNothing to do: no "0" category found.');
     process.exit(0);
   }
 
   if (dry) {
     console.log(
-      `\nDRY RUN: ${total(beforeAgg)} valores em sales_prod_daily_agg seriam convertidos ` +
-        `para NULL e a filter_hierarchy seria regenerada. Nada foi alterado.`,
+      `\nDRY RUN: ${total(beforeAgg)} values in sales_prod_daily_agg would be converted ` +
+        `to NULL and filter_hierarchy would be regenerated. Nothing was changed.`,
     );
     process.exit(0);
   }
@@ -78,26 +78,24 @@ async function main() {
         WHERE depto = '0' OR secao = '0' OR grupo = '0' OR subgrupo = '0'`,
     );
     console.log(
-      `\nsales_prod_daily_agg: ${(res as { affectedRows: number }).affectedRows} linhas atualizadas.`,
+      `\nsales_prod_daily_agg: ${(res as { affectedRows: number }).affectedRows} rows updated.`,
     );
   }
 
   await db.query("CALL refresh_filter_hierarchy()");
-  console.log("filter_hierarchy regenerada via refresh_filter_hierarchy().");
+  console.log("filter_hierarchy regenerated via refresh_filter_hierarchy().");
 
   const afterAgg = await countAggZeros();
   const afterHier = await countHierZeros();
   const remaining = total(afterAgg) + afterHier;
-  console.log("\nApós o backfill:");
+  console.log("\nAfter the backfill:");
   console.table(afterAgg);
-  console.log(`filter_hierarchy com '0': ${afterHier}`);
-  console.log(
-    remaining === 0 ? "\nBackfill concluído." : `\nAinda restam ${remaining} valores "0".`,
-  );
+  console.log(`filter_hierarchy with '0': ${afterHier}`);
+  console.log(remaining === 0 ? "\nBackfill complete." : `\n${remaining} "0" values still remain.`);
   process.exit(remaining === 0 ? 0 : 1);
 }
 
 main().catch((err) => {
-  console.error("Erro:", err instanceof Error ? err.message : String(err));
+  console.error("Error:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

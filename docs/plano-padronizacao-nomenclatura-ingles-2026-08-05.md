@@ -313,10 +313,23 @@ nenhuma tela nem resposta HTTP:
 - **Etapa 17** (concluída, PR #227): `console.*` em `src/` -- 3 arquivos,
   7 mensagens, todos server-side (`turnstile.ts`, `heartbeat.ts`,
   `audit.ts`). Log do PM2, nunca chega ao navegador.
-- **Etapa 18** (planejada): `console.*` em `scripts/*.ts` (CLI/cron) --
-  `create-test-admin.ts`, `purge-aggs.ts`, `refresh-universe.ts`,
-  `backfill-null-categories.ts`, `extract-date.ts`, `import.ts`,
-  `import-watch.ts`.
+- **Etapa 18** (concluída, PR #228): `console.*` em `scripts/*.ts`
+  (CLI/cron) -- `create-test-admin.ts`, `purge-aggs.ts`,
+  `refresh-universe.ts`, `backfill-null-categories.ts`,
+  `extract-date.ts`, `import.ts`, `import-watch.ts`. Achado durante a
+  execução: `import.ts` tem um `throw new Error("Nenhuma linha de
+  venda para importar.")` idêntico ao de
+  `src/lib/upload.functions.ts:27` (usado pelo fluxo real de upload
+  via navegador, que permanece em português) -- são cópias
+  independentes, a do script CLI standalone nunca é alcançada pelo
+  app, então foi traduzida sem afetar a outra. Em `import-watch.ts` e
+  nos dois scripts de cron da etapa 17
+  (`purge-aggs.ts`/`refresh-universe.ts`), a string passada como
+  `detail` para `recordHeartbeat(...)` foi mantida em português de
+  propósito (comentário explicando o motivo): é gravada em
+  `cron_heartbeat.last_detail` e renderizada no painel de admin
+  (`admin-audit-panel.tsx`), não é log puro -- só os `console.log/error`
+  ao redor mudaram.
 - **Etapa 19** (planejada): `echo` em `scripts/*.sh` --
   `bench-experiment-rankings.sh`, `bench-procs.sh`, `import-all.sh`,
   `run-migrations.sh`, `setup-crons.sh`, `validate-procs.sh`. Atenção:

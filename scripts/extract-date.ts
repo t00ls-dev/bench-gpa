@@ -58,7 +58,7 @@ export function extractDate(filePath: string): string | null {
 if (import.meta.path === Bun.main) {
   const filePath = process.argv[2];
   if (!filePath || filePath === "--help") {
-    console.error("Uso: bun run scripts/extract-date.ts <arquivo.xlsx>");
+    console.error("Usage: bun run scripts/extract-date.ts <file.xlsx>");
     process.exit(1);
   }
   const date = extractDate(filePath);

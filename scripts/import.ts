@@ -10,12 +10,12 @@ function parseArgs() {
   const args = process.argv.slice(2);
   if (args.length === 0 || args.includes("--help")) {
     console.log(`
-Uso: bun run scripts/import.ts <arquivo.xlsx> [opções]
+Usage: bun run scripts/import.ts <file.xlsx> [options]
 
-Opções:
-  --user-id UUID     ID do usuário que está importando
-  --chunk-size N     Linhas por lote (padrão ${IMPORT_CHUNK_SIZE})
-  --help             Exibe esta mensagem
+Options:
+  --user-id UUID     ID of the user performing the import
+  --chunk-size N     Rows per batch (default ${IMPORT_CHUNK_SIZE})
+  --help             Show this message
 `);
     process.exit(0);
   }
@@ -36,13 +36,13 @@ function extractArg(args: string[], flag: string): string | undefined {
 async function main() {
   const { filePath, userId, chunkSize } = parseArgs();
 
-  console.log(`Lendo ${filePath}...`);
+  console.log(`Reading ${filePath}...`);
   const buffer = readFileSync(filePath).buffer;
   const parsed = parseAnyWorkbook(buffer);
-  console.log(`   Data: ${parsed.sale_date}`);
-  console.log(`   Vendas: ${parsed.sales.length}`);
-  console.log(`   Lojas: ${parsed.stores.length}`);
-  console.log(`   Produtos: ${parsed.products.length}`);
+  console.log(`   Date: ${parsed.sale_date}`);
+  console.log(`   Sales: ${parsed.sales.length}`);
+  console.log(`   Stores: ${parsed.stores.length}`);
+  console.log(`   Products: ${parsed.products.length}`);
 
   const batchId = randomUUID();
   const totalRows = parsed.sales.length;
@@ -53,13 +53,13 @@ async function main() {
   // (SIGNAL SQLSTATE '45000' from staging_count=0), a raw database error
   // instead of this message.
   if (totalRows === 0) {
-    throw new Error("Nenhuma linha de venda para importar.");
+    throw new Error("No sale rows to import.");
   }
 
   // ---- beginImport ----
-  console.log(`\nIniciando importação (batch ${batchId})...`);
+  console.log(`\nStarting import (batch ${batchId})...`);
   await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [parsed.sale_date]);
-  console.log("   OK: staging limpo");
+  console.log("   OK: staging cleared");
 
   if (parsed.stores.length) {
     const ph = parsed.stores.map(() => "(?, ?)").join(", ");
@@ -68,7 +68,7 @@ async function main() {
       `INSERT INTO stores (store_code, store_name) VALUES ${ph} ON DUPLICATE KEY UPDATE store_name = VALUES(store_name)`,
       vals,
     );
-    console.log(`   OK: ${parsed.stores.length} lojas`);
+    console.log(`   OK: ${parsed.stores.length} stores`);
   }
 
   if (parsed.products.length) {
@@ -76,7 +76,7 @@ async function main() {
       JSON.stringify(parsed.products),
       parsed.sale_date,
     ]);
-    console.log(`   OK: ${parsed.products.length} produtos`);
+    console.log(`   OK: ${parsed.products.length} products`);
   }
 
   // ---- insertSalesChunk ----
@@ -98,24 +98,24 @@ async function main() {
     );
     inserted += chunk.length;
     const pct = Math.round((inserted / totalRows) * 100);
-    console.log(`   OK: chunk ${i / chunkSize + 1}: ${chunk.length} linhas (${pct}%)`);
+    console.log(`   OK: chunk ${i / chunkSize + 1}: ${chunk.length} rows (${pct}%)`);
   }
 
   // ---- finalizeImport ----
-  console.log("\nFinalizando...");
+  console.log("\nFinalizing...");
   await db.query("CALL finalize_import(?, ?, ?, ?)", [
     batchId,
     parsed.sale_date,
     totalRows,
     userId ?? null,
   ]);
-  console.log("   OK: importação finalizada");
+  console.log("   OK: import finalized");
 
-  console.log(`\nImportação concluída com sucesso.`);
+  console.log(`\nImport completed successfully.`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error("Erro fatal:", err instanceof Error ? err.message : String(err));
+  console.error("Fatal error:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

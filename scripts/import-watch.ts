@@ -74,13 +74,13 @@ async function main() {
   log("====== import-watch start ======");
 
   if (!existsSync(INBOX_DIR)) {
-    log(`Inbox: ${INBOX_DIR}/ não existe, criando`);
+    log(`Inbox: ${INBOX_DIR}/ does not exist, creating`);
     mkdirSync(INBOX_DIR, { recursive: true });
   }
   log(`Inbox: ${INBOX_DIR}/`);
 
   const files = listXlsx(INBOX_DIR);
-  if (files.length === 0) log("Nenhum arquivo .xlsx no inbox.");
+  if (files.length === 0) log("No .xlsx file in the inbox.");
 
   const imported: string[] = [];
   const alreadyImported: string[] = [];
@@ -92,8 +92,8 @@ async function main() {
 
     const date = extractDate(filePath);
     if (!date) {
-      log(`Date: ERROR, não foi possível extrair a data de ${filePath}`);
-      failed.push(`${filePath}: data não identificada`);
+      log(`Date: ERROR, could not extract the date from ${filePath}`);
+      failed.push(`${filePath}: date not identified`);
       continue;
     }
     log(`Date: ${date}`);
@@ -104,8 +104,8 @@ async function main() {
       // version of the same date. Reimporting requires deleting the date
       // in admin first, their call, not this script's, which only imports
       // what doesn't exist yet.
-      log(`import_log: ${date} já importado, mantido no inbox, nada a fazer`);
-      alreadyImported.push(`${filePath} (${date} já importado)`);
+      log(`import_log: ${date} already imported, kept in the inbox, nothing to do`);
+      alreadyImported.push(`${filePath} (${date} already imported)`);
       continue;
     }
 
@@ -115,8 +115,8 @@ async function main() {
     // days, imports normally.
     const daysAgo = daysSinceUtc(date);
     if (!isWithinRetention(date)) {
-      log(`Skip: ${date} além da retenção (${daysAgo}d > ${RETENTION_DAYS}d), seria purgado`);
-      skippedOld.push(`${filePath} (${daysAgo}d, além da retenção)`);
+      log(`Skip: ${date} beyond retention (${daysAgo}d > ${RETENTION_DAYS}d), would be purged`);
+      skippedOld.push(`${filePath} (${daysAgo}d, beyond retention)`);
       continue;
     }
 
@@ -124,7 +124,7 @@ async function main() {
     const imp = exec(["bun", "run", "cli:import", filePath]);
     if (!imp.ok) {
       log(`Import: ERROR: ${imp.stderr}`);
-      failed.push(`${filePath} (erro na importação)`);
+      failed.push(`${filePath} (import error)`);
       continue;
     }
 
@@ -137,7 +137,7 @@ async function main() {
     // can be re-downloaded from the GPA portal. Only deleted after
     // success, a failure keeps the file for retry.
     rmSync(filePath, { force: true });
-    log(`Removido do inbox: ${filePath}`);
+    log(`Removed from the inbox: ${filePath}`);
     imported.push(`${filePath} → ${date}`);
   }
 
@@ -149,6 +149,10 @@ async function main() {
   ];
   for (const p of all) log(p);
 
+  // Kept in Portuguese on purpose, unlike the log() calls above: this
+  // string is stored in cron_heartbeat.last_detail and rendered directly
+  // in the admin panel (src/components/admin-audit-panel.tsx), not just
+  // log output.
   const detail =
     [
       imported.length && `${imported.length} importados`,
