@@ -52,6 +52,6 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
     );
   } catch (err) {
     // Only logs: auditing must not interrupt the main flow.
-    console.error("[audit] falha ao registrar evento:", err instanceof Error ? err.message : err);
+    console.error("[audit] failed to record event:", err instanceof Error ? err.message : err);
   }
 }

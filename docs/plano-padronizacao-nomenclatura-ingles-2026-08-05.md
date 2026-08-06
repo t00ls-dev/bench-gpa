@@ -296,6 +296,36 @@ checagem faria um usuário comum ver texto em inglês onde deveria ver
 português (regressão real de UX), então cada string é confirmada
 individualmente pelo ponto onde é consumida antes de entrar numa etapa.
 
+### Mapeamento (2026-08-06)
+
+Conferido `throw new Error(...)` com texto em português em todo `src/`
+(11 ocorrências: `auth-api.ts`, `admin-docs.functions.ts`,
+`admin-users.functions.ts`, `admin-utils.ts`, `xlsx-parser.ts`,
+`rate-limit.middleware.ts`) e o único `SIGNAL SQLSTATE` de
+`migrate-schema.sql` (já em inglês). **Nenhum muda**: todos são lançados
+dentro de server functions e capturados para exibir ao usuário (erro de
+login, permissão negada, erro de upload, limite de requisição) -- caso
+"visível a qualquer usuário do app", fica em português.
+
+O que sobrou como candidato real, confirmado como nunca renderizado em
+nenhuma tela nem resposta HTTP:
+
+- **Etapa 17** (concluída, PR #227): `console.*` em `src/` -- 3 arquivos,
+  7 mensagens, todos server-side (`turnstile.ts`, `heartbeat.ts`,
+  `audit.ts`). Log do PM2, nunca chega ao navegador.
+- **Etapa 18** (planejada): `console.*` em `scripts/*.ts` (CLI/cron) --
+  `create-test-admin.ts`, `purge-aggs.ts`, `refresh-universe.ts`,
+  `backfill-null-categories.ts`, `extract-date.ts`, `import.ts`,
+  `import-watch.ts`.
+- **Etapa 19** (planejada): `echo` em `scripts/*.sh` --
+  `bench-experiment-rankings.sh`, `bench-procs.sh`, `import-all.sh`,
+  `run-migrations.sh`, `setup-crons.sh`, `validate-procs.sh`. Atenção:
+  `run-migrations.sh:80` (`echo "(nenhuma migration nova)"`) tem
+  acoplamento funcional com `.github/workflows/ci.yml:108`
+  (`grep -q "nenhuma migration nova"`, job `schema-check`) -- os dois
+  precisam mudar juntos, com o CI provando que o grep continua
+  encontrando a string nova.
+
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
 Categoria explicitamente deixada de fora do escopo original ("nomenclatura",

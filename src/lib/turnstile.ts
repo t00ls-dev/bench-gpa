@@ -11,13 +11,13 @@ export function isTurnstileEnabled(): boolean {
 
 export async function verifyTurnstile(token: string, ip?: string): Promise<boolean> {
   if (process.env.TURNSTILE_BYPASS === "true") {
-    console.warn("[Turnstile] Bypass ativado via env");
+    console.warn("[Turnstile] Bypass enabled via env");
     return true;
   }
 
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) {
-    console.error("[Turnstile] TURNSTILE_SECRET_KEY não configurada");
+    console.error("[Turnstile] TURNSTILE_SECRET_KEY not configured");
     return false;
   }
 
@@ -33,16 +33,16 @@ export async function verifyTurnstile(token: string, ip?: string): Promise<boole
       });
 
       if (!res.ok) {
-        console.error(`[Turnstile] HTTP ${res.status} na verificação`);
+        console.error(`[Turnstile] HTTP ${res.status} during verification`);
         continue;
       }
 
       const data = (await res.json()) as { success: boolean };
       return data.success === true;
     } catch (err) {
-      console.error(`[Turnstile] Tentativa ${attempt + 1} falhou:`, err);
+      console.error(`[Turnstile] Attempt ${attempt + 1} failed:`, err);
       if (attempt === 1) {
-        console.error("[Turnstile] API indisponível após 2 tentativas: fail-closed");
+        console.error("[Turnstile] API unavailable after 2 attempts: fail-closed");
         return false;
       }
     }
