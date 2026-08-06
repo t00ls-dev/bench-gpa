@@ -202,15 +202,36 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     dados reais antes/depois de reaplicar o schema, hash de ordem e de
     conjunto idênticos nos 37 cenários. **`scripts/migrate-schema.sql` está
     completo.**
-  - Strings de descrição `it("...")`/`describe("...")` em português
-    continuam fora de escopo (categoria própria, ainda não iniciada).
   - **Estado geral da tradução de comentários (Fase 3)**: `src/lib/`,
     `src/hooks/`, `src/routes/`, `src/components/`, `scripts/` (todos,
     incluindo `migrate-schema.sql`) e todos os arquivos de teste estão
     completos (Etapas 1-10, PRs #207, #209, #211-#218). **A tradução de
-    comentários técnicos do projeto inteiro está concluída.** Resta só a
-    categoria à parte de strings de descrição de teste
-    `it("...")`/`describe("...")` em português.
+    comentários técnicos do projeto inteiro está concluída.**
+
+## Fase 4: strings de descrição de teste (`it`/`describe`)
+
+Categoria explicitamente deixada de fora do escopo original ("nomenclatura",
+não descrições de teste), mas dentro da regra mais ampla de idioma técnico
+registrada em `AGENTS.md`. Iniciada por pedido do usuário em 2026-08-06,
+mesmo padrão de etapas incrementais da Fase 3: um PR por etapa, só a string
+do primeiro argumento de `it(...)`/`describe(...)`, nenhuma mudança de
+comportamento (são só rótulos do reporter do Vitest).
+
+- **Etapa 11** (concluída, PR #219): os 8 arquivos de teste com maior
+  volume de descrição em português (`auth-api.test.ts`,
+  `xlsx-parser.test.ts`, `auth-middleware.test.ts`, `filter-cascade.test.ts`,
+  `rate-limit.test.ts`, `pdf-download-store.test.ts`,
+  `dashboard.functions.test.ts`, `admin-users.functions.test.ts`).
+- Restam ~24 arquivos de teste menores com descrição em português para
+  etapas futuras (retention.test.ts, area.functions.test.ts,
+  admin-user-management.test.tsx, rate-limit.middleware.test.ts,
+  utils.test.ts, staging-row.test.ts, date-window.test.ts, csp.test.ts,
+  boot-guards.test.ts, audit-tooltip.test.ts, upload.functions.test.ts,
+  schemas.test.ts, product.functions.test.ts, export-pdf.test.ts,
+  admin-utils.test.ts, admin-system.functions.test.ts,
+  admin-docs.functions.test.ts, use-wake-lock.test.ts,
+  admin-audit-panel.test.tsx, turnstile.test.ts, e os 4 arquivos
+  `*.guards.test.ts` com 2 descrições cada).
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

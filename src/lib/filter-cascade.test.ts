@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { cascadePatch, computeAreaCascadeOptions, type HierarchyItem } from "./filter-cascade";
 
 describe("cascadePatch", () => {
-  it("zera todos os níveis abaixo de stores", () => {
+  it("zeroes out every level below stores", () => {
     expect(cascadePatch("stores", ["1516"])).toEqual({
       stores: ["1516"],
       deptos: [],
@@ -12,7 +12,7 @@ describe("cascadePatch", () => {
     });
   });
 
-  it("zera apenas os níveis abaixo de secoes, preservando stores/deptos fora do patch", () => {
+  it("zeroes out only the levels below secoes, preserving stores/deptos outside the patch", () => {
     expect(cascadePatch("secoes", ["MERCEARIA SECA"])).toEqual({
       secoes: ["MERCEARIA SECA"],
       grupos: [],
@@ -20,11 +20,11 @@ describe("cascadePatch", () => {
     });
   });
 
-  it("não zera nada abaixo de subgrupos, o último nível", () => {
+  it("zeroes out nothing below subgrupos, the last level", () => {
     expect(cascadePatch("subgrupos", ["ARROZ"])).toEqual({ subgrupos: ["ARROZ"] });
   });
 
-  it("zera com array vazio quando o valor setado também é vazio (limpar seleção)", () => {
+  it("zeroes out with an empty array when the set value is also empty (clear selection)", () => {
     expect(cascadePatch("deptos", [])).toEqual({
       deptos: [],
       secoes: [],
@@ -72,31 +72,31 @@ describe("computeAreaCascadeOptions", () => {
 
   const noFilters = { fStores: [], fDeptos: [], fSecoes: [], fGrupos: [] };
 
-  it("dedup as lojas por store_code sem filtro nenhum", () => {
+  it("dedupes stores by store_code with no filter at all", () => {
     const { stores } = computeAreaCascadeOptions(hierarchy, noFilters);
     expect(stores.map((s) => s.store_code)).toEqual(["1516", "1629", "5287"]);
   });
 
-  it("sem filtro, opções de cada nível vêm da hierarquia inteira", () => {
+  it("with no filter, each level's options come from the entire hierarchy", () => {
     const r = computeAreaCascadeOptions(hierarchy, noFilters);
     expect(r.deptosOpts).toEqual(["BAZAR", "MERCEARIA"]);
     expect(r.secoesOpts.sort()).toEqual(["BEBIDAS", "SECA", "UTILIDADES"]);
   });
 
-  it("filtrar por loja restringe as opções de depto/secao/grupo/subgrupo ao subconjunto dela", () => {
+  it("filtering by store restricts depto/secao/grupo/subgrupo options to its subset", () => {
     const r = computeAreaCascadeOptions(hierarchy, { ...noFilters, fStores: ["1516"] });
     expect(r.deptosOpts).toEqual(["MERCEARIA"]);
     expect(r.gruposOpts).toEqual(["ARROZ", "FEIJAO"]);
   });
 
-  it("filtrar por depto não elimina outras lojas do mesmo depto (stores não depende de fDeptos)", () => {
+  it("filtering by depto does not eliminate other stores in the same depto (stores doesn't depend on fDeptos)", () => {
     // MERCEARIA exists in both 1516 and 5287: the filter is hierarchical downward, not upward.
     const r = computeAreaCascadeOptions(hierarchy, { ...noFilters, fDeptos: ["MERCEARIA"] });
     expect(r.stores.map((s) => s.store_code)).toEqual(["1516", "1629", "5287"]);
     expect(r.secoesOpts.sort()).toEqual(["BEBIDAS", "SECA"]);
   });
 
-  it("cascata completa: loja + depto + secao restringe grupo/subgrupo ao caminho exato", () => {
+  it("full cascade: store + depto + secao restricts grupo/subgrupo to the exact path", () => {
     const r = computeAreaCascadeOptions(hierarchy, {
       fStores: ["1516"],
       fDeptos: ["MERCEARIA"],
@@ -107,12 +107,12 @@ describe("computeAreaCascadeOptions", () => {
     expect(r.subgruposOpts).toEqual(["ARROZ BRANCO", "FEIJAO CARIOCA"]);
   });
 
-  it("filtrar por grupo restringe subgrupo ao grupo selecionado", () => {
+  it("filtering by grupo restricts subgrupo to the selected grupo", () => {
     const r = computeAreaCascadeOptions(hierarchy, { ...noFilters, fGrupos: ["ARROZ"] });
     expect(r.subgruposOpts).toEqual(["ARROZ BRANCO"]);
   });
 
-  it("filtro que não bate com nada devolve listas vazias, não erro", () => {
+  it("a filter matching nothing returns empty lists, not an error", () => {
     const r = computeAreaCascadeOptions(hierarchy, { ...noFilters, fStores: ["9999"] });
     expect(r.deptosOpts).toEqual([]);
     expect(r.secoesOpts).toEqual([]);
@@ -120,12 +120,12 @@ describe("computeAreaCascadeOptions", () => {
     expect(r.subgruposOpts).toEqual([]);
   });
 
-  it("subgrupo null na hierarquia não vira a string 'null' nem quebra o filtro/sort", () => {
+  it("a null subgrupo in the hierarchy doesn't become the string 'null' or break the filter/sort", () => {
     const r = computeAreaCascadeOptions(hierarchy, { ...noFilters, fStores: ["1629"] });
     expect(r.subgruposOpts).toEqual([]);
   });
 
-  it("hierarquia vazia devolve tudo vazio", () => {
+  it("an empty hierarchy returns everything empty", () => {
     const r = computeAreaCascadeOptions([], noFilters);
     expect(r).toEqual({
       stores: [],

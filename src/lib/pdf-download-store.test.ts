@@ -29,7 +29,7 @@ describe("pdf-download-store", () => {
     vi.useRealTimers();
   });
 
-  it("devolve os mesmos bytes/filename que foram guardados, pro mesmo usuário", async () => {
+  it("returns the same bytes/filename that were stored, for the same user", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     const entry = takePdf(token, "user-1");
@@ -43,7 +43,7 @@ describe("pdf-download-store", () => {
   // saved as if it were the PDF). Short TTL + per-user isolation are
   // already enough protection; the token doesn't also need to die on the
   // first read.
-  it("permite ler o mesmo token mais de uma vez dentro do TTL", async () => {
+  it("allows reading the same token more than once within the TTL", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     expect(takePdf(token, "user-1")).toBeDefined();
@@ -51,41 +51,41 @@ describe("pdf-download-store", () => {
     expect(takePdf(token, "user-1")).toBeDefined();
   });
 
-  it("token inexistente devolve undefined", async () => {
+  it("a nonexistent token returns undefined", async () => {
     const { takePdf } = await freshStore();
     expect(takePdf("token-que-nunca-existiu", "user-1")).toBeUndefined();
   });
 
   // Per-user isolation: same token, wrong user, isn't just theory, it's
   // the only thing stopping someone from guessing another export's token.
-  it("não devolve nada pra um userId diferente do que gerou o token", async () => {
+  it("returns nothing for a userId different from the one that generated the token", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     expect(takePdf(token, "user-2")).toBeUndefined();
   });
 
-  it("uma tentativa com userId errado não invalida o token pro usuário certo depois", async () => {
+  it("an attempt with the wrong userId does not invalidate the token for the right user afterward", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     expect(takePdf(token, "user-2")).toBeUndefined(); // wrong
     expect(takePdf(token, "user-1")).toBeDefined(); // right, still valid
   });
 
-  it("expira depois do TTL, token válido mas velho não devolve nada", async () => {
+  it("expires after the TTL, a valid but old token returns nothing", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     vi.advanceTimersByTime(61_000);
     expect(takePdf(token, "user-1")).toBeUndefined();
   });
 
-  it("dentro do TTL continua válido", async () => {
+  it("stays valid within the TTL", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
     vi.advanceTimersByTime(59_000);
     expect(takePdf(token, "user-1")).toBeDefined();
   });
 
-  it("tokens de chamadas diferentes não colidem, mesmo pro mesmo usuário", async () => {
+  it("tokens from different calls don't collide, even for the same user", async () => {
     const { storePdf, takePdf } = await freshStore();
     const t1 = storePdf("user-1", new Uint8Array([1]), "a.pdf");
     const t2 = storePdf("user-1", new Uint8Array([2]), "b.pdf");
@@ -97,7 +97,7 @@ describe("pdf-download-store", () => {
   // Covers the very reason for the change: two different "processes"
   // (here, two module instances via separate dynamic import, without
   // resetModules() between them) seeing the same token through disk.
-  it("um token gravado por uma instância do módulo é lido por outra", async () => {
+  it("a token written by one module instance is read by another", async () => {
     const store1 = await freshStore();
     const token = store1.storePdf("user-1", BYTES, "relatorio.pdf");
 
@@ -108,7 +108,7 @@ describe("pdf-download-store", () => {
     expect(entry?.filename).toBe("relatorio.pdf");
   });
 
-  it("token com formato inválido (não-UUID) devolve undefined, sem tentar ler arquivo", async () => {
+  it("a token with an invalid format (non-UUID) returns undefined, without trying to read a file", async () => {
     const { takePdf } = await freshStore();
     expect(takePdf("../../etc/passwd", "user-1")).toBeUndefined();
     expect(takePdf("token-qualquer", "user-1")).toBeUndefined();

@@ -98,7 +98,7 @@ beforeEach(() => {
 });
 
 describe("getDashboardRankings", () => {
-  it("mapeia os cinco rankings da proc", async () => {
+  it("maps the proc's five rankings", async () => {
     const r = await call({});
     expect(r.byDepto).toEqual([{ name: "BAZAR", val: 500 }]);
     expect(r.byProduto).toEqual([{ code: "1", name: "P1", val: 90 }]);
@@ -109,14 +109,14 @@ describe("getDashboardRankings", () => {
   // in prod on the default window, before the proc started scanning the
   // aggregate just once (19.0s at 28 days today).
   describe("cache", () => {
-    it("serve a segunda chamada igual sem tocar no banco", async () => {
+    it("serves the second identical call without touching the database", async () => {
       const a = await call({});
       const b = await call({});
       expect(db.query).toHaveBeenCalledTimes(1);
       expect(b).toEqual(a);
     });
 
-    it("não colide entre períodos, filtros ou limites diferentes", async () => {
+    it("does not collide across different periods, filters, or limits", async () => {
       await call({});
       await call({ dateFrom: "2026-07-01" });
       await call({ deptos: ["BAZAR"] });
@@ -139,7 +139,7 @@ describe("getFilterOptions", () => {
     ],
   ];
 
-  it("mapeia os 7 result sets e ordena availableDates ascendente", async () => {
+  it("maps the 7 result sets and sorts availableDates ascending", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(PROC_RESULT as never);
     const result = await (getFilterOptions as (d: object) => Promise<unknown>)({});
     expect(result).toEqual({
@@ -155,7 +155,7 @@ describe("getFilterOptions", () => {
     });
   });
 
-  it("chama filter_options com dateFrom/dateTo null quando vazios e filtros serializados", async () => {
+  it("calls filter_options with dateFrom/dateTo null when empty and filters serialized", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(PROC_RESULT as never);
     await (getFilterOptions as (d: { stores: string[] }) => Promise<unknown>)({
       stores: ["1516"],
@@ -170,14 +170,14 @@ describe("getFilterOptions", () => {
     ]);
   });
 
-  it("usa cache: mesma combinação de filtros não bate no banco de novo", async () => {
+  it("uses cache: the same filter combination doesn't hit the database again", async () => {
     vi.mocked(db.query).mockResolvedValue(PROC_RESULT as never);
     await (getFilterOptions as (d: { stores: string[] }) => Promise<unknown>)({ stores: [] });
     await (getFilterOptions as (d: { stores: string[] }) => Promise<unknown>)({ stores: [] });
     expect(db.query).toHaveBeenCalledTimes(1);
   });
 
-  it("passa dateFrom/dateTo reais quando informados (não cai no fallback null)", async () => {
+  it("passes real dateFrom/dateTo when provided (doesn't fall back to null)", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(PROC_RESULT as never);
     await (getFilterOptions as (d: { dateFrom: string; dateTo: string }) => Promise<unknown>)({
       dateFrom: "2026-07-01",
@@ -195,7 +195,7 @@ describe("getFilterOptions", () => {
 });
 
 describe("getStores", () => {
-  it("lista lojas ordenadas por código", async () => {
+  it("lists stores sorted by code", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [
         { store_code: "1516", store_name: "Loja Centro" },
@@ -212,7 +212,7 @@ describe("getStores", () => {
     );
   });
 
-  it("devolve array vazio quando o banco não retorna rows", async () => {
+  it("returns an empty array when the database returns no rows", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([undefined] as never);
     const result = await (getStores as () => Promise<unknown>)();
     expect(result).toEqual([]);
@@ -239,7 +239,7 @@ describe("getDashboard", () => {
     subgrupos: [],
   };
 
-  it("busca só o período pedido, uma vez", async () => {
+  it("fetches only the requested period, once", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(METRICS_RESULT as never);
     const result = await (getDashboard as (d: object) => Promise<{ total: number }>)(BASE);
     expect(result.total).toBe(1000);
@@ -248,7 +248,7 @@ describe("getDashboard", () => {
 });
 
 describe("getLatestSaleInfo", () => {
-  it("mapeia a última importação registrada", async () => {
+  it("maps the last recorded import", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [{ sale_date: "2026-07-20", row_count: 12000, imported_at: "2026-07-21 03:00:00" }],
     ] as never);
@@ -260,7 +260,7 @@ describe("getLatestSaleInfo", () => {
     });
   });
 
-  it("devolve null quando não há nenhum import registrado", async () => {
+  it("returns null when there is no recorded import", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
     const result = await (getLatestSaleInfo as () => Promise<unknown>)();
     expect(result).toBeNull();

@@ -178,7 +178,7 @@ describe("login", () => {
     );
   });
 
-  it("com rememberMe, emite uma sessão persistente de 7 dias", async () => {
+  it("with rememberMe, issues a 7-day persistent session", async () => {
     const result = await login({
       identifier: "test",
       password: "correct",
@@ -197,7 +197,7 @@ describe("login", () => {
     );
   });
 
-  it("autentica por matrícula (não só por username)", async () => {
+  it("authenticates by employee_id (not just username)", async () => {
     vi.mocked(db.query).mockResolvedValue([
       dbRow({ username: "test", employee_id: "5001" }),
     ] as never);
@@ -235,7 +235,7 @@ describe("login", () => {
     );
   });
 
-  it("conta sem senha (primeiro acesso pendente): nunca chama bcrypt.compare, mensagem específica", async () => {
+  it("account without a password (first access pending): never calls bcrypt.compare, specific message", async () => {
     vi.mocked(db.query).mockResolvedValue([dbRow({ password: null })] as never);
     await expect(login({ identifier: "test", password: "qualquer" } as never)).rejects.toThrow(
       "primeiro acesso",
@@ -254,7 +254,7 @@ describe("login", () => {
     );
   });
 
-  it("throws when account-level rate limit exceeded (por conta, não por IP)", async () => {
+  it("throws when account-level rate limit exceeded (per account, not per IP)", async () => {
     vi.mocked(authAccountLimiter.check).mockReturnValue({
       allowed: false,
       remaining: 0,
@@ -268,12 +268,12 @@ describe("login", () => {
   // The account bucket's key is the resolved id, not the typed string:
   // switching between username and employee_id of the SAME account must
   // not reset the bucket.
-  it("chaveia o rate limit de conta pelo id resolvido", async () => {
+  it("keys the account rate limit by the resolved id", async () => {
     await login({ identifier: "test", password: "correct" } as never);
     expect(authAccountLimiter.check).toHaveBeenCalledWith("user:u1");
   });
 
-  it("chaveia pelo identificador bruto quando a conta não é encontrada", async () => {
+  it("keys by the raw identifier when the account isn't found", async () => {
     vi.mocked(db.query).mockResolvedValue([[]] as never);
     await login({ identifier: "ninguem", password: "x" } as never).catch(() => {});
     expect(authAccountLimiter.check).toHaveBeenCalledWith("identifier:ninguem");
@@ -286,7 +286,7 @@ describe("login", () => {
     ).rejects.toThrow("Falha na verificação");
   });
 
-  it("fail-closed: recusa login sem token quando o Turnstile está ativo", async () => {
+  it("fail-closed: refuses login without a token when Turnstile is active", async () => {
     vi.mocked(isTurnstileEnabled).mockReturnValue(true);
     await expect(login({ identifier: "test", password: "correct" } as never)).rejects.toThrow(
       "Falha na verificação",
@@ -313,7 +313,7 @@ describe("getMe", () => {
   // can't have the side effect of reissuing the session on every call.
   // Sliding the session on activity is requireAuth's job, called by the
   // functions that actually fetch data (see auth-middleware.test.ts).
-  it("não reemite o cookie (não desliza a sessão)", async () => {
+  it("does not reissue the cookie (does not slide the session)", async () => {
     await getMe();
     expect(jwt.sign).not.toHaveBeenCalled();
     expect(setCookie).not.toHaveBeenCalled();
@@ -331,7 +331,7 @@ describe("getMe", () => {
     expect(user).toBeNull();
   });
 
-  it("returns null quando a senha foi redefinida depois da emissão do token", async () => {
+  it("returns null when the password was reset after the token was issued", async () => {
     vi.mocked(jwt.verify).mockReturnValue({
       userId: "u1",
       role: "admin",
@@ -342,7 +342,7 @@ describe("getMe", () => {
     expect(user).toBeNull();
   });
 
-  it("passwordChangeRequired: true quando a senha está pendente/expirada", async () => {
+  it("passwordChangeRequired: true when the password is pending/expired", async () => {
     vi.mocked(db.query).mockResolvedValue([dbRow({ password_change_required: 1 })] as never);
     const user = await getMe();
     expect(user).not.toBeNull();
@@ -365,14 +365,14 @@ describe("logout", () => {
     );
   });
 
-  it("não tenta revogar nem auditar quando não há cookie de sessão", async () => {
+  it("does not try to revoke or audit when there is no session cookie", async () => {
     vi.mocked(getCookie).mockReturnValue(undefined);
     const result = await logout();
     expect(result).toEqual({ ok: true });
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("não quebra se o token do cookie for inválido/expirado", async () => {
+  it("does not break if the cookie's token is invalid/expired", async () => {
     vi.mocked(jwt.verify).mockImplementation(() => {
       throw new Error("jwt expired");
     });
@@ -384,7 +384,7 @@ describe("logout", () => {
 });
 
 describe("setInitialPassword", () => {
-  it("identificador (username OU matrícula) correto: define a senha e auto-loga (issueSession)", async () => {
+  it("correct identifier (username OR employee_id): sets the password and auto-logs in (issueSession)", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [{ id: "u1", username: "novo", role: "user", password: null, token_version: 0 }],
     ] as never);
@@ -406,7 +406,7 @@ describe("setInitialPassword", () => {
     expect(setCookie).toHaveBeenCalled();
   });
 
-  it("também resolve pela matrícula, mesma resolução do login", async () => {
+  it("also resolves by employee_id, same resolution as login", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [{ id: "u1", username: null, role: "user", password: null, token_version: 0 }],
     ] as never);
@@ -419,7 +419,7 @@ describe("setInitialPassword", () => {
     expect(setCookie).toHaveBeenCalled();
   });
 
-  it("rejeita quando a conta já tem senha (mensagem genérica, não confirma existência)", async () => {
+  it("rejects when the account already has a password (generic message, doesn't confirm existence)", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [
         {
@@ -441,7 +441,7 @@ describe("setInitialPassword", () => {
     expect(setCookie).not.toHaveBeenCalled();
   });
 
-  it("rejeita quando o identificador não corresponde a nenhuma conta", async () => {
+  it("rejects when the identifier doesn't match any account", async () => {
     vi.mocked(db.query).mockResolvedValue([[]] as never);
     await expect(
       setInitialPassword({
@@ -452,7 +452,7 @@ describe("setInitialPassword", () => {
     ).rejects.toThrow("Usuário ou matrícula inválidos");
   });
 
-  it("protegido por rate limit de IP, igual ao login", async () => {
+  it("protected by IP rate limit, same as login", async () => {
     vi.mocked(authLimiter.check).mockReturnValue({
       allowed: false,
       remaining: 0,
@@ -469,7 +469,7 @@ describe("setInitialPassword", () => {
 });
 
 describe("changePassword", () => {
-  it("confere a senha atual, grava a nova e reemite a sessão com o token_version fresco", async () => {
+  it("checks the current password, writes the new one, and reissues the session with a fresh token_version", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([[{ password: "$2b$12$hash" }]] as never) // SELECT password
       .mockResolvedValueOnce([{ affectedRows: 1 }] as never) // UPDATE
@@ -496,7 +496,7 @@ describe("changePassword", () => {
     expect(setCookie).toHaveBeenCalled();
   });
 
-  it("rejeita quando a senha atual está errada", async () => {
+  it("rejects when the current password is wrong", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[{ password: "$2b$12$hash" }]] as never);
     vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
     await expect(

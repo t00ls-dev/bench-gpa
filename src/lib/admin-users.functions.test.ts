@@ -107,7 +107,7 @@ describe("createUser", () => {
   };
   const call = createUser as (d: CreateUserInput) => Promise<{ ok: boolean; id: string }>;
 
-  it("insere usuário sem senha (password fica NULL, sem bcrypt.hash neste caminho)", async () => {
+  it("inserts a user without a password (password stays NULL, no bcrypt.hash on this path)", async () => {
     const result = await call({
       username: "novo.usuario",
       employeeId: "5001",
@@ -125,7 +125,7 @@ describe("createUser", () => {
     );
   });
 
-  it("aceita só username (matrícula fica NULL, pendente de o admin completar depois)", async () => {
+  it("accepts only username (employee_id stays NULL, pending the admin completing it later)", async () => {
     const result = await call({ username: "novo.usuario", name: "New User", role: "user" });
     expect(db.query).toHaveBeenCalledWith(
       "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
@@ -133,7 +133,7 @@ describe("createUser", () => {
     );
   });
 
-  it("aceita só matrícula (username fica NULL, pendente de o admin completar depois)", async () => {
+  it("accepts only employee_id (username stays NULL, pending the admin completing it later)", async () => {
     const result = await call({ employeeId: "5001", name: "New User", role: "user" });
     expect(db.query).toHaveBeenCalledWith(
       "INSERT INTO users (id, username, employee_id, name, role, is_active) VALUES (?, ?, ?, ?, ?, TRUE)",
@@ -143,7 +143,7 @@ describe("createUser", () => {
 });
 
 describe("resetPassword", () => {
-  it("zera password e password_changed_at, incrementa token_version, sem receber senha nova", async () => {
+  it("clears password and password_changed_at, increments token_version, without receiving a new password", async () => {
     const result = await (resetPassword as (d: { userId: string }) => Promise<{ ok: boolean }>)({
       userId: "u1",
     });
@@ -164,7 +164,7 @@ describe("resetPassword", () => {
 });
 
 describe("updateUserIdentifiers", () => {
-  it("atualiza username e matrícula", async () => {
+  it("updates username and employee_id", async () => {
     const result = await (
       updateUserIdentifiers as (d: {
         userId: string;
@@ -182,7 +182,7 @@ describe("updateUserIdentifiers", () => {
     );
   });
 
-  it("traduz conflito de unicidade (ER_DUP_ENTRY) numa mensagem amigável", async () => {
+  it("translates a uniqueness conflict (ER_DUP_ENTRY) into a friendly message", async () => {
     const dupError = Object.assign(new Error("Duplicate entry"), { code: "ER_DUP_ENTRY" });
     vi.mocked(db.query).mockRejectedValueOnce(dupError);
     await expect(
@@ -197,8 +197,8 @@ describe("updateUserIdentifiers", () => {
   });
 });
 
-describe("detail gravado no audit log", () => {
-  it("setUserRole grava o novo papel", async () => {
+describe("detail recorded in the audit log", () => {
+  it("setUserRole records the new role", async () => {
     await (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
       userId: "u-alvo",
       role: "admin",
@@ -208,7 +208,7 @@ describe("detail gravado no audit log", () => {
     );
   });
 
-  it("setUserActive(true) grava user.activate sem detail", async () => {
+  it("setUserActive(true) records user.activate with no detail", async () => {
     await (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
       userId: "u-alvo",
       isActive: true,
@@ -218,7 +218,7 @@ describe("detail gravado no audit log", () => {
     expect(call.detail).toBeUndefined();
   });
 
-  it("setUserActive(false) grava user.deactivate sem detail", async () => {
+  it("setUserActive(false) records user.deactivate with no detail", async () => {
     await (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
       userId: "u-alvo",
       isActive: false,
@@ -228,7 +228,7 @@ describe("detail gravado no audit log", () => {
     expect(call.detail).toBeUndefined();
   });
 
-  it("barra auto-inativação antes de gravar qualquer audit", async () => {
+  it("blocks self-deactivation before recording any audit entry", async () => {
     await expect(
       (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
         userId: "admin-u1",
@@ -239,8 +239,8 @@ describe("detail gravado no audit log", () => {
   });
 });
 
-describe("invalidação do cache de admin", () => {
-  it("setUserRole descarta o veredito cacheado do alvo", async () => {
+describe("admin cache invalidation", () => {
+  it("setUserRole discards the target's cached verdict", async () => {
     const result = await (
       setUserRole as (d: { userId: string; role: string }) => Promise<{ ok: boolean }>
     )({ userId: "u-alvo", role: "admin" });
@@ -248,7 +248,7 @@ describe("invalidação do cache de admin", () => {
     expect(invalidateAdminCache).toHaveBeenCalledWith("u-alvo");
   });
 
-  it("setUserActive descarta o veredito cacheado do alvo", async () => {
+  it("setUserActive discards the target's cached verdict", async () => {
     const result = await (
       setUserActive as (d: { userId: string; isActive: boolean }) => Promise<{ ok: boolean }>
     )({ userId: "u-alvo", isActive: false });
@@ -256,7 +256,7 @@ describe("invalidação do cache de admin", () => {
     expect(invalidateAdminCache).toHaveBeenCalledWith("u-alvo");
   });
 
-  it("não invalida nada quando a própria ação é recusada", async () => {
+  it("invalidates nothing when the action itself is refused", async () => {
     // Self-demotion is blocked before the UPDATE; the cache must not be touched.
     await expect(
       (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
