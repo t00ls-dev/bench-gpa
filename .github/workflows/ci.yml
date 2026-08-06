@@ -321,23 +321,21 @@ jobs:
             # ecosystem.config.cjs (and the .env it loads); without the
             # flag, the reload would preserve the previous run's
             # environment. listen_timeout: 8000 (ecosystem.config.cjs) gives
-            # PM2 real headroom for each worker's full boot under reload.
-            # Note: with exec_mode "fork" the reload is equivalent to a
-            # restart -- the blip is short, but it isn't zero-downtime.
+            # PM2 real headroom for the single worker's full boot. With
+            # exec_mode "fork" the reload is equivalent to a restart -- the
+            # blip is short, but it isn't zero-downtime.
             #
-            # Retry on the reload (not just the healthcheck): a known PM2
-            # bug in cluster mode (Unitech/pm2#3946, "TCP port isn't
-            # released on reload") -- every so often startOrReload marks
-            # both workers as "online" without the new process having
-            # actually rebound the port (no error in the app log, just
-            # nothing in LISTEN). Measured in isolation, off the VPS
-            # (08/04/2026, 20 reload cycles in a row): about 5-10% of
-            # individual attempts hit this, but calling startOrReload again
-            # (same release, no need to delete first) always fixed it --
-            # never needed more than a second attempt in testing. Each
-            # attempt here is independent of the last, so the odds of all 3
-            # failing at once are already residual; if it happens anyway,
-            # it's a genuine rollback, not a masked one.
+            # Retry on the reload (not just the healthcheck): kept as a
+            # cheap, generic safety net against any transient boot failure
+            # (a slow MariaDB connection, a hiccup acquiring the port),
+            # even though the specific bug that originally motivated this
+            # (Unitech/pm2#3946, "TCP port isn't released on reload when
+            # app is running in cluster mode") no longer applies now that
+            # PM2 runs in fork mode (see docs/medicao-performance.md,
+            # 2026-08-06 entry). Each attempt here is independent of the
+            # last, so the odds of all 3 failing at once are already
+            # residual; if it happens anyway, it's a genuine rollback, not
+            # a masked one.
             ok=""
             for attempt in 1 2 3; do
               sudo -u admin pm2 startOrReload ecosystem.config.cjs --update-env || true
@@ -359,9 +357,9 @@ jobs:
 
             sudo -u admin pm2 save
 
-            # Keeps the last 5 releases: every old worker has already been
+            # Keeps the last 5 releases: the old process has already been
             # replaced and confirmed dead by pm2 startOrReload above (the
-            # command blocks until every instance's reload finishes),
-            # nothing reads from them anymore. Just disk space, not
-            # correctness -- 18M each, huge slack (the VPS has ~9.5G free).
+            # command blocks until the reload finishes), nothing reads from
+            # them anymore. Just disk space, not correctness -- 18M each,
+            # huge slack (the VPS has ~9.5G free).
             cd "$APPDIR/releases" && ls -1t | tail -n +6 | xargs -r sudo rm -rf

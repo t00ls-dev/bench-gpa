@@ -574,3 +574,59 @@ já tem sessão válida, então o afrouxamento não abre superfície nova pra
 tráfego anônimo ali. Revisitar se a frequência de "Muitas requisições" no
 Sentry/audit_log for maior que o esperado, ou se a VPS ganhar mais núcleos
 (nesse caso vale reavaliar o teto de novo, com folga real).
+
+## 2026-08-06: reverte PM2 de cluster/2 instâncias para fork/1 instância
+
+Não é medição, é registro de uma decisão de trade-off. Reverte a migração de
+04/08 (entrada acima) depois de observação direta ("não notei melhora
+nenhuma com Cluster") que bate com o que já estava documentado desde o
+início: numa VPS de 1 núcleo físico, 2 instâncias nunca tiveram paralelismo
+de CPU real pra entregar — o único motivo de ter ido pra cluster foi o
+`pm2 reload` fazer troca gradual de worker (mais perto de zero-downtime) em
+vez do restart completo do fork mode.
+
+Motivo da reversão, com o custo/benefício completo agora visível:
+
+- **Nunca houve medição formal** comparando cluster com fork neste projeto
+  (throughput, latência, CPU) — era decisão qualitativa desde o início.
+- **Custo real, mensurável**: dois processos Node completos (heap V8, GC,
+  pool de conexão MariaDB duplicados) numa máquina com só 1,9GB de RAM
+  compartilhada com outros dois sites, já registrando uso de swap em
+  `docs/analise-servidor-producao-2026-07-31.md`.
+- **O benefício prometido nunca foi entregue por completo**: a própria
+  migração causou três rollbacks no dia em que subiu (entrada de 08/04
+  acima), incluindo um bug real do PM2 upstream
+  ([Unitech/pm2#3946](https://github.com/Unitech/pm2/issues/3946)) que
+  segue sem correção disponível (7.0.3 é a última versão). Mesmo com a
+  mitigação de retry, o risco residual medido em produção (PR #189) foi de
+  ~6,2s de 502 real por deploy — não é o zero-downtime que motivou a
+  migração.
+- `SimpleCache` e os `RateLimiter`s (`src/lib/cache.ts`,
+  `src/lib/rate-limit.ts`) voltam a ser singletons de processo de verdade,
+  sem diluição entre workers.
+
+O que muda:
+
+- `ecosystem.config.cjs`: `instances: 2` / `exec_mode: "cluster"` volta pra
+  `instances: 1` / `exec_mode: "fork"`. `listen_timeout: 8000` mantido (era
+  calibrado pra 2 workers competindo pela mesma CPU no boot; com 1 processo
+  só, o boot deve ficar mais rápido que os 4,8s medidos em 08/04, mas manter
+  a folga não tem custo).
+- `RATE_LIMITS.auth` (`src/lib/rate-limit.ts`) volta de `[15, 60]` pra
+  `[10, 40]` (entrada de 08/05 acima): sem diluição entre workers, o teto
+  original volta a fazer sentido como defesa por IP.
+- `.github/workflows/ci.yml`: o loop de retry no `pm2 startOrReload`
+  continua existindo (rede de segurança genérica e barata contra qualquer
+  falha transitória de boot), só o comentário deixa de atribuí-lo
+  especificamente ao bug de cluster mode do PM2, que não se aplica mais.
+- O esquema `releases/<timestamp>-<sha>/` + symlink atômico `current` (PR
+  #188) **não muda**: apesar de ter nascido de um bug do cluster mode, o
+  padrão em si (rollback instantâneo trocando o symlink, nenhum processo
+  lendo conteúdo trocado por baixo dele) vale independente do modo de
+  execução e continua sendo a base do deploy.
+
+Revisitar se a VPS ganhar mais núcleos algum dia (aí cluster volta a fazer
+sentido de verdade) ou se o tráfego real algum dia justificar zero-downtime
+como requisito, caso em que vale investir em blue-green de verdade (subir a
+release nova sob um nome de app separado, validar, só depois trocar) em vez
+de reabrir o cluster mode e seus bugs conhecidos.
