@@ -319,7 +319,7 @@ BEGIN
   -- which TypeScript discarded: three COUNT(DISTINCT prod_code) over the
   -- filtered sales_prod_daily_agg window on every call, with no reader at
   -- all. The equivalent KPIs that actually exist live in area_analysis,
-  -- which delivers them to the Área screen. Don't confuse the two.
+  -- which delivers them to the Area screen. Don't confuse the two.
   SELECT COALESCE(SUM(val), 0) AS total FROM tmp_period;
 
   -- Result set 2: byStore
@@ -536,7 +536,7 @@ BEGIN
   -- Departamento) -- which seemed harmless, but collapsed `opts.deptos`
   -- into its own already-selected subset and fired a false allSelected in
   -- MultiSelect (the filter turned into "All" on its own without the user
-  -- ever clicking "Select all", see src/components/multi-select.tsx). Área
+  -- ever clicking "Select all", see src/components/multi-select.tsx). Area
   -- had always followed this same rule (computeAreaCascadeOptions in
   -- src/lib/filter-cascade.ts), which is why it never had this bug.
   --
@@ -1048,7 +1048,7 @@ BEGIN
   -- are rare enough not to justify that synchronous cost on every import.
   -- Both now run in a daily cron (scripts/refresh-universe.ts, 03:30,
   -- after the 03:00 purge): a PLU sold for the first time today only shows
-  -- up in Área after the next refresh, not the same day. Accepted
+  -- up in Area after the next refresh, not the same day. Accepted
   -- consciously: see the full trade-off in the decision recorded in
   -- docs/continuar.md item 5.
   COMMIT;
@@ -1162,7 +1162,7 @@ END//
 -- DELETE, not TRUNCATE. Both empty the table, but TRUNCATE is DDL: it
 -- causes an implicit commit and doesn't respect MVCC. Measured on
 -- 2026-07-25, with 164k rows in product_universe: during the refresh's
--- ~33s, a concurrent reader saw ZERO rows in the table, and the Área
+-- ~33s, a concurrent reader saw ZERO rows in the table, and the Area
 -- screen starts from the universe, so it went empty on every import, right
 -- in the middle of business hours (the cron runs 10am-10pm). With DELETE,
 -- the reader keeps seeing the previous version until COMMIT.

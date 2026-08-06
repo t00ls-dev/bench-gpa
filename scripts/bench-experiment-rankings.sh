@@ -9,7 +9,7 @@
 # omitted the same five NOT EXISTS/OR filter predicates, the control
 # matched the real proc within 7% in the scenario where the two versions
 # behave the same, and I read that as proof of fidelity. The rewrite went
-# to production and made the Área screen 32% slower.
+# to production and made the Area screen 32% slower.
 #
 # The right way to test a proc variant:
 #   1. create the candidate proc under ANOTHER NAME, with the full body;

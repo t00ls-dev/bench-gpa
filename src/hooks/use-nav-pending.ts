@@ -28,8 +28,7 @@ export function useNavPendingPath(): string | null {
 /**
  * True if the pending navigation is to `to` (or a subroute of it, unless
  * `exact` is true). Without `exact`, "/admin" would be a prefix of
- * "/admin/docs": navigating to Documentação would also mark Administração
- * as pending.
+ * "/admin/docs": navigating to Docs would also mark Admin as pending.
  */
 export function isNavPendingTo(pending: string | null, to: string, exact = false): boolean {
   if (pending == null) return false;
