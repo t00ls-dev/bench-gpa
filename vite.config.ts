@@ -52,10 +52,11 @@ export default defineConfig({
     }),
     nitro({ preset: "node-server" }),
     react(),
-    // Sem SENTRY_AUTH_TOKEN (dev, PR de fora, ambiente sem os secrets), o
-    // plugin fica de fora inteiro: upload de source map é o único papel dele
-    // aqui (o tunnel já é feito manualmente em src/server.ts e src/client.tsx),
-    // então não tem por que rodar sem token.
+    // Without SENTRY_AUTH_TOKEN (dev, an external PR, an environment
+    // without the secrets), the plugin is left out entirely: source map
+    // upload is its only job here (the tunnel is already handled manually
+    // in src/server.ts and src/client.tsx), so there's no reason to run it
+    // without a token.
     ...(process.env.SENTRY_AUTH_TOKEN
       ? [
           sentryTanstackStart({
@@ -63,12 +64,13 @@ export default defineConfig({
             project: process.env.SENTRY_PROJECT,
             authToken: process.env.SENTRY_AUTH_TOKEN,
             autoInstrumentMiddleware: false,
-            // Sem isto, o plugin usa GITHUB_SHA (hash completo) como nome do
-            // release do upload de source map, enquanto Sentry.init({release})
-            // em client.tsx/instrument-server.ts usa __COMMIT_HASH__ (hash
-            // curto, mesma variável commitHash abaixo). Nomes diferentes nunca
-            // casam, e o Sentry associa source map a evento por match exato de
-            // release: sem isto os stack traces em produção ficam minificados.
+            // Without this, the plugin uses GITHUB_SHA (full hash) as the
+            // source map upload's release name, while Sentry.init({release})
+            // in client.tsx/instrument-server.ts uses __COMMIT_HASH__ (short
+            // hash, the same commitHash variable below). Different names
+            // never match, and Sentry associates a source map with an event
+            // by exact release match: without this, production stack
+            // traces stay minified.
             release: { name: commitHash },
           }),
         ]

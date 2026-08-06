@@ -15,9 +15,9 @@ jobs:
       group: ci-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      # fetch-depth: 0 → histórico git completo. O prebuild (gendocmeta) usa
-      # `git log -1 --format=%ct` por doc para o "timeago" das docs; com o
-      # checkout raso (depth 1) todo doc herdaria o timestamp do HEAD.
+      # fetch-depth: 0 -> full git history. The prebuild (gendocmeta) uses
+      # `git log -1 --format=%ct` per doc for the docs' "timeago"; with a
+      # shallow checkout (depth 1) every doc would inherit HEAD's timestamp.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -25,11 +25,11 @@ jobs:
         with:
           bun-version: "1.3.14"
       - run: bun install --frozen-lockfile
-      # Relatório completo é sempre impresso (visibilidade), mas só falha o
-      # build em severidade crítica — moderate/high de hoje são só toolchain
-      # de build/lint (vite/postcss/js-yaml/babel), não caminho de request.
-      # Isso é o que teria pego a regressão do seroval (GHSA-mv8w-475r-vwqw)
-      # automaticamente, em vez de precisar de uma auditoria manual.
+      # The full report is always printed (visibility), but only fails the
+      # build on critical severity -- today's moderate/high findings are all
+      # build/lint toolchain (vite/postcss/js-yaml/babel), not the request
+      # path. This is what would have caught the seroval regression
+      # (GHSA-mv8w-475r-vwqw) automatically, instead of needing a manual audit.
       - name: Dependency audit (bun audit)
         run: |
           bun audit || true
@@ -41,9 +41,9 @@ jobs:
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-          # Sem SENTRY_AUTH_TOKEN o plugin de upload de source map nem entra
-          # no array de plugins (vite.config.ts): build segue normal até os
-          # secrets existirem.
+          # Without SENTRY_AUTH_TOKEN the source map upload plugin doesn't
+          # even enter the plugins array (vite.config.ts): the build proceeds
+          # normally until the secrets exist.
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
@@ -61,11 +61,12 @@ jobs:
     concurrency:
       group: schema-check-${{ github.ref }}
       cancel-in-progress: true
-    # Prova que migrate-schema.sql + scripts/migrations/*.sql aplicam limpo
-    # numa instalação nova (banco vazio), e que rodar de novo é um no-op —
-    # antes deste job, isso nunca era testado (só ambientes já migrados, onde
-    # um ALTER quebrado nunca teria chance de aparecer). Descobriu 2 bugs
-    # reais na primeira execução: docs/auditoria-qa-2026-08-01.md, item 10.
+    # Proves that migrate-schema.sql + scripts/migrations/*.sql apply
+    # cleanly on a fresh install (empty database), and that running them
+    # again is a no-op -- before this job, that was never tested (only
+    # already-migrated environments, where a broken ALTER would never have
+    # a chance to show up). Found 2 real bugs on its first run:
+    # docs/auditoria-qa-2026-08-01.md, item 10.
     services:
       mariadb:
         image: mariadb:11.4
@@ -74,11 +75,12 @@ jobs:
           MARIADB_DATABASE: bench_gpa_ci
         ports:
           - 3306:3306
-        # healthcheck.sh vem no próprio image oficial (mariadb.org), feito pra
-        # este entrypoint em duas fases (servidor temporário de init, depois o
-        # real) — `mysqladmin ping` tentado antes ficou "unhealthy" até
-        # estourar os 10 retries mesmo com o server já pronto (log mostrava
-        # "ready for connections" bem antes do timeout), pela troca de fase.
+        # healthcheck.sh ships with the official image itself (mariadb.org),
+        # built for this entrypoint's two phases (temporary init server,
+        # then the real one) -- `mysqladmin ping`, tried before, stayed
+        # "unhealthy" until it burned through all 10 retries even with the
+        # server already ready (the log showed "ready for connections" well
+        # before the timeout), because of the phase switch.
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s
@@ -114,16 +116,17 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
-      # Checkout dá acesso a scripts/ (migrate-schema.sql + migrations/) —
-      # o artifact só contém .output/.
+      # Checkout gives access to scripts/ (migrate-schema.sql + migrations/)
+      # -- the artifact only contains .output/.
       - uses: actions/checkout@v7
-      # v8 (ESM): falha em vez de só avisar quando o digest do artifact não bate
-      # — um artifact corrompido aborta o deploy ANTES do swap.
+      # v8 (ESM): fails instead of just warning when the artifact's digest
+      # doesn't match -- a corrupted artifact aborts the deploy BEFORE the swap.
       #
-      # NODE_OPTIONS=--no-deprecation: a action ainda usa o construtor legado
-      # `Buffer()` numa dependência transitiva e emite [DEP0005] a cada deploy
-      # (verificado: persiste na v8). Como o código é de terceiros, só resta
-      # silenciar. O escopo é este step apenas — nada nosso roda aqui.
+      # NODE_OPTIONS=--no-deprecation: the action still uses the legacy
+      # `Buffer()` constructor in a transitive dependency and emits
+      # [DEP0005] on every deploy (verified: persists on v8). Since it's
+      # third-party code, all that's left is to silence it. The scope is
+      # this step only -- nothing of ours runs here.
       - uses: actions/download-artifact@v8
         env:
           NODE_OPTIONS: "--no-deprecation"
@@ -143,49 +146,50 @@ jobs:
           REMOTE=${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/admin/web/gpa.t00ls.dev/public_html
           rsync -az --delete -e "$SSH_CMD" .output/ "$REMOTE/.output.new/"
 
-          # ecosystem.config.cjs fica na raiz de $APPDIR, fora do .output/
-          # (bundle self-contained do Nitro): nunca fez parte de nenhum rsync
-          # deste workflow, então uma mudança nele (instances, exec_mode etc.)
-          # nunca chegava no servidor de verdade até alguém copiar manualmente
-          # (achado em 04/08/2026, na migração pra PM2 cluster mode: PR
-          # mergeado, CI verde, deploy "com sucesso", e o servidor continuou
-          # rodando fork/1 instância porque o pm2 startOrReload lia a config
-          # antiga). Sem --delete/staging: rsync de arquivo único já escreve
-          # em temp e renomeia por cima, é atômico por padrão, não precisa da
-          # mesma dança de .new/swap do .output/. Fora do bloco tolerante a
-          # falha (cron scripts, mais abaixo) de propósito: isto controla
-          # quantos workers sobem e em que modo, é tão crítico quanto o
-          # .output/ em si.
+          # ecosystem.config.cjs lives at the root of $APPDIR, outside
+          # .output/ (Nitro's self-contained bundle): it was never part of
+          # any rsync in this workflow, so a change to it (instances,
+          # exec_mode, etc.) never actually reached the server until someone
+          # copied it manually (found on 08/04/2026, during the migration to
+          # PM2 cluster mode: PR merged, CI green, deploy "successful", and
+          # the server kept running fork/1 instance because pm2
+          # startOrReload was reading the old config). No --delete/staging
+          # needed: a single-file rsync already writes to a temp file and
+          # renames over the target, atomic by default, no need for the same
+          # .new/swap dance as .output/. Deliberately outside the
+          # failure-tolerant block (cron scripts, further below): this
+          # controls how many workers come up and in what mode, just as
+          # critical as .output/ itself.
           rsync -az -e "$SSH_CMD" ecosystem.config.cjs "$REMOTE/"
 
-          # Runner + baseline + migrations versionadas → $APPDIR/_migrations/
+          # Runner + baseline + versioned migrations -> $APPDIR/_migrations/
           rsync -az -e "$SSH_CMD" \
             scripts/run-migrations.sh scripts/migrate-schema.sql scripts/migrations \
             "$REMOTE/_migrations/"
 
-          # src/ + scripts/ + manifesto de deps: os cron jobs (cli:purge,
-          # cli:refresh-universe) rodam `bun run scripts/X.ts` direto no
-          # checkout do servidor, fora do bundle do .output — precisam do
-          # próprio TS fonte, não só do build. Até 30/07/2026 esse checkout
-          # era um clone manual nunca resincronizado (apontava pro remote
-          # errado, sem credencial pra pull de repo privado): as crons rodavam
-          # código de semanas atrás sem ninguém perceber. Ver docs/continuar.md
-          # item 5.
+          # src/ + scripts/ + deps manifest: the cron jobs (cli:purge,
+          # cli:refresh-universe) run `bun run scripts/X.ts` directly on the
+          # server's checkout, outside the .output bundle -- they need the
+          # actual TS source, not just the build. Until 07/30/2026 that
+          # checkout was a manual clone that was never resynced (pointed to
+          # the wrong remote, no credential to pull a private repo): the
+          # crons were running weeks-old code without anyone noticing. See
+          # docs/continuar.md item 5.
           #
-          # Vai para .cronsrc.new/, NÃO direto em src/scripts/etc — esses
-          # caminhos já existem no servidor com dono admin:www-data (o usuário
-          # de deploy do rsync não tem permissão de escrita neles; testado
-          # manualmente em 30/07/2026, rsync direto falha com "Permission
-          # denied" em toda árvore). O staging fica com o dono do usuário do
-          # rsync (sem conflito, é um diretório novo) e o swap pro lugar certo
-          # com sudo acontece no step seguinte — mesmo padrão do
-          # .output.new → .output logo abaixo.
+          # Goes to .cronsrc.new/, NOT directly into src/scripts/etc -- those
+          # paths already exist on the server owned by admin:www-data (the
+          # rsync deploy user has no write permission on them; tested
+          # manually on 07/30/2026, a direct rsync fails with "Permission
+          # denied" across the whole tree). The staging area is owned by the
+          # rsync user (no conflict, it's a new directory) and the swap into
+          # the right place with sudo happens in the next step -- same
+          # pattern as .output.new -> .output right below.
           #
-          # `|| echo` em cada linha: o shell do step tem -e por padrão — sem
-          # isto, uma falha aqui abortaria o STEP inteiro (que já rodou o
-          # rsync crítico do .output/ antes) e bloquearia migrations/atomic
-          # swap por um problema que não afeta o app rodando. Mesmo raciocínio
-          # do continue-on-error no step seguinte.
+          # `|| echo` on every line: the step's shell has -e by default --
+          # without this, a failure here would abort the ENTIRE step (which
+          # already ran the critical .output/ rsync before it) and block
+          # migrations/atomic swap over a problem that doesn't affect the
+          # running app. Same reasoning as the continue-on-error in the next step.
           rsync -az --mkpath --delete -e "$SSH_CMD" src/ "$REMOTE/.cronsrc.new/src/" \
             || echo "AVISO: falha ao sincronizar src/ (cron scripts podem ficar desatualizados)"
           rsync -az --mkpath --delete -e "$SSH_CMD" scripts/ "$REMOTE/.cronsrc.new/scripts/" \
@@ -193,21 +197,22 @@ jobs:
           rsync -az --mkpath -e "$SSH_CMD" package.json bun.lock tsconfig.json bunfig.toml "$REMOTE/.cronsrc.new/" \
             || echo "AVISO: falha ao sincronizar manifesto de deps (cron scripts podem ficar desatualizados)"
 
-      # Independente do resto do deploy: só afeta o checkout usado pelos cron
-      # jobs, não o app rodando (que é o bundle self-contained em .output/).
-      # Medido na própria VPS (30/07/2026): 41s do zero, sem estresse de
-      # memória (1 núcleo, 1,9 GB); ~1s quando node_modules já bate com
-      # bun.lock, que é o caso comum (só mudou dependência 1 de ~50 deploys
-      # até aqui). Guarda com `[ -d "$STAGE" ]` porque o step anterior pode
-      # ter falhado o rsync (viram os `|| echo` acima) e deixado sem staging —
-      # sem a guarda, o `mv` de um diretório inexistente abortaria este step
-      # à toa mesmo já tendo continue-on-error.
+      # Independent from the rest of the deploy: only affects the checkout
+      # used by the cron jobs, not the running app (which is the
+      # self-contained bundle in .output/). Measured on the VPS itself
+      # (07/30/2026): 41s from scratch, no memory stress (1 core, 1.9 GB);
+      # ~1s when node_modules already matches bun.lock, which is the common
+      # case (a dependency only changed 1 out of ~50 deploys so far).
+      # Guarded with `[ -d "$STAGE" ]` because the previous step may have
+      # failed the rsync (became the `|| echo` above) and left no staging --
+      # without the guard, `mv`-ing a nonexistent directory would abort this
+      # step for nothing even with continue-on-error already set.
       #
-      # continue-on-error: uma falha aqui (rede, npm fora do ar) não pode travar
-      # o deploy do app de verdade — migrations e o atomic swap seguem mesmo
-      # que este step falhe. O pior caso é a próxima cron rodar código de um
-      # deploy atrás até o deploy seguinte corrigir; o app em produção nunca
-      # fica pendurado esperando isto.
+      # continue-on-error: a failure here (network, npm down) must not block
+      # the real app deploy -- migrations and the atomic swap proceed even
+      # if this step fails. The worst case is the next cron run using code
+      # from one deploy behind until the following deploy fixes it; the app
+      # in production never hangs waiting on this.
       - name: Update checkout and dependencies used by the crons
         continue-on-error: true
         uses: appleboy/ssh-action@v1
@@ -230,21 +235,22 @@ jobs:
               done
               sudo rm -rf "$STAGE"
               cd "$APPDIR"
-              # --production: os dois cron scripts (cli:purge, cli:refresh-universe)
-              # só importam dependência de produção (confirmado nos imports de
-              # scripts/purge-aggs.ts e scripts/refresh-universe.ts). Sem isto,
-              # todo deploy reinstalava devDependencies inteiras aqui, incluindo
-              # puppeteer, cujo postinstall baixa um Chromium de ~700MB que nada
-              # neste servidor usa (04/08/2026, ~2G reclamados na limpeza).
+              # --production: the two cron scripts (cli:purge,
+              # cli:refresh-universe) only import production dependencies
+              # (confirmed in the imports of scripts/purge-aggs.ts and
+              # scripts/refresh-universe.ts). Without this, every deploy
+              # reinstalled the entire set of devDependencies here, including
+              # puppeteer, whose postinstall downloads a ~700MB Chromium that
+              # nothing on this server uses (08/04/2026, ~2G reclaimed in the cleanup).
               sudo -u admin bun install --frozen-lockfile --production
             else
               echo "AVISO: staging .cronsrc.new ausente (rsync anterior deve ter falhado) — pulando"
             fi
 
-      # Migrations ANTES do swap: o baseline é idempotente e backward-compatible
-      # (re-sincroniza procedures sem quebrar o código antigo ainda em execução).
-      # Se falhar, o job para aqui — nenhum código novo é ativado e o app atual
-      # segue rodando no schema anterior.
+      # Migrations BEFORE the swap: the baseline is idempotent and
+      # backward-compatible (re-syncs procedures without breaking the old
+      # code still running). If it fails, the job stops here -- no new code
+      # is activated and the current app keeps running on the previous schema.
       - name: Apply database migrations
         uses: appleboy/ssh-action@v1
         with:
@@ -273,22 +279,22 @@ jobs:
             APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
             cd "$APPDIR"
 
-            # Release versionada + symlink "current" (não mais troca de conteúdo
-            # no MESMO caminho ".output"): achado em 04/08/2026, terceiro
-            # rollback do dia. Reload em cluster mode troca os workers um de
-            # cada vez (~10-20s no total); com o esquema antigo, o worker
-            # antigo — ainda de pé, ainda recebendo tráfego real — ficava lendo
-            # qualquer asset sob demanda (hash antigo, não cacheado em memória)
-            # do caminho ".output", que essa mesma troca já tinha apontado pro
-            # build NOVO por baixo dele: ENOENT/500 real, pego tanto pelo
-            # healthcheck abaixo quanto por usuário de verdade nesse intervalo.
-            # Ver docs/medicao-performance.md.
+            # Versioned release + "current" symlink (no longer swapping
+            # content at the SAME ".output" path): found on 08/04/2026, the
+            # third rollback of the day. Cluster mode's reload swaps workers
+            # one at a time (~10-20s total); with the old scheme, the old
+            # worker -- still up, still receiving real traffic -- kept
+            # reading any asset on demand (old hash, not cached in memory)
+            # from the ".output" path, which that very swap had already
+            # pointed at the NEW build underneath it: a real ENOENT/500,
+            # caught both by the healthcheck below and by a real user during
+            # that window. See docs/medicao-performance.md.
             #
-            # Cada release vai para releases/<timestamp>-<sha>/, nunca
-            # reescrita. Node resolve o caminho REAL (segue symlink) do módulo
-            # de entrada no import() inicial: uma vez de pé, cada worker fica
-            # preso pra sempre na sua própria releases/.../ — nenhum worker
-            # antigo volta a ler de um caminho cujo conteúdo mudou debaixo dele.
+            # Each release goes to releases/<timestamp>-<sha>/, never
+            # rewritten. Node resolves the entry module's REAL path (follows
+            # the symlink) on the initial import(): once up, each worker
+            # stays pinned forever to its own releases/.../ -- no old worker
+            # ever reads again from a path whose content changed underneath it.
             RELEASE_SHA="${{ github.sha }}"
             RELEASE="$APPDIR/releases/$(date +%Y%m%d%H%M%S)-${RELEASE_SHA:0:7}"
             PREV_RELEASE=$(readlink -f "$APPDIR/current" 2>/dev/null || true)
@@ -310,27 +316,28 @@ jobs:
             sudo mv "$APPDIR/.output.new" "$RELEASE"
             sudo ln -sfn "$RELEASE" "$APPDIR/current"
 
-            # startOrReload é idempotente: sobe se não existe, recarrega se já
-            # existe. --update-env força reler o ecosystem.config.cjs (e o .env
-            # que ele carrega); sem a flag, o reload preservaria o ambiente da
-            # execução anterior. listen_timeout: 8000 (ecosystem.config.cjs) dá
-            # ao PM2 margem real pro boot completo de cada worker sob reload.
-            # Obs.: com exec_mode "fork" o reload equivale a restart — o blip é
-            # curto, mas não é zero-downtime.
+            # startOrReload is idempotent: comes up if it doesn't exist,
+            # reloads if it does. --update-env forces it to re-read
+            # ecosystem.config.cjs (and the .env it loads); without the
+            # flag, the reload would preserve the previous run's
+            # environment. listen_timeout: 8000 (ecosystem.config.cjs) gives
+            # PM2 real headroom for each worker's full boot under reload.
+            # Note: with exec_mode "fork" the reload is equivalent to a
+            # restart -- the blip is short, but it isn't zero-downtime.
             #
-            # Retry no reload (não só no healthcheck): bug conhecido do PM2 em
-            # cluster mode (Unitech/pm2#3946, "TCP port isn't released on
-            # reload") — de vez em quando o startOrReload marca os dois workers
-            # como "online" sem o processo novo ter de fato religado na porta
-            # (nenhum erro no log da app, só nada em LISTEN). Medido isolado,
-            # fora da VPS (04/08/2026, 20 ciclos de reload em sequência): cerca
-            # de 5-10% das tentativas individuais caem nisso, mas chamar
-            # startOrReload de novo (mesmo release, sem precisar de delete
-            # antes) sempre corrigiu — nunca precisou de mais de uma segunda
-            # tentativa no teste. Cada tentativa aqui é independente da
-            # anterior, então a chance de as 3 falharem ao mesmo tempo já é
-            # residual; se acontecer mesmo assim, é rollback de verdade, não
-            # mascarado.
+            # Retry on the reload (not just the healthcheck): a known PM2
+            # bug in cluster mode (Unitech/pm2#3946, "TCP port isn't
+            # released on reload") -- every so often startOrReload marks
+            # both workers as "online" without the new process having
+            # actually rebound the port (no error in the app log, just
+            # nothing in LISTEN). Measured in isolation, off the VPS
+            # (08/04/2026, 20 reload cycles in a row): about 5-10% of
+            # individual attempts hit this, but calling startOrReload again
+            # (same release, no need to delete first) always fixed it --
+            # never needed more than a second attempt in testing. Each
+            # attempt here is independent of the last, so the odds of all 3
+            # failing at once are already residual; if it happens anyway,
+            # it's a genuine rollback, not a masked one.
             ok=""
             for attempt in 1 2 3; do
               sudo -u admin pm2 startOrReload ecosystem.config.cjs --update-env || true
@@ -352,9 +359,9 @@ jobs:
 
             sudo -u admin pm2 save
 
-            # Mantém as últimas 5 releases: todo worker antigo já foi
-            # substituído e confirmado morto pelo pm2 startOrReload acima
-            # (comando bloqueia até o reload de todas as instâncias terminar),
-            # nada mais lê deles. Só espaço em disco, não correção — 18M cada,
-            # folga enorme (VPS tem ~9,5G livre).
+            # Keeps the last 5 releases: every old worker has already been
+            # replaced and confirmed dead by pm2 startOrReload above (the
+            # command blocks until every instance's reload finishes),
+            # nothing reads from them anymore. Just disk space, not
+            # correctness -- 18M each, huge slack (the VPS has ~9.5G free).
             cd "$APPDIR/releases" && ls -1t | tail -n +6 | xargs -r sudo rm -rf
