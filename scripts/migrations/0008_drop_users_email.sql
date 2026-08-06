@@ -1,10 +1,10 @@
--- Remove users.email: último passo da migração para username/matrícula
--- (PR 1 adicionou as colunas novas e migrou os dados reais em produção via
--- scripts/migrate-users-to-username.ts; PR 2 trocou todo o código de auth
--- para não depender mais de e-mail). Rodada só depois de confirmar
--- estabilidade em produção com o modelo novo.
+-- Removes users.email: the last step of the migration to username/matricula
+-- (PR 1 added the new columns and migrated the real data in production via
+-- scripts/migrate-users-to-username.ts; PR 2 changed all the auth code to
+-- no longer depend on email). Run only after confirming stability in
+-- production with the new model.
 --
--- DROP COLUMN IF EXISTS: no-op em instalação nova, já que o baseline
--- (migrate-schema.sql) não cria mais essa coluna desde o PR 1.
+-- DROP COLUMN IF EXISTS: a no-op on a fresh install, since the baseline
+-- (migrate-schema.sql) no longer creates this column since PR 1.
 ALTER TABLE users
   DROP COLUMN IF EXISTS email;

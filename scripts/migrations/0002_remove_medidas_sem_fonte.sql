@@ -1,37 +1,38 @@
--- Remove as colunas de quantidade/custo/devolução/margem, que nunca tiveram
--- fonte: o export do GPA traz uma única medida (VAL_VDA), verificado nas 68
--- planilhas de data/ (maio a julho/2026). Todas essas colunas estavam
--- estruturalmente em zero desde sempre.
+-- Removes the quantity/cost/return/margin columns, which never had a data
+-- source: the GPA export brings a single measure (VAL_VDA), verified across
+-- the 68 spreadsheets in data/ (May-July/2026). All these columns were
+-- structurally zero from the start.
 --
--- ALGORITHM=INSTANT é explícito de propósito. Nenhuma dessas colunas participa
--- de índice, então o MariaDB 11.4 consegue dropar só os metadados, sem
--- reconstruir a tabela: o que importa muito em sales_prod_daily_agg (3,3M
--- linhas, 554 MB) num servidor de 1 núcleo, onde um rebuild estouraria o
--- command_timeout de 3 min do step de migrations.
+-- ALGORITHM=INSTANT is explicit on purpose. None of these columns is part of
+-- an index, so MariaDB 11.4 can drop just the metadata, without rebuilding
+-- the table: which matters a lot on sales_prod_daily_agg (3.3M rows, 554 MB)
+-- on a 1-core server, where a rebuild would blow past the migrations step's
+-- 3min command_timeout.
 --
--- Sendo explícito, se por algum motivo o INSTANT não for possível o ALTER FALHA
--- em vez de silenciosamente cair para um rebuild demorado no meio do deploy.
--- Nesse caso, rodar manualmente em janela de manutenção sem a cláusula.
+-- Being explicit, if for some reason INSTANT isn't possible the ALTER FAILS
+-- instead of silently falling back to a slow rebuild in the middle of the
+-- deploy. In that case, run it manually in a maintenance window without the
+-- clause.
 --
--- EDITADO em 01/08/2026 (auditoria de QA, item 10): instalação nova (banco
--- vazio) SEMPRE quebrava aqui: migrate-schema.sql já não cria essas colunas
--- há tempos, então DROP COLUMN sem IF EXISTS falhava com "check that it
--- exists" em qualquer ambiente que nunca tivesse rodado esta migration antes
--- de a baseline mudar. Ninguém notou porque todo ambiente existente (prod,
--- dev de cada um) já tinha essas colunas de quando a migration foi escrita.
--- Descoberto rodando o schema do zero pela primeira vez (CI, este mesmo item
--- da auditoria).
+-- EDITED on 01/08/2026 (QA audit, item 10): a fresh install (empty database)
+-- ALWAYS broke here: migrate-schema.sql had already stopped creating these
+-- columns a while ago, so DROP COLUMN without IF EXISTS failed with "check
+-- that it exists" in any environment that had never run this migration
+-- before the baseline changed. Nobody noticed because every existing
+-- environment (prod, everyone's dev) already had these columns from when the
+-- migration was written. Discovered by running the schema from scratch for
+-- the first time (CI, this same audit item).
 --
--- Normalmente uma migration já aplicada em produção não se edita (ver
--- scripts/migrations/README.md, "forward-only"). Aqui é seguro: o runner
--- identifica migrations concluídas pelo NOME DO ARQUIVO em
--- schema_migrations, nunca reexecuta o conteúdo. Produção (e qualquer banco
--- que já rodou esta migration) não é afetada de forma alguma por esta edição.
--- O único efeito é consertar quem ainda não rodou (instalação nova).
+-- Normally a migration already applied in production isn't edited (see
+-- scripts/migrations/README.md, "forward-only"). Here it's safe: the runner
+-- identifies completed migrations by the FILE NAME in schema_migrations,
+-- never re-executes the content. Production (and any database that already
+-- ran this migration) is unaffected by this edit in any way. The only effect
+-- is fixing whoever hasn't run it yet (a fresh install).
 --
--- Correção do comentário anterior: MariaDB (diferente do MySQL vanilla até
--- 8.0.29) SUPORTA `DROP COLUMN IF EXISTS` desde a série 10.x, confirmado
--- direto no MariaDB 11.8 local. Não precisa de SQL dinâmico.
+-- Correction to the previous comment: MariaDB (unlike vanilla MySQL up to
+-- 8.0.29) SUPPORTS `DROP COLUMN IF EXISTS` since the 10.x series, confirmed
+-- directly on local MariaDB 11.8. No dynamic SQL needed.
 
 ALTER TABLE staging_sales
   DROP COLUMN IF EXISTS qty_vda,

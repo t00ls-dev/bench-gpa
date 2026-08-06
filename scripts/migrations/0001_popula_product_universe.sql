@@ -1,13 +1,14 @@
--- Popula a product_universe pela primeira vez.
+-- Populates product_universe for the first time.
 --
--- A tabela nasce vazia com o baseline (CREATE TABLE IF NOT EXISTS) e passa a
--- ser mantida por refresh_product_universe(), chamada ao fim de finalize_import
--- e depois do purge. Sem esta carga inicial, o universo só existiria após o
--- próximo import. Até lá o KPI "PLUs sem venda" ficaria zerado e a coluna
--- "dias sem vender" viria NULL.
+-- The table is born empty with the baseline (CREATE TABLE IF NOT EXISTS) and
+-- is then kept up to date by refresh_product_universe(), called at the end of
+-- finalize_import and after the purge. Without this initial load, the
+-- universe would only exist after the next import. Until then the "PLUs
+-- without a sale" KPI would show zero and the "days without a sale" column
+-- would come back NULL.
 --
--- O baseline roda ANTES das migrations versionadas, então a procedure já
--- existe aqui. Idempotente por construção: a procedure faz DELETE + INSERT
--- (não TRUNCATE: ver comentário em migrate-schema.sql sobre visibilidade
--- MVCC para leitores concorrentes).
+-- The baseline runs BEFORE the versioned migrations, so the procedure
+-- already exists here. Idempotent by construction: the procedure does
+-- DELETE + INSERT (not TRUNCATE: see the comment in migrate-schema.sql about
+-- MVCC visibility for concurrent readers).
 CALL refresh_product_universe();

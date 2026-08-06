@@ -1,21 +1,24 @@
--- Substitui e-mail por username/matrícula como identificador de login, e
--- introduz o estado de senha ausente/expirada.
+-- Replaces email with username/matricula as the login identifier, and
+-- introduces the missing/expired password state.
 --
--- username/matricula nascem NULL UNIQUE: usuários legados migrados de e-mail
--- podem ter só um dos dois definido (a parte local do e-mail já era um deles,
--- dependendo do formato -- ver scripts/migrate-users-to-username.ts), o outro
--- fica pendente até o admin completar via updateUserIdentifiers. UNIQUE sobre
--- coluna NULL é seguro em MariaDB: múltiplos NULL não colidem entre si.
+-- username/matricula are born NULL UNIQUE: legacy users migrated from email
+-- may have only one of the two set (the email's local part was already one
+-- of them, depending on the format, see scripts/migrate-users-to-username.ts),
+-- the other stays pending until the admin fills it in via
+-- updateUserIdentifiers. UNIQUE over a NULL column is safe in MariaDB:
+-- multiple NULLs don't collide with each other.
 --
--- password passa a aceitar NULL: conta criada pelo admin nasce sem senha
--- (fluxo de primeiro acesso definida em setInitialPassword), e reset de senha
--- por admin volta ao mesmo estado (zera password e password_changed_at) em
--- vez de definir uma senha temporária.
+-- password now accepts NULL: an account created by the admin is born
+-- without a password (the first-access flow defined in setInitialPassword),
+-- and a password reset by the admin goes back to that same state (clears
+-- password and password_changed_at) instead of setting a temporary
+-- password.
 --
--- password_changed_at: base da expiração de 30 dias (ver passwordChangeRequired
--- em session.ts). O backfill abaixo dá a todo usuário já com senha real uma
--- janela cheia de 30 dias a partir deste deploy, em vez de forçar troca em
--- massa no primeiro login pós-deploy.
+-- password_changed_at: the basis for the 30-day expiration (see
+-- passwordChangeRequired in session.ts). The backfill below gives every
+-- user who already has a real password a full 30-day window from this
+-- deploy, instead of forcing a mass password change on the first login
+-- after deploy.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS username VARCHAR(60) NULL AFTER id,
   ADD COLUMN IF NOT EXISTS matricula VARCHAR(30) NULL AFTER username,

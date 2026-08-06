@@ -1,13 +1,13 @@
--- Renomeia audit_log.actor_email -> actor_username (e ajusta o tamanho para
--- VARCHAR(60), mesmo domínio de users.username). Parte da remoção completa de
--- e-mail do sistema, em favor de username/matrícula.
+-- Renames audit_log.actor_email -> actor_username (and adjusts the size to
+-- VARCHAR(60), same domain as users.username). Part of removing email from
+-- the system entirely, in favor of username/matricula.
 --
--- MariaDB não tem `RENAME COLUMN ... IF EXISTS`. Numa instalação nova, o
--- baseline (migrate-schema.sql) já cria a tabela com actor_username desde o
--- início, então a coluna antiga nunca existe -- rodar o RENAME direto quebraria
--- ali (mesma classe de bug documentada em 0003_token_version.sql). A checagem
--- via information_schema + SQL dinâmico torna esta migration um no-op seguro
--- nesse caso.
+-- MariaDB doesn't have `RENAME COLUMN ... IF EXISTS`. On a fresh install,
+-- the baseline (migrate-schema.sql) already creates the table with
+-- actor_username from the start, so the old column never exists, running
+-- the RENAME directly would break there (same bug class documented in
+-- 0003_token_version.sql). The check via information_schema + dynamic SQL
+-- makes this migration a safe no-op in that case.
 SET @col_exists = (
   SELECT COUNT(*)
   FROM information_schema.COLUMNS
