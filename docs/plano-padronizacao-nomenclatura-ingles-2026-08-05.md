@@ -226,13 +226,26 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     `grep -q "nenhuma migration nova"` no job `schema-check` (que depende
     do texto literal em português de `scripts/run-migrations.sh`)
     mantidas intactas, mesmo critério das etapas anteriores.
+  - **Etapa 15** (concluída, PR #225): `.env.example` (7 linhas de
+    comentário) e `.gitignore` (18 linhas, incluindo o bloco explicando
+    a história do diretório `data/`) -- terceira e última lacuna
+    encontrada numa varredura de conferência em 2026-08-06. Também
+    traduzidos os dois placeholders de valor em português dentro de
+    `.env.example` (`<senha>` -> `<password>`, `<senha_admin_teste>` ->
+    `<test_admin_password>`), consistente com os demais placeholders do
+    mesmo arquivo que já estavam em inglês. `bunfig.toml`,
+    `tsconfig.json`, `eslint.config.js` e `components.json` conferidos
+    na mesma varredura e já não têm comentário em português.
   - **Estado geral da tradução de comentários (Fase 3)**: `src/` (incluindo
     os 4 entry points na raiz), `scripts/` (todos, incluindo
     `migrate-schema.sql`), todos os arquivos de teste, o pipeline de
-    CI/CD (`.github/`) e os arquivos de configuração de build/teste na
-    raiz estão completos (Etapas 1-10, 13 e 14, PRs #207, #209,
-    #211-#218, #222, #223). **A tradução de comentários técnicos do
-    projeto inteiro está concluída.**
+    CI/CD (`.github/`) e todos os arquivos de configuração de
+    build/teste/ambiente na raiz estão completos (Etapas 1-10, 13, 14 e
+    15, PRs #207, #209, #211-#218, #222, #223, #225). **A tradução de
+    comentários técnicos do projeto inteiro está concluída -- não resta
+    nenhum comentário em português em nenhum arquivo versionado, fora
+    `.md` e as 5 migrations já aplicadas, exceção documentada por
+    design do próprio mecanismo de migration.**
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
