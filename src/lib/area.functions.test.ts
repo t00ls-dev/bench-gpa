@@ -112,7 +112,7 @@ beforeEach(() => {
 });
 
 describe("getAreaAnalysis", () => {
-  it("mapeia os quatro result sets da proc", async () => {
+  it("maps the proc's four result sets", async () => {
     const r = await call({});
     expect(r.total).toBe(1000);
     expect(r.products).toHaveLength(1);
@@ -122,20 +122,20 @@ describe("getAreaAnalysis", () => {
   // The screen measures 2.1s in prod on the default window and 23.0s at 28
   // days, and used to hit the database on every page, sort, or filter change.
   describe("cache", () => {
-    it("serve a segunda chamada igual sem tocar no banco", async () => {
+    it("serves the second identical call without touching the database", async () => {
       const a = await call({});
       const b = await call({});
       expect(db.query).toHaveBeenCalledTimes(1);
       expect(b).toEqual(a);
     });
 
-    it("não colide entre períodos diferentes", async () => {
+    it("does not collide across different periods", async () => {
       await call({});
       await call({ dateFrom: "2026-07-01" });
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    it("não colide entre páginas nem ordenações diferentes", async () => {
+    it("does not collide across different pages or sort orders", async () => {
       await call({});
       await call({ page: 2 });
       await call({ sortDir: "asc" });
@@ -143,7 +143,7 @@ describe("getAreaAnalysis", () => {
       expect(db.query).toHaveBeenCalledTimes(4);
     });
 
-    it("não colide entre filtros de categoria diferentes", async () => {
+    it("does not collide across different category filters", async () => {
       await call({ deptos: ["BAZAR"] });
       await call({ deptos: ["MERCEARIA"] });
       expect(db.query).toHaveBeenCalledTimes(2);
@@ -151,13 +151,13 @@ describe("getAreaAnalysis", () => {
 
     // The PDF export requests the entire list: megabytes per entry, in a
     // click that rarely repeats. Caching it would fill the process's memory.
-    it("não cacheia o caminho do export", async () => {
+    it("does not cache the export path", async () => {
       await call({ pageSize: EXPORT_PAGE_SIZE });
       await call({ pageSize: EXPORT_PAGE_SIZE });
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
-    it("ainda cacheia exatamente no limiar (só acima dele é que escapa)", async () => {
+    it("still caches exactly at the threshold (only above it does it bypass)", async () => {
       await call({ pageSize: CACHE_BYPASS_PAGE_SIZE });
       await call({ pageSize: CACHE_BYPASS_PAGE_SIZE });
       expect(db.query).toHaveBeenCalledTimes(1);
@@ -173,7 +173,7 @@ describe("getAreaAnalysis", () => {
       expect(EXPORT_PAGE_SIZE).toBeGreaterThan(CACHE_BYPASS_PAGE_SIZE);
     });
 
-    it("o export é aceito pelo schema", () => {
+    it("the export is accepted by the schema", () => {
       const r = AreaAnalysisSchema.safeParse({
         dateFrom: "2026-07-14",
         dateTo: "2026-07-20",
@@ -191,7 +191,7 @@ describe("getAreaAnalysis", () => {
       expect(r.success).toBe(false);
     });
 
-    it("o schema recusa pageSize e page não positivos", () => {
+    it("the schema rejects non-positive pageSize and page", () => {
       const base = { dateFrom: "2026-07-14", dateTo: "2026-07-20" };
       expect(AreaAnalysisSchema.safeParse({ ...base, pageSize: 0 }).success).toBe(false);
       expect(AreaAnalysisSchema.safeParse({ ...base, page: -5 }).success).toBe(false);

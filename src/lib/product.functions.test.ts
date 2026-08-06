@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe("searchProducts", () => {
-  it("busca com LIKE nos dois lados (código e nome), envolvido em %", async () => {
+  it("searches with LIKE on both sides (code and name), wrapped in %", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [{ prod_code: "1008160", prod_name: "ARROZ TIO JOAO" }],
     ] as never);
@@ -67,7 +67,7 @@ describe("searchProducts", () => {
     ]);
   });
 
-  it("devolve array vazio quando o banco não retorna rows", async () => {
+  it("returns an empty array when the database returns no rows", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([undefined] as never);
     const result = await (searchProducts as (d: { q: string }) => Promise<unknown>)({
       q: "xyz",
@@ -77,7 +77,7 @@ describe("searchProducts", () => {
 });
 
 describe("getProductByCode", () => {
-  it("busca exata por prod_code, aparado (trim)", async () => {
+  it("exact match by prod_code, trimmed", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [{ prod_code: "1008160", prod_name: "ARROZ TIO JOAO" }],
     ] as never);
@@ -90,7 +90,7 @@ describe("getProductByCode", () => {
     expect(db.query).toHaveBeenCalledWith(expect.stringContaining("prod_code = ?"), ["1008160"]);
   });
 
-  it("devolve null quando o produto não existe", async () => {
+  it("returns null when the product doesn't exist", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
     const result = await (getProductByCode as (d: { prodCode: string }) => Promise<unknown>)({
       prodCode: "9999999",
@@ -120,7 +120,7 @@ describe("getProductAnalysis", () => {
     ],
   ];
 
-  it("chama product_analysis com storeCodes serializado e mapeia os 6 result sets", async () => {
+  it("calls product_analysis with serialized storeCodes and maps the 6 result sets", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(PROC_RESULT as never);
 
     const result = await (
@@ -154,7 +154,7 @@ describe("getProductAnalysis", () => {
     });
   });
 
-  it("sem storeCodes, envia JSON de array vazio (todas as lojas) e referenceDate null", async () => {
+  it("with no storeCodes, sends an empty-array JSON (all stores) and referenceDate null", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(PROC_RESULT as never);
 
     await (
@@ -172,7 +172,7 @@ describe("getProductAnalysis", () => {
     ]);
   });
 
-  it("product vem null quando o PLU não existe em products", async () => {
+  it("product comes back null when the PLU doesn't exist in products", async () => {
     const emptyProductResult = [[[], [{ ref_date: null, ref_value: 0 }], [], [], [], []]];
     vi.mocked(db.query).mockResolvedValueOnce(emptyProductResult as never);
 

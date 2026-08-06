@@ -4,22 +4,22 @@ import { getCspNonce } from "./csp";
 import { runWithCspNonce } from "./csp-server";
 
 describe("csp", () => {
-  it("não tem nonce fora de qualquer runWithCspNonce", () => {
+  it("has no nonce outside of any runWithCspNonce", () => {
     expect(getCspNonce()).toBeUndefined();
   });
 
-  it("devolve o nonce durante a execução do callback", () => {
+  it("returns the nonce during the callback's execution", () => {
     runWithCspNonce("abc123", () => {
       expect(getCspNonce()).toBe("abc123");
     });
   });
 
-  it("volta a undefined depois que o callback termina", () => {
+  it("goes back to undefined after the callback finishes", () => {
     runWithCspNonce("abc123", () => {});
     expect(getCspNonce()).toBeUndefined();
   });
 
-  it("propaga através de await dentro do callback", async () => {
+  it("propagates through an await inside the callback", async () => {
     await runWithCspNonce("async-nonce", async () => {
       await Promise.resolve();
       expect(getCspNonce()).toBe("async-nonce");
@@ -30,7 +30,7 @@ describe("csp", () => {
   // let a concurrent request overwrite another's nonce before it finished
   // rendering. Simulates two interleaved "requests" (the second starts in
   // the middle of the first) and confirms each one only sees its own nonce.
-  it("duas execuções concorrentes não vazam o nonce uma pra outra", async () => {
+  it("two concurrent executions don't leak the nonce into each other", async () => {
     const seenByFirst: (string | undefined)[] = [];
     const seenBySecond: (string | undefined)[] = [];
 
@@ -66,7 +66,7 @@ describe("csp", () => {
   // reintroduces a Node module import here. The real implementation lives
   // in csp-server.ts, imported only by src/server.ts (never by code shared
   // with the client).
-  it("csp.ts não importa nenhum módulo do Node (mantém o arquivo seguro pro bundle do client)", () => {
+  it("csp.ts imports no Node module (keeps the file safe for the client bundle)", () => {
     const source = readFileSync(new URL("./csp.ts", import.meta.url), "utf-8");
     const importLines = source.split("\n").filter((line) => line.trimStart().startsWith("import "));
     for (const line of importLines) {

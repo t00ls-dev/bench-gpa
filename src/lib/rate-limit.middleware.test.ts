@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 
 describe("requireRateLimit", () => {
-  it("libera a requisição dentro do teto e propaga o retorno de next()", async () => {
+  it("allows the request within the ceiling and propagates next()'s return value", async () => {
     getRequestMock.mockReturnValue(requestFromIp("203.0.113.1"));
     const requireRateLimit = await freshRequireRateLimit();
     const mw = requireRateLimit("api") as unknown as Middleware;
@@ -47,7 +47,7 @@ describe("requireRateLimit", () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
-  it("bloqueia a 301ª requisição do mesmo IP no tier api (teto real: 300/min)", async () => {
+  it("blocks the 301st request from the same IP in the api tier (real ceiling: 300/min)", async () => {
     getRequestMock.mockReturnValue(requestFromIp("203.0.113.2"));
     const requireRateLimit = await freshRequireRateLimit();
     const mw = requireRateLimit("api") as unknown as Middleware;
@@ -58,7 +58,7 @@ describe("requireRateLimit", () => {
     expect(next).toHaveBeenCalledTimes(300); // the 301st never gets to call next()
   });
 
-  it("bloqueia a 201ª requisição do mesmo IP no tier upload (teto real: 200/min)", async () => {
+  it("blocks the 201st request from the same IP in the upload tier (real ceiling: 200/min)", async () => {
     getRequestMock.mockReturnValue(requestFromIp("203.0.113.3"));
     const requireRateLimit = await freshRequireRateLimit();
     const mw = requireRateLimit("upload") as unknown as Middleware;
@@ -69,7 +69,7 @@ describe("requireRateLimit", () => {
     expect(next).toHaveBeenCalledTimes(200);
   });
 
-  it("usa o tier 'api' por padrão quando nenhum é informado", async () => {
+  it("uses the 'api' tier by default when none is given", async () => {
     getRequestMock.mockReturnValue(requestFromIp("203.0.113.4"));
     const requireRateLimit = await freshRequireRateLimit();
     const mw = requireRateLimit() as unknown as Middleware; // no argument
@@ -80,7 +80,7 @@ describe("requireRateLimit", () => {
     await expect(mw({ next })).resolves.toBe("ok");
   });
 
-  it("orçamento é por IP: um IP bloqueado não afeta outro IP no mesmo tier", async () => {
+  it("the budget is per IP: a blocked IP does not affect another IP in the same tier", async () => {
     const requireRateLimit = await freshRequireRateLimit();
     const mw = requireRateLimit("upload") as unknown as Middleware;
     const next = vi.fn(async () => "ok");
@@ -93,7 +93,7 @@ describe("requireRateLimit", () => {
     await expect(mw({ next })).resolves.toBe("ok");
   });
 
-  it("tiers diferentes têm orçamentos independentes para o mesmo IP", async () => {
+  it("different tiers have independent budgets for the same IP", async () => {
     const requireRateLimit = await freshRequireRateLimit();
     const next = vi.fn(async () => "ok");
     const ip = "203.0.113.7";
@@ -108,7 +108,7 @@ describe("requireRateLimit", () => {
     await expect(apiMw({ next })).resolves.toBe("ok");
   });
 
-  it("resolve o IP via getClientIp (CF-Connecting-IP) e ainda funciona sem nenhum header", async () => {
+  it("resolves the IP via getClientIp (CF-Connecting-IP) and still works with no headers at all", async () => {
     getRequestMock.mockReturnValue(new Request("https://gpa.t00ls.dev/"));
     const requireRateLimit = await freshRequireRateLimit();
     const mw = requireRateLimit("api") as unknown as Middleware;

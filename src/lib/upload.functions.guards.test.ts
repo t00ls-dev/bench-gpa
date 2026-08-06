@@ -61,8 +61,8 @@ beforeEach(() => {
   vi.mocked(db.query).mockReset();
 });
 
-describe("beginImport: guard de admin real (assertAdmin não mockado)", () => {
-  it("rejeita usuário não-admin sem tocar em staging_sales", async () => {
+describe("beginImport: real admin guard (assertAdmin not mocked)", () => {
+  it("rejects a non-admin user without touching staging_sales", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[[{ has_role: 0 }]]] as never); // CALL has_role
 
     await expect(
