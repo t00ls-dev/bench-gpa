@@ -212,8 +212,8 @@ describe("xlsx-parser", () => {
   });
 
   it("emits null categories when there is no hierarchy (trigger for the staging '0' bug)", () => {
-    // Produto sem nenhuma linha de Total de hierarquia acima dele: depto/secao/
-    // grupo/subgrupo devem sair NULL, nunca "" nem 0.
+    // Product with no Total row of hierarchy above it: depto/secao/
+    // grupo/subgrupo must come out NULL, never "" or 0.
     const buf = makeWorkbook([
       [null, null, null, null, null, "001 - CENTRO"],
       ["DTA_VENDA é 01/01/2024"],
