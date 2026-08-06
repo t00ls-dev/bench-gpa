@@ -37,7 +37,7 @@ describe("assertAdmin", () => {
 });
 
 describe("invalidateAdminCache", () => {
-  it("promoção passa a valer na hora, sem esperar o TTL de 5 min", async () => {
+  it("a promotion takes effect immediately, without waiting for the 5min TTL", async () => {
     // Not yet an admin: the `false` gets cached.
     mockQuery.mockResolvedValue([[[{ has_role: 0 }]]]);
     await expect(assertAdmin({ userId: "u-promovido" })).rejects.toThrow("Apenas administradores");
@@ -53,7 +53,7 @@ describe("invalidateAdminCache", () => {
     expect(mockQuery).toHaveBeenCalledTimes(2);
   });
 
-  it("revogação tira o acesso na hora", async () => {
+  it("a revocation removes access immediately", async () => {
     mockQuery.mockResolvedValue([[[{ has_role: 1 }]]]);
     await expect(assertAdmin({ userId: "u-revogado" })).resolves.toBeUndefined();
 
@@ -63,7 +63,7 @@ describe("invalidateAdminCache", () => {
     await expect(assertAdmin({ userId: "u-revogado" })).rejects.toThrow("Apenas administradores");
   });
 
-  it("invalidar um usuário não afeta o veredito dos outros", async () => {
+  it("invalidating one user does not affect the others' verdicts", async () => {
     mockQuery.mockResolvedValue([[[{ has_role: 1 }]]]);
     await assertAdmin({ userId: "u-intocado" });
     vi.clearAllMocks();
@@ -74,7 +74,7 @@ describe("invalidateAdminCache", () => {
     expect(mockQuery).not.toHaveBeenCalled(); // kept coming from cache
   });
 
-  it("invalidar um usuário nunca visto é inofensivo", () => {
+  it("invalidating a never-seen user is harmless", () => {
     expect(() => invalidateAdminCache("u-inexistente")).not.toThrow();
   });
 });

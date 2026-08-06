@@ -222,16 +222,18 @@ comportamento (são só rótulos do reporter do Vitest).
   `xlsx-parser.test.ts`, `auth-middleware.test.ts`, `filter-cascade.test.ts`,
   `rate-limit.test.ts`, `pdf-download-store.test.ts`,
   `dashboard.functions.test.ts`, `admin-users.functions.test.ts`).
-- Restam ~24 arquivos de teste menores com descrição em português para
-  etapas futuras (retention.test.ts, area.functions.test.ts,
-  admin-user-management.test.tsx, rate-limit.middleware.test.ts,
-  utils.test.ts, staging-row.test.ts, date-window.test.ts, csp.test.ts,
-  boot-guards.test.ts, audit-tooltip.test.ts, upload.functions.test.ts,
-  schemas.test.ts, product.functions.test.ts, export-pdf.test.ts,
-  admin-utils.test.ts, admin-system.functions.test.ts,
-  admin-docs.functions.test.ts, use-wake-lock.test.ts,
-  admin-audit-panel.test.tsx, turnstile.test.ts, e os 4 arquivos
-  `*.guards.test.ts` com 2 descrições cada).
+- **Etapa 12** (concluída, PR #220): os 25 arquivos de teste restantes
+  com descrição em português (`retention.test.ts`,
+  `area.functions.test.ts`, `admin-user-management.test.tsx`,
+  `rate-limit.middleware.test.ts`, `utils.test.ts`, `staging-row.test.ts`,
+  `date-window.test.ts`, `csp.test.ts`, `boot-guards.test.ts`,
+  `audit-tooltip.test.ts`, `upload.functions.test.ts`, `schemas.test.ts`,
+  `product.functions.test.ts`, `export-pdf.test.ts`, `admin-utils.test.ts`,
+  `admin-system.functions.test.ts`, `admin-docs.functions.test.ts`,
+  `use-wake-lock.test.ts`, `admin-audit-panel.test.tsx`,
+  `turnstile.test.ts`, e os 4 arquivos `*.guards.test.ts`).
+  **A tradução de descrições de teste em português está completa em
+  todo o projeto.**
 
 Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --

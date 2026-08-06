@@ -32,13 +32,13 @@ function renderWithClient(ui: ReactElement) {
 }
 
 describe("AuditLogSection", () => {
-  it("mostra a mensagem de lista vazia quando não há eventos", async () => {
+  it("shows the empty-list message when there are no events", async () => {
     const auditFn = () => Promise.resolve({ events: [], total: 0, limit: 50, offset: 0 });
     renderWithClient(<AuditLogSection auditFn={auditFn} />);
     expect(await screen.findByText("Nenhum evento registrado.")).toBeInTheDocument();
   });
 
-  it("renderiza rótulo conhecido e cai no nome cru da ação pra uma desconhecida", async () => {
+  it("renders a known label and falls back to the raw action name for an unknown one", async () => {
     const events = [
       row({ id: 1, action: "user.create" }),
       row({ id: 2, action: "algo.inexistente" }),
@@ -50,7 +50,7 @@ describe("AuditLogSection", () => {
     expect(screen.getByText("algo.inexistente")).toBeInTheDocument();
   });
 
-  it("só torna a ação clicável (com tooltip) quando há username ou detalhe pra mostrar", async () => {
+  it("only makes the action clickable (with a tooltip) when there's a username or detail to show", async () => {
     const events = [
       row({ id: 1, action: "auth.login", target_username: null, detail: null }),
       row({
@@ -72,7 +72,7 @@ describe("AuditLogSection", () => {
     expect(within(roleChangeRow as HTMLElement).getByRole("button")).toBeInTheDocument();
   });
 
-  it("mostra Data, Ação, Usuário e IP nessa ordem", async () => {
+  it("shows Data, Ação, Usuário, and IP in that order", async () => {
     const auditFn = () => Promise.resolve({ events: [row()], total: 1, limit: 50, offset: 0 });
     renderWithClient(<AuditLogSection auditFn={auditFn} />);
     await screen.findByRole("table");

@@ -88,7 +88,7 @@ describe("beginImport", () => {
     products: [{ prod_code: "1", prod_name: "Produto 1" }],
   };
 
-  it("limpa o staging da data, upserta lojas e produtos, retorna ok", async () => {
+  it("clears the date's staging, upserts stores and products, returns ok", async () => {
     const result = await (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput);
     expect(result).toEqual({ ok: true, batch_id: "b1" });
     expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
@@ -106,14 +106,14 @@ describe("beginImport", () => {
     ]);
   });
 
-  it("rejeita total_rows zero antes de tocar o banco", async () => {
+  it("rejects total_rows zero before touching the database", async () => {
     await expect(
       (beginImport as (d: typeof baseInput) => Promise<unknown>)({ ...baseInput, total_rows: 0 }),
     ).rejects.toThrow("Nenhuma linha de venda para importar.");
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("pula o INSERT de lojas quando stores está vazio", async () => {
+  it("skips the stores INSERT when stores is empty", async () => {
     await (beginImport as (d: typeof baseInput) => Promise<unknown>)({ ...baseInput, stores: [] });
     // Only DELETE (staging) + CALL upsert_products_bulk: no call with "INSERT INTO stores".
     expect(db.query).toHaveBeenCalledTimes(2);
@@ -123,7 +123,7 @@ describe("beginImport", () => {
     );
   });
 
-  it("pula o upsert de produtos quando products está vazio", async () => {
+  it("skips the products upsert when products is empty", async () => {
     await (beginImport as (d: typeof baseInput) => Promise<unknown>)({
       ...baseInput,
       products: [],
@@ -134,7 +134,7 @@ describe("beginImport", () => {
 });
 
 describe("insertSalesChunk", () => {
-  it("monta o INSERT posicional via toStagingRow e retorna a contagem", async () => {
+  it("builds the positional INSERT via toStagingRow and returns the count", async () => {
     const rows = [
       {
         store_code: "1516",
@@ -176,7 +176,7 @@ describe("insertSalesChunk", () => {
     );
   });
 
-  it("depto/secao/grupo/subgrupo ausentes viram NULL, não 0 (armadilha documentada em staging-row.ts)", async () => {
+  it("missing depto/secao/grupo/subgrupo become NULL, not 0 (trap documented in staging-row.ts)", async () => {
     const rows = [
       {
         store_code: "1516",
@@ -205,7 +205,7 @@ describe("getImportedDates", () => {
     [[{ sale_date: "2026-07-20", row_count: 1234, imported_at: "2026-07-20 10:00:00" }]],
   ];
 
-  it("mapeia o result set da proc para o shape esperado", async () => {
+  it("maps the proc's result set to the expected shape", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(proc_result as never);
     const result = await (getImportedDates as () => Promise<unknown>)();
     expect(result).toEqual([
@@ -214,7 +214,7 @@ describe("getImportedDates", () => {
     expect(db.query).toHaveBeenCalledWith("CALL imported_dates()");
   });
 
-  it("usa cache: a segunda chamada não bate no banco de novo", async () => {
+  it("uses cache: the second call doesn't hit the database again", async () => {
     vi.mocked(db.query).mockResolvedValueOnce(proc_result as never);
     await (getImportedDates as () => Promise<unknown>)();
     await (getImportedDates as () => Promise<unknown>)();
@@ -235,7 +235,7 @@ describe("finalizeImport", () => {
   // docs/auditoria-qa-2026-08-01.md, item 8): `CALL finalize_import(...,
   // 999, ...)` with only 3 real rows in staging recorded `row_count = 3`
   // in `import_log`, not 999.
-  it("chama finalize_import com batch_id/sale_date/row_count/userId e retorna ok", async () => {
+  it("calls finalize_import with batch_id/sale_date/row_count/userId and returns ok", async () => {
     const result = await (
       finalizeImport as (d: {
         sale_date: string;

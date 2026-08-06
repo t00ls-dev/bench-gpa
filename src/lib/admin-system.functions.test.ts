@@ -78,7 +78,7 @@ beforeEach(() => {
 });
 
 describe("diagnoseData", () => {
-  it("conta as 6 tabelas e lista as datas distintas do staging", async () => {
+  it("counts the 6 tables and lists staging's distinct dates", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([[{ count: 100 }]] as never) // staging_sales
       .mockResolvedValueOnce([[{ count: 200 }]] as never) // sales_daily_agg
@@ -104,7 +104,7 @@ describe("diagnoseData", () => {
 });
 
 describe("purgeOldAggs", () => {
-  it("chama purge_old_aggs, registra auditoria e retorna quantos registros saíram", async () => {
+  it("calls purge_old_aggs, records an audit entry, and returns how many records were removed", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([[{ deleted: 42 }]] as never) // CALL purge_old_aggs
       .mockResolvedValueOnce([{ affectedRows: 1 }] as never); // INSERT INTO audit_log
@@ -123,7 +123,7 @@ describe("purgeOldAggs", () => {
 });
 
 describe("dbHealthCheck", () => {
-  it("mapeia versão, tamanho do banco, tabelas e conexões ativas", async () => {
+  it("maps version, database size, tables, and active connections", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([
         [
@@ -172,7 +172,7 @@ describe("getAuditLog", () => {
     ip: "203.0.113.5",
   };
 
-  it("usa limit/offset default (50/0) quando não informados", async () => {
+  it("uses the default limit/offset (50/0) when not provided", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([[ROW]] as never)
       .mockResolvedValueOnce([[{ total: 1 }]] as never);
@@ -193,7 +193,7 @@ describe("getAuditLog", () => {
     expect(db.query).toHaveBeenNthCalledWith(1, expect.stringContaining("FROM audit_log"), [50, 0]);
   });
 
-  it("respeita limit/offset informados e trata campos nulos como null", async () => {
+  it("respects a given limit/offset and treats null fields as null", async () => {
     const rowWithNullFields = { ...ROW, actor_username: null, target_id: null, detail: null };
     vi.mocked(db.query)
       .mockResolvedValueOnce([[rowWithNullFields]] as never)
@@ -216,7 +216,7 @@ describe("getAuditLog", () => {
 });
 
 describe("getHeartbeats", () => {
-  it("job sem heartbeat nenhum: overdue e last_run_at null", async () => {
+  it("a job with no heartbeat at all: overdue with last_run_at null", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
     const result = await (
       getHeartbeats as () => Promise<
@@ -229,7 +229,7 @@ describe("getHeartbeats", () => {
     expect(purge.last_run_at).toBeNull();
   });
 
-  it("job recente e ok, dentro do prazo: não está atrasado", async () => {
+  it("a recent, ok job within the deadline: is not overdue", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [
         {
@@ -253,7 +253,7 @@ describe("getHeartbeats", () => {
     expect(purge.last_duration_ms).toBe(2600);
   });
 
-  it("job com status fail fica atrasado mesmo dentro do prazo de horas", async () => {
+  it("a job with fail status is overdue even within the hour deadline", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [
         {
@@ -271,7 +271,7 @@ describe("getHeartbeats", () => {
     expect(result.find((r) => r.job === "purge")!.overdue).toBe(true);
   });
 
-  it("job passou do prazo (age_hours > maxHours) fica atrasado mesmo com status ok", async () => {
+  it("a job past the deadline (age_hours > maxHours) is overdue even with ok status", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [
         {
@@ -289,7 +289,7 @@ describe("getHeartbeats", () => {
     expect(result.find((r) => r.job === "purge")!.overdue).toBe(true);
   });
 
-  it("devolve uma linha por job conhecido (purge + refresh-universe)", async () => {
+  it("returns one row per known job (purge + refresh-universe)", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
     const result = await (getHeartbeats as () => Promise<{ job: string }[]>)();
     expect(result.map((r) => r.job).sort()).toEqual(["purge", "refresh-universe"]);

@@ -93,19 +93,19 @@ describe("verifyTurnstile", () => {
 describe("isTurnstileEnabled", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("ativo quando há secret e sem bypass", () => {
+  it("active when there's a secret and no bypass", () => {
     vi.stubEnv("TURNSTILE_SECRET_KEY", "test-secret");
     delete process.env.TURNSTILE_BYPASS;
     expect(isTurnstileEnabled()).toBe(true);
   });
 
-  it("inativo quando o bypass está ligado", () => {
+  it("inactive when the bypass is on", () => {
     vi.stubEnv("TURNSTILE_SECRET_KEY", "test-secret");
     vi.stubEnv("TURNSTILE_BYPASS", "true");
     expect(isTurnstileEnabled()).toBe(false);
   });
 
-  it("inativo quando não há secret (dev)", () => {
+  it("inactive when there's no secret (dev)", () => {
     delete process.env.TURNSTILE_SECRET_KEY;
     delete process.env.TURNSTILE_BYPASS;
     expect(isTurnstileEnabled()).toBe(false);

@@ -56,29 +56,29 @@ describe("UsernameSchema", () => {
     expect(UsernameSchema.parse("joao.silva-1")).toBe("joao.silva-1");
   });
 
-  it("normaliza para minúsculas", () => {
+  it("normalizes to lowercase", () => {
     expect(UsernameSchema.parse("Joao.Silva")).toBe("joao.silva");
   });
 
-  it("rejeita string só de dígitos: ambiguidade com matrícula no login (WHERE username = ? OR employee_id = ?)", () => {
+  it("rejects a digits-only string: ambiguity with employee_id at login (WHERE username = ? OR employee_id = ?)", () => {
     expect(() => UsernameSchema.parse("12345")).toThrow();
   });
 
-  it("rejeita caractere fora do charset", () => {
+  it("rejects a character outside the charset", () => {
     expect(() => UsernameSchema.parse("joao@silva")).toThrow();
   });
 });
 
 describe("EmployeeIdSchema", () => {
-  it("aceita string só de dígitos", () => {
+  it("accepts a digits-only string", () => {
     expect(EmployeeIdSchema.parse("12345")).toBe("12345");
   });
 
-  it("preserva zero à esquerda (sem cast pra número)", () => {
+  it("preserves a leading zero (no cast to number)", () => {
     expect(EmployeeIdSchema.parse("00099")).toBe("00099");
   });
 
-  it("rejeita letra", () => {
+  it("rejects a letter", () => {
     expect(() => EmployeeIdSchema.parse("123a5")).toThrow();
   });
 });

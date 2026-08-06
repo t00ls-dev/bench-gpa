@@ -80,18 +80,18 @@ beforeEach(() => {
 });
 
 describe("AdminUserManagement", () => {
-  it("mostra o skeleton de carregamento, sem tabela, enquanto isLoading", () => {
+  it("shows the loading skeleton, no table, while isLoading", () => {
     const { container } = renderWithClient(<AdminUserManagement data={undefined} isLoading />);
     expect(screen.queryByRole("table")).toBeNull();
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
   });
 
-  it("mostra a mensagem de lista vazia quando não há usuários", () => {
+  it("shows the empty-list message when there are no users", () => {
     renderWithClient(<AdminUserManagement data={[]} isLoading={false} />);
     expect(screen.getByText("Nenhum usuário cadastrado.")).toBeInTheDocument();
   });
 
-  it("renderiza username, matrícula, nome, papel e status de cada usuário", () => {
+  it("renders username, employee_id, name, role, and status for each user", () => {
     const data = [
       user({ id: "u1", username: "ana", employeeId: "1001", name: "Ana Silva", role: "admin" }),
       user({
@@ -114,13 +114,13 @@ describe("AdminUserManagement", () => {
     expect(screen.getByText("Inativo")).toBeInTheDocument();
   });
 
-  it("sinaliza primeiro acesso pendente", () => {
+  it("flags pending first access", () => {
     const data = [user({ id: "u1", pending: true })];
     renderWithClient(<AdminUserManagement data={data} isLoading={false} />);
     expect(screen.getByText("Primeiro acesso pendente")).toBeInTheDocument();
   });
 
-  it("filtra por busca (username, matrícula ou nome, case-insensitive) e reseta a página", () => {
+  it("filters by search (username, employee_id, or name, case-insensitive) and resets the page", () => {
     const data = [
       user({ id: "u1", username: "ana", employeeId: "1001", name: "Ana Silva" }),
       user({ id: "u2", username: "bruno", employeeId: "1002", name: "Bruno Costa" }),
@@ -135,7 +135,7 @@ describe("AdminUserManagement", () => {
     expect(screen.getByText("bruno")).toBeInTheDocument();
   });
 
-  it("pagina 25 por vez e navega para a próxima página", () => {
+  it("paginates 25 at a time and navigates to the next page", () => {
     const data = Array.from({ length: 30 }, (_, i) =>
       user({
         id: `u${i}`,
@@ -158,7 +158,7 @@ describe("AdminUserManagement", () => {
     expect(screen.getByLabelText("Próxima página")).toBeDisabled();
   });
 
-  it("promove a admin: confirma no diálogo, chama setUserRole e invalida o cache", async () => {
+  it("promotes to admin: confirms in the dialog, calls setUserRole, and invalidates the cache", async () => {
     const data = [user({ id: "u1", role: "user" })];
     const { invalidateSpy } = renderWithClient(
       <AdminUserManagement data={data} isLoading={false} />,
@@ -175,7 +175,7 @@ describe("AdminUserManagement", () => {
     );
   });
 
-  it("inativa um usuário: confirma no diálogo e chama setUserActive", async () => {
+  it("deactivates a user: confirms in the dialog and calls setUserActive", async () => {
     const data = [user({ id: "u1", username: "ana", is_active: true })];
     renderWithClient(<AdminUserManagement data={data} isLoading={false} />);
 
@@ -191,7 +191,7 @@ describe("AdminUserManagement", () => {
     );
   });
 
-  it("redefine a senha: confirma no diálogo (sem input) e chama resetPassword só com o userId", async () => {
+  it("resets the password: confirms in the dialog (no input) and calls resetPassword with just the userId", async () => {
     const data = [user({ id: "u1", username: "ana" })];
     renderWithClient(<AdminUserManagement data={data} isLoading={false} />);
 
