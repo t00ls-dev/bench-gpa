@@ -100,12 +100,12 @@ jobs:
           DB_PASS=root
           EOF
 
-          echo "==> 1ª aplicação (banco vazio)"
+          echo "==> 1st application (empty database)"
           bash scripts/run-migrations.sh /tmp/schema-check.env
 
-          echo "==> 2ª aplicação (idempotência — precisa ser no-op nas migrations versionadas)"
+          echo "==> 2nd application (idempotency, must be a no-op on versioned migrations)"
           bash scripts/run-migrations.sh /tmp/schema-check.env | tee /tmp/second-run.log
-          grep -q "nenhuma migration nova" /tmp/second-run.log
+          grep -q "no new migrations" /tmp/second-run.log
 
   deploy:
     name: Deploy
@@ -191,11 +191,11 @@ jobs:
           # migrations/atomic swap over a problem that doesn't affect the
           # running app. Same reasoning as the continue-on-error in the next step.
           rsync -az --mkpath --delete -e "$SSH_CMD" src/ "$REMOTE/.cronsrc.new/src/" \
-            || echo "AVISO: falha ao sincronizar src/ (cron scripts podem ficar desatualizados)"
+            || echo "WARNING: failed to sync src/ (cron scripts may be stale)"
           rsync -az --mkpath --delete -e "$SSH_CMD" scripts/ "$REMOTE/.cronsrc.new/scripts/" \
-            || echo "AVISO: falha ao sincronizar scripts/ (cron scripts podem ficar desatualizados)"
+            || echo "WARNING: failed to sync scripts/ (cron scripts may be stale)"
           rsync -az --mkpath -e "$SSH_CMD" package.json bun.lock tsconfig.json bunfig.toml "$REMOTE/.cronsrc.new/" \
-            || echo "AVISO: falha ao sincronizar manifesto de deps (cron scripts podem ficar desatualizados)"
+            || echo "WARNING: failed to sync deps manifest (cron scripts may be stale)"
 
       # Independent from the rest of the deploy: only affects the checkout
       # used by the cron jobs, not the running app (which is the
@@ -244,7 +244,7 @@ jobs:
               # nothing on this server uses (08/04/2026, ~2G reclaimed in the cleanup).
               sudo -u admin bun install --frozen-lockfile --production
             else
-              echo "AVISO: staging .cronsrc.new ausente (rsync anterior deve ter falhado) — pulando"
+              echo "WARNING: staging .cronsrc.new missing (previous rsync must have failed), skipping"
             fi
 
       # Migrations BEFORE the swap: the baseline is idempotent and
@@ -300,7 +300,7 @@ jobs:
             PREV_RELEASE=$(readlink -f "$APPDIR/current" 2>/dev/null || true)
 
             rollback() {
-              echo "FALHA no deploy — revertendo para o release anterior"
+              echo "DEPLOY FAILED, rolling back to the previous release"
               sudo -u admin pm2 delete bench-gpa >&2 || true
               if [ -n "$PREV_RELEASE" ] && [ -d "$PREV_RELEASE" ]; then
                 sudo ln -sfn "$PREV_RELEASE" "$APPDIR/current"
@@ -353,7 +353,7 @@ jobs:
                 ok=1
                 break
               fi
-              echo "tentativa $attempt de reload não respondeu ao healthcheck, tentando de novo"
+              echo "attempt $attempt of reload did not respond to the healthcheck, retrying"
             done
             [ -n "$ok" ] || rollback
 

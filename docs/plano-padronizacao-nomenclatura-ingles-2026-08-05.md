@@ -330,14 +330,37 @@ nenhuma tela nem resposta HTTP:
   `cron_heartbeat.last_detail` e renderizada no painel de admin
   (`admin-audit-panel.tsx`), não é log puro -- só os `console.log/error`
   ao redor mudaram.
-- **Etapa 19** (planejada): `echo` em `scripts/*.sh` --
+- **Etapa 19** (concluída, PR #229): `echo` em `scripts/*.sh` --
   `bench-experiment-rankings.sh`, `bench-procs.sh`, `import-all.sh`,
-  `run-migrations.sh`, `setup-crons.sh`, `validate-procs.sh`. Atenção:
-  `run-migrations.sh:80` (`echo "(nenhuma migration nova)"`) tem
-  acoplamento funcional com `.github/workflows/ci.yml:108`
-  (`grep -q "nenhuma migration nova"`, job `schema-check`) -- os dois
-  precisam mudar juntos, com o CI provando que o grep continua
-  encontrando a string nova.
+  `run-migrations.sh`, `setup-crons.sh`, `validate-procs.sh` -- mais os
+  `echo` do job de deploy de `.github/workflows/ci.yml` que tinham
+  ficado de fora da etapa 14 (que só cobriu comentários `#`, não echo
+  de operador). Achado durante a execução: `import-all.sh` tinha 2
+  linhas de comentário em português nunca cobertas por nenhuma etapa
+  anterior, traduzidas junto.
+
+  Acoplamento funcional resolvido: `run-migrations.sh:80`
+  (`echo "(nenhuma migration nova)"`) e `ci.yml:108`
+  (`grep -q "nenhuma migration nova"`, job `schema-check`) mudaram
+  juntos, para `"(no new migrations)"`/`"no new migrations"`.
+  Reproduzido localmente o mesmo teste que o CI roda (aplicação dupla
+  das migrations num banco novo + grep na saída da segunda aplicação),
+  confirmando que o grep encontra a string nova antes de abrir a PR.
+
+  Mantidos sem tradução, por decisão registrada: os identificadores de
+  cenário dos arrays `SCENARIOS` (`bench-procs.sh`, referenciados em
+  anos de histórico em `docs/medicao-performance.md` e
+  `docs/continuar.md`) e `CASES` (`validate-procs.sh`) -- são chaves de
+  correlação entre execuções, não mensagens; e nomes de variável local
+  (`nome`, `sql`, `saida`), fora do escopo desta fase (só strings de
+  saída, não identificadores).
+
+  **Com isto a Fase 5 está concluída**: não resta nenhuma string de
+  log/operador em português em `src/`, `scripts/*.ts` ou `scripts/*.sh`
+  que não seja renderizada em alguma tela do app (as que são --
+  `throw new Error` capturado por server functions, o campo `detail` de
+  `recordHeartbeat`, mensagens de auditoria, validação Zod -- ficam em
+  português por regra, mesmo nas telas de Admin).
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 

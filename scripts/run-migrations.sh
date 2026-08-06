@@ -26,7 +26,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${1:-$DIR/../.env}"
 
 if [ ! -f "$ENV_FILE" ]; then
-  echo "ERRO: arquivo .env não encontrado em: $ENV_FILE" >&2
+  echo "ERROR: .env file not found at: $ENV_FILE" >&2
   exit 1
 fi
 
@@ -35,10 +35,10 @@ set -a
 source "$ENV_FILE"
 set +a
 
-: "${DB_HOST:?DB_HOST ausente no .env}"
-: "${DB_NAME:?DB_NAME ausente no .env}"
-: "${DB_USER:?DB_USER ausente no .env}"
-: "${DB_PASS:?DB_PASS ausente no .env}"
+: "${DB_HOST:?DB_HOST missing from .env}"
+: "${DB_NAME:?DB_NAME missing from .env}"
+: "${DB_USER:?DB_USER missing from .env}"
+: "${DB_PASS:?DB_PASS missing from .env}"
 
 # MYSQL_PWD keeps the password out of the process list (ps).
 export MYSQL_PWD="$DB_PASS"
@@ -48,10 +48,10 @@ export MYSQL_PWD="$DB_PASS"
 # "insecure passwordless login".
 MYSQL=(mariadb --skip-ssl --host="$DB_HOST" --port="${DB_PORT:-3306}" --user="$DB_USER" "$DB_NAME")
 
-echo "==> [1/3] Baseline idempotente (tabelas + procedures)"
+echo "==> [1/3] Idempotent baseline (tables + procedures)"
 "${MYSQL[@]}" < "$DIR/migrate-schema.sql"
 
-echo "==> [2/3] Garantindo tabela de controle schema_migrations"
+echo "==> [2/3] Ensuring schema_migrations control table"
 "${MYSQL[@]}" <<'SQL'
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version    VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 SQL
 
-echo "==> [3/3] Migrations versionadas (forward-only)"
+echo "==> [3/3] Versioned migrations (forward-only)"
 # nullglob: with no files, the loop simply doesn't run. Bash's glob already
 # comes lexicographically sorted (LC_COLLATE): the NNNN prefix guarantees the order.
 shopt -s nullglob
@@ -69,14 +69,14 @@ for f in "$DIR"/migrations/*.sql; do
   exists="$("${MYSQL[@]}" -N -B -e \
     "SELECT 1 FROM schema_migrations WHERE version = '${version}' LIMIT 1")"
   if [ -n "$exists" ]; then
-    echo "    - ${version} (já aplicada)"
+    echo "    - ${version} (already applied)"
     continue
   fi
-  echo "    - ${version} (APLICANDO)"
+  echo "    - ${version} (APPLYING)"
   "${MYSQL[@]}" < "$f"
   "${MYSQL[@]}" -e "INSERT INTO schema_migrations (version) VALUES ('${version}')"
   applied_any=1
 done
-[ "$applied_any" -eq 0 ] && echo "    (nenhuma migration nova)"
+[ "$applied_any" -eq 0 ] && echo "    (no new migrations)"
 
-echo "==> Migrations concluídas com sucesso"
+echo "==> Migrations completed successfully"

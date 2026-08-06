@@ -27,7 +27,7 @@ M() { MYSQL_PWD="$DB_PASS" mariadb --skip-ssl-verify-server-cert -h "$DB_HOST" -
 
 LAST=$(M -e "SELECT MAX(sale_date) FROM sales_prod_daily_agg;")
 D28=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")
-echo "janela: $D28 .. $LAST"
+echo "window: $D28 .. $LAST"
 
 # --- A: how the proc does it today (5 scans, predicate (? IS NULL OR ...)) ---
 A_SQL="
@@ -71,7 +71,7 @@ DROP TEMPORARY TABLE t_per;
 run() { # nome, sql
   local nome="$1" sql="$2" out us
   # discarded warmup
-  M -e "$sql" > /dev/null 2>&1 || { echo "  $nome: FALHOU"; return; }
+  M -e "$sql" > /dev/null 2>&1 || { echo "  $nome: FAILED"; return; }
   for i in 1 2 3; do
     us=$(M -e "SET @t0=NOW(6); $sql SELECT CONCAT('##T##', TIMESTAMPDIFF(MICROSECOND,@t0,NOW(6)));" \
          2>/dev/null | sed -n 's/^##T##//p' | tail -1)
