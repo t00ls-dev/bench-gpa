@@ -73,7 +73,7 @@ while [ $# -gt 0 ]; do
     --max-load) MAX_LOAD="$2"; shift 2 ;;
     --scenario) ONLY="$2"; shift 2 ;;
     --force) FORCE=1; shift ;;
-    *) echo "opção desconhecida: $1" >&2; exit 2 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
 
@@ -87,14 +87,14 @@ if [ -z "$ENV_FILE" ]; then
     [ -f "$cand" ] && { ENV_FILE="$cand"; break; }
   done
 fi
-[ -f "${ENV_FILE:-}" ] || { echo "ERRO: .env não encontrado (use --env)" >&2; exit 1; }
+[ -f "${ENV_FILE:-}" ] || { echo "ERROR: .env not found (use --env)" >&2; exit 1; }
 
 set -a; . "$ENV_FILE"; set +a
 : "${DB_HOST:?}" "${DB_NAME:?}" "${DB_USER:?}" "${DB_PASS:?}"
 DB_PORT="${DB_PORT:-3306}"
 
 CLIENT="$(command -v mariadb || command -v mysql)" || {
-  echo "ERRO: nenhum cliente mariadb/mysql no PATH" >&2; exit 1; }
+  echo "ERROR: no mariadb/mysql client in PATH" >&2; exit 1; }
 
 OUT_DIR="${OUT_DIR:-/tmp/bench-procs-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$OUT_DIR"
@@ -113,13 +113,13 @@ LOAD1="$(awk '{print $1}' /proc/loadavg)"
 ACTIVE="$(sql -e "SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE COMMAND NOT IN ('Sleep','Daemon') AND ID != CONNECTION_ID();")"
 if [ "$FORCE" -eq 0 ]; then
   if awk -v l="$LOAD1" -v m="$MAX_LOAD" 'BEGIN{exit !(l>m)}'; then
-    echo "ABORTADO: load1=$LOAD1 acima de $MAX_LOAD. Medir sob carga contamina a" >&2
-    echo "medida e rouba o único núcleo de quem está usando. Use --force se souber" >&2
-    echo "o que está fazendo, ou espere a janela de baixo uso." >&2
+    echo "ABORTED: load1=$LOAD1 above $MAX_LOAD. Measuring under load contaminates the" >&2
+    echo "measurement and steals the only core from whoever is using it. Use --force if" >&2
+    echo "you know what you're doing, or wait for the low-usage window." >&2
     exit 3
   fi
   if [ "${ACTIVE:-0}" -gt 0 ]; then
-    echo "ABORTADO: $ACTIVE consulta(s) ativa(s) no banco além desta sessão." >&2
+    echo "ABORTED: $ACTIVE active query/queries in the database besides this session." >&2
     exit 3
   fi
 fi
@@ -127,22 +127,22 @@ fi
 # ------------------------------------------------------------- fingerprint
 FP="$OUT_DIR/environment.txt"
 {
-  echo "quando_utc=$(date -u +%FT%TZ)"
+  echo "when_utc=$(date -u +%FT%TZ)"
   echo "host=$(hostname)"
-  echo "load_inicial=$(cat /proc/loadavg)"
+  echo "initial_load=$(cat /proc/loadavg)"
   echo "runs=$RUNS warmup=$WARMUP"
   sql -e "
-    SELECT CONCAT('versao=', VERSION());
+    SELECT CONCAT('version=', VERSION());
     SELECT CONCAT('buffer_pool_bytes=', @@innodb_buffer_pool_size);
     SELECT CONCAT('uptime_s=', VARIABLE_VALUE) FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='UPTIME';
     SELECT CONCAT('bp_pages_data=', VARIABLE_VALUE) FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='INNODB_BUFFER_POOL_PAGES_DATA';
     SELECT CONCAT('bp_pages_free=', VARIABLE_VALUE) FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME='INNODB_BUFFER_POOL_PAGES_FREE';
-    SELECT CONCAT('linhas_agg=', COUNT(*)) FROM sales_prod_daily_agg;
-    SELECT CONCAT('linhas_universe=', COUNT(*)) FROM product_universe;
-    SELECT CONCAT('linhas_products=', COUNT(*)) FROM products;
-    SELECT CONCAT('datas=', COUNT(DISTINCT sale_date), ' de ', MIN(sale_date), ' a ', MAX(sale_date)) FROM sales_prod_daily_agg;
+    SELECT CONCAT('agg_rows=', COUNT(*)) FROM sales_prod_daily_agg;
+    SELECT CONCAT('universe_rows=', COUNT(*)) FROM product_universe;
+    SELECT CONCAT('products_rows=', COUNT(*)) FROM products;
+    SELECT CONCAT('dates=', COUNT(DISTINCT sale_date), ' from ', MIN(sale_date), ' to ', MAX(sale_date)) FROM sales_prod_daily_agg;
   "
-  echo "-- indices em sales_prod_daily_agg e product_universe:"
+  echo "-- indexes on sales_prod_daily_agg and product_universe:"
   sql -e "SELECT CONCAT(TABLE_NAME,'.',INDEX_NAME,' (',GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX),')')
           FROM information_schema.STATISTICS
           WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('sales_prod_daily_agg','product_universe')
@@ -186,11 +186,11 @@ SCENARIOS=(
 )
 
 RESULTS="$OUT_DIR/results.tsv"
-printf 'cenario\tamostras_ms\tmediana_ms\tmin_ms\tmax_ms\tdispersao\thash_ordem\thash_conjunto\tlinhas\n' > "$RESULTS"
+printf 'scenario\tsamples_ms\tmedian_ms\tmin_ms\tmax_ms\tspread\thash_order\thash_set\trows\n' > "$RESULTS"
 
-echo "Saída em: $OUT_DIR"
-echo "Janela: $D28 .. $LAST (28d) | $D7 .. $LAST (7d) | depto='$DEPTO' loja='$STORE'"
-echo "Produtos: alto_volume='$PROD_HIGH' baixo_volume='$PROD_LOW'"
+echo "Output at: $OUT_DIR"
+echo "Window: $D28 .. $LAST (28d) | $D7 .. $LAST (7d) | depto='$DEPTO' loja='$STORE'"
+echo "Products: high_volume='$PROD_HIGH' low_volume='$PROD_LOW'"
 echo
 
 for entry in "${SCENARIOS[@]}"; do
@@ -201,7 +201,7 @@ for entry in "${SCENARIOS[@]}"; do
   # measurements and also serves as extra warmup.
   raw="$OUT_DIR/$name.out"
   if ! sql -e "$call" > "$raw" 2> "$OUT_DIR/$name.err"; then
-    echo "  $name: FALHOU, ver $OUT_DIR/$name.err"
+    echo "  $name: FAILED, see $OUT_DIR/$name.err"
     continue
   fi
   h_order="$(md5sum < "$raw" | cut -c1-12)"
@@ -231,17 +231,17 @@ for entry in "${SCENARIOS[@]}"; do
     "$name" "$joined" "$med" "$lo" "$hi" "$disp" "$h_order" "$h_set" "$lines" >> "$RESULTS"
 
   flag=""
-  awk -v d="$disp" 'BEGIN{exit !(d>1.3)}' && flag="  <-- DISPERSÃO ALTA, não confiar"
-  printf '  %-22s mediana %6s ms  (min %s / max %s, disp %sx)%s\n' \
+  awk -v d="$disp" 'BEGIN{exit !(d>1.3)}' && flag="  <-- HIGH SPREAD, don't trust"
+  printf '  %-22s median %6s ms  (min %s / max %s, disp %sx)%s\n' \
     "$name" "$med" "$lo" "$hi" "$disp" "$flag"
 done
 
-echo "load_final=$(cat /proc/loadavg)" >> "$FP"
+echo "final_load=$(cat /proc/loadavg)" >> "$FP"
 echo
-echo "Impressão digital: $FP"
-echo "Tabela: $RESULTS"
+echo "Fingerprint: $FP"
+echo "Table: $RESULTS"
 echo
-echo "Para comparar com uma medição anterior:"
-echo "  diff <(cut -f1,3,7,8,9 ANTES/results.tsv) <(cut -f1,3,7,8,9 $OUT_DIR/results.tsv)"
-echo "Os hashes (colunas 7 e 8) TÊM de bater. Se não baterem, a mudança alterou"
-echo "o resultado e o ganho de tempo é irrelevante."
+echo "To compare with a previous measurement:"
+echo "  diff <(cut -f1,3,7,8,9 BEFORE/results.tsv) <(cut -f1,3,7,8,9 $OUT_DIR/results.tsv)"
+echo "The hashes (columns 7 and 8) HAVE to match. If they don't, the change"
+echo "altered the result and the time gain is irrelevant."
