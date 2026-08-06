@@ -6,9 +6,9 @@ import { hydrateRoot } from "react-dom/client";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 
-// tunnel aponta pra rota same-origin em src/server.ts (não pro domínio da
-// Sentry direto): mantém o CSP com connect-src só 'self' e não é bloqueado
-// por ad-blocker.
+// tunnel points to the same-origin route in src/server.ts (not directly to
+// Sentry's domain): keeps the CSP's connect-src at just 'self' and isn't
+// blocked by ad blockers.
 Sentry.init({
   dsn,
   enabled: !!dsn,
@@ -32,17 +32,17 @@ Sentry.init({
 
 const CHUNK_RELOAD_KEY = "bench-gpa:chunk-reload-attempted";
 
-// Vite dispara este evento (cancelable, node_modules/vite/.../handlePreloadError)
-// antes de deixar um import() dinâmico falho estourar - chunk removido por um
-// deploy no meio da sessão, ou rede instável no meio do carregamento (comum em
-// mobile: BENCH-GPA-Q). preventDefault() assume a recuperação em vez de deixar
-// virar exceção não tratada: reporta ao Sentry primeiro (senão perdemos a
-// captura, já que ela não chega mais no onUncaughtError) e recarrega uma vez.
-// sessionStorage evita loop se o reload falhar pelo mesmo motivo (ex.: usuário
-// genuinamente offline) - a segunda falha na mesma aba cai na tela normal de
-// erro em vez de recarregar de novo. Pulado em /upload pelo mesmo motivo do
-// useVersionCheck: um fluxo de múltiplas etapas não pode ser interrompido por
-// um reload.
+// Vite fires this event (cancelable, node_modules/vite/.../handlePreloadError)
+// before letting a failed dynamic import() blow up - a chunk removed by a
+// mid-session deploy, or an unstable network mid-load (common on mobile:
+// BENCH-GPA-Q). preventDefault() takes over recovery instead of letting it
+// become an unhandled exception: reports to Sentry first (otherwise the
+// capture is lost, since it no longer reaches onUncaughtError) and reloads
+// once. sessionStorage avoids a loop if the reload fails for the same
+// reason (e.g. the user is genuinely offline) - the second failure in the
+// same tab falls through to the normal error screen instead of reloading
+// again. Skipped on /upload for the same reason as useVersionCheck: a
+// multi-step flow can't be interrupted by a reload.
 window.addEventListener("vite:preloadError", (event) => {
   Sentry.captureException((event as Event & { payload?: unknown }).payload ?? event);
   event.preventDefault();
@@ -54,21 +54,21 @@ window.addEventListener("vite:preloadError", (event) => {
   window.location.reload();
 });
 
-// startTransition: mesmo padrão do entry client.tsx padrão do TanStack Start
+// startTransition: same pattern as TanStack Start's default client.tsx entry
 // (node_modules/@tanstack/react-start/dist/plugin/default-entry/client.tsx),
-// perdido quando este arquivo virou custom entry pro Sentry.init() acima.
+// lost when this file became a custom entry for Sentry.init() above.
 startTransition(() => {
   hydrateRoot(
     document,
     <StrictMode>
       <StartClient />
     </StrictMode>,
-    // Sem isto, erro de hidratação (recuperável: React descarta a árvore SSR
-    // e renderiza de novo no cliente) só vira um console.error interno do
-    // React, capturado pelo consoleLoggingIntegration como log, sem stack
-    // trace nem componentStack de verdade. reactErrorHandler() é o helper
-    // oficial do SDK pra isso: captura como exceção real, com o componente
-    // que causou o mismatch anexado ao evento.
+    // Without this, a hydration error (recoverable: React discards the SSR
+    // tree and renders again on the client) only becomes an internal React
+    // console.error, captured by consoleLoggingIntegration as a log, with
+    // no real stack trace or componentStack. reactErrorHandler() is the
+    // SDK's official helper for this: captures it as a real exception, with
+    // the component that caused the mismatch attached to the event.
     {
       onCaughtError: Sentry.reactErrorHandler(),
       onUncaughtError: Sentry.reactErrorHandler(),

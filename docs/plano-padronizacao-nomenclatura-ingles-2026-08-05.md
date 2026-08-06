@@ -200,10 +200,18 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     dados reais antes/depois de reaplicar o schema, hash de ordem e de
     conjunto idênticos nos 37 cenários. **`scripts/migrate-schema.sql` está
     completo.**
-  - **Estado geral da tradução de comentários (Fase 3)**: `src/lib/`,
-    `src/hooks/`, `src/routes/`, `src/components/`, `scripts/` (todos,
-    incluindo `migrate-schema.sql`) e todos os arquivos de teste estão
-    completos (Etapas 1-10, PRs #207, #209, #211-#218). **A tradução de
+  - **Etapa 13** (concluída, PR #222): os 4 arquivos de entrada na raiz de
+    `src/` (`router.tsx`, `client.tsx`, `start.ts`, `server.ts`) -- lacuna
+    real encontrada numa varredura de conferência em 2026-08-06: o escopo
+    das etapas 1-10 nunca incluiu `src/*.ts(x)` diretamente, só os
+    subdiretórios. Validado com o mesmo rigor da etapa 10, dado que são os
+    arquivos de bootstrap mais críticos do app: build de produção completo,
+    servidor real subido, teste em navegador via Puppeteer (login,
+    hidratação sem erro de console, navegação entre rotas).
+  - **Estado geral da tradução de comentários (Fase 3)**: `src/` (incluindo
+    os 4 entry points na raiz) e `scripts/` (todos, incluindo
+    `migrate-schema.sql`) e todos os arquivos de teste estão completos
+    (Etapas 1-10 e 13, PRs #207, #209, #211-#218, #222). **A tradução de
     comentários técnicos do projeto inteiro está concluída.**
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)

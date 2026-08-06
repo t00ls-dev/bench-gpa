@@ -18,9 +18,10 @@ export const getRouter = () => {
     queryCache: new QueryCache({
       onError: async (error) => {
         const msg = error?.message ?? "";
-        // Sessão continua válida aqui (diferente do ramo "Unauthorized"
-        // abaixo): a senha só precisa ser definida/atualizada antes de
-        // continuar, então NÃO desloga -- só redireciona pra tela de troca.
+        // The session is still valid here (unlike the "Unauthorized" branch
+        // below): the password just needs to be set/updated before
+        // continuing, so it does NOT log out -- it only redirects to the
+        // change-password screen.
         if (msg.includes("PasswordChangeRequired")) {
           const path = window.location.pathname + window.location.search;
           const next = path && path !== "/" ? `?next=${encodeURIComponent(path)}` : "";
@@ -53,13 +54,14 @@ export const getRouter = () => {
     ...(nonce ? { ssr: { nonce } } : {}),
   });
 
-  // getRouter roda tanto no server (SSR) quanto no client (hidratação): no
-  // server, @sentry/tanstackstart-react resolve tanstackRouterBrowserTracingIntegration
-  // pra um stub no-op de propósito (evita erro de build tentando usar API de
-  // browser), então não precisa de guard de ambiente aqui. Sentry.init() já
-  // rodou antes disso (em src/client.tsx / src/lib/instrument-server.ts), e o
-  // router só existe depois de criado aqui, por isso addIntegration() em vez
-  // de passar no array `integrations` do init.
+  // getRouter runs both on the server (SSR) and on the client (hydration):
+  // on the server, @sentry/tanstackstart-react deliberately resolves
+  // tanstackRouterBrowserTracingIntegration to a no-op stub (avoids a build
+  // error from trying to use a browser API), so no environment guard is
+  // needed here. Sentry.init() already ran before this (in src/client.tsx /
+  // src/lib/instrument-server.ts), and the router only exists once it's
+  // created here, which is why addIntegration() is used instead of passing
+  // it in init's `integrations` array.
   Sentry.addIntegration(Sentry.tanstackRouterBrowserTracingIntegration(router));
 
   return router;
