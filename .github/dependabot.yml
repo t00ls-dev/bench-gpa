@@ -9,18 +9,18 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      # Pacotes do "clã" ESLint costumam exigir versões compatíveis entre si
-      # (eslint + @eslint/js + plugins). Em PRs separadas, cada uma conflita
-      # em bun.lock com as outras e precisa de resolução manual — agrupadas,
-      # sobem juntas, testadas juntas, num CI só.
+      # Packages in the ESLint "family" tend to require mutually compatible
+      # versions (eslint + @eslint/js + plugins). In separate PRs, each one
+      # conflicts with the others in bun.lock and needs manual resolution --
+      # grouped, they come up together, get tested together, in a single CI run.
       eslint:
         patterns:
           - "eslint*"
           - "@eslint/*"
           - "typescript-eslint"
-      # Patch/minor de tudo o mais: baixo risco, não precisa de uma PR por
-      # pacote — reduz o volume sem esconder majors (que continuam
-      # aparecendo à parte, exigindo revisão individual de propósito).
+      # Patch/minor for everything else: low risk, doesn't need a PR per
+      # package -- cuts the volume without hiding majors (which still show
+      # up separately, deliberately requiring individual review).
       patch-and-minor:
         update-types:
           - "minor"

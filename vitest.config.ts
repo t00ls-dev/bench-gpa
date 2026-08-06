@@ -2,12 +2,12 @@ import { defineConfig } from "vitest/config";
 import { COVERAGE_THRESHOLDS } from "./scripts/coverage-thresholds";
 
 export default defineConfig({
-  // Mesmos globals que vite.config.ts injeta via define no app real: sem
-  // isto, qualquer teste que importe (mesmo transitivamente) um módulo que
-  // referencie __COMMIT_HASH__/__COMMIT_DATE__ no escopo do módulo (ex:
-  // src/lib/instrument-server.ts, em Sentry.init({ release: __COMMIT_HASH__ }))
-  // quebra com ReferenceError: valor exato não importa em teste, só precisa
-  // existir.
+  // Same globals vite.config.ts injects via define in the real app:
+  // without this, any test that imports (even transitively) a module that
+  // references __COMMIT_HASH__/__COMMIT_DATE__ at module scope (e.g.
+  // src/lib/instrument-server.ts, in Sentry.init({ release: __COMMIT_HASH__ }))
+  // breaks with a ReferenceError: the exact value doesn't matter in a
+  // test, it just needs to exist.
   define: {
     __COMMIT_HASH__: JSON.stringify("test"),
     __COMMIT_DATE__: JSON.stringify("0"),
@@ -33,7 +33,7 @@ export default defineConfig({
         "src/server.ts",
         "src/styles.css.ts",
       ],
-      // Fonte única, compartilhada com o gerador do resumo — ver
+      // Single source, shared with the summary generator -- see
       // scripts/coverage-thresholds.ts.
       thresholds: COVERAGE_THRESHOLDS,
     },

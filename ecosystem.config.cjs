@@ -33,42 +33,44 @@ module.exports = {
   apps: [
     {
       name: "bench-gpa",
-      // "current" é symlink pra releases/<sha>/, nunca um diretório real (ver
-      // .github/workflows/ci.yml, step "Atomic swap"). Node resolve o caminho
-      // REAL do módulo de entrada (segue symlink) no import() inicial: uma vez
-      // de pé, cada worker fica preso pra sempre na sua própria releases/.../,
-      // imune a uma troca de symlink que aconteça depois — é o que evita o
-      // ENOENT de asset que o esquema antigo (troca de conteúdo no MESMO
-      // caminho ".output") causava em workers ainda de pé durante o reload
-      // gradual do cluster mode (achado em 04/08/2026, terceiro rollback do
-      // dia: ver docs/medicao-performance.md).
+      // "current" is a symlink to releases/<sha>/, never a real directory
+      // (see .github/workflows/ci.yml, "Atomic swap" step). Node resolves
+      // the entry module's REAL path (follows the symlink) on the initial
+      // import(): once up, each worker stays pinned forever to its own
+      // releases/.../, immune to a symlink swap that happens afterward --
+      // that's what avoids the asset ENOENT that the old scheme (swapping
+      // content at the SAME ".output" path) caused in workers still up
+      // during cluster mode's gradual reload (found on 08/04/2026, the
+      // third rollback of the day: see docs/medicao-performance.md).
       script: "current/server/index.mjs",
-      // cluster (não fork): pm2 reload faz troca gradual worker por worker
-      // (sobe o novo, espera responder, só então mata o antigo) em vez do
-      // restart completo do fork mode. VPS de 1 núcleo: 2 instâncias não
-      // ganha paralelismo real de CPU, é só o suficiente pra sempre ter pelo
-      // menos um worker de pé durante a troca.
+      // cluster (not fork): pm2 reload does a gradual worker-by-worker swap
+      // (brings up the new one, waits for it to respond, only then kills
+      // the old one) instead of fork mode's full restart. On a 1-core VPS,
+      // 2 instances gain no real CPU parallelism, it's just enough to
+      // always have at least one worker up during the swap.
       //
-      // Estado em memória de processo deixa de ser global do app com isto:
-      // SimpleCache (src/lib/cache.ts) e os RateLimiter (src/lib/rate-limit.ts)
-      // passam a ser por worker, não mais únicos. Cache: só reduz um pouco o
-      // hit rate, sem bug. Rate limit: o teto efetivo por IP dilui por worker,
-      // aceito conscientemente (ver docs/medicao-performance.md) porque o
-      // gargalo real do authLimiter é o custo de CPU do bcrypt, compartilhado
-      // entre os workers no mesmo núcleo, não o contador em si.
+      // Process-level in-memory state stops being global to the app with
+      // this: SimpleCache (src/lib/cache.ts) and the RateLimiters
+      // (src/lib/rate-limit.ts) become per-worker, no longer singletons.
+      // Cache: only slightly reduces the hit rate, no bug. Rate limit: the
+      // effective per-IP ceiling dilutes per worker, consciously accepted
+      // (see docs/medicao-performance.md) because authLimiter's real
+      // bottleneck is bcrypt's CPU cost, shared between the workers on the
+      // same core, not the counter itself.
       instances: 2,
       exec_mode: "cluster",
-      // Default do PM2 (GRACEFUL_LISTEN_TIMEOUT) é 3000ms: tempo curto demais
-      // pro nosso boot real sob reload. Medido em produção (04/08/2026, duas
-      // falhas de deploy seguidas causadas por isto): cada worker leva
-      // consistentemente ~4,8s do pedido de reload até confirmar "listening"
-      // (pool de conexão do MariaDB, SDK do Sentry, registro de rotas, tudo
-      // competindo pela CPU única com o outro worker subindo ao mesmo tempo).
-      // Sem isto, o PM2 desiste de esperar antes do worker novo responder,
-      // considera o reload malsucedido e o workflow de deploy reverte pro
-      // build anterior mesmo com os dois workers saudáveis um instante depois.
-      // 8000ms dá margem confortável acima do medido, mesma ordem de grandeza
-      // do GRACEFUL_TIMEOUT (8000ms) que o próprio PM2 já usa como padrão.
+      // PM2's default (GRACEFUL_LISTEN_TIMEOUT) is 3000ms: too short for
+      // our real boot time under reload. Measured in production
+      // (08/04/2026, two consecutive deploy failures caused by this): each
+      // worker consistently takes ~4.8s from the reload request to
+      // confirming "listening" (MariaDB connection pool, Sentry SDK, route
+      // registration, all competing for the single CPU while the other
+      // worker boots at the same time). Without this, PM2 gives up waiting
+      // before the new worker responds, considers the reload failed, and
+      // the deploy workflow rolls back to the previous build even though
+      // both workers are healthy a moment later. 8000ms gives comfortable
+      // margin above the measured value, the same order of magnitude as
+      // PM2's own default GRACEFUL_TIMEOUT (8000ms).
       listen_timeout: 8000,
       env: {
         NODE_ENV: "production",

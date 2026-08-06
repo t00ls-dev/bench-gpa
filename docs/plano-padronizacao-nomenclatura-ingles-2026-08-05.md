@@ -208,11 +208,31 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
     arquivos de bootstrap mais críticos do app: build de produção completo,
     servidor real subido, teste em navegador via Puppeteer (login,
     hidratação sem erro de console, navegação entre rotas).
+  - **Etapa 14** (concluída, PR #223): `.github/workflows/ci.yml` (79
+    linhas de comentário) e `.github/dependabot.yml` (5 linhas), mais 4
+    arquivos de configuração na raiz nunca cobertos por nenhuma etapa
+    anterior -- `vite.config.ts`, `vitest.config.ts`, `vitest.setup.ts`,
+    `ecosystem.config.cjs`. Segunda lacuna real encontrada numa varredura
+    de conferência em 2026-08-06 (a etapa 1 só traduziu os 7 rótulos
+    `name:` de step do `ci.yml`, nunca os comentários internos do
+    arquivo). Validado com o mesmo rigor da etapa 10/13, dado que
+    `ci.yml` define o próprio pipeline de deploy: sintaxe YAML checada
+    com `python3 -c "import yaml; yaml.safe_load(...)"` para os dois
+    arquivos `.github/*.yml`, e `ecosystem.config.cjs` recarregado via
+    `node -e "require(...)"` confirmando que os valores reais de config
+    (`script`, `instances`, `exec_mode`, `listen_timeout`) ficaram
+    byte-idênticos aos originais. Strings de saída de operador
+    (`echo`/`console.log`) e a checagem funcional
+    `grep -q "nenhuma migration nova"` no job `schema-check` (que depende
+    do texto literal em português de `scripts/run-migrations.sh`)
+    mantidas intactas, mesmo critério das etapas anteriores.
   - **Estado geral da tradução de comentários (Fase 3)**: `src/` (incluindo
-    os 4 entry points na raiz) e `scripts/` (todos, incluindo
-    `migrate-schema.sql`) e todos os arquivos de teste estão completos
-    (Etapas 1-10 e 13, PRs #207, #209, #211-#218, #222). **A tradução de
-    comentários técnicos do projeto inteiro está concluída.**
+    os 4 entry points na raiz), `scripts/` (todos, incluindo
+    `migrate-schema.sql`), todos os arquivos de teste, o pipeline de
+    CI/CD (`.github/`) e os arquivos de configuração de build/teste na
+    raiz estão completos (Etapas 1-10, 13 e 14, PRs #207, #209,
+    #211-#218, #222, #223). **A tradução de comentários técnicos do
+    projeto inteiro está concluída.**
 
 ## Fase 4: strings de descrição de teste (`it`/`describe`)
 
