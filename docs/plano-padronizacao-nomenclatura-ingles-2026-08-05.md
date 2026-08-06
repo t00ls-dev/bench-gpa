@@ -166,12 +166,10 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `purge-aggs.ts`, `refresh-universe.ts`, `postbuild-restore-manifest.mjs`,
   `create-test-admin.ts`, `import.ts`). Mensagens de log/console (saída de
   operador) mantidas em português, mesmo critério das etapas anteriores.
-- **Restante, não iniciado**:
-  - `scripts/migrate-schema.sql`: 209 linhas de comentário SQL, majoritariamente
-    dentro das stored procedures. Deixado de fora da etapa 7 de propósito,
-    dado o histórico de cautela desta sessão com mudanças nessas procedures
-    (ver Fase 2 acima); fica para uma etapa dedicada, com o mesmo cuidado de
-    validação (`schema-check` do CI, `validate-procs.sh`).
+- `scripts/migrate-schema.sql` (209 linhas de comentário SQL, majoritariamente
+  dentro das stored procedures) foi deixado de fora da etapa 7 de propósito;
+  concluído na etapa 10 abaixo, com o cuidado de validação extra que o
+  histórico desta sessão com essas procedures exigia.
   - `scripts/migrations/*.sql`: forward-only, imutáveis por design mesmo
     para comentários (ver exceção documentada na seção "Idioma" do
     `AGENTS.md`) -- não aplicável, não uma pendência.
@@ -239,10 +237,10 @@ Nomes próprios de tela (ex.: "Área", "Documentação", "Administração") são
 mantidos como estão em qualquer etapa, mesmo dentro de comentários --
 critério fixado na etapa 1.
 
-O mesmo vale para strings de descrição de teste (`it("...")`,
-`describe("...")`) em português, encontradas durante a auditoria mas fora
-do escopo original do pedido (fala de "nomenclatura", não de descrições de
-teste): tratamento incremental, mesmo critério, ainda não iniciado.
+Strings de descrição de teste (`it("...")`, `describe("...")`) em português,
+encontradas durante a auditoria mas fora do escopo original do pedido (fala
+de "nomenclatura", não de descrições de teste), viraram a Fase 4 abaixo por
+pedido explícito do usuário em 2026-08-06, e estão concluídas (etapas 11-12).
 
 ## Verificação (quando a Fase 2 for executada)
 
