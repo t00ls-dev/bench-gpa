@@ -50,7 +50,7 @@
 :root {
   --radius: 0.75rem;
 
-  /* Retail moderno: verde profundo + azul executivo + âmbar para acentos */
+  /* Modern retail: deep green + executive blue + amber for accents */
   --background: oklch(0.985 0.005 90);
   --foreground: oklch(0.18 0.03 240);
 
@@ -60,14 +60,14 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.03 240);
 
-  --primary: oklch(0.48 0.12 165); /* teal/verde GPA */
+  --primary: oklch(0.48 0.12 165); /* teal/green GPA */
   --primary-foreground: oklch(0.99 0 0);
   --primary-soft: oklch(0.94 0.04 165);
 
-  --secondary: oklch(0.32 0.09 265); /* azul executivo */
+  --secondary: oklch(0.32 0.09 265); /* executive blue */
   --secondary-foreground: oklch(0.99 0 0);
 
-  --accent: oklch(0.78 0.16 75); /* âmbar destaque KPI */
+  --accent: oklch(0.78 0.16 75); /* amber KPI highlight */
   --accent-foreground: oklch(0.2 0.04 65);
 
   --muted: oklch(0.96 0.01 240);
