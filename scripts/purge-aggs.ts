@@ -20,7 +20,7 @@ const MONITOR_CONFIG = {
 
 async function main() {
   const started = Date.now();
-  console.log(`[${new Date().toISOString()}] Purge iniciado (${RETENTION_DAYS} dias)...`);
+  console.log(`[${new Date().toISOString()}] Purge started (${RETENTION_DAYS} days)...`);
   try {
     const deleted = await Sentry.withMonitor(
       MONITOR_SLUG,
@@ -30,7 +30,7 @@ async function main() {
       },
       MONITOR_CONFIG,
     );
-    console.log(`[${new Date().toISOString()}] Purge concluído. Removidos: ${deleted}`);
+    console.log(`[${new Date().toISOString()}] Purge complete. Removed: ${deleted}`);
     await recordHeartbeat("purge", "ok", `${deleted} registros removidos`, Date.now() - started);
     await Sentry.flush(2000);
     process.exit(0);
@@ -43,6 +43,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Erro:", err instanceof Error ? err.message : String(err));
+  console.error("Error:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });
