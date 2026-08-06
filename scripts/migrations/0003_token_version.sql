@@ -1,34 +1,38 @@
--- Adiciona users.token_version: o contador que permite invalidar sessões já
--- emitidas.
+-- Adds users.token_version: the counter that lets already-issued sessions
+-- be invalidated.
 --
--- O JWT é stateless e vale 7 dias (JWT_EXPIRY). Até aqui, redefinir a senha de
--- uma conta comprometida NÃO derrubava quem já estava logado com ela: o token
--- antigo continuava sendo aceito por até uma semana. Inativar a conta
--- funcionava, porque o requireAuth relê `is_active` do banco a cada request; a
--- senha era o único vetor sem essa rede.
+-- The JWT is stateless and valid for 7 days (JWT_EXPIRY). Until now,
+-- resetting the password of a compromised account did NOT sign out whoever
+-- was already logged in with it: the old token kept being accepted for up
+-- to a week. Deactivating the account worked, because requireAuth rereads
+-- `is_active` from the database on every request; the password was the only
+-- vector without that safety net.
 --
--- Com a coluna, o token carrega a versão vigente no momento da emissão e o
--- requireAuth/getMe comparam com a do banco. resetPassword incrementa, e todo
--- token emitido antes deixa de valer no request seguinte.
+-- With the column, the token carries the version in effect at issuance time
+-- and requireAuth/getMe compare it against the database's. resetPassword
+-- increments it, and every token issued before that stops being valid on
+-- the next request.
 --
--- DEFAULT 0 é o que torna a transição indolor: os tokens já em circulação não
--- têm o campo no payload, e o código lê `payload.tokenVersion ?? 0`, logo
--- continuam válidos até expirar naturalmente, sem deslogar ninguém no deploy.
--- O primeiro resetPassword de cada usuário leva a coluna para 1 e aí sim
--- invalida tudo que é anterior.
+-- DEFAULT 0 is what makes the transition painless: tokens already in
+-- circulation don't have the field in the payload, and the code reads
+-- `payload.tokenVersion ?? 0`, so they keep working until they expire
+-- naturally, without signing anyone out at deploy time. Each user's first
+-- resetPassword takes the column to 1, and only then does it invalidate
+-- everything before it.
 --
--- A tabela users tem poucas linhas, então o custo do ALTER é irrelevante.
+-- The users table has few rows, so the ALTER's cost is irrelevant.
 --
--- EDITADO em 01/08/2026 (auditoria de QA, item 10): o comentário original
--- dizia "MariaDB não tem ADD COLUMN IF NOT EXISTS": errado, suporta desde a
--- série 10.x (extensão própria do MariaDB, ausente só no MySQL vanilla até
--- 8.0.29). Sem o `IF NOT EXISTS`, instalação nova (banco vazio) sempre
--- quebrava aqui: migrate-schema.sql já cria `users.token_version` na
--- definição da tabela, então o ADD COLUMN duplicava a coluna. Mesma classe de
--- bug do item 2/10 desta auditoria, e mesmo raciocínio de segurança pra
--- editar uma migration "já aplicada": o runner identifica migrations
--- concluídas pelo nome do arquivo, nunca reexecuta conteúdo já aplicado.
--- Produção não é afetada, só instalação nova passa a funcionar.
+-- EDITED on 01/08/2026 (QA audit, item 10): the original comment said
+-- "MariaDB doesn't have ADD COLUMN IF NOT EXISTS": wrong, it's supported
+-- since the 10.x series (a MariaDB-only extension, absent only from vanilla
+-- MySQL up to 8.0.29). Without `IF NOT EXISTS`, a fresh install (empty
+-- database) always broke here: migrate-schema.sql already creates
+-- `users.token_version` in the table definition, so ADD COLUMN duplicated
+-- the column. Same bug class as item 2/10 of this audit, and the same
+-- safety reasoning for editing an "already applied" migration: the runner
+-- identifies completed migrations by the file name, never re-executes
+-- already-applied content. Production is unaffected, only a fresh install
+-- starts working.
 
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0 AFTER is_active;
