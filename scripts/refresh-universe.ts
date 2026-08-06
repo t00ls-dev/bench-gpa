@@ -20,7 +20,7 @@ const MONITOR_CONFIG = {
 async function main() {
   const started = Date.now();
   console.log(
-    `[${new Date().toISOString()}] Refresh de product_universe/filter_hierarchy iniciado...`,
+    `[${new Date().toISOString()}] Refresh of product_universe/filter_hierarchy started...`,
   );
   try {
     await Sentry.withMonitor(
@@ -31,7 +31,7 @@ async function main() {
       },
       MONITOR_CONFIG,
     );
-    console.log(`[${new Date().toISOString()}] Refresh concluído.`);
+    console.log(`[${new Date().toISOString()}] Refresh complete.`);
     await recordHeartbeat("refresh-universe", "ok", null, Date.now() - started);
     await Sentry.flush(2000);
     process.exit(0);
@@ -44,6 +44,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Erro:", err instanceof Error ? err.message : String(err));
+  console.error("Error:", err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

@@ -26,5 +26,5 @@ await pool.query(
   [id, username, employeeId, name, hash],
 );
 
-console.log(`Admin criado: ${username} (matrícula ${employeeId}) / ${password}`);
+console.log(`Admin created: ${username} (employee_id ${employeeId}) / ${password}`);
 await pool.end();
