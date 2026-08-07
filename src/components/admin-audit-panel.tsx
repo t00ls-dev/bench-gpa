@@ -155,11 +155,27 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
   "auth.login": { label: "Login", className: "bg-success/15 text-success" },
   "auth.login_failed": { label: "Login falhou", className: "bg-destructive/15 text-destructive" },
   "auth.logout": { label: "Logout", className: "bg-muted text-muted-foreground" },
+  "auth.first_access_failed": {
+    label: "Primeiro acesso falhou",
+    className: "bg-destructive/15 text-destructive",
+  },
+  "auth.first_access_completed": {
+    label: "Primeiro acesso concluído",
+    className: "bg-success/15 text-success",
+  },
+  "auth.password_change": {
+    label: "Trocou a própria senha",
+    className: "bg-primary/15 text-primary",
+  },
   "user.create": { label: "Criou usuário", className: "bg-primary/15 text-primary" },
   "user.role_change": { label: "Alterou papel", className: "bg-primary/15 text-primary" },
   "user.activate": { label: "Reativou usuário", className: "bg-success/15 text-success" },
   "user.deactivate": { label: "Inativou usuário", className: "bg-destructive/15 text-destructive" },
   "user.password_reset": { label: "Redefiniu senha", className: "bg-warning/15 text-warning" },
+  "user.identifiers_update": {
+    label: "Atualizou identificadores",
+    className: "bg-primary/15 text-primary",
+  },
   "data.purge": { label: "Purga de dados", className: "bg-warning/15 text-warning" },
 };
 
