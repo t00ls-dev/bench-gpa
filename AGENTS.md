@@ -173,13 +173,25 @@ em vez de commit direto em `main`.
 - CI/CD (`.github/workflows/ci.yml`) roda lint, typecheck, test, build e
   schema-check antes de liberar o deploy: o gate é a própria CI, não um
   job separado
+- PM2 roda em `fork`/1 instância (não `cluster`): a VPS tem 1 núcleo físico
+  só, então uma segunda instância nunca teve paralelismo de CPU real pra
+  entregar, só dobrava o consumo de memória numa máquina de 1,9GB já
+  compartilhada com outros sites. Cluster mode foi tentado de 04 a
+  06/08/2026 só pelo reload gradual do PM2 (mais perto de zero-downtime),
+  mas causou incidentes reais de produção (ver `docs/medicao-performance.md`,
+  entradas de 08/06) sem entregar o zero-downtime completo — foi revertido.
+  Não reabrir sem medir de novo, e só se a VPS ganhar mais núcleos.
+  **Gotcha**: `pm2 startOrReload`/`reload` nunca aplica mudança de
+  `instances`/`exec_mode` num app já rodando, só recarrega código/env dos
+  workers existentes — mudar topologia exige `pm2 delete` + `pm2 start`
+  manual (com `cd` pro diretório do app antes, já que o `script` do
+  `ecosystem.config.cjs` é caminho relativo).
 - Deploy é atômico: cada build vira uma release versionada em
   `releases/<sha>/` no VPS, e o symlink `current` troca atomicamente para
-  ela (nunca sobrescreve o conteúdo de uma release em uso — evita workers
-  antigos, ainda de pé durante o reload gradual do cluster mode, lendo
-  arquivo de um caminho que mudou debaixo deles). Se o health-check
-  pós-reload do PM2 falhar, o workflow reverte sozinho o symlink para a
-  release anterior
+  ela (nunca sobrescreve o conteúdo de uma release em uso — nasceu de um
+  bug do cluster mode, mas o padrão vale independente do modo de execução
+  atual). Se o health-check pós-reload do PM2 falhar, o workflow reverte
+  sozinho o symlink para a release anterior
 - Deploy real é CI Actions para a VPS Hestia (`sv1.t00ls.dev`,
   `gpa.t00ls.dev`). Não há PaaS
 
