@@ -8,6 +8,19 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    # TypeScript 7.x: typescript-eslint recusa rodar sob TS 7.0 de
+    # propósito (checagem explícita deles). Rastreado em
+    # typescript-eslint/typescript-eslint#10940 (suporte a TS >=7.1) --
+    # ainda aberto em 2026-08-07, com os próprios mantenedores dizendo que
+    # a base (tsgo, TypeScript portado pra Go) está "many months away from
+    # being stable", estimativa de 1-2 anos até virar padrão. Não é algo
+    # que se resolve do lado deste repo. Sem este ignore, o Dependabot abre
+    # uma PR nova (ou reabre a #91) a cada bump de patch/minor do 7.x, que
+    # falha o CI inteiro no `bun run lint` sempre da mesma forma. Remover
+    # quando typescript-eslint anunciar suporte a TS 7.x.
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
     groups:
       # Packages in the ESLint "family" tend to require mutually compatible
       # versions (eslint + @eslint/js + plugins). In separate PRs, each one

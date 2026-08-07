@@ -199,7 +199,13 @@ em vez de commit direto em `main`.
 
 ## Padrões de código
 
-- **TypeScript**: strict mode, sem `any`, sem `@ts-ignore`/`@ts-expect-error`
+- **TypeScript**: strict mode, sem `any`, sem `@ts-ignore`/`@ts-expect-error`.
+  Fixo em `^6.0.3` de propósito: `typescript-eslint` (8.66.0 no momento)
+  recusa rodar sob TS 7.0, e o suporte upstream está longe
+  ([typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
+  "many months away from being stable" segundo os mantenedores). Bump pra
+  7.x ignorado no `dependabot.yml` até isso mudar -- não reabrir essa
+  discussão sem checar se o issue upstream fechou primeiro
 - **Server functions**: sempre em `*.functions.ts` com schemas Zod
   compartilhados de `src/lib/schemas.ts`
 - **Estilo**: Tailwind v4 e utilitário `cn()`. Sem CSS modules ou
