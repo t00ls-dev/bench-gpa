@@ -50,6 +50,22 @@ describe("AuditLogSection", () => {
     expect(screen.getByText("algo.inexistente")).toBeInTheDocument();
   });
 
+  it("renders labels for first-access, self password change, and identifiers update", async () => {
+    const events = [
+      row({ id: 1, action: "auth.first_access_failed" }),
+      row({ id: 2, action: "auth.first_access_completed" }),
+      row({ id: 3, action: "auth.password_change" }),
+      row({ id: 4, action: "user.identifiers_update" }),
+    ];
+    const auditFn = () => Promise.resolve({ events, total: 4, limit: 50, offset: 0 });
+    renderWithClient(<AuditLogSection auditFn={auditFn} />);
+
+    expect(await screen.findByText("Primeiro acesso falhou")).toBeInTheDocument();
+    expect(screen.getByText("Primeiro acesso concluído")).toBeInTheDocument();
+    expect(screen.getByText("Trocou a própria senha")).toBeInTheDocument();
+    expect(screen.getByText("Atualizou identificadores")).toBeInTheDocument();
+  });
+
   it("only makes the action clickable (with a tooltip) when there's a username or detail to show", async () => {
     const events = [
       row({ id: 1, action: "auth.login", target_username: null, detail: null }),
