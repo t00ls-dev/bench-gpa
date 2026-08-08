@@ -17,23 +17,21 @@ export function ProductionTable({
 }: {
   secoes: ProductionSecaoForecast[];
   isFetching: boolean;
-  productFilter?: string;
+  productFilter?: string[];
 }) {
-  const q = productFilter?.trim().toLowerCase() ?? "";
-  // A text search is a deliberate scope narrowing the user asked for --
-  // unlike the confidence-floor "every seção always shows" rule (which is
-  // about not hiding data for statistical sparsity), a seção with zero
-  // matches for an active search is allowed to disappear. "Outros" has no
-  // per-product name to match against, so it's excluded (not just hidden)
-  // while a search is active: totalSecao/totalGeral are recomputed from
+  const selected = productFilter && productFilter.length > 0 ? new Set(productFilter) : null;
+  // Picking specific products is a deliberate scope narrowing the user
+  // asked for -- unlike the confidence-floor "every seção always shows"
+  // rule (which is about not hiding data for statistical sparsity), a
+  // seção with zero selected products is allowed to disappear. "Outros" has
+  // no per-product identity to select, so it's excluded (not just hidden)
+  // while a selection is active: totalSecao/totalGeral are recomputed from
   // just the visible rows, so the numbers on screen always add up to what's
   // actually shown, instead of a stale total that includes filtered-out data.
-  const visibleSecoes = q
+  const visibleSecoes = selected
     ? secoes
         .map((s) => {
-          const produtos = s.produtos.filter(
-            (p) => p.prodName.toLowerCase().includes(q) || p.prodCode.toLowerCase().includes(q),
-          );
+          const produtos = s.produtos.filter((p) => selected.has(p.prodCode));
           return {
             ...s,
             produtos,
@@ -64,7 +62,7 @@ export function ProductionTable({
 
       {secoes.length > 0 && visibleSecoes.length === 0 && (
         <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-          Nenhum produto encontrado para "{productFilter}".
+          Nenhum produto encontrado para os produtos selecionados.
         </p>
       )}
 
@@ -80,8 +78,8 @@ export function ProductionTable({
                 key={p.prodCode}
                 className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
               >
-                <span className="truncate" title={p.prodName}>
-                  {p.prodName}
+                <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
+                  <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
                 </span>
                 <span className="text-right whitespace-nowrap">
                   <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
