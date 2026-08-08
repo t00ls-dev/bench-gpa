@@ -800,6 +800,5 @@ mesmo assim.
 Hash idêntico entre execuções repetidas do mesmo cenário. Os cenários de
 teste (`producao_v3_sem_filtro`, `producao_v3_com_filtro`) foram
 removidos do `bench-procs.sh` depois de renomear pro nome definitivo. A
-proc candidata `production_forecast_v3_candidate` em si ainda não foi
-apagada de produção neste momento (baixa prioridade, mesmo padrão da
-v2 acima).
+proc candidata `production_forecast_v3_candidate` foi apagada de
+produção logo em seguida (via SSH, `DROP PROCEDURE IF EXISTS`).
