@@ -55,7 +55,7 @@ export function useProductionPdfExport({
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.setTextColor(17, 17, 17);
-      doc.text("Planejamento de Produção", mX, 12);
+      doc.text("Previsão de Produção", mX, 12);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);
@@ -69,11 +69,13 @@ export function useProductionPdfExport({
       );
       doc.text("Total geral: " + fmtBRL(totalGeral), mX, 31.5);
 
-      // Every row a plain string tuple, except a seção header (a single
-      // colSpan:6 cell) and an "outros" row (individually styled cells) --
-      // outrosRowIndices tracks which body index needs the italic/gray
-      // styling, since a row's own content can't be trusted to identify it
-      // (a real product could coincidentally have an empty PLU/name).
+      // Every row a plain string tuple, except a Seção/Grupo/Subgrupo header
+      // (a single colSpan:6 cell, one style per level -- decreasing
+      // emphasis mirrors the screen's indent/fill scheme) and an "outros"
+      // row (individually styled cells) -- outrosRowIndices tracks which
+      // body index needs the italic/gray styling, since a row's own
+      // content can't be trusted to identify it (a real product could
+      // coincidentally have an empty PLU/name).
       const body: Row[] = [];
       const outrosRowIndices = new Set<number>();
       let hasOutros = false;
@@ -86,27 +88,55 @@ export function useProductionPdfExport({
             styles: { fillColor: [238, 238, 238], fontStyle: "bold", halign: "left" },
           },
         ]);
-        for (const p of s.produtos) {
+        for (const g of s.grupos) {
           body.push([
-            p.prodCode,
-            p.prodName,
-            fmtBRL(p.forecastMin),
-            fmtBRL(p.forecastVal),
-            fmtBRL(p.forecastMax),
-            "",
+            {
+              content: `  ${g.grupo ?? "Sem grupo"} — Total: ${fmtBRL(g.totalGrupo)}`,
+              colSpan: 6,
+              styles: {
+                fillColor: [246, 246, 246],
+                fontStyle: "bold",
+                halign: "left",
+                fontSize: 7.5,
+              },
+            },
           ]);
-        }
-        if (s.outrosNumProdutos > 0) {
-          hasOutros = true;
-          outrosRowIndices.add(body.length);
-          body.push([
-            "",
-            `Outros produtos (${s.outrosNumProdutos})*`,
-            "-",
-            fmtBRL(s.outrosVal),
-            "-",
-            "-",
-          ]);
+          for (const sg of g.subgrupos) {
+            body.push([
+              {
+                content: `    ${sg.subgrupo ?? "Sem subgrupo"} — Total: ${fmtBRL(sg.totalSubgrupo)}`,
+                colSpan: 6,
+                styles: {
+                  fontStyle: "italic",
+                  halign: "left",
+                  textColor: [102, 102, 102],
+                  fontSize: 7,
+                },
+              },
+            ]);
+            for (const p of sg.produtos) {
+              body.push([
+                p.prodCode,
+                p.prodName,
+                fmtBRL(p.forecastMin),
+                fmtBRL(p.forecastVal),
+                fmtBRL(p.forecastMax),
+                "",
+              ]);
+            }
+            if (sg.outros) {
+              hasOutros = true;
+              outrosRowIndices.add(body.length);
+              body.push([
+                "",
+                `Outros produtos (${sg.outros.numProdutos})*`,
+                "-",
+                fmtBRL(sg.outros.outrosVal),
+                "-",
+                "-",
+              ]);
+            }
+          }
         }
       }
 

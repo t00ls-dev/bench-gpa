@@ -5,6 +5,9 @@ import db from "./db";
 import {
   ProductionForecastResult,
   ProductionSecaoForecast,
+  ProductionGrupoForecast,
+  ProductionSubgrupoForecast,
+  ProductionForecastProduct,
   ProductionFilterOption,
   asArray,
   asRecord,
@@ -43,44 +46,86 @@ export const getProductionForecast = createServerFn({ method: "POST" })
       const [individualRows, outrosRows, secoesRows, metaRows] = rs as unknown[];
       const meta = asRecord(asArray(metaRows)[0]);
 
-      const individual = asArray(individualRows).map((r) => {
+      const individual: ProductionForecastProduct[] = asArray(individualRows).map((r) => {
         const p = asRecord(r);
         return {
           prodCode: str(p.prod_code),
           prodName: str(p.prod_name),
           secao: strOrNull(p.secao),
+          grupo: strOrNull(p.grupo),
+          subgrupo: strOrNull(p.subgrupo),
           occurrences: num(p.occurrences),
           forecastVal: num(p.forecast_val),
           forecastMin: num(p.forecast_min),
           forecastMax: num(p.forecast_max),
         };
       });
-      const outrosBySecao = new Map(
-        asArray(outrosRows).map((r) => {
-          const o = asRecord(r);
-          return [
-            str(o.secao),
-            { numProdutos: num(o.num_produtos), outrosVal: num(o.outros_val) },
-          ] as const;
-        }),
-      );
+
+      // secao -> grupo -> subgrupo -> bucket. Nested Maps preserve
+      // insertion order, so walking `individual` first (already ordered by
+      // the proc's `ORDER BY secao, grupo, subgrupo, forecast_val DESC`)
+      // fixes the grupo/subgrupo order for free; `outrosRows` (also
+      // ordered by secao/grupo/subgrupo) only adds a bucket when a combo
+      // has ONLY below-threshold products (no individual row at all).
+      interface SubgrupoBucket {
+        subgrupo: string | null;
+        produtos: ProductionForecastProduct[];
+        outros: { numProdutos: number; outrosVal: number } | null;
+      }
+      const bySecao = new Map<
+        string | null,
+        Map<string | null, Map<string | null, SubgrupoBucket>>
+      >();
+      const getBucket = (
+        secao: string | null,
+        grupo: string | null,
+        subgrupo: string | null,
+      ): SubgrupoBucket => {
+        let byGrupo = bySecao.get(secao);
+        if (!byGrupo) bySecao.set(secao, (byGrupo = new Map()));
+        let bySubgrupo = byGrupo.get(grupo);
+        if (!bySubgrupo) byGrupo.set(grupo, (bySubgrupo = new Map()));
+        let bucket = bySubgrupo.get(subgrupo);
+        if (!bucket) bySubgrupo.set(subgrupo, (bucket = { subgrupo, produtos: [], outros: null }));
+        return bucket;
+      };
+
+      for (const p of individual) {
+        getBucket(p.secao, p.grupo, p.subgrupo).produtos.push(p);
+      }
+      for (const r of asArray(outrosRows)) {
+        const o = asRecord(r);
+        const bucket = getBucket(strOrNull(o.secao), strOrNull(o.grupo), strOrNull(o.subgrupo));
+        bucket.outros = { numProdutos: num(o.num_produtos), outrosVal: num(o.outros_val) };
+      }
 
       // secoesRows (product_universe) is the source of truth for WHICH
       // sections exist for this store: guarantees a section with zero sales
       // on this weekday within the window (e.g. Bacalhau) still shows up,
-      // with an empty product list and R$0 -- see the design doc.
+      // with an empty grupos list -- see the design doc. Grupo/Subgrupo,
+      // unlike Seção, only exist here when bySecao actually has them: they
+      // aren't padded from product_universe's full catalog.
       const secoes: ProductionSecaoForecast[] = asArray(secoesRows).map((r) => {
         const secao = str(asRecord(r).secao);
-        const outros = outrosBySecao.get(secao);
-        const produtos = individual.filter((p) => p.secao === secao);
-        const outrosVal = outros?.outrosVal ?? 0;
-        return {
-          secao,
-          produtos,
-          outrosVal,
-          outrosNumProdutos: outros?.numProdutos ?? 0,
-          totalSecao: produtos.reduce((sum, p) => sum + p.forecastVal, 0) + outrosVal,
-        };
+        const byGrupo = bySecao.get(secao);
+        const grupos: ProductionGrupoForecast[] = byGrupo
+          ? [...byGrupo.entries()].map(([grupo, bySubgrupo]) => {
+              const subgrupos: ProductionSubgrupoForecast[] = [...bySubgrupo.values()].map(
+                (bucket) => ({
+                  subgrupo: bucket.subgrupo,
+                  produtos: bucket.produtos,
+                  outros: bucket.outros,
+                  totalSubgrupo:
+                    bucket.produtos.reduce((sum, p) => sum + p.forecastVal, 0) +
+                    (bucket.outros?.outrosVal ?? 0),
+                }),
+              );
+              const totalGrupo = subgrupos.reduce((sum, sg) => sum + sg.totalSubgrupo, 0);
+              return { grupo, subgrupos, totalGrupo };
+            })
+          : [];
+        const totalSecao = grupos.reduce((sum, g) => sum + g.totalGrupo, 0);
+        return { secao, grupos, totalSecao };
       });
 
       return {
