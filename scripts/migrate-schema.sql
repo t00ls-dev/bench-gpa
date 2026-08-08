@@ -18,6 +18,7 @@ DROP PROCEDURE IF EXISTS db_health_check;
 DROP PROCEDURE IF EXISTS refresh_filter_hierarchy;
 DROP PROCEDURE IF EXISTS refresh_product_universe;
 DROP PROCEDURE IF EXISTS has_role;
+DROP PROCEDURE IF EXISTS production_forecast;
 
 -- =============================================
 -- TABLES
@@ -122,14 +123,21 @@ CREATE TABLE IF NOT EXISTS sales_daily_agg (
   INDEX idx_daily_sale_date (sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Deliberately no index on depto/secao/grupo/subgrupo: no analysis proc
--- benefits from them (filtering by any of them cost more than not
--- filtering, since the real access plan is always a scan by sale_date). The
--- 4 combined once took up 532.81 MB, 74.7% of the table's index. Removed in
--- production and measured on 2026-07-30 (see
--- scripts/migrations/0004_drop_indices_categoria_sales_prod_daily_agg.sql
+-- Deliberately no STANDALONE index on depto/secao/grupo/subgrupo: no
+-- analysis proc with OPTIONAL filters benefits from one (filtering by any
+-- of them cost more than not filtering, since the real access plan is
+-- always a scan by sale_date). The 4 combined once took up 532.81 MB, 74.7%
+-- of the table's index. Removed in production and measured on 2026-07-30
+-- (see scripts/migrations/0004_drop_indices_categoria_sales_prod_daily_agg.sql
 -- and docs/medicao-performance.md): identical hash across the procs, no
--- read regression. Don't recreate without measuring again.
+-- read regression. Don't recreate a standalone one without measuring again.
+--
+-- idx_prod_daily_store_depto_date below is a DIFFERENT case, added
+-- 2026-08-07 for production_forecast: store_code/depto are MANDATORY,
+-- single-value parameters there (not optional multi-value filters like
+-- area_analysis/dashboard_metrics), so the access pattern genuinely
+-- benefits. See scripts/migrations/0012_add_index_sales_prod_daily_agg_store_depto_date.sql
+-- for the full before/after measurement (127x on the read side).
 CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
@@ -141,6 +149,7 @@ CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   subgrupo    VARCHAR(100),
   val_vda     DECIMAL(15,2) NOT NULL DEFAULT 0,
   PRIMARY KEY (sale_date, store_code, prod_code),
+  INDEX idx_prod_daily_store_depto_date (store_code, depto, sale_date),
   INDEX idx_prod_daily_prod_code (prod_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -235,7 +244,7 @@ CREATE TABLE IF NOT EXISTS cron_heartbeat (
 
 DELIMITER //
 
--- 1/16: dashboard_metrics
+-- 1/17: dashboard_metrics
 CREATE PROCEDURE dashboard_metrics(
   p_date_from DATE,
   p_date_to DATE,
@@ -352,7 +361,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 2/16: dashboard_rankings
+-- 2/17: dashboard_rankings
 CREATE PROCEDURE dashboard_rankings(
   p_date_from DATE,
   p_date_to DATE,
@@ -480,7 +489,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 3/16: filter_options (uses filter_hierarchy, 21k rows instead of 942k)
+-- 3/17: filter_options (uses filter_hierarchy, 21k rows instead of 942k)
 CREATE PROCEDURE filter_options(
   p_date_from DATE,
   p_date_to DATE,
@@ -585,7 +594,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 4/16: area_analysis
+-- 4/17: area_analysis
 --
 -- Do NOT rewrite this proc into the "one scan + temp table" model without
 -- measuring the entire proc. It's been tried before (PR #9) and REGRESSED
@@ -820,7 +829,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 5/16: area_filter_hierarchy
+-- 5/17: area_filter_hierarchy
 CREATE PROCEDURE area_filter_hierarchy()
 BEGIN
   SELECT MAX(sale_date) AS latest_date FROM import_log;
@@ -832,7 +841,7 @@ BEGIN
   SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date ASC;
 END//
 
--- 6/16: product_search
+-- 6/17: product_search
 CREATE PROCEDURE product_search(p_q VARCHAR(255))
 BEGIN
   SELECT DISTINCT prod_code, prod_name
@@ -842,7 +851,7 @@ BEGIN
   LIMIT 20;
 END//
 
--- 7/16: get_product_by_code
+-- 7/17: get_product_by_code
 CREATE PROCEDURE get_product_by_code(p_code VARCHAR(20))
 BEGIN
   SELECT DISTINCT prod_code, prod_name
@@ -851,7 +860,7 @@ BEGIN
   LIMIT 1;
 END//
 
--- 8/16: product_analysis
+-- 8/17: product_analysis
 --
 -- p_store_codes is JSON (an array of store codes), no longer a single
 -- VARCHAR: supports comparing a specific subset of stores, not just "one
@@ -942,7 +951,7 @@ BEGIN
   LIMIT 4;
 END//
 
--- 9/16: upsert_products_bulk
+-- 9/17: upsert_products_bulk
 CREATE PROCEDURE upsert_products_bulk(
   p_rows JSON,
   p_sale_date DATE
@@ -973,7 +982,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_products;
 END//
 
--- 10/16: finalize_import
+-- 10/17: finalize_import
 CREATE PROCEDURE finalize_import(
   p_batch_id VARCHAR(36),
   p_sale_date DATE,
@@ -1054,7 +1063,7 @@ BEGIN
   COMMIT;
 END//
 
--- 11/16: imported_dates
+-- 11/17: imported_dates
 CREATE PROCEDURE imported_dates()
 BEGIN
   SELECT sale_date, row_count, imported_at
@@ -1062,7 +1071,7 @@ BEGIN
   ORDER BY sale_date DESC;
 END//
 
--- 12/16: purge_old_aggs
+-- 12/17: purge_old_aggs
 --
 -- The other end of the retention invariant; the JS side is in
 -- src/lib/retention.ts (isWithinRetention), used by import-watch to avoid
@@ -1138,7 +1147,7 @@ BEGIN
   SELECT v_deleted AS deleted;
 END//
 
--- 13/16: db_health_check
+-- 13/17: db_health_check
 CREATE PROCEDURE db_health_check()
 BEGIN
   SELECT VERSION() AS version, NOW() AS time;
@@ -1157,7 +1166,7 @@ BEGIN
   ORDER BY size_mb DESC;
 END//
 
--- 14/16: refresh_filter_hierarchy
+-- 14/17: refresh_filter_hierarchy
 --
 -- DELETE, not TRUNCATE. Both empty the table, but TRUNCATE is DDL: it
 -- causes an implicit commit and doesn't respect MVCC. Measured on
@@ -1208,7 +1217,7 @@ BEGIN
   COMMIT;
 END//
 
--- 15/16: refresh_product_universe
+-- 15/17: refresh_product_universe
 -- Regenerates product_universe from scratch (same pattern as
 -- refresh_filter_hierarchy: the table is derived, so it's recreated, never
 -- edited in place).
@@ -1254,12 +1263,106 @@ BEGIN
   COMMIT;
 END//
 
--- 16/16: has_role
+-- 16/17: has_role
 CREATE PROCEDURE has_role(p_user_id VARCHAR(36), p_role VARCHAR(20))
 BEGIN
   SELECT COUNT(*) > 0 AS has_role
   FROM users
   WHERE id = p_user_id AND role = p_role AND is_active = TRUE;
+END//
+
+-- 17/17: production_forecast
+--
+-- See docs/planejamento-producao-perecveis-2026-08-07.md for the design.
+-- Measured as a candidate before adopting this name (docs/medicao-
+-- performance.md's rule): 31,826 ms -> 250 ms (127x) after adding
+-- idx_prod_daily_store_depto_date (see migration 0012), same hash
+-- before/after. Without that index the optimizer scanned the entire table
+-- via idx_prod_daily_prod_code to avoid a filesort on GROUP BY prod_code,
+-- ignoring the sale_date range entirely -- confirmed with EXPLAIN.
+--
+-- p_store_code/p_target_date are always required singles (not JSON like
+-- area_analysis's optional multi-value filters): this screen always plans
+-- for exactly one store and one future day, so none of the
+-- tmp_filters/JSON_TABLE apparatus applies here.
+CREATE PROCEDURE production_forecast(
+  p_store_code VARCHAR(20),
+  p_target_date DATE,
+  p_min_occurrences INT,
+  p_lookback_occurrences INT
+)
+BEGIN
+  DECLARE v_window_start DATE;
+
+  -- Exact calendar window, same trick as product_analysis's
+  -- `INTERVAL 27 DAY` (this proc's precedent for "same day of the week"):
+  -- p_lookback_occurrences*7 - 1 days back guarantees AT MOST
+  -- p_lookback_occurrences occurrences of DAYOFWEEK(p_target_date) in
+  -- range. No window function needed -- none of the other 16 procs use
+  -- one, and a fixed window makes a per-product cap unnecessary.
+  SET v_window_start = DATE_SUB(p_target_date, INTERVAL (p_lookback_occurrences * 7 - 1) DAY);
+
+  -- ONE scan of sales_prod_daily_agg, filtered AND aggregated by
+  -- prod_code in the same materialization step -- same proven model as
+  -- dashboard_metrics (46.3s -> 10.1s: collapsing millions of rows to a
+  -- few thousand in a single CREATE TEMPORARY TABLE ... AS SELECT,
+  -- instead of re-scanning per result set). Unlike area_analysis's
+  -- regression (PR #9, reverted, docs/medicao-performance.md 2026-07-26),
+  -- there's no LEFT JOIN against product_universe inside this statement --
+  -- documented there as the actual differentiator, not the materialization
+  -- itself. Measure anyway before trusting this reasoning (same rule as
+  -- always): scripts/bench-procs.sh against this candidate name.
+  DROP TEMPORARY TABLE IF EXISTS tmp_product_forecast;
+  CREATE TEMPORARY TABLE tmp_product_forecast ENGINE=InnoDB AS
+  SELECT prod_code, MAX(prod_name) AS prod_name, MAX(secao) AS secao,
+         COUNT(*) AS occurrences, AVG(val_vda) AS forecast_val
+  FROM sales_prod_daily_agg
+  WHERE store_code = p_store_code
+    AND depto = 'PERECIVEIS'
+    AND sale_date >= v_window_start
+    AND sale_date < p_target_date
+    AND DAYOFWEEK(sale_date) = DAYOFWEEK(p_target_date)
+  GROUP BY prod_code;
+
+  -- Result set 1: individual products (confidence floor reached)
+  SELECT prod_code, prod_name, secao, occurrences, forecast_val
+  FROM tmp_product_forecast
+  WHERE occurrences >= p_min_occurrences
+  ORDER BY secao, forecast_val DESC;
+
+  -- Result set 2: "Outros" per section (below the confidence floor).
+  -- Reconciliation is by construction: every product in
+  -- tmp_product_forecast has >=1 occurrence in the window and falls into
+  -- EXACTLY one of the two result sets above, never both, never neither.
+  -- A product with ZERO occurrences of this weekday in the window (but
+  -- that sells on other days) isn't in tmp_product_forecast at all --
+  -- correct for "average of this weekday's occurrences": no occurrence,
+  -- no average, contributes implicitly R$0. Label this on the UI as
+  -- "outros produtos com histórico no dia", not "...da seção", to avoid
+  -- implying 100% catalog coverage.
+  SELECT secao, COUNT(*) AS num_produtos, SUM(forecast_val) AS outros_val
+  FROM tmp_product_forecast
+  WHERE occurrences < p_min_occurrences
+  GROUP BY secao;
+
+  -- Result set 3: every section of PERECIVEIS at this store, from
+  -- product_universe (has idx_pu_store/idx_pu_depto; sales_prod_daily_agg
+  -- doesn't). Guarantees no section disappears from the screen even with
+  -- zero sales on this weekday within the window (rare sections like
+  -- Bacalhau/Peixaria/Peixes Congelados) -- "todo PERECIVEIS entra, sem
+  -- exceção de seção" is a decision from the user, not a nice-to-have.
+  SELECT DISTINCT secao
+  FROM product_universe
+  WHERE store_code = p_store_code AND depto = 'PERECIVEIS';
+
+  -- Result set 4: metadata for the UI ("com base em N sextas-feiras")
+  -- without duplicating the day-of-week/parameter math in TypeScript.
+  -- DAYOFWEEK: MariaDB convention, 1=Sunday..7=Saturday.
+  SELECT DAYOFWEEK(p_target_date) AS weekday_num,
+         p_min_occurrences AS min_occurrences,
+         p_lookback_occurrences AS lookback_occurrences;
+
+  DROP TEMPORARY TABLE IF EXISTS tmp_product_forecast;
 END//
 
 DELIMITER ;
