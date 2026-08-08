@@ -3,22 +3,10 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { fmtBRShort, todayISOBrazil } from "@/lib/utils";
+import { fmtBRShort } from "@/lib/utils";
 
 function iso(d: Date) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
-
-/**
- * Exported on its own so it's unit-testable without rendering the
- * Calendar: this project's jsdom setup has no Portal/ResizeObserver (see
- * admin-audit-panel.test.tsx), so a Radix Popover never actually opens in
- * a test. The strict `<=` here is exactly the kind of off-by-one that's
- * easy to invert by accident (blocks today AND the past, only allows
- * tomorrow onward).
- */
-export function isPastOrToday(d: Date, todayIso: string): boolean {
-  return iso(d) <= todayIso;
 }
 
 interface Props {
@@ -27,21 +15,19 @@ interface Props {
 }
 
 /**
- * Every other date picker in this project (DateRangePicker,
- * ImportCalendar) restricts selection to PAST dates that already have
- * data. This one is the opposite: Production Planning always
- * predicts a day that hasn't happened yet, so `disabled` is inverted --
- * blocks today and the past instead of restricting to `availableDates`.
- * There's no "data available" concept to check against here; a thin
- * history for the chosen weekday shows up as more "Outros" in the table
- * itself, not as a disabled day on the calendar (see the design doc).
+ * Unlike DateRangePicker/ImportCalendar (restricted to `availableDates`
+ * that already have data), Production Planning has no such restriction in
+ * either direction: a future day is a forecast (planning ahead), a past
+ * day recomputes what the forecast would have said (conferência, or
+ * catching up on a day someone forgot to check before it happened) -- see
+ * docs/planejamento-producao-perecveis-2026-08-07.md. The proc itself
+ * already only ever looks at sale_date strictly before p_target_date, so
+ * a past target date isn't a special case for it, just a normal call.
  */
 export function TargetDatePicker({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
-  const today = todayISOBrazil();
 
   const selected = value ? new Date(value + "T00:00:00") : undefined;
-  const isDisabled = (d: Date) => isPastOrToday(d, today);
 
   const handleSelect = (d: Date | undefined) => {
     if (!d) return;
@@ -58,7 +44,7 @@ export function TargetDatePicker({ value, onChange }: Props) {
         >
           <CalendarIcon className="size-4 opacity-60" />
           <span className="truncate whitespace-nowrap min-w-0">
-            {value ? fmtBRShort(value) : "Selecione um dia futuro"}
+            {value ? fmtBRShort(value) : "Selecione um dia"}
           </span>
         </Button>
       </PopoverTrigger>
@@ -68,7 +54,6 @@ export function TargetDatePicker({ value, onChange }: Props) {
           selected={selected}
           onSelect={handleSelect}
           defaultMonth={selected}
-          disabled={isDisabled}
           numberOfMonths={1}
           className="p-2 pointer-events-auto"
         />
