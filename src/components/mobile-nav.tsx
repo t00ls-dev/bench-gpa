@@ -22,7 +22,7 @@ const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/product", label: "Produto", icon: Package },
   { to: "/area", label: "Área", icon: Layers },
-  { to: "/producao", label: "Produção", icon: ClipboardList },
+  { to: "/forecast", label: "Produção", icon: ClipboardList },
 ] as const;
 
 const ADMIN_ITEMS = [

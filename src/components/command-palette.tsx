@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { to: "/product", label: "Produto", icon: Package, keywords: "produto busca pesquisa" },
   { to: "/area", label: "Área", icon: Layers, keywords: "área regional" },
   {
-    to: "/producao",
+    to: "/forecast",
     label: "Planejamento de Produção",
     icon: ClipboardList,
     keywords: "produção planejamento previsão perecíveis venda esperada",

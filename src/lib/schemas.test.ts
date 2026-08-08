@@ -5,6 +5,7 @@ import {
   UsernameSchema,
   EmployeeIdSchema,
   PasswordSchema,
+  ProductionForecastSchema,
 } from "./schemas";
 
 describe("FilterSchema", () => {
@@ -80,6 +81,30 @@ describe("EmployeeIdSchema", () => {
 
   it("rejects a letter", () => {
     expect(() => EmployeeIdSchema.parse("123a5")).toThrow();
+  });
+});
+
+describe("ProductionForecastSchema", () => {
+  it("accepts a future date", () => {
+    const result = ProductionForecastSchema.parse({ storeCode: "1516", targetDate: "2099-01-01" });
+    expect(result.targetDate).toBe("2099-01-01");
+  });
+
+  it("accepts a past date: conferência of a day that already happened", () => {
+    const result = ProductionForecastSchema.parse({ storeCode: "1516", targetDate: "2020-01-01" });
+    expect(result.targetDate).toBe("2020-01-01");
+  });
+
+  it("rejects a malformed date string", () => {
+    expect(() =>
+      ProductionForecastSchema.parse({ storeCode: "1516", targetDate: "not-a-date" }),
+    ).toThrow();
+  });
+
+  it("defaults secoes/grupos to empty arrays", () => {
+    const result = ProductionForecastSchema.parse({ storeCode: "1516", targetDate: "2026-01-01" });
+    expect(result.secoes).toEqual([]);
+    expect(result.grupos).toEqual([]);
   });
 });
 
