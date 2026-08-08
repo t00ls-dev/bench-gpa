@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
@@ -21,6 +22,7 @@ const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/product", label: "Produto", icon: Package },
   { to: "/area", label: "Área", icon: Layers },
+  { to: "/producao", label: "Produção", icon: ClipboardList },
 ] as const;
 
 const ADMIN_ITEMS = [

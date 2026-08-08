@@ -7,6 +7,7 @@ const SHORTCUTS = [
   { keys: "g + d", label: "Ir para Dashboard" },
   { keys: "g + p", label: "Ir para Produto" },
   { keys: "g + a", label: "Ir para Área" },
+  { keys: "g + e", label: "Ir para Planejamento de Produção" },
   { keys: "g + u", label: "Ir para Importar" },
   { keys: "g + o", label: "Ir para Documentação" },
   { keys: "g + n", label: "Ir para Administração" },

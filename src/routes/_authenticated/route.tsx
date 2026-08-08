@@ -21,6 +21,7 @@ import {
   HelpCircle,
   Loader2,
   KeyRound,
+  ClipboardList,
 } from "lucide-react";
 import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 import { Button } from "@/components/ui/button";
@@ -191,6 +192,9 @@ function AuthedLayout() {
       },
     }),
   );
+  useGotoHotkey("e", () =>
+    router.navigate({ to: "/producao", search: { store: undefined, targetDate: undefined } }),
+  );
   useGotoHotkey("u", () => router.navigate({ to: "/upload" }));
   useGotoHotkey("o", () => router.navigate({ to: "/admin/docs" }));
   useGotoHotkey("n", () => router.navigate({ to: "/admin" }));
@@ -202,6 +206,7 @@ function AuthedLayout() {
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/product", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
+    { to: "/producao", label: "Planejamento de Produção", icon: ClipboardList },
     { to: "/howto", label: "Como usar", icon: HelpCircle },
   ] as const;
 

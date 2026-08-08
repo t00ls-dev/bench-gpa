@@ -17,6 +17,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAreaRouteImport } from './routes/_authenticated/area'
 import { Route as AuthenticatedHowtoRouteImport } from './routes/_authenticated/howto'
+import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedProductRouteImport } from './routes/_authenticated/product'
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -61,6 +62,11 @@ const AuthenticatedHowtoRoute = AuthenticatedHowtoRouteImport.update({
   path: '/howto',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
+  id: '/producao',
+  path: '/producao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProductRoute = AuthenticatedProductRouteImport.update({
   id: '/product',
   path: '/product',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/area': typeof AuthenticatedAreaRoute
   '/howto': typeof AuthenticatedHowtoRoute
+  '/producao': typeof AuthenticatedProducaoRoute
   '/product': typeof AuthenticatedProductRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/admin/docs': typeof AuthenticatedAdminDocsRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/first-access': typeof FirstAccessRoute
   '/area': typeof AuthenticatedAreaRoute
   '/howto': typeof AuthenticatedHowtoRoute
+  '/producao': typeof AuthenticatedProducaoRoute
   '/product': typeof AuthenticatedProductRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/area': typeof AuthenticatedAreaRoute
   '/_authenticated/howto': typeof AuthenticatedHowtoRoute
+  '/_authenticated/producao': typeof AuthenticatedProducaoRoute
   '/_authenticated/product': typeof AuthenticatedProductRoute
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/area'
     | '/howto'
+    | '/producao'
     | '/product'
     | '/upload'
     | '/admin/docs'
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/first-access'
     | '/area'
     | '/howto'
+    | '/producao'
     | '/product'
     | '/upload'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/area'
     | '/_authenticated/howto'
+    | '/_authenticated/producao'
     | '/_authenticated/product'
     | '/_authenticated/upload'
     | '/_authenticated/'
@@ -229,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHowtoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/producao': {
+      id: '/_authenticated/producao'
+      path: '/producao'
+      fullPath: '/producao'
+      preLoaderRoute: typeof AuthenticatedProducaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/product': {
       id: '/_authenticated/product'
       path: '/product'
@@ -277,6 +296,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAreaRoute: typeof AuthenticatedAreaRoute
   AuthenticatedHowtoRoute: typeof AuthenticatedHowtoRoute
+  AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRoute
   AuthenticatedProductRoute: typeof AuthenticatedProductRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -286,6 +306,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAreaRoute: AuthenticatedAreaRoute,
   AuthenticatedHowtoRoute: AuthenticatedHowtoRoute,
+  AuthenticatedProducaoRoute: AuthenticatedProducaoRoute,
   AuthenticatedProductRoute: AuthenticatedProductRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
