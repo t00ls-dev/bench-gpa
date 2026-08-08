@@ -13,11 +13,38 @@ import { Loader2 } from "lucide-react";
 export function ProductionTable({
   secoes,
   isFetching,
+  productFilter,
 }: {
   secoes: ProductionSecaoForecast[];
   isFetching: boolean;
+  productFilter?: string;
 }) {
-  const totalGeral = secoes.reduce((sum, s) => sum + s.totalSecao, 0);
+  const q = productFilter?.trim().toLowerCase() ?? "";
+  // A text search is a deliberate scope narrowing the user asked for --
+  // unlike the confidence-floor "every seção always shows" rule (which is
+  // about not hiding data for statistical sparsity), a seção with zero
+  // matches for an active search is allowed to disappear. "Outros" has no
+  // per-product name to match against, so it's excluded (not just hidden)
+  // while a search is active: totalSecao/totalGeral are recomputed from
+  // just the visible rows, so the numbers on screen always add up to what's
+  // actually shown, instead of a stale total that includes filtered-out data.
+  const visibleSecoes = q
+    ? secoes
+        .map((s) => {
+          const produtos = s.produtos.filter(
+            (p) => p.prodName.toLowerCase().includes(q) || p.prodCode.toLowerCase().includes(q),
+          );
+          return {
+            ...s,
+            produtos,
+            outrosVal: 0,
+            outrosNumProdutos: 0,
+            totalSecao: produtos.reduce((sum, p) => sum + p.forecastVal, 0),
+          };
+        })
+        .filter((s) => s.produtos.length > 0)
+    : secoes;
+  const totalGeral = visibleSecoes.reduce((sum, s) => sum + s.totalSecao, 0);
 
   return (
     <div className="kpi-card overflow-hidden">
@@ -35,8 +62,14 @@ export function ProductionTable({
         </p>
       )}
 
+      {secoes.length > 0 && visibleSecoes.length === 0 && (
+        <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+          Nenhum produto encontrado para "{productFilter}".
+        </p>
+      )}
+
       <div className="divide-y">
-        {secoes.map((s) => (
+        {visibleSecoes.map((s) => (
           <Fragment key={s.secao}>
             <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
@@ -50,7 +83,12 @@ export function ProductionTable({
                 <span className="truncate" title={p.prodName}>
                   {p.prodName}
                 </span>
-                <span className="whitespace-nowrap font-medium">{fmtBRL(p.forecastVal)}</span>
+                <span className="text-right whitespace-nowrap">
+                  <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
+                  </span>
+                </span>
               </div>
             ))}
             {s.outrosNumProdutos > 0 && (

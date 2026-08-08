@@ -177,6 +177,11 @@ NUL="JSON_ARRAY()"
 # filters on, so it's the representative choice for measuring its cost.
 TOMORROW="$(sql -e "SELECT DATE_ADD('$LAST', INTERVAL 1 DAY);")"
 STORE_PEREC="$(sql -e "SELECT store_code FROM sales_prod_daily_agg WHERE depto='PERECIVEIS' GROUP BY store_code ORDER BY COUNT(*) DESC LIMIT 1;")"
+# Busiest seção within PERECIVEIS at STORE_PEREC: representative filtered
+# case for the v2 candidate (secao/grupo filters), same reasoning as
+# STORE_PEREC itself -- the dimension this scenario actually filters on.
+SECAO_PEREC="$(sql -e "SELECT secao FROM sales_prod_daily_agg WHERE depto='PERECIVEIS' AND store_code='$STORE_PEREC' GROUP BY secao ORDER BY COUNT(*) DESC LIMIT 1;")"
+J_SECAO_PEREC="[\"$(printf '%s' "$SECAO_PEREC" | sed 's/"/\\"/g')\"]"
 
 # name | full SQL call
 SCENARIOS=(
@@ -191,7 +196,8 @@ SCENARIOS=(
 "filtros_28d|CALL filter_options('$D28','$LAST',$NUL,$NUL,$NUL,$NUL)"
 "produto_alto_volume|CALL product_analysis('$PROD_HIGH',$NUL,NULL)"
 "produto_baixo_volume|CALL product_analysis('$PROD_LOW',$NUL,NULL)"
-"producao_amanha|CALL production_forecast('$STORE_PEREC','$TOMORROW',4,8)"
+"producao_amanha|CALL production_forecast('$STORE_PEREC','$TOMORROW',4,8,$NUL,$NUL)"
+"producao_amanha_com_filtro|CALL production_forecast('$STORE_PEREC','$TOMORROW',4,8,'$J_SECAO_PEREC',$NUL)"
 )
 
 RESULTS="$OUT_DIR/results.tsv"

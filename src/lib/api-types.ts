@@ -89,6 +89,8 @@ export interface ProductionForecastProduct {
   secao: string | null;
   occurrences: number;
   forecastVal: number;
+  forecastMin: number;
+  forecastMax: number;
 }
 export interface ProductionSecaoForecast {
   secao: string;
@@ -102,6 +104,14 @@ export interface ProductionForecastResult {
   weekdayNum: number;
   minOccurrences: number;
   lookbackOccurrences: number;
+}
+
+/** One row per (secao, grupo) pair that exists in PERECIVEIS at a store --
+ * used to build the Seção/Grupo filter cascade client-side, same spirit
+ * as AreaHierarchyItem but scoped to just these 2 levels. */
+export interface ProductionFilterOption {
+  secao: string;
+  grupo: string | null;
 }
 
 export interface ProductAnalysisResult {
