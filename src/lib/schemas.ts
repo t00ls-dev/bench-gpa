@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { todayISOBrazil } from "./utils";
 
 const DateRangeSchema = z.object({
   dateFrom: z.string().optional().nullable(),
@@ -68,20 +67,19 @@ export const DashboardRankingsSchema = FilterSchema.extend({
 /**
  * Store and target date are always required singles here (never optional
  * multi-value filters like FilterSchema's): the Production Planning
- * screen always plans for exactly one store, one future day. secoes/
- * grupos ARE optional multi-value filters (added 2026-08-08), same shape
- * as FilterSchema's, narrowing the fixed PERECIVEIS scope further.
+ * screen always plans for exactly one store, one day. secoes/grupos ARE
+ * optional multi-value filters (added 2026-08-08), same shape as
+ * FilterSchema's, narrowing the fixed PERECIVEIS scope further.
  *
- * targetDate must be strictly after "today" in the Brasília timezone
- * (todayISOBrazil, utils.ts) -- reused instead of comparing against a raw
- * `new Date()`, for the same reason it exists: the server (UTC) and a
- * client in Brazil can disagree about what day it is by a few hours.
+ * targetDate has no past/future restriction (removed 2026-08-08): a
+ * future date is a forecast, a past date recomputes what the forecast
+ * would have said for a day that already happened (conferência) -- the
+ * proc only ever looks at sale_date strictly before p_target_date either
+ * way, so there's nothing direction-specific to validate here.
  */
 export const ProductionForecastSchema = z.object({
   storeCode: z.string().min(1),
-  targetDate: z.string().refine((d) => d > todayISOBrazil(), {
-    message: "A data deve ser um dia futuro.",
-  }),
+  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
   secoes: z.array(z.string()).optional().default([]),
   grupos: z.array(z.string()).optional().default([]),
 });
