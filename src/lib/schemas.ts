@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { todayISOBrazil } from "./utils";
 
 const DateRangeSchema = z.object({
   dateFrom: z.string().optional().nullable(),
@@ -62,6 +63,23 @@ export const AreaAnalysisSchema = z.object({
 
 export const DashboardRankingsSchema = FilterSchema.extend({
   limit: z.number().int().min(1).max(50).optional().default(10),
+});
+
+/**
+ * Store and target date are always required singles here (never optional
+ * multi-value filters like FilterSchema's): the Production Planning
+ * screen always plans for exactly one store, one future day.
+ *
+ * targetDate must be strictly after "today" in the Brasília timezone
+ * (todayISOBrazil, utils.ts) -- reused instead of comparing against a raw
+ * `new Date()`, for the same reason it exists: the server (UTC) and a
+ * client in Brazil can disagree about what day it is by a few hours.
+ */
+export const ProductionForecastSchema = z.object({
+  storeCode: z.string().min(1),
+  targetDate: z.string().refine((d) => d > todayISOBrazil(), {
+    message: "A data deve ser um dia futuro.",
+  }),
 });
 
 export const UserIdSchema = z.string().uuid();

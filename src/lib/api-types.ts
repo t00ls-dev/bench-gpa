@@ -83,6 +83,27 @@ export interface AreaFilterHierarchyResult {
   availableDates: string[];
 }
 
+export interface ProductionForecastProduct {
+  prodCode: string;
+  prodName: string;
+  secao: string | null;
+  occurrences: number;
+  forecastVal: number;
+}
+export interface ProductionSecaoForecast {
+  secao: string;
+  produtos: ProductionForecastProduct[];
+  outrosVal: number;
+  outrosNumProdutos: number;
+  totalSecao: number;
+}
+export interface ProductionForecastResult {
+  secoes: ProductionSecaoForecast[];
+  weekdayNum: number;
+  minOccurrences: number;
+  lookbackOccurrences: number;
+}
+
 export interface ProductAnalysisResult {
   product: {
     prod_code: string;
