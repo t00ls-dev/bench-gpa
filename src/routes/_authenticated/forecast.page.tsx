@@ -7,7 +7,7 @@ import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { ProductionFilters } from "@/components/production-filters";
 import { ProductionTable } from "@/components/production-table";
 import { ClipboardList } from "lucide-react";
-import { Route } from "./producao";
+import { Route } from "./forecast";
 
 function ProductionPage() {
   const { store, targetDate: initialTargetDate } = Route.useSearch();
@@ -52,8 +52,9 @@ function ProductionPage() {
             <ClipboardList className="size-7 text-primary shrink-0" /> Planejamento de Produção
           </h1>
           <p className="text-sm text-muted-foreground">
-            Venda esperada por produto de Perecíveis, numa loja, para um dia futuro. Baseado na
-            média das últimas ocorrências do mesmo dia da semana.
+            Venda esperada por produto de Perecíveis, numa loja, para um dia futuro (ou já passado,
+            pra conferência). Baseado na média das últimas ocorrências do mesmo dia da semana antes
+            dessa data.
           </p>
         </div>
       </header>
@@ -79,7 +80,7 @@ function ProductionPage() {
 
       {!storeCode || !targetDate ? (
         <div className="kpi-card px-3 py-6 text-center text-sm text-muted-foreground">
-          Selecione uma loja e um dia futuro para ver a previsão.
+          Selecione uma loja e um dia para ver a previsão.
         </div>
       ) : isError ? (
         <div className="kpi-card px-3 py-6 text-center text-sm text-destructive">
