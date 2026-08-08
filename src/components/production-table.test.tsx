@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ProductionTable } from "./production-table";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
 import { fmtBRL } from "@/lib/utils";
+import { OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
 
 // fmtBRL uses a non-breaking space between "R$" and the number.
 // testing-library's default text normalizer collapses that into a regular
@@ -85,6 +86,45 @@ describe("ProductionTable", () => {
     expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
   });
 
+  it("shows a caveat explaining why 'outros' has no individual PLU, instead of just hiding it", () => {
+    render(<ProductionTable secoes={SECOES} isFetching={false} />);
+    expect(screen.getByText(exactText(OUTROS_CAVEAT_TEXT))).toBeInTheDocument();
+  });
+
+  describe("export PDF button", () => {
+    it("doesn't render without an onExportPDF handler", () => {
+      render(<ProductionTable secoes={SECOES} isFetching={false} />);
+      expect(screen.queryByRole("button", { name: /exportar planejamento em pdf/i })).toBeNull();
+    });
+
+    it("doesn't render when there's no data loaded yet", () => {
+      render(<ProductionTable secoes={[]} isFetching={false} onExportPDF={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: /exportar planejamento em pdf/i })).toBeNull();
+    });
+
+    it("calls onExportPDF when clicked", () => {
+      const onExportPDF = vi.fn();
+      render(<ProductionTable secoes={SECOES} isFetching={false} onExportPDF={onExportPDF} />);
+      fireEvent.click(screen.getByRole("button", { name: /exportar planejamento em pdf/i }));
+      expect(onExportPDF).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows the elapsed time and disables the button while generating", () => {
+      render(
+        <ProductionTable
+          secoes={SECOES}
+          isFetching={false}
+          onExportPDF={vi.fn()}
+          pdfLoading
+          pdfElapsed={3}
+        />,
+      );
+      const button = screen.getByRole("button", { name: /exportar planejamento em pdf/i });
+      expect(button).toBeDisabled();
+      expect(screen.getByText("Gerando… 3s")).toBeInTheDocument();
+    });
+  });
+
   describe("productFilter", () => {
     it("keeps only the selected products", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
@@ -119,7 +159,7 @@ describe("ProductionTable", () => {
 
     it("shows a R$0 total when nothing matches the selection", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
-      expect(screen.getByText(exactText(`Total: ${fmtBRL(0)}`))).toBeInTheDocument();
+      expect(screen.getAllByText(exactText(`Total: ${fmtBRL(0)}`)).length).toBeGreaterThan(0);
     });
   });
 });
