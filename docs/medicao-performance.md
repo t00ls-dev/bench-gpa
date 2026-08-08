@@ -700,3 +700,55 @@ teste (`idx_test_store_depto_date`) depois substituído pelo nome
 definitivo via a migration, que já inclui o `DROP INDEX IF EXISTS` do
 nome de teste (self-cleaning, confirmado depois do deploy real: só sobrou
 o nome definitivo em produção).
+
+## 2026-08-08: production_forecast, extensão mín/méd/máx + filtros seção/grupo
+
+Usuário trouxe um relatório real da GPA (`/home/admin/producao/data.xlsx`,
+não importado, só referência) que mostra QTD_MINIMA/QTD_IDEAL/QTD_MAXIMA
+por produto: uma faixa, não um número único. Pedido: a mesma proc já
+existente (ver entrada de 2026-08-07 acima) passa a devolver
+`forecast_min`/`forecast_max` junto do `forecast_val` (AVG), calculados
+do mesmo `sales_prod_daily_agg` já materializado, sem nenhum pipeline de
+import novo; e ganha dois parâmetros JSON opcionais (`p_secoes`,
+`p_grupos`) pra filtrar a tela por seção/grupo.
+
+Assinatura foi de 4 pra 6 parâmetros (`p_secoes JSON, p_grupos JSON`
+adicionados no fim). Mesmo padrão `tmp_filters` + `JSON_TABLE` +
+`NOT EXISTS (...) OR col IN (...)` já usado em `area_analysis` e
+`dashboard_metrics`, só que com 2 colunas (secao, grupo) em vez de 5, já
+que depto é fixo (PERECIVEIS) e loja é sempre singular obrigatória aqui.
+
+**Por que era seguro aplicar isso dentro de um `CREATE TEMPORARY TABLE
+... AS SELECT`**: essa combinação regrediu `area_analysis` no passado
+(PR #9, entrada de 2026-07-26 acima), mas `dashboard_metrics` usa
+exatamente o mesmo formato com sucesso (46,3s -> 10,1s). O diferencial
+documentado no próprio schema é o `LEFT JOIN` contra `product_universe`
+que só `area_analysis` tem, dentro da mesma instrução; nem
+`dashboard_metrics` nem `production_forecast` têm esse `LEFT JOIN`.
+Medido mesmo assim, sem aceitar o argumento histórico sozinho.
+
+Protocolo de sempre: candidata testada primeiro sob o nome
+`production_forecast_v2_candidate` em produção via SSH, medida com
+`scripts/bench-procs.sh` (dois cenários novos: `producao_amanha` sem
+filtro e `producao_amanha_com_filtro`, loja/seção de PERECIVEIS reais),
+só então renomeada pro nome definitivo.
+
+**Sem filtro**: mediana 178ms (repetição do cenário já medido em
+2026-08-07, mesma ordem de grandeza da baseline de 250ms; variação
+esperada por carga da VPS, não regressão).
+
+**Com filtro de seção** (`p_secoes` com 1 valor): primeira medição deu
+1,58x de dispersão (`<-- HIGH SPREAD, don't trust`, log do próprio
+script), atribuída a contaminação por tráfego real de produção
+concorrente (confirmado via `SHOW PROCESSLIST` antes de medir de novo,
+`load average` acima de 0,7 disparou o guard do script). Depois da carga
+normalizar: mediana **229ms**, dispersão 1,01x, confiável. Sem
+regressão frente à baseline sem filtro.
+
+Hash idêntico entre execuções repetidas do mesmo cenário. Os cenários de
+teste do `bench-procs.sh` usados só pra medir (`producao_v2_sem_filtro`,
+`producao_v2_com_filtro`) foram removidos do script depois de renomear
+pro nome definitivo. A proc candidata `production_forecast_v2_candidate`
+em si ainda não foi apagada de produção neste momento (baixa prioridade,
+não bloqueia; ver pendência equivalente já resolvida na entrada de
+2026-08-07 acima para o precedente de como isso costuma ser limpo).

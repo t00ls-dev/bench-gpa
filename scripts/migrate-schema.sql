@@ -1283,86 +1283,98 @@ END//
 --
 -- p_store_code/p_target_date are always required singles (not JSON like
 -- area_analysis's optional multi-value filters): this screen always plans
--- for exactly one store and one future day, so none of the
--- tmp_filters/JSON_TABLE apparatus applies here.
+-- for exactly one store and one future day.
+--
+-- p_secoes/p_grupos: JSON arrays, optional multi-value filters (added
+-- 2026-08-08, measured as a v2 candidate: 178-229ms, no regression vs the
+-- 229ms re-measured baseline, dispersion <1.3x on every trustworthy run
+-- -- see docs/medicao-performance.md). Same tmp_filters/JSON_TABLE/
+-- NOT EXISTS-OR-IN pattern as area_analysis, just 2 columns instead of 5
+-- (no depto/subgrupo/store filter here: depto is fixed, store is always a
+-- required single). Applying these as a condition on a
+-- CREATE TEMPORARY TABLE ... AS SELECT is the exact shape that regressed
+-- area_analysis (PR #9) -- but dashboard_metrics uses this same shape
+-- successfully (46.3s -> 10.1s): the documented differentiator is
+-- area_analysis's LEFT JOIN against product_universe inside the same
+-- statement, which neither dashboard_metrics nor this proc has.
 CREATE PROCEDURE production_forecast(
   p_store_code VARCHAR(20),
   p_target_date DATE,
   p_min_occurrences INT,
-  p_lookback_occurrences INT
+  p_lookback_occurrences INT,
+  p_secoes JSON,
+  p_grupos JSON
 )
 BEGIN
   DECLARE v_window_start DATE;
 
-  -- Exact calendar window, same trick as product_analysis's
-  -- `INTERVAL 27 DAY` (this proc's precedent for "same day of the week"):
-  -- p_lookback_occurrences*7 - 1 days back guarantees AT MOST
-  -- p_lookback_occurrences occurrences of DAYOFWEEK(p_target_date) in
-  -- range. No window function needed -- none of the other 16 procs use
-  -- one, and a fixed window makes a per-product cap unnecessary.
   SET v_window_start = DATE_SUB(p_target_date, INTERVAL (p_lookback_occurrences * 7 - 1) DAY);
 
-  -- ONE scan of sales_prod_daily_agg, filtered AND aggregated by
-  -- prod_code in the same materialization step -- same proven model as
-  -- dashboard_metrics (46.3s -> 10.1s: collapsing millions of rows to a
-  -- few thousand in a single CREATE TEMPORARY TABLE ... AS SELECT,
-  -- instead of re-scanning per result set). Unlike area_analysis's
-  -- regression (PR #9, reverted, docs/medicao-performance.md 2026-07-26),
-  -- there's no LEFT JOIN against product_universe inside this statement --
-  -- documented there as the actual differentiator, not the materialization
-  -- itself. Measure anyway before trusting this reasoning (same rule as
-  -- always): scripts/bench-procs.sh against this candidate name.
+  DROP TEMPORARY TABLE IF EXISTS tmp_filters;
+  CREATE TEMPORARY TABLE tmp_filters (
+    secao VARCHAR(100),
+    grupo VARCHAR(100)
+  ) ENGINE=MEMORY;
+
+  IF JSON_LENGTH(p_secoes) > 0 THEN
+    INSERT INTO tmp_filters (secao)
+    SELECT DISTINCT value FROM JSON_TABLE(p_secoes, '$[*]' COLUMNS (value VARCHAR(100) PATH '$')) AS j;
+  END IF;
+  IF JSON_LENGTH(p_grupos) > 0 THEN
+    INSERT INTO tmp_filters (grupo)
+    SELECT DISTINCT value FROM JSON_TABLE(p_grupos, '$[*]' COLUMNS (value VARCHAR(100) PATH '$')) AS j;
+  END IF;
+
   DROP TEMPORARY TABLE IF EXISTS tmp_product_forecast;
   CREATE TEMPORARY TABLE tmp_product_forecast ENGINE=InnoDB AS
-  SELECT prod_code, MAX(prod_name) AS prod_name, MAX(secao) AS secao,
-         COUNT(*) AS occurrences, AVG(val_vda) AS forecast_val
+  SELECT prod_code, MAX(prod_name) AS prod_name, MAX(secao) AS secao, MAX(grupo) AS grupo,
+         COUNT(*) AS occurrences,
+         AVG(val_vda) AS forecast_val, MIN(val_vda) AS forecast_min, MAX(val_vda) AS forecast_max
   FROM sales_prod_daily_agg
   WHERE store_code = p_store_code
     AND depto = 'PERECIVEIS'
     AND sale_date >= v_window_start
     AND sale_date < p_target_date
     AND DAYOFWEEK(sale_date) = DAYOFWEEK(p_target_date)
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
   GROUP BY prod_code;
 
-  -- Result set 1: individual products (confidence floor reached)
-  SELECT prod_code, prod_name, secao, occurrences, forecast_val
+  -- Result set 1: individual products (confidence floor reached), now
+  -- with the min/max range alongside the average -- mirrors GPA's own
+  -- internal "Planejamento de Produção" report (QTD_MINIMA/IDEAL/MAXIMA),
+  -- built from real sales history instead of imported as a separate feed
+  -- (see docs/planejamento-producao-perecveis-2026-08-07.md).
+  SELECT prod_code, prod_name, secao, occurrences, forecast_val, forecast_min, forecast_max
   FROM tmp_product_forecast
   WHERE occurrences >= p_min_occurrences
   ORDER BY secao, forecast_val DESC;
 
-  -- Result set 2: "Outros" per section (below the confidence floor).
-  -- Reconciliation is by construction: every product in
-  -- tmp_product_forecast has >=1 occurrence in the window and falls into
-  -- EXACTLY one of the two result sets above, never both, never neither.
-  -- A product with ZERO occurrences of this weekday in the window (but
-  -- that sells on other days) isn't in tmp_product_forecast at all --
-  -- correct for "average of this weekday's occurrences": no occurrence,
-  -- no average, contributes implicitly R$0. Label this on the UI as
-  -- "outros produtos com histórico no dia", not "...da seção", to avoid
-  -- implying 100% catalog coverage.
+  -- Result set 2: "Outros" per section. No min/max here: a range doesn't
+  -- have a clean meaning for a SUM across different products (same limit
+  -- GPA's own report would have for an aggregated bucket).
   SELECT secao, COUNT(*) AS num_produtos, SUM(forecast_val) AS outros_val
   FROM tmp_product_forecast
   WHERE occurrences < p_min_occurrences
   GROUP BY secao;
 
-  -- Result set 3: every section of PERECIVEIS at this store, from
-  -- product_universe (has idx_pu_store/idx_pu_depto; sales_prod_daily_agg
-  -- doesn't). Guarantees no section disappears from the screen even with
-  -- zero sales on this weekday within the window (rare sections like
-  -- Bacalhau/Peixaria/Peixes Congelados) -- "todo PERECIVEIS entra, sem
-  -- exceção de seção" is a decision from the user, not a nice-to-have.
+  -- Result set 3: every section of PERECIVEIS at this store (from
+  -- product_universe), now also respecting the secao/grupo filters -- an
+  -- explicit user filter is different from the automatic confidence
+  -- floor: narrowing scope on purpose is not "hiding data without
+  -- warning".
   SELECT DISTINCT secao
   FROM product_universe
-  WHERE store_code = p_store_code AND depto = 'PERECIVEIS';
+  WHERE store_code = p_store_code AND depto = 'PERECIVEIS'
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL));
 
-  -- Result set 4: metadata for the UI ("com base em N sextas-feiras")
-  -- without duplicating the day-of-week/parameter math in TypeScript.
-  -- DAYOFWEEK: MariaDB convention, 1=Sunday..7=Saturday.
   SELECT DAYOFWEEK(p_target_date) AS weekday_num,
          p_min_occurrences AS min_occurrences,
          p_lookback_occurrences AS lookback_occurrences;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_product_forecast;
+  DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
 DELIMITER ;

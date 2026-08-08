@@ -43,7 +43,7 @@ vi.mock("./rate-limit.middleware", () => ({
 }));
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
-import { getProductionForecast } from "./production.functions";
+import { getProductionForecast, getProductionFilterOptions } from "./production.functions";
 import db from "./db";
 import { cache } from "./cache";
 
@@ -58,6 +58,8 @@ const PROC_RESULT_MIXED = [
         secao: "CARNES E AVES",
         occurrences: 6,
         forecast_val: 500,
+        forecast_min: 380,
+        forecast_max: 610,
       },
     ],
     [{ secao: "CARNES E AVES", num_produtos: 3, outros_val: 90 }],
@@ -69,6 +71,8 @@ const PROC_RESULT_MIXED = [
 interface Input {
   storeCode: string;
   targetDate: string;
+  secoes?: string[];
+  grupos?: string[];
 }
 type Fn = (d: Input) => Promise<{
   secoes: {
@@ -101,7 +105,12 @@ describe("getProductionForecast", () => {
 
     const carnes = r.secoes.find((s) => s.secao === "CARNES E AVES");
     expect(carnes?.produtos).toHaveLength(1);
-    expect(carnes?.produtos[0]).toMatchObject({ prodCode: "1", forecastVal: 500 });
+    expect(carnes?.produtos[0]).toMatchObject({
+      prodCode: "1",
+      forecastVal: 500,
+      forecastMin: 380,
+      forecastMax: 610,
+    });
     expect(carnes?.outrosVal).toBe(90);
     expect(carnes?.outrosNumProdutos).toBe(3);
     // Reconciliation: sum of individual + outros = total, by construction.
@@ -170,5 +179,79 @@ describe("getProductionForecast", () => {
       await call({ targetDate: "2026-08-15" });
       expect(db.query).toHaveBeenCalledTimes(3);
     });
+
+    it("does not collide across different secoes/grupos filters", async () => {
+      await call({ secoes: [] });
+      await call({ secoes: ["CARNES E AVES"] });
+      await call({ grupos: ["BOVINOS"] });
+      expect(db.query).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("secoes/grupos filters", () => {
+    it("passes the filters through to the proc as JSON arrays, defaulting to empty", async () => {
+      await call();
+      expect(db.query).toHaveBeenCalledWith(expect.any(String), [
+        "1516",
+        "2026-08-14",
+        4,
+        8,
+        "[]",
+        "[]",
+      ]);
+    });
+
+    it("JSON-stringifies non-empty secoes/grupos for the proc call", async () => {
+      await call({ secoes: ["CARNES E AVES"], grupos: ["BOVINOS"] });
+      expect(db.query).toHaveBeenCalledWith(expect.any(String), [
+        "1516",
+        "2026-08-14",
+        4,
+        8,
+        '["CARNES E AVES"]',
+        '["BOVINOS"]',
+      ]);
+    });
+  });
+});
+
+describe("getProductionFilterOptions", () => {
+  const callOptions = (storeCode = "1516") =>
+    (getProductionFilterOptions as unknown as (d: { storeCode: string }) => Promise<unknown>)({
+      storeCode,
+    });
+
+  it("maps distinct secao/grupo rows from product_universe", async () => {
+    vi.mocked(db.query).mockResolvedValue([
+      [
+        { secao: "CARNES E AVES", grupo: "BOVINOS" },
+        { secao: "CARNES E AVES", grupo: "SUINOS" },
+        { secao: "BACALHAU", grupo: null },
+      ],
+    ] as never);
+    const r = await callOptions();
+    expect(r).toEqual([
+      { secao: "CARNES E AVES", grupo: "BOVINOS" },
+      { secao: "CARNES E AVES", grupo: "SUINOS" },
+      { secao: "BACALHAU", grupo: null },
+    ]);
+  });
+
+  it("serves the second identical call without touching the database", async () => {
+    vi.mocked(db.query).mockResolvedValue([
+      [{ secao: "CARNES E AVES", grupo: "BOVINOS" }],
+    ] as never);
+    await callOptions();
+    await callOptions();
+    expect(db.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not collide across different stores", async () => {
+    vi.mocked(db.query).mockResolvedValue([
+      [{ secao: "CARNES E AVES", grupo: "BOVINOS" }],
+    ] as never);
+    await callOptions("1516");
+    await callOptions("1274");
+    expect(db.query).toHaveBeenCalledTimes(2);
   });
 });
