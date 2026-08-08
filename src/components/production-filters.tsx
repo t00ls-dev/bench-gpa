@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { FilterField } from "@/components/filter-field";
-import { MultiSelect } from "@/components/multi-select";
+import { MultiSelect, type MSOption } from "@/components/multi-select";
 import { TargetDatePicker } from "@/components/target-date-picker";
-import { Input } from "@/components/ui/input";
 import type { ProductionFilterOption } from "@/lib/api-types";
 
 interface StoreOption {
@@ -17,6 +16,7 @@ export function ProductionFilters({
   filterOptions,
   secoes,
   grupos,
+  productOptions,
   productFilter,
   onStoreChange,
   onTargetDateChange,
@@ -30,12 +30,13 @@ export function ProductionFilters({
   filterOptions: ProductionFilterOption[];
   secoes: string[];
   grupos: string[];
-  productFilter: string;
+  productOptions: MSOption[];
+  productFilter: string[];
   onStoreChange: (v: string[]) => void;
   onTargetDateChange: (v: string) => void;
   onSecoesChange: (v: string[]) => void;
   onGruposChange: (v: string[]) => void;
-  onProductFilterChange: (v: string) => void;
+  onProductFilterChange: (v: string[]) => void;
 }) {
   const secaoOptions = useMemo(
     () =>
@@ -92,11 +93,12 @@ export function ProductionFilters({
           />
         </FilterField>
         <FilterField label="Produto">
-          <Input
-            placeholder="Buscar por nome ou código…"
+          <MultiSelect
+            label="Todos"
+            searchable
+            options={productOptions}
             value={productFilter}
-            onChange={(e) => onProductFilterChange(e.target.value)}
-            className="h-9"
+            onChange={onProductFilterChange}
           />
         </FilterField>
       </div>
