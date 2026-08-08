@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getProductionForecast } from "@/lib/production.functions";
+import { getProductionForecast, getProductionFilterOptions } from "@/lib/production.functions";
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { ProductionFilters } from "@/components/production-filters";
@@ -13,6 +13,9 @@ function ProductionPage() {
   const { store, targetDate: initialTargetDate } = Route.useSearch();
   const [storeCode, setStoreCode] = useState<string | undefined>(store);
   const [targetDate, setTargetDate] = useState<string | undefined>(initialTargetDate);
+  const [secoes, setSecoes] = useState<string[]>([]);
+  const [grupos, setGrupos] = useState<string[]>([]);
+  const [productFilter, setProductFilter] = useState("");
 
   const getStoresFn = useServerFn(getStores);
   const { data: stores = [] } = useQuery({
@@ -21,10 +24,21 @@ function ProductionPage() {
     staleTime: QUERY_STALE_REFERENCE,
   });
 
+  const filterOptionsFn = useServerFn(getProductionFilterOptions);
+  const { data: filterOptions = [] } = useQuery({
+    queryKey: ["production-filter-options", storeCode],
+    queryFn: () => filterOptionsFn({ data: { storeCode: storeCode! } }),
+    enabled: !!storeCode,
+    staleTime: QUERY_STALE_REFERENCE,
+  });
+
   const forecastFn = useServerFn(getProductionForecast);
   const { data, isFetching, isError, error } = useQuery({
-    queryKey: ["production-forecast", storeCode, targetDate],
-    queryFn: () => forecastFn({ data: { storeCode: storeCode!, targetDate: targetDate! } }),
+    queryKey: ["production-forecast", storeCode, targetDate, secoes, grupos],
+    queryFn: () =>
+      forecastFn({
+        data: { storeCode: storeCode!, targetDate: targetDate!, secoes, grupos },
+      }),
     enabled: !!storeCode && !!targetDate,
     staleTime: QUERY_STALE_CORE,
     placeholderData: (prev) => prev,
@@ -48,8 +62,19 @@ function ProductionPage() {
         stores={stores}
         storeCode={storeCode}
         targetDate={targetDate}
-        onStoreChange={(v) => setStoreCode(v[0])}
+        filterOptions={filterOptions}
+        secoes={secoes}
+        grupos={grupos}
+        productFilter={productFilter}
+        onStoreChange={(v) => {
+          setStoreCode(v[0]);
+          setSecoes([]);
+          setGrupos([]);
+        }}
         onTargetDateChange={setTargetDate}
+        onSecoesChange={setSecoes}
+        onGruposChange={setGrupos}
+        onProductFilterChange={setProductFilter}
       />
 
       {!storeCode || !targetDate ? (
@@ -68,7 +93,11 @@ function ProductionPage() {
               (mínimo de {data.minOccurrences} vendas para entrar individualmente).
             </p>
           )}
-          <ProductionTable secoes={data?.secoes ?? []} isFetching={isFetching} />
+          <ProductionTable
+            secoes={data?.secoes ?? []}
+            isFetching={isFetching}
+            productFilter={productFilter}
+          />
         </>
       )}
     </div>
