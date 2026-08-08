@@ -169,6 +169,14 @@ PROD_LOW="$(sql -e "SELECT prod_code FROM sales_prod_daily_agg GROUP BY prod_cod
 J_DEPTO="[\"$(printf '%s' "$DEPTO" | sed 's/"/\\"/g')\"]"
 J_STORE="[\"$STORE\"]"
 NUL="JSON_ARRAY()"
+# production_forecast: TOMORROW (LAST + 1 day) mirrors real usage -- the
+# proc always predicts a day strictly after the most recent import, so
+# sale_date < p_target_date naturally covers all real history up to LAST.
+# STORE_PEREC is the busiest store specifically within PERECIVEIS (not
+# just overall volume like STORE above): the department this proc always
+# filters on, so it's the representative choice for measuring its cost.
+TOMORROW="$(sql -e "SELECT DATE_ADD('$LAST', INTERVAL 1 DAY);")"
+STORE_PEREC="$(sql -e "SELECT store_code FROM sales_prod_daily_agg WHERE depto='PERECIVEIS' GROUP BY store_code ORDER BY COUNT(*) DESC LIMIT 1;")"
 
 # name | full SQL call
 SCENARIOS=(
@@ -183,6 +191,7 @@ SCENARIOS=(
 "filtros_28d|CALL filter_options('$D28','$LAST',$NUL,$NUL,$NUL,$NUL)"
 "produto_alto_volume|CALL product_analysis('$PROD_HIGH',$NUL,NULL)"
 "produto_baixo_volume|CALL product_analysis('$PROD_LOW',$NUL,NULL)"
+"producao_amanha|CALL production_forecast('$STORE_PEREC','$TOMORROW',4,8)"
 )
 
 RESULTS="$OUT_DIR/results.tsv"
@@ -191,6 +200,7 @@ printf 'scenario\tsamples_ms\tmedian_ms\tmin_ms\tmax_ms\tspread\thash_order\thas
 echo "Output at: $OUT_DIR"
 echo "Window: $D28 .. $LAST (28d) | $D7 .. $LAST (7d) | depto='$DEPTO' loja='$STORE'"
 echo "Products: high_volume='$PROD_HIGH' low_volume='$PROD_LOW'"
+echo "Production forecast: loja='$STORE_PEREC' (mais PERECIVEIS) alvo='$TOMORROW' (LAST+1)"
 echo
 
 for entry in "${SCENARIOS[@]}"; do
