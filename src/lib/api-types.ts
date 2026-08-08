@@ -87,16 +87,40 @@ export interface ProductionForecastProduct {
   prodCode: string;
   prodName: string;
   secao: string | null;
+  grupo: string | null;
+  subgrupo: string | null;
   occurrences: number;
   forecastVal: number;
   forecastMin: number;
   forecastMax: number;
 }
+/** Aggregate for products below PRODUCTION_MIN_OCCURRENCES within one
+ * (secao, grupo, subgrupo) -- no individual PLU/min/max, see
+ * OUTROS_CAVEAT_TEXT (src/lib/production-filter.ts) for why. */
+export interface ProductionOutrosAggregate {
+  numProdutos: number;
+  outrosVal: number;
+}
+export interface ProductionSubgrupoForecast {
+  /** null = "Sem subgrupo" (nullable in sales_prod_daily_agg/product_universe). */
+  subgrupo: string | null;
+  produtos: ProductionForecastProduct[];
+  outros: ProductionOutrosAggregate | null;
+  totalSubgrupo: number;
+}
+export interface ProductionGrupoForecast {
+  /** null = "Sem grupo". */
+  grupo: string | null;
+  subgrupos: ProductionSubgrupoForecast[];
+  totalGrupo: number;
+}
 export interface ProductionSecaoForecast {
   secao: string;
-  produtos: ProductionForecastProduct[];
-  outrosVal: number;
-  outrosNumProdutos: number;
+  // [] when the seção had nothing this weekday -- it still shows (built
+  // from product_universe's full catalog, see production.functions.ts),
+  // just with an empty tree. Grupo/Subgrupo, unlike Seção, only exist here
+  // when they actually have data: nothing pads them from the catalog.
+  grupos: ProductionGrupoForecast[];
   totalSecao: number;
 }
 export interface ProductionForecastResult {

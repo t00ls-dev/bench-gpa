@@ -84,16 +84,17 @@ function ProductionPage() {
   const productOptions: MSOption[] = useMemo(() => {
     const seen = new Set<string>();
     const opts: Array<MSOption & { prodName: string }> = [];
-    for (const s of data?.secoes ?? []) {
-      for (const p of s.produtos) {
-        if (seen.has(p.prodCode)) continue;
-        seen.add(p.prodCode);
-        opts.push({
-          value: p.prodCode,
-          label: `PLU ${p.prodCode} · ${p.prodName}`,
-          prodName: p.prodName,
-        });
-      }
+    const produtos = (data?.secoes ?? []).flatMap((s) =>
+      s.grupos.flatMap((g) => g.subgrupos.flatMap((sg) => sg.produtos)),
+    );
+    for (const p of produtos) {
+      if (seen.has(p.prodCode)) continue;
+      seen.add(p.prodCode);
+      opts.push({
+        value: p.prodCode,
+        label: `PLU ${p.prodCode} · ${p.prodName}`,
+        prodName: p.prodName,
+      });
     }
     // Sorted by name (what the user scans for), not by the PLU prefix in the label.
     return opts.sort((a, b) => a.prodName.localeCompare(b.prodName));
@@ -119,7 +120,7 @@ function ProductionPage() {
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-            <ClipboardList className="size-7 text-primary shrink-0" /> Planejamento de Produção
+            <ClipboardList className="size-7 text-primary shrink-0" /> Previsão de Produção
           </h1>
           <p className="text-sm text-muted-foreground">
             Venda esperada por produto de Perecíveis, numa loja, para um dia futuro (ou já passado,

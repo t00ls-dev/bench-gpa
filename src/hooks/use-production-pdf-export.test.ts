@@ -5,7 +5,12 @@ import { fmtBRL } from "@/lib/utils";
 import { slugifyFilename } from "@/lib/export-pdf";
 import { OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
 import { useProductionPdfExport } from "./use-production-pdf-export";
-import type { ProductionSecaoForecast } from "@/lib/api-types";
+import type {
+  ProductionForecastProduct,
+  ProductionGrupoForecast,
+  ProductionSecaoForecast,
+  ProductionSubgrupoForecast,
+} from "@/lib/api-types";
 
 const { openPdfBlob } = vi.hoisted(() => ({ openPdfBlob: vi.fn() }));
 vi.mock("@/lib/export-pdf", async (importOriginal) => {
@@ -38,11 +43,13 @@ const { MockJsPDF, textCalls } = vi.hoisted(() => {
 });
 vi.mock("jspdf", () => ({ default: MockJsPDF }));
 
-function produto(overrides: Partial<ProductionSecaoForecast["produtos"][number]> = {}) {
+function produto(overrides: Partial<ProductionForecastProduct> = {}): ProductionForecastProduct {
   return {
     prodCode: "1",
     prodName: "PICANHA",
     secao: "CARNES E AVES",
+    grupo: "BOVINOS",
+    subgrupo: "CORTES NOBRES",
     occurrences: 6,
     forecastVal: 500,
     forecastMin: 380,
@@ -51,12 +58,29 @@ function produto(overrides: Partial<ProductionSecaoForecast["produtos"][number]>
   };
 }
 
+function subgrupo(overrides: Partial<ProductionSubgrupoForecast> = {}): ProductionSubgrupoForecast {
+  return {
+    subgrupo: "CORTES NOBRES",
+    produtos: [produto()],
+    outros: null,
+    totalSubgrupo: 500,
+    ...overrides,
+  };
+}
+
+function grupo(overrides: Partial<ProductionGrupoForecast> = {}): ProductionGrupoForecast {
+  return {
+    grupo: "BOVINOS",
+    subgrupos: [subgrupo()],
+    totalGrupo: 500,
+    ...overrides,
+  };
+}
+
 function secao(overrides: Partial<ProductionSecaoForecast> = {}): ProductionSecaoForecast {
   return {
     secao: "CARNES E AVES",
-    produtos: [produto()],
-    outrosVal: 0,
-    outrosNumProdutos: 0,
+    grupos: [grupo()],
     totalSecao: 500,
     ...overrides,
   };
@@ -126,25 +150,42 @@ describe("useProductionPdfExport", () => {
     expect(productRow).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610), ""]);
   });
 
-  it("prints a seção header row spanning all columns with the seção subtotal", async () => {
+  it("prints Seção/Grupo/Subgrupo header rows, in that order, spanning all columns with each subtotal", async () => {
     const { result } = renderHook(() => useProductionPdfExport(makeParams()));
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
-    const headerRow = autoTableCalls[0].body[0] as unknown as {
-      content: string;
-      colSpan: number;
-    }[];
-    expect(headerRow[0].colSpan).toBe(6);
-    expect(headerRow[0].content).toBe("CARNES E AVES — Total: " + fmtBRL(500));
+    const body = autoTableCalls[0].body as unknown as { content: string; colSpan: number }[][];
+    const [secaoRow, grupoRow, subgrupoRow] = body;
+    expect(secaoRow[0]).toMatchObject({
+      content: "CARNES E AVES — Total: " + fmtBRL(500),
+      colSpan: 6,
+    });
+    expect(grupoRow[0]).toMatchObject({ content: "  BOVINOS — Total: " + fmtBRL(500), colSpan: 6 });
+    expect(subgrupoRow[0]).toMatchObject({
+      content: "    CORTES NOBRES — Total: " + fmtBRL(500),
+      colSpan: 6,
+    });
   });
 
   it("respects productFilter: drops outros and narrows to the selected products, same as the screen", async () => {
     const secoes = [
       secao({
-        produtos: [produto({ prodCode: "1" }), produto({ prodCode: "2", prodName: "COSTELA" })],
-        outrosNumProdutos: 3,
-        outrosVal: 90,
+        grupos: [
+          grupo({
+            subgrupos: [
+              subgrupo({
+                produtos: [
+                  produto({ prodCode: "1" }),
+                  produto({ prodCode: "2", prodName: "COSTELA" }),
+                ],
+                outros: { numProdutos: 3, outrosVal: 90 },
+                totalSubgrupo: 590,
+              }),
+            ],
+            totalGrupo: 590,
+          }),
+        ],
         totalSecao: 590,
       }),
     ];
@@ -160,7 +201,19 @@ describe("useProductionPdfExport", () => {
   });
 
   it("shows the Outros row with the aggregate value and a footnote when no productFilter is active", async () => {
-    const secoes = [secao({ outrosNumProdutos: 3, outrosVal: 90, totalSecao: 590 })];
+    const secoes = [
+      secao({
+        grupos: [
+          grupo({
+            subgrupos: [
+              subgrupo({ outros: { numProdutos: 3, outrosVal: 90 }, totalSubgrupo: 590 }),
+            ],
+            totalGrupo: 590,
+          }),
+        ],
+        totalSecao: 590,
+      }),
+    ];
     const { result } = renderHook(() => useProductionPdfExport(makeParams({ secoes })));
     await act(async () => {
       await result.current.openPdfInNewTab();

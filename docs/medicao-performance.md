@@ -752,3 +752,54 @@ pro nome definitivo. A proc candidata `production_forecast_v2_candidate`
 em si ainda não foi apagada de produção neste momento (baixa prioridade,
 não bloqueia; ver pendência equivalente já resolvida na entrada de
 2026-08-07 acima para o precedente de como isso costuma ser limpo).
+
+## 2026-08-08: production_forecast, agrupamento por Grupo/Subgrupo (v3)
+
+Pedido do usuário: a tabela do Planejamento de Produção (renomeado nesta
+mesma mudança pra "Previsão de Produção", ver PR) já agrupava só por
+Seção — passa a agrupar também por Grupo e Subgrupo, mesmo tratamento
+(cabeçalho + subtotal) em cada nível. `grupo`/`subgrupo` já existiam
+como colunas em `sales_prod_daily_agg`/`product_universe` (usadas na
+Área) e a proc já calculava `MAX(grupo)` internamente só pra filtrar,
+mas nunca devolvia `grupo`/`subgrupo` por produto no resultado — essa
+era a lacuna.
+
+Mudança na proc: result set 1 (produtos individuais) ganha `grupo`,
+`subgrupo` no `SELECT` e `ORDER BY`; result set 2 ("outros") passa de
+`GROUP BY secao` pra `GROUP BY secao, grupo, subgrupo` (decisão do
+usuário: a linha "outros" fica mais granular, nasce dentro do Subgrupo
+certo, não mais um agregado único por Seção). Result set 3 (lista de
+seções) fica inalterado, ainda só `secao` — Grupo/Subgrupo, diferente de
+Seção, só existem na árvore quando têm dado de verdade (não são
+"preenchidos" a partir do catálogo completo como a Seção é).
+
+Protocolo de sempre: candidata testada sob o nome
+`production_forecast_v3_candidate` em produção via SSH, medida com
+`scripts/bench-procs.sh` (dois cenários novos, mesmo padrão do v2:
+`producao_v3_sem_filtro` e `producao_v3_com_filtro`, loja/seção de
+PERECIVEIS reais).
+
+**Sem filtro**: mediana **281ms** (dispersão 1,12x, confiável) — 58%
+acima da baseline v2 de 178ms. **Com filtro de seção**: mediana **226ms**
+(dispersão 1,16x, confiável) — praticamente igual à baseline v2 de
+229ms.
+
+**Por que o aumento é assimétrico (aceito, não é ruído)**: o result set
+2 ("outros") passou de agrupar por `secao` (13 grupos nesta loja) pra
+agrupar por `secao, grupo, subgrupo` (439 grupos, medido no dev local
+pra essa mesma loja/dia) — uma agregação bem mais granular. Isso pesa
+proporcionalmente mais no cenário sem filtro (catálogo inteiro da loja,
+centenas de combinações secao/grupo/subgrupo) do que no cenário com
+filtro (uma seção só, poucas combinações) — exatamente o padrão
+observado. Discutido com o usuário antes de prosseguir: 281ms ainda é
+rápido em termos absolutos (imperceptível numa tela carregada uma vez),
+mesma ordem de grandeza da baseline original de 250ms, e a VPS atende
+só 1-2 usuários simultâneos — usuário confirmou seguir com o rename
+mesmo assim.
+
+Hash idêntico entre execuções repetidas do mesmo cenário. Os cenários de
+teste (`producao_v3_sem_filtro`, `producao_v3_com_filtro`) foram
+removidos do `bench-procs.sh` depois de renomear pro nome definitivo. A
+proc candidata `production_forecast_v3_candidate` em si ainda não foi
+apagada de produção neste momento (baixa prioridade, mesmo padrão da
+v2 acima).
