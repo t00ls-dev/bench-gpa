@@ -5,6 +5,7 @@ import { getProductionForecast, getProductionFilterOptions } from "@/lib/product
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useProductionPdfExport } from "@/hooks/use-production-pdf-export";
 import { ProductionFilters } from "@/components/production-filters";
 import { ProductionTable } from "@/components/production-table";
 import type { MSOption } from "@/components/multi-select";
@@ -98,6 +99,21 @@ function ProductionPage() {
     return opts.sort((a, b) => a.prodName.localeCompare(b.prodName));
   }, [data]);
 
+  const storeLabel = storeCode
+    ? (() => {
+        const s = stores.find((x) => x.store_code === storeCode);
+        return s ? `${s.store_code} - ${s.store_name}` : storeCode;
+      })()
+    : "";
+  const { pdfLoading, pdfElapsed, openPdfInNewTab } = useProductionPdfExport({
+    secoes: data?.secoes ?? [],
+    productFilter,
+    storeLabel,
+    targetDate: targetDate ?? "",
+    lookbackOccurrences: data?.lookbackOccurrences ?? 0,
+    minOccurrences: data?.minOccurrences ?? 0,
+  });
+
   return (
     <div>
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -149,6 +165,9 @@ function ProductionPage() {
             secoes={data?.secoes ?? []}
             isFetching={isFetching}
             productFilter={productFilter}
+            onExportPDF={openPdfInNewTab}
+            pdfLoading={pdfLoading}
+            pdfElapsed={pdfElapsed}
           />
         </>
       )}
