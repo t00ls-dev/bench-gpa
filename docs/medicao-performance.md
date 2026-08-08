@@ -652,3 +652,51 @@ processos antigos — o app ficou fora do ar até o comando ser refeito com
 `cd /home/admin/web/gpa.t00ls.dev/public_html &&` antes. O script de
 deploy do `ci.yml` já faz esse `cd` (por isso nunca pegou esse problema em
 deploy normal); só faltou no comando manual.
+
+## 2026-08-07: production_forecast (Planejamento de Produção) — índice novo, 127x
+
+Medição real via `scripts/bench-procs.sh` (cenário `producao_amanha`,
+adicionado nesta mesma mudança), proc candidata primeiro, nome definitivo
+só depois de medir — mesmo protocolo de sempre. Design completo em
+`docs/planejamento-producao-perecveis-2026-08-07.md`.
+
+**Sem índice**: mediana 31.826ms (min 31.021 / max 33.002, dispersão
+1,06x — confiável). `EXPLAIN` mostrou `type: index`, `key:
+idx_prod_daily_prod_code`, `rows: 3.522.284` — a proc escaneava a tabela
+inteira (`sales_prod_daily_agg`, 3,5M linhas), porque o otimizador
+preferia esse índice pra evitar um `filesort` no `GROUP BY prod_code` e
+ignorava por completo o filtro de `sale_date`. A chave primária
+`(sale_date, store_code, prod_code)` não ajuda aqui: `sale_date` lidera o
+índice, mas o filtro mais seletivo desta proc é `store_code` (1 de 18
+lojas), que não está na posição líder de nenhum índice existente.
+
+**Com o índice** `idx_prod_daily_store_depto_date (store_code, depto,
+sale_date)` (migration
+`0012_add_index_sales_prod_daily_agg_store_depto_date.sql`): mediana
+**250ms** (min 234 / max 263, dispersão 1,12x). `EXPLAIN` confirma
+`type: range`, `rows: 200.798` (de 3,5M pra ~200k). Hash idêntico
+antes/depois — resultado não mudou, só a velocidade.
+
+Diferente das 4 categorias removidas pela migration 0004: aqueles eram
+filtros **opcionais** (`area_analysis`/`dashboard_metrics` deixam o
+usuário filtrar por depto ou não), onde o plano real já era o scan por
+`sale_date` de qualquer jeito. Aqui `store_code`/`depto` são **sempre
+obrigatórios**, parâmetro único, não filtro opcional multivalor — o
+padrão de acesso é genuinamente diferente, por isso o índice compensa.
+
+**Custo de escrita, medido também** (não só estimado): `INSERT` sintético
+de 50.534 linhas (volume real de um dia de import, todas as lojas,
+copiado de `sale_date='2026-08-06'` com PK trocada pra `2099-12-31`,
+apagado logo depois): 8.083ms com o índice vs. 1.718ms sem — **+6,4s por
+import**. Import é operação manual sob demanda (não um caminho de
+leitura), e o índice também participa do `DELETE` diário de
+`purge_old_aggs` (3h da manhã, ninguém usando o sistema nesse horário).
+Trade-off aceito: +6,4s uma vez por import contra 31,6s a menos toda vez
+que a tela carrega.
+
+Candidata testada em produção sob o nome `production_forecast_candidate`
+antes de renomear pra `production_forecast` definitivo — mesmo índice de
+teste (`idx_test_store_depto_date`) depois substituído pelo nome
+definitivo via a migration, que já inclui o `DROP INDEX IF EXISTS` do
+nome de teste (self-cleaning, confirmado depois do deploy real: só sobrou
+o nome definitivo em produção).
