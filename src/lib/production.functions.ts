@@ -5,14 +5,15 @@ import db from "./db";
 import {
   ProductionForecastResult,
   ProductionSecaoForecast,
+  ProductionFilterOption,
   asArray,
   asRecord,
   str,
   strOrNull,
   num,
 } from "./api-types";
-import { ProductionForecastSchema } from "./schemas";
-import { CACHE_TTL_SHORT } from "./cache";
+import { ProductionForecastSchema, SingleStoreCodeSchema } from "./schemas";
+import { CACHE_TTL_SHORT, CACHE_TTL_LONG } from "./cache";
 
 /**
  * Confidence floor for a product to be forecast individually (see
@@ -31,11 +32,13 @@ export const getProductionForecast = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ProductionForecastSchema.parse(d))
   .handler(async ({ data }): Promise<ProductionForecastResult> => {
     const query = async (): Promise<ProductionForecastResult> => {
-      const [rs] = await db.query("CALL production_forecast(?, ?, ?, ?)", [
+      const [rs] = await db.query("CALL production_forecast(?, ?, ?, ?, ?, ?)", [
         data.storeCode,
         data.targetDate,
         PRODUCTION_MIN_OCCURRENCES,
         PRODUCTION_LOOKBACK_OCCURRENCES,
+        JSON.stringify(data.secoes ?? []),
+        JSON.stringify(data.grupos ?? []),
       ]);
       const [individualRows, outrosRows, secoesRows, metaRows] = rs as unknown[];
       const meta = asRecord(asArray(metaRows)[0]);
@@ -48,6 +51,8 @@ export const getProductionForecast = createServerFn({ method: "POST" })
           secao: strOrNull(p.secao),
           occurrences: num(p.occurrences),
           forecastVal: num(p.forecast_val),
+          forecastMin: num(p.forecast_min),
+          forecastMax: num(p.forecast_max),
         };
       });
       const outrosBySecao = new Map(
@@ -91,5 +96,27 @@ export const getProductionForecast = createServerFn({ method: "POST" })
     // not on every clock tick. Nothing here is more special than
     // getAreaAnalysis in that respect.
     const { cache } = await import("./cache");
-    return cache.wrap(`production:${data.storeCode}:${data.targetDate}`, query, CACHE_TTL_SHORT);
+    const key = `production:${data.storeCode}:${data.targetDate}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
+    return cache.wrap(key, query, CACHE_TTL_SHORT);
+  });
+
+export const getProductionFilterOptions = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .inputValidator((d: unknown) => SingleStoreCodeSchema.parse(d))
+  .handler(async ({ data }): Promise<ProductionFilterOption[]> => {
+    const { cache } = await import("./cache");
+    return cache.wrap(
+      `production-filter-options:${data.storeCode}`,
+      async () => {
+        const [rows] = await db.query(
+          "SELECT DISTINCT secao, grupo FROM product_universe WHERE store_code = ? AND depto = 'PERECIVEIS'",
+          [data.storeCode],
+        );
+        return asArray(rows).map((r) => {
+          const p = asRecord(r);
+          return { secao: str(p.secao), grupo: strOrNull(p.grupo) };
+        });
+      },
+      CACHE_TTL_LONG,
+    );
   });

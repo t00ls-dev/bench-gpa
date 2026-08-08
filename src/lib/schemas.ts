@@ -68,7 +68,9 @@ export const DashboardRankingsSchema = FilterSchema.extend({
 /**
  * Store and target date are always required singles here (never optional
  * multi-value filters like FilterSchema's): the Production Planning
- * screen always plans for exactly one store, one future day.
+ * screen always plans for exactly one store, one future day. secoes/
+ * grupos ARE optional multi-value filters (added 2026-08-08), same shape
+ * as FilterSchema's, narrowing the fixed PERECIVEIS scope further.
  *
  * targetDate must be strictly after "today" in the Brasília timezone
  * (todayISOBrazil, utils.ts) -- reused instead of comparing against a raw
@@ -80,6 +82,8 @@ export const ProductionForecastSchema = z.object({
   targetDate: z.string().refine((d) => d > todayISOBrazil(), {
     message: "A data deve ser um dia futuro.",
   }),
+  secoes: z.array(z.string()).optional().default([]),
+  grupos: z.array(z.string()).optional().default([]),
 });
 
 export const UserIdSchema = z.string().uuid();
@@ -126,3 +130,5 @@ export const SingleSlugSchema = z.object({ slug: z.string().min(1) });
 export const SingleQuerySchema = z.object({ q: z.string().min(3) });
 
 export const SingleProdCodeSchema = z.object({ prodCode: z.string().min(1) });
+
+export const SingleStoreCodeSchema = z.object({ storeCode: z.string().min(1) });
