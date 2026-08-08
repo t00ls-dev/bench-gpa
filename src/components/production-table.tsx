@@ -11,6 +11,13 @@ import { FileText, Loader2 } from "lucide-react";
  * purpose: the row count is the number of individual products of
  * PERECIVEIS at ONE store, dozens to a few hundred rows, well below
  * AreaTable's volume.
+ *
+ * Nested Seção → Grupo → Subgrupo → produtos, each level with its own
+ * header/subtotal (increasing indent/decreasing emphasis). Unlike Seção
+ * (always shown, even with nothing this weekday -- padded from the full
+ * catalog in production.functions.ts), a Grupo/Subgrupo branch only exists
+ * here when it actually has a product or an "outros" aggregate: nothing
+ * pads them from the catalog, so there's no empty-branch case to hide.
  */
 export function ProductionTable({
   secoes,
@@ -78,33 +85,54 @@ export function ProductionTable({
               <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
               <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
             </div>
-            {s.produtos.map((p) => (
-              <div
-                key={p.prodCode}
-                className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
-              >
-                <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
-                  <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
-                </span>
-                <span className="text-right whitespace-nowrap">
-                  <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
-                  </span>
-                </span>
-              </div>
+            {s.grupos.map((g) => (
+              <Fragment key={`${s.secao}|${g.grupo ?? ""}`}>
+                <div className="flex items-center justify-between bg-muted/20 py-1 pr-3 pl-5">
+                  <span className="text-xs font-medium">{g.grupo ?? "Sem grupo"}</span>
+                  <span className="text-xs font-medium">{fmtBRL(g.totalGrupo)}</span>
+                </div>
+                {g.subgrupos.map((sg) => (
+                  <Fragment key={`${s.secao}|${g.grupo ?? ""}|${sg.subgrupo ?? ""}`}>
+                    <div className="flex items-center justify-between py-1 pr-3 pl-7">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {sg.subgrupo ?? "Sem subgrupo"}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {fmtBRL(sg.totalSubgrupo)}
+                      </span>
+                    </div>
+                    {sg.produtos.map((p) => (
+                      <div
+                        key={p.prodCode}
+                        className="grid grid-cols-[1fr_auto] items-center gap-3 py-1.5 pr-3 pl-9 text-sm"
+                      >
+                        <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
+                          <span className="text-muted-foreground">PLU {p.prodCode}</span> ·{" "}
+                          {p.prodName}
+                        </span>
+                        <span className="text-right whitespace-nowrap">
+                          <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                    {sg.outros && (
+                      <div className="grid grid-cols-[1fr_auto] items-center gap-3 py-1.5 pr-3 pl-9 text-sm text-muted-foreground italic">
+                        <span>
+                          <span className="block">
+                            Outros produtos com histórico no dia ({sg.outros.numProdutos})
+                          </span>
+                          <span className="block text-xs">{OUTROS_CAVEAT_TEXT}</span>
+                        </span>
+                        <span className="whitespace-nowrap">{fmtBRL(sg.outros.outrosVal)}</span>
+                      </div>
+                    )}
+                  </Fragment>
+                ))}
+              </Fragment>
             ))}
-            {s.outrosNumProdutos > 0 && (
-              <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm text-muted-foreground italic">
-                <span>
-                  <span className="block">
-                    Outros produtos com histórico no dia ({s.outrosNumProdutos})
-                  </span>
-                  <span className="block text-xs">{OUTROS_CAVEAT_TEXT}</span>
-                </span>
-                <span className="whitespace-nowrap">{fmtBRL(s.outrosVal)}</span>
-              </div>
-            )}
           </Fragment>
         ))}
       </div>
