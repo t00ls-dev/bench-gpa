@@ -1,0 +1,183 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { fmtBRL } from "@/lib/utils";
+import { slugifyFilename } from "@/lib/export-pdf";
+import { OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
+import { useProductionPdfExport } from "./use-production-pdf-export";
+import type { ProductionSecaoForecast } from "@/lib/api-types";
+
+const { openPdfBlob } = vi.hoisted(() => ({ openPdfBlob: vi.fn() }));
+vi.mock("@/lib/export-pdf", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/export-pdf")>();
+  return { ...actual, openPdfBlob };
+});
+
+type AutoTableCall = { head: unknown; body: unknown[][] };
+let autoTableCalls: AutoTableCall[] = [];
+
+vi.mock("jspdf-autotable", () => ({
+  default: vi.fn((doc: { lastAutoTable: { finalY: number } }, opts: AutoTableCall) => {
+    autoTableCalls.push(opts);
+    doc.lastAutoTable = { finalY: 40 };
+  }),
+}));
+
+const { MockJsPDF, textCalls } = vi.hoisted(() => {
+  const textCalls: unknown[][] = [];
+  return {
+    textCalls,
+    MockJsPDF: class {
+      setFont = vi.fn();
+      setFontSize = vi.fn();
+      setTextColor = vi.fn();
+      text = vi.fn((...args: unknown[]) => textCalls.push(args));
+      lastAutoTable = { finalY: 40 };
+    },
+  };
+});
+vi.mock("jspdf", () => ({ default: MockJsPDF }));
+
+function produto(overrides: Partial<ProductionSecaoForecast["produtos"][number]> = {}) {
+  return {
+    prodCode: "1",
+    prodName: "PICANHA",
+    secao: "CARNES E AVES",
+    occurrences: 6,
+    forecastVal: 500,
+    forecastMin: 380,
+    forecastMax: 610,
+    ...overrides,
+  };
+}
+
+function secao(overrides: Partial<ProductionSecaoForecast> = {}): ProductionSecaoForecast {
+  return {
+    secao: "CARNES E AVES",
+    produtos: [produto()],
+    outrosVal: 0,
+    outrosNumProdutos: 0,
+    totalSecao: 500,
+    ...overrides,
+  };
+}
+
+function makeParams(overrides: Record<string, unknown> = {}) {
+  return {
+    secoes: [secao()],
+    productFilter: [] as string[],
+    storeLabel: "1516 - LEBLON",
+    targetDate: "2026-07-13",
+    lookbackOccurrences: 8,
+    minOccurrences: 4,
+    ...overrides,
+  };
+}
+
+describe("useProductionPdfExport", () => {
+  beforeEach(() => {
+    autoTableCalls = [];
+    textCalls.length = 0;
+    openPdfBlob.mockClear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("toggles pdfLoading around the export and opens the generated blob", async () => {
+    const { result } = renderHook(() => useProductionPdfExport(makeParams()));
+    expect(result.current.pdfLoading).toBe(false);
+
+    let pending: Promise<void>;
+    act(() => {
+      pending = result.current.openPdfInNewTab();
+    });
+    expect(result.current.pdfLoading).toBe(true);
+
+    await act(async () => {
+      await pending;
+    });
+    expect(result.current.pdfLoading).toBe(false);
+    expect(openPdfBlob).toHaveBeenCalledTimes(1);
+  });
+
+  it("builds a filename from the store label, date and a timestamp via slugifyFilename", async () => {
+    const { result } = renderHook(() => useProductionPdfExport(makeParams()));
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    const expectedPrefix = `planejamento-producao-${slugifyFilename("1516 - LEBLON")}-2026-07-13-`;
+    expect(openPdfBlob).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringMatching(new RegExp(`^${expectedPrefix}\\d{8}-\\d{6}\\.pdf$`)),
+    );
+  });
+
+  it("prints PLU/PRODUTO/MÍN/MÉDIA/MÁX/QTD PRODUZIDA header, leaving QTD PRODUZIDA blank per product", async () => {
+    const { result } = renderHook(() => useProductionPdfExport(makeParams()));
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    expect(autoTableCalls[0].head).toEqual([
+      ["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX", "QTD PRODUZIDA"],
+    ]);
+    const productRow = autoTableCalls[0].body.find((r) => r[0] === "1");
+    expect(productRow).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610), ""]);
+  });
+
+  it("prints a seção header row spanning all columns with the seção subtotal", async () => {
+    const { result } = renderHook(() => useProductionPdfExport(makeParams()));
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    const headerRow = autoTableCalls[0].body[0] as unknown as {
+      content: string;
+      colSpan: number;
+    }[];
+    expect(headerRow[0].colSpan).toBe(6);
+    expect(headerRow[0].content).toBe("CARNES E AVES — Total: " + fmtBRL(500));
+  });
+
+  it("respects productFilter: drops outros and narrows to the selected products, same as the screen", async () => {
+    const secoes = [
+      secao({
+        produtos: [produto({ prodCode: "1" }), produto({ prodCode: "2", prodName: "COSTELA" })],
+        outrosNumProdutos: 3,
+        outrosVal: 90,
+        totalSecao: 590,
+      }),
+    ];
+    const { result } = renderHook(() =>
+      useProductionPdfExport(makeParams({ secoes, productFilter: ["1"] })),
+    );
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    const body = autoTableCalls[0].body;
+    expect(body.some((r) => r[0] === "2")).toBe(false);
+    expect(body.some((r) => String(r[1] ?? "").includes("Outros produtos"))).toBe(false);
+  });
+
+  it("shows the Outros row with the aggregate value and a footnote when no productFilter is active", async () => {
+    const secoes = [secao({ outrosNumProdutos: 3, outrosVal: 90, totalSecao: 590 })];
+    const { result } = renderHook(() => useProductionPdfExport(makeParams({ secoes })));
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    const body = autoTableCalls[0].body;
+    const outrosRow = body.find((r) => String(r[1] ?? "").startsWith("Outros produtos (3)"));
+    expect(outrosRow).toEqual(["", "Outros produtos (3)*", "-", fmtBRL(90), "-", "-"]);
+    const footnote = textCalls.find((c) => String(c[0]).startsWith("* Outros produtos:"));
+    expect(footnote?.[0]).toBe(`* Outros produtos: ${OUTROS_CAVEAT_TEXT}.`);
+  });
+
+  it("does not print a footnote when there's no Outros row", async () => {
+    const { result } = renderHook(() => useProductionPdfExport(makeParams()));
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    const footnote = textCalls.find((c) => String(c[0]).startsWith("* Outros produtos:"));
+    expect(footnote).toBeUndefined();
+  });
+});
