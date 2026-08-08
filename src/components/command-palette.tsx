@@ -15,6 +15,7 @@ import {
   BookText,
   Search,
   Loader2,
+  ClipboardList,
 } from "lucide-react";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -23,6 +24,12 @@ const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, keywords: "início home" },
   { to: "/product", label: "Produto", icon: Package, keywords: "produto busca pesquisa" },
   { to: "/area", label: "Área", icon: Layers, keywords: "área regional" },
+  {
+    to: "/producao",
+    label: "Planejamento de Produção",
+    icon: ClipboardList,
+    keywords: "produção planejamento previsão perecíveis venda esperada",
+  },
   { to: "/upload", label: "Importar", icon: Upload, keywords: "upload importar planilha" },
   { to: "/admin", label: "Administração", icon: Shield, keywords: "admin administração" },
   { to: "/admin/docs", label: "Documentação", icon: BookText, keywords: "docs documentação ajuda" },
