@@ -80,43 +80,45 @@ describe("ProductionTable", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the PLU alongside the product name", () => {
+    render(<ProductionTable secoes={SECOES} isFetching={false} />);
+    expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
+  });
+
   describe("productFilter", () => {
-    it("keeps only products matching the search, by name or code", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter="picanha" />);
-      expect(screen.getByText("PICANHA")).toBeInTheDocument();
+    it("keeps only the selected products", () => {
+      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
+      expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
       expect(screen.queryByText("BACALHAU")).not.toBeInTheDocument();
     });
 
-    it("matches by product code too, case-insensitively", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter="1" />);
-      expect(screen.getByText("PICANHA")).toBeInTheDocument();
-    });
-
-    it("hides a section with no product matching an active search", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter="xyz-nada" />);
+    it("hides a section with no selected product in it", () => {
+      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
       expect(screen.queryByText("CARNES E AVES")).not.toBeInTheDocument();
       expect(screen.queryByText("BACALHAU")).not.toBeInTheDocument();
-      expect(screen.getByText('Nenhum produto encontrado para "xyz-nada".')).toBeInTheDocument();
+      expect(
+        screen.getByText("Nenhum produto encontrado para os produtos selecionados."),
+      ).toBeInTheDocument();
     });
 
-    it("shows every section again once the search is cleared", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter="" />);
+    it("shows every section again once the selection is cleared", () => {
+      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={[]} />);
       expect(screen.getByText("CARNES E AVES")).toBeInTheDocument();
       expect(screen.getByText("BACALHAU")).toBeInTheDocument();
     });
 
     it("drops 'outros' and recomputes the totals from just the visible rows while filtering", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter="picanha" />);
-      // Outros (R$90) isn't attributable to a product name, so it's excluded
-      // while a search is active -- the section and overall total should
-      // both equal PICANHA alone (R$500), not the unfiltered R$590.
+      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
+      // Outros (R$90) isn't attributable to a selected product, so it's
+      // excluded while a selection is active -- the section and overall
+      // total should both equal PICANHA alone (R$500), not the unfiltered R$590.
       expect(screen.queryByText(/outros produtos/i)).not.toBeInTheDocument();
       expect(screen.getAllByText(exactText(fmtBRL(VAL_INDIVIDUAL))).length).toBeGreaterThan(1);
       expect(screen.queryByText(exactText(fmtBRL(VAL_TOTAL_SECAO)))).not.toBeInTheDocument();
     });
 
-    it("shows a R$0 total when nothing matches the search", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter="xyz-nada" />);
+    it("shows a R$0 total when nothing matches the selection", () => {
+      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
       expect(screen.getByText(exactText(`Total: ${fmtBRL(0)}`))).toBeInTheDocument();
     });
   });
