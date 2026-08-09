@@ -191,7 +191,7 @@ export function useProductionPdfExport({
       }
 
       const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
-      const filename = `planejamento-producao-${slugifyFilename(storeLabel)}-${targetDate}-${timestamp}.pdf`;
+      const filename = `previsao-venda-${slugifyFilename(storeLabel)}-${targetDate}-${timestamp}.pdf`;
       await openPdfBlob(doc, filename);
     } finally {
       setPdfLoading(false);
