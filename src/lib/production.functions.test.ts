@@ -47,9 +47,9 @@ import { getProductionForecast, getProductionFilterOptions } from "./production.
 import db from "./db";
 import { cache } from "./cache";
 
-// The proc returns 4 result sets: individual products (now with
-// grupo/subgrupo), outros-per-(secao,grupo,subgrupo), every section of
-// PERECIVEIS from product_universe, and metadata.
+// The proc returns 3 result sets: individual products (every product that
+// sold at least once, no confidence floor -- carrying grupo/subgrupo),
+// every section of PERECIVEIS from product_universe, and metadata.
 const PROC_RESULT_MIXED = [
   [
     [
@@ -64,18 +64,22 @@ const PROC_RESULT_MIXED = [
         forecast_min: 380,
         forecast_max: 610,
       },
-    ],
-    [
       {
+        // A single occurrence: min === val === max, shown individually
+        // (no aggregate "outros" bucket).
+        prod_code: "2",
+        prod_name: "COSTELA",
         secao: "CARNES E AVES",
         grupo: "BOVINOS",
         subgrupo: "CORTES NOBRES",
-        num_produtos: 3,
-        outros_val: 90,
+        occurrences: 1,
+        forecast_val: 90,
+        forecast_min: 90,
+        forecast_max: 90,
       },
     ],
     [{ secao: "CARNES E AVES" }, { secao: "BACALHAU" }],
-    [{ weekday_num: 6, min_occurrences: 4, lookback_occurrences: 8 }],
+    [{ weekday_num: 6, lookback_occurrences: 8 }],
   ],
 ];
 
@@ -84,12 +88,6 @@ interface Input {
   targetDate: string;
   secoes?: string[];
   grupos?: string[];
-}
-interface OutrosBucket {
-  grupo: string | null;
-  subgrupo: string | null;
-  numProdutos: number;
-  outrosVal: number;
 }
 interface Produto {
   prodCode: string;
@@ -103,7 +101,6 @@ type Fn = (d: Input) => Promise<{
   secoes: {
     secao: string;
     produtos: Produto[];
-    outrosBySubgrupo: OutrosBucket[];
     totalSecao: number;
   }[];
   weekdayNum: number;
@@ -123,12 +120,12 @@ beforeEach(() => {
 });
 
 describe("getProductionForecast", () => {
-  it("maps individual products and outros, tagged with grupo/subgrupo, and reconciles the seção total", async () => {
+  it("maps every product individually (no confidence floor), tagged with grupo/subgrupo, and reconciles the seção total", async () => {
     const r = await call();
     expect(r.secoes).toHaveLength(2);
 
     const carnes = r.secoes.find((s) => s.secao === "CARNES E AVES");
-    expect(carnes?.produtos).toHaveLength(1);
+    expect(carnes?.produtos).toHaveLength(2);
     expect(carnes?.produtos[0]).toMatchObject({
       prodCode: "1",
       grupo: "BOVINOS",
@@ -137,10 +134,14 @@ describe("getProductionForecast", () => {
       forecastMin: 380,
       forecastMax: 610,
     });
-    expect(carnes?.outrosBySubgrupo).toEqual([
-      { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
-    ]);
-    // Reconciliation: sum of individual + outros, by construction.
+    // A product with a single occurrence still gets its own row: min ===
+    // val === max, no aggregate bucket hiding it.
+    expect(carnes?.produtos[1]).toMatchObject({
+      prodCode: "2",
+      forecastVal: 90,
+      forecastMin: 90,
+      forecastMax: 90,
+    });
     expect(carnes?.totalSecao).toBe(590);
   });
 
@@ -148,62 +149,12 @@ describe("getProductionForecast", () => {
     const r = await call();
     const bacalhau = r.secoes.find((s) => s.secao === "BACALHAU");
     expect(bacalhau?.produtos).toHaveLength(0);
-    expect(bacalhau?.outrosBySubgrupo).toHaveLength(0);
     expect(bacalhau?.totalSecao).toBe(0);
-  });
-
-  it("handles a seção that's only individual products (no outros)", async () => {
-    vi.mocked(db.query).mockResolvedValue([
-      [
-        [
-          {
-            prod_code: "1",
-            prod_name: "P1",
-            secao: "PADARIA",
-            grupo: "PAES",
-            subgrupo: "PAES ESPECIAIS",
-            occurrences: 5,
-            forecast_val: 100,
-          },
-        ],
-        [],
-        [{ secao: "PADARIA" }],
-        [{ weekday_num: 6, min_occurrences: 4, lookback_occurrences: 8 }],
-      ],
-    ] as never);
-    const r = await call();
-    expect(r.secoes[0].outrosBySubgrupo).toEqual([]);
-    expect(r.secoes[0].totalSecao).toBe(100);
-  });
-
-  it("handles a seção that's only outros (no product reaches the confidence floor) -- no individual row at all", async () => {
-    vi.mocked(db.query).mockResolvedValue([
-      [
-        [],
-        [
-          {
-            secao: "PEIXARIA",
-            grupo: "PEIXES",
-            subgrupo: "PEIXES CONGELADOS",
-            num_produtos: 12,
-            outros_val: 340,
-          },
-        ],
-        [{ secao: "PEIXARIA" }],
-        [{ weekday_num: 6, min_occurrences: 4, lookback_occurrences: 8 }],
-      ],
-    ] as never);
-    const r = await call();
-    expect(r.secoes[0].produtos).toEqual([]);
-    expect(r.secoes[0].outrosBySubgrupo).toEqual([
-      { grupo: "PEIXES", subgrupo: "PEIXES CONGELADOS", numProdutos: 12, outrosVal: 340 },
-    ]);
-    expect(r.secoes[0].totalSecao).toBe(340);
   });
 
   it("returns every section with R$0 for a store/date with no sales at all on this weekday", async () => {
     vi.mocked(db.query).mockResolvedValue([
-      [[], [], [{ secao: "CARNES E AVES" }, { secao: "F.L.V." }], [{ weekday_num: 3 }]],
+      [[], [{ secao: "CARNES E AVES" }, { secao: "F.L.V." }], [{ weekday_num: 3 }]],
     ] as never);
     const r = await call();
     expect(r.secoes).toHaveLength(2);
@@ -239,7 +190,6 @@ describe("getProductionForecast", () => {
       expect(db.query).toHaveBeenCalledWith(expect.any(String), [
         "1516",
         "2026-08-14",
-        4,
         8,
         "[]",
         "[]",
@@ -251,7 +201,6 @@ describe("getProductionForecast", () => {
       expect(db.query).toHaveBeenCalledWith(expect.any(String), [
         "1516",
         "2026-08-14",
-        4,
         8,
         '["CARNES E AVES"]',
         '["BOVINOS"]',

@@ -196,8 +196,8 @@ SCENARIOS=(
 "filtros_28d|CALL filter_options('$D28','$LAST',$NUL,$NUL,$NUL,$NUL)"
 "produto_alto_volume|CALL product_analysis('$PROD_HIGH',$NUL,NULL)"
 "produto_baixo_volume|CALL product_analysis('$PROD_LOW',$NUL,NULL)"
-"producao_amanha|CALL production_forecast('$STORE_PEREC','$TOMORROW',4,8,$NUL,$NUL)"
-"producao_amanha_com_filtro|CALL production_forecast('$STORE_PEREC','$TOMORROW',4,8,'$J_SECAO_PEREC',$NUL)"
+"producao_amanha|CALL production_forecast('$STORE_PEREC','$TOMORROW',8,$NUL,$NUL)"
+"producao_amanha_com_filtro|CALL production_forecast('$STORE_PEREC','$TOMORROW',8,'$J_SECAO_PEREC',$NUL)"
 )
 
 RESULTS="$OUT_DIR/results.tsv"

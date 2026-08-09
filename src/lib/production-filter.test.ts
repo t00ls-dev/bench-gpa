@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeVisibleSecoes, mergeOutros } from "./production-filter";
+import { computeVisibleSecoes } from "./production-filter";
 import type { ProductionForecastProduct, ProductionSecaoForecast } from "@/lib/api-types";
 
 function produto(overrides: Partial<ProductionForecastProduct> = {}): ProductionForecastProduct {
@@ -32,16 +32,11 @@ const SECOES: ProductionSecaoForecast[] = [
         forecastMax: 260,
       }),
     ],
-    outrosBySubgrupo: [
-      { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
-      { grupo: "AVES", subgrupo: "CONGELADOS", numProdutos: 2, outrosVal: 50 },
-    ],
-    totalSecao: 840,
+    totalSecao: 700,
   },
   {
     secao: "BACALHAU",
     produtos: [],
-    outrosBySubgrupo: [],
     totalSecao: 0,
   },
 ];
@@ -50,40 +45,39 @@ describe("computeVisibleSecoes", () => {
   it("returns every seção unchanged when no filter is active", () => {
     const { visibleSecoes, totalGeral } = computeVisibleSecoes(SECOES);
     expect(visibleSecoes).toEqual(SECOES);
-    expect(totalGeral).toBe(840);
+    expect(totalGeral).toBe(700);
   });
 
   it("returns every seção unchanged when filters are empty arrays", () => {
     const { visibleSecoes, totalGeral } = computeVisibleSecoes(SECOES, [], []);
     expect(visibleSecoes).toEqual(SECOES);
-    expect(totalGeral).toBe(840);
+    expect(totalGeral).toBe(700);
   });
 
-  it("productFilter: narrows to the selected PLUs, drops every outros bucket, recomputes the total", () => {
+  it("productFilter: narrows to the selected PLUs and recomputes the total", () => {
     const { visibleSecoes, totalGeral } = computeVisibleSecoes(SECOES, ["1"]);
     expect(visibleSecoes).toHaveLength(1);
     expect(visibleSecoes[0].produtos.map((p) => p.prodCode)).toEqual(["1"]);
-    expect(visibleSecoes[0].outrosBySubgrupo).toEqual([]);
     expect(totalGeral).toBe(500);
   });
 
-  it("subgrupoFilter: narrows to the selected subgrupo's products AND its outros bucket", () => {
+  it("subgrupoFilter: narrows to the selected subgrupo's products", () => {
     const { visibleSecoes, totalGeral } = computeVisibleSecoes(SECOES, undefined, [
       "CORTES NOBRES",
     ]);
     expect(visibleSecoes).toHaveLength(1);
     expect(visibleSecoes[0].produtos.map((p) => p.prodCode)).toEqual(["1"]);
-    expect(visibleSecoes[0].outrosBySubgrupo).toEqual([
-      { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
-    ]);
-    expect(totalGeral).toBe(590);
+    expect(totalGeral).toBe(500);
   });
 
   it("combines subgrupoFilter and productFilter", () => {
-    const { visibleSecoes, totalGeral } = computeVisibleSecoes(SECOES, ["1"], ["CORTES NOBRES"]);
+    const { visibleSecoes, totalGeral } = computeVisibleSecoes(
+      SECOES,
+      ["1", "2"],
+      ["CORTES NOBRES"],
+    );
     expect(visibleSecoes).toHaveLength(1);
     expect(visibleSecoes[0].produtos.map((p) => p.prodCode)).toEqual(["1"]);
-    expect(visibleSecoes[0].outrosBySubgrupo).toEqual([]);
     expect(totalGeral).toBe(500);
   });
 
@@ -91,15 +85,5 @@ describe("computeVisibleSecoes", () => {
     const { visibleSecoes, totalGeral } = computeVisibleSecoes(SECOES, ["nada-aqui"]);
     expect(visibleSecoes).toHaveLength(0);
     expect(totalGeral).toBe(0);
-  });
-});
-
-describe("mergeOutros", () => {
-  it("sums every outros bucket for a seção into one aggregate", () => {
-    expect(mergeOutros(SECOES[0].outrosBySubgrupo)).toEqual({ numProdutos: 5, outrosVal: 140 });
-  });
-
-  it("returns null when there are no outros buckets", () => {
-    expect(mergeOutros([])).toBeNull();
   });
 });
