@@ -273,25 +273,25 @@ describe("getProductionFilterOptions", () => {
       storeCode,
     });
 
-  it("maps distinct secao/grupo rows from product_universe", async () => {
+  it("maps distinct secao/grupo/subgrupo rows from product_universe", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [
-        { secao: "CARNES E AVES", grupo: "BOVINOS" },
-        { secao: "CARNES E AVES", grupo: "SUINOS" },
-        { secao: "BACALHAU", grupo: null },
+        { secao: "CARNES E AVES", grupo: "BOVINOS", subgrupo: "CORTES NOBRES" },
+        { secao: "CARNES E AVES", grupo: "SUINOS", subgrupo: null },
+        { secao: "BACALHAU", grupo: null, subgrupo: null },
       ],
     ] as never);
     const r = await callOptions();
     expect(r).toEqual([
-      { secao: "CARNES E AVES", grupo: "BOVINOS" },
-      { secao: "CARNES E AVES", grupo: "SUINOS" },
-      { secao: "BACALHAU", grupo: null },
+      { secao: "CARNES E AVES", grupo: "BOVINOS", subgrupo: "CORTES NOBRES" },
+      { secao: "CARNES E AVES", grupo: "SUINOS", subgrupo: null },
+      { secao: "BACALHAU", grupo: null, subgrupo: null },
     ]);
   });
 
   it("serves the second identical call without touching the database", async () => {
     vi.mocked(db.query).mockResolvedValue([
-      [{ secao: "CARNES E AVES", grupo: "BOVINOS" }],
+      [{ secao: "CARNES E AVES", grupo: "BOVINOS", subgrupo: "CORTES NOBRES" }],
     ] as never);
     await callOptions();
     await callOptions();
@@ -300,7 +300,7 @@ describe("getProductionFilterOptions", () => {
 
   it("does not collide across different stores", async () => {
     vi.mocked(db.query).mockResolvedValue([
-      [{ secao: "CARNES E AVES", grupo: "BOVINOS" }],
+      [{ secao: "CARNES E AVES", grupo: "BOVINOS", subgrupo: "CORTES NOBRES" }],
     ] as never);
     await callOptions("1516");
     await callOptions("1274");

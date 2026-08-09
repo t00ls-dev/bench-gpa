@@ -17,6 +17,7 @@ interface ForecastFilters {
   targetDate: string | undefined;
   secoes: string[];
   grupos: string[];
+  subgrupos: string[];
   productFilter: string[];
 }
 
@@ -28,10 +29,11 @@ function ProductionPage() {
     targetDate: undefined,
     secoes: [],
     grupos: [],
+    subgrupos: [],
     productFilter: [],
   });
   const patch = (p: Partial<ForecastFilters>) => setFf((prev) => ({ ...prev, ...p }));
-  const { storeCode, targetDate, secoes, grupos, productFilter } = ff;
+  const { storeCode, targetDate, secoes, grupos, subgrupos, productFilter } = ff;
 
   // Deep link / hotkey navigation (?store=&targetDate=) takes over the
   // persisted filters once per visit, same spirit as Area's dashboard
@@ -109,6 +111,7 @@ function ProductionPage() {
   const { pdfLoading, pdfElapsed, openPdfInNewTab } = useProductionPdfExport({
     secoes: data?.secoes ?? [],
     productFilter,
+    subgrupoFilter: subgrupos,
     storeLabel,
     targetDate: targetDate ?? "",
     lookbackOccurrences: data?.lookbackOccurrences ?? 0,
@@ -137,12 +140,16 @@ function ProductionPage() {
         filterOptions={filterOptions}
         secoes={secoes}
         grupos={grupos}
+        subgrupos={subgrupos}
         productOptions={productOptions}
         productFilter={productFilter}
-        onStoreChange={(v) => patch({ storeCode: v[0], secoes: [], grupos: [], productFilter: [] })}
+        onStoreChange={(v) =>
+          patch({ storeCode: v[0], secoes: [], grupos: [], subgrupos: [], productFilter: [] })
+        }
         onTargetDateChange={(v) => patch({ targetDate: v, productFilter: [] })}
-        onSecoesChange={(v) => patch({ secoes: v })}
-        onGruposChange={(v) => patch({ grupos: v })}
+        onSecoesChange={(v) => patch({ secoes: v, subgrupos: [] })}
+        onGruposChange={(v) => patch({ grupos: v, subgrupos: [] })}
+        onSubgruposChange={(v) => patch({ subgrupos: v })}
         onProductFilterChange={(v) => patch({ productFilter: v })}
       />
 
@@ -166,6 +173,7 @@ function ProductionPage() {
             secoes={data?.secoes ?? []}
             isFetching={isFetching}
             productFilter={productFilter}
+            subgrupoFilter={subgrupos}
             onExportPDF={openPdfInNewTab}
             pdfLoading={pdfLoading}
             pdfElapsed={pdfElapsed}

@@ -16,12 +16,14 @@ export function ProductionFilters({
   filterOptions,
   secoes,
   grupos,
+  subgrupos,
   productOptions,
   productFilter,
   onStoreChange,
   onTargetDateChange,
   onSecoesChange,
   onGruposChange,
+  onSubgruposChange,
   onProductFilterChange,
 }: {
   stores: StoreOption[];
@@ -30,12 +32,14 @@ export function ProductionFilters({
   filterOptions: ProductionFilterOption[];
   secoes: string[];
   grupos: string[];
+  subgrupos: string[];
   productOptions: MSOption[];
   productFilter: string[];
   onStoreChange: (v: string[]) => void;
   onTargetDateChange: (v: string) => void;
   onSecoesChange: (v: string[]) => void;
   onGruposChange: (v: string[]) => void;
+  onSubgruposChange: (v: string[]) => void;
   onProductFilterChange: (v: string[]) => void;
 }) {
   const secaoOptions = useMemo(
@@ -47,7 +51,7 @@ export function ProductionFilters({
   // Cascade: with no seção selected, every grupo is available; once one or
   // more seções are picked, narrow to only the grupos that occur under them
   // (same in-memory cascade spirit as computeAreaCascadeOptions, but for
-  // just these 2 levels).
+  // just these levels).
   const grupoOptions = useMemo(() => {
     const scoped =
       secoes.length === 0 ? filterOptions : filterOptions.filter((o) => secoes.includes(o.secao));
@@ -56,9 +60,21 @@ export function ProductionFilters({
       .map((g) => ({ value: g, label: g }));
   }, [filterOptions, secoes]);
 
+  // Same cascade, one level deeper: scoped by both seção and grupo when
+  // either is selected.
+  const subgrupoOptions = useMemo(() => {
+    let scoped = filterOptions;
+    if (secoes.length > 0) scoped = scoped.filter((o) => secoes.includes(o.secao));
+    if (grupos.length > 0)
+      scoped = scoped.filter((o) => o.grupo !== null && grupos.includes(o.grupo));
+    return [...new Set(scoped.map((o) => o.subgrupo).filter((sg): sg is string => sg !== null))]
+      .sort()
+      .map((sg) => ({ value: sg, label: sg }));
+  }, [filterOptions, secoes, grupos]);
+
   return (
     <div className="kpi-card mb-4 space-y-3 min-w-0 overflow-hidden">
-      <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-5 [&>*]:min-w-0">
+      <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
         <FilterField label="Loja">
           <MultiSelect
             single
@@ -90,6 +106,14 @@ export function ProductionFilters({
             options={grupoOptions}
             value={grupos}
             onChange={onGruposChange}
+          />
+        </FilterField>
+        <FilterField label="Subgrupo">
+          <MultiSelect
+            label="Todos"
+            options={subgrupoOptions}
+            value={subgrupos}
+            onChange={onSubgruposChange}
           />
         </FilterField>
         <FilterField label="Produto">

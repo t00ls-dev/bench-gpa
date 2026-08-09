@@ -1,28 +1,29 @@
 import { Fragment } from "react";
 import { fmtBRL } from "@/lib/utils";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
-import { computeVisibleSecoes, OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
+import {
+  computeVisibleSecoes,
+  flattenSecaoRows,
+  OUTROS_CAVEAT_TEXT,
+} from "@/lib/production-filter";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 
 /**
- * First component in this project to render grouped rows with a subtotal
- * (AreaTable is a flat virtualized list). No virtualization here on
- * purpose: the row count is the number of individual products of
- * PERECIVEIS at ONE store, dozens to a few hundred rows, well below
- * AreaTable's volume.
+ * No virtualization here on purpose: the row count is the number of
+ * individual products of PERECIVEIS at ONE store, dozens to a few hundred
+ * rows, well below AreaTable's volume.
  *
- * Nested Seção → Grupo → Subgrupo → produtos, each level with its own
- * header/subtotal (increasing indent/decreasing emphasis). Unlike Seção
- * (always shown, even with nothing this weekday -- padded from the full
- * catalog in production.functions.ts), a Grupo/Subgrupo branch only exists
- * here when it actually has a product or an "outros" aggregate: nothing
- * pads them from the catalog, so there's no empty-branch case to hide.
+ * Only the leaf product is shown per row -- Grupo/Subgrupo aren't rendered
+ * as their own headers, just used (via computeVisibleSecoes/
+ * flattenSecaoRows) to keep products in secao/grupo/subgrupo/valor order
+ * and to power the Subgrupo filter.
  */
 export function ProductionTable({
   secoes,
   isFetching,
   productFilter,
+  subgrupoFilter,
   onExportPDF,
   pdfLoading,
   pdfElapsed,
@@ -30,11 +31,12 @@ export function ProductionTable({
   secoes: ProductionSecaoForecast[];
   isFetching: boolean;
   productFilter?: string[];
+  subgrupoFilter?: string[];
   onExportPDF?: () => void;
   pdfLoading?: boolean;
   pdfElapsed?: number;
 }) {
-  const { visibleSecoes, totalGeral } = computeVisibleSecoes(secoes, productFilter);
+  const { visibleSecoes, totalGeral } = computeVisibleSecoes(secoes, productFilter, subgrupoFilter);
 
   return (
     <div className="kpi-card overflow-hidden">
@@ -74,67 +76,49 @@ export function ProductionTable({
 
       {secoes.length > 0 && visibleSecoes.length === 0 && (
         <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-          Nenhum produto encontrado para os produtos selecionados.
+          Nenhum produto encontrado para os filtros selecionados.
         </p>
       )}
 
       <div className="divide-y">
-        {visibleSecoes.map((s) => (
-          <Fragment key={s.secao}>
-            <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
-              <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
-            </div>
-            {s.grupos.map((g) => (
-              <Fragment key={`${s.secao}|${g.grupo ?? ""}`}>
-                <div className="flex items-center justify-between bg-muted/20 py-1 pr-3 pl-5">
-                  <span className="text-xs font-medium">{g.grupo ?? "Sem grupo"}</span>
-                  <span className="text-xs font-medium">{fmtBRL(g.totalGrupo)}</span>
+        {visibleSecoes.map((s) => {
+          const { produtos, outros } = flattenSecaoRows(s);
+          return (
+            <Fragment key={s.secao}>
+              <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
+                <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
+              </div>
+              {produtos.map((p) => (
+                <div
+                  key={p.prodCode}
+                  className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
+                >
+                  <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
+                    <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
+                  </span>
+                  <span className="text-right whitespace-nowrap">
+                    <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
+                    </span>
+                  </span>
                 </div>
-                {g.subgrupos.map((sg) => (
-                  <Fragment key={`${s.secao}|${g.grupo ?? ""}|${sg.subgrupo ?? ""}`}>
-                    <div className="flex items-center justify-between py-1 pr-3 pl-7">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {sg.subgrupo ?? "Sem subgrupo"}
-                      </span>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {fmtBRL(sg.totalSubgrupo)}
-                      </span>
-                    </div>
-                    {sg.produtos.map((p) => (
-                      <div
-                        key={p.prodCode}
-                        className="grid grid-cols-[1fr_auto] items-center gap-3 py-1.5 pr-3 pl-9 text-sm"
-                      >
-                        <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
-                          <span className="text-muted-foreground">PLU {p.prodCode}</span> ·{" "}
-                          {p.prodName}
-                        </span>
-                        <span className="text-right whitespace-nowrap">
-                          <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
-                          <span className="block text-xs text-muted-foreground">
-                            mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
-                          </span>
-                        </span>
-                      </div>
-                    ))}
-                    {sg.outros && (
-                      <div className="grid grid-cols-[1fr_auto] items-center gap-3 py-1.5 pr-3 pl-9 text-sm text-muted-foreground italic">
-                        <span>
-                          <span className="block">
-                            Outros produtos com histórico no dia ({sg.outros.numProdutos})
-                          </span>
-                          <span className="block text-xs">{OUTROS_CAVEAT_TEXT}</span>
-                        </span>
-                        <span className="whitespace-nowrap">{fmtBRL(sg.outros.outrosVal)}</span>
-                      </div>
-                    )}
-                  </Fragment>
-                ))}
-              </Fragment>
-            ))}
-          </Fragment>
-        ))}
+              ))}
+              {outros && (
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm text-muted-foreground italic">
+                  <span>
+                    <span className="block">
+                      Outros produtos com histórico no dia ({outros.numProdutos})
+                    </span>
+                    <span className="block text-xs">{OUTROS_CAVEAT_TEXT}</span>
+                  </span>
+                  <span className="whitespace-nowrap">{fmtBRL(outros.outrosVal)}</span>
+                </div>
+              )}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );
