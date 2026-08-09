@@ -132,7 +132,7 @@ describe("useProductionPdfExport", () => {
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
-    const expectedPrefix = `planejamento-producao-${slugifyFilename("1516 - LEBLON")}-2026-07-13-`;
+    const expectedPrefix = `previsao-venda-${slugifyFilename("1516 - LEBLON")}-2026-07-13-`;
     expect(openPdfBlob).toHaveBeenCalledWith(
       expect.anything(),
       expect.stringMatching(new RegExp(`^${expectedPrefix}\\d{8}-\\d{6}\\.pdf$`)),
