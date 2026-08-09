@@ -749,9 +749,9 @@ Hash idêntico entre execuções repetidas do mesmo cenário. Os cenários de
 teste do `bench-procs.sh` usados só pra medir (`producao_v2_sem_filtro`,
 `producao_v2_com_filtro`) foram removidos do script depois de renomear
 pro nome definitivo. A proc candidata `production_forecast_v2_candidate`
-em si ainda não foi apagada de produção neste momento (baixa prioridade,
-não bloqueia; ver pendência equivalente já resolvida na entrada de
-2026-08-07 acima para o precedente de como isso costuma ser limpo).
+em si ficou parada em produção por um tempo (baixa prioridade, não
+bloqueava nada) e foi apagada em 2026-08-09 (via SSH, `DROP PROCEDURE
+IF EXISTS`), junto da limpeza de fim de sessão da entrada do v4 acima.
 
 ## 2026-08-08: production_forecast, agrupamento por Grupo/Subgrupo (v3)
 
