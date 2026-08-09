@@ -15,7 +15,7 @@ const exactText = (text: string) => (_: string, el: Element | null) => el?.textC
 
 const VAL_INDIVIDUAL = 500;
 const VAL_OUTROS = 90;
-const VAL_TOTAL_SUBGRUPO = VAL_INDIVIDUAL + VAL_OUTROS;
+const VAL_TOTAL_SECAO = VAL_INDIVIDUAL + VAL_OUTROS;
 
 const SECOES: ProductionSecaoForecast[] = [
   {
@@ -40,13 +40,13 @@ const SECOES: ProductionSecaoForecast[] = [
               },
             ],
             outros: { numProdutos: 3, outrosVal: VAL_OUTROS },
-            totalSubgrupo: VAL_TOTAL_SUBGRUPO,
+            totalSubgrupo: VAL_TOTAL_SECAO,
           },
         ],
-        totalGrupo: VAL_TOTAL_SUBGRUPO,
+        totalGrupo: VAL_TOTAL_SECAO,
       },
     ],
-    totalSecao: VAL_TOTAL_SUBGRUPO,
+    totalSecao: VAL_TOTAL_SECAO,
   },
   {
     secao: "BACALHAU",
@@ -62,63 +62,17 @@ describe("ProductionTable", () => {
     expect(screen.getByText("BACALHAU")).toBeInTheDocument();
   });
 
-  it("reconciles: seção/grupo/subgrupo totals all equal individual + outros", () => {
+  it("does not render Grupo/Subgrupo as their own header rows -- only the leaf product", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    // Seção, Grupo and Subgrupo totals are all the same value here (a
-    // single grupo/subgrupo under the seção), so all three headers show it.
-    expect(
-      screen.getAllByText(exactText(fmtBRL(VAL_TOTAL_SUBGRUPO))).length,
-    ).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText("BOVINOS")).not.toBeInTheDocument();
+    expect(screen.queryByText("CORTES NOBRES")).not.toBeInTheDocument();
+  });
+
+  it("reconciles: section total equals individual products plus outros", () => {
+    render(<ProductionTable secoes={SECOES} isFetching={false} />);
+    expect(screen.getAllByText(exactText(fmtBRL(VAL_TOTAL_SECAO))).length).toBeGreaterThan(0);
     expect(screen.getByText(exactText(fmtBRL(VAL_INDIVIDUAL)))).toBeInTheDocument();
     expect(screen.getByText(exactText(fmtBRL(VAL_OUTROS)))).toBeInTheDocument();
-  });
-
-  it("shows the Grupo header with its label and subtotal", () => {
-    render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getByText("BOVINOS")).toBeInTheDocument();
-  });
-
-  it("shows the Subgrupo header with its label and subtotal", () => {
-    render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getByText("CORTES NOBRES")).toBeInTheDocument();
-  });
-
-  it("labels a null grupo/subgrupo as 'Sem grupo'/'Sem subgrupo'", () => {
-    const secoes: ProductionSecaoForecast[] = [
-      {
-        secao: "CARNES E AVES",
-        grupos: [
-          {
-            grupo: null,
-            subgrupos: [
-              {
-                subgrupo: null,
-                produtos: [
-                  {
-                    prodCode: "9",
-                    prodName: "SEM CATEGORIA",
-                    secao: "CARNES E AVES",
-                    grupo: null,
-                    subgrupo: null,
-                    occurrences: 4,
-                    forecastVal: 100,
-                    forecastMin: 80,
-                    forecastMax: 120,
-                  },
-                ],
-                outros: null,
-                totalSubgrupo: 100,
-              },
-            ],
-            totalGrupo: 100,
-          },
-        ],
-        totalSecao: 100,
-      },
-    ];
-    render(<ProductionTable secoes={secoes} isFetching={false} />);
-    expect(screen.getByText("Sem grupo")).toBeInTheDocument();
-    expect(screen.getByText("Sem subgrupo")).toBeInTheDocument();
   });
 
   it("doesn't render an 'outros' line when there's nothing to aggregate", () => {
@@ -196,7 +150,7 @@ describe("ProductionTable", () => {
       expect(screen.queryByText("CARNES E AVES")).not.toBeInTheDocument();
       expect(screen.queryByText("BACALHAU")).not.toBeInTheDocument();
       expect(
-        screen.getByText("Nenhum produto encontrado para os produtos selecionados."),
+        screen.getByText("Nenhum produto encontrado para os filtros selecionados."),
       ).toBeInTheDocument();
     });
 
@@ -208,19 +162,29 @@ describe("ProductionTable", () => {
 
     it("drops 'outros' and recomputes the totals from just the visible rows while filtering", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
-      // Outros (R$90) isn't attributable to a selected product, so it's
-      // excluded while a selection is active -- seção/grupo/subgrupo totals
-      // should all equal PICANHA alone (R$500), not the unfiltered R$590.
       expect(screen.queryByText(/outros produtos/i)).not.toBeInTheDocument();
-      expect(screen.getAllByText(exactText(fmtBRL(VAL_INDIVIDUAL))).length).toBeGreaterThanOrEqual(
-        4,
-      );
-      expect(screen.queryByText(exactText(fmtBRL(VAL_TOTAL_SUBGRUPO)))).not.toBeInTheDocument();
+      expect(screen.getAllByText(exactText(fmtBRL(VAL_INDIVIDUAL))).length).toBeGreaterThan(1);
+      expect(screen.queryByText(exactText(fmtBRL(VAL_TOTAL_SECAO)))).not.toBeInTheDocument();
     });
 
     it("shows a R$0 total when nothing matches the selection", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
       expect(screen.getAllByText(exactText(`Total: ${fmtBRL(0)}`)).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("subgrupoFilter", () => {
+    it("keeps only the selected subgrupo, INCLUDING its outros", () => {
+      render(
+        <ProductionTable secoes={SECOES} isFetching={false} subgrupoFilter={["CORTES NOBRES"]} />,
+      );
+      expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
+      expect(screen.getByText(exactText(fmtBRL(VAL_OUTROS)))).toBeInTheDocument();
+    });
+
+    it("hides a section with no matching subgrupo", () => {
+      render(<ProductionTable secoes={SECOES} isFetching={false} subgrupoFilter={["nada-aqui"]} />);
+      expect(screen.queryByText("CARNES E AVES")).not.toBeInTheDocument();
     });
   });
 });

@@ -130,12 +130,14 @@ export interface ProductionForecastResult {
   lookbackOccurrences: number;
 }
 
-/** One row per (secao, grupo) pair that exists in PERECIVEIS at a store --
- * used to build the Seção/Grupo filter cascade client-side, same spirit
- * as AreaHierarchyItem but scoped to just these 2 levels. */
+/** One row per (secao, grupo, subgrupo) triple that exists in PERECIVEIS at
+ * a store -- used to build the Seção/Grupo/Subgrupo filter cascade
+ * client-side, same spirit as AreaHierarchyItem but scoped to just these 3
+ * levels. */
 export interface ProductionFilterOption {
   secao: string;
   grupo: string | null;
+  subgrupo: string | null;
 }
 
 export interface ProductAnalysisResult {
