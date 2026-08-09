@@ -802,3 +802,59 @@ teste (`producao_v3_sem_filtro`, `producao_v3_com_filtro`) foram
 removidos do `bench-procs.sh` depois de renomear pro nome definitivo. A
 proc candidata `production_forecast_v3_candidate` foi apagada de
 produção logo em seguida (via SSH, `DROP PROCEDURE IF EXISTS`).
+
+## 2026-08-09: production_forecast, remove o piso de confiança (v4)
+
+Pedido do usuário: a linha "Outros produtos com histórico no dia (N) —
+poucas vendas no período" (agregado sem PLU pra todo produto com menos
+de `PRODUCTION_MIN_OCCURRENCES` = 4 ocorrências) não ajudava em nada —
+só dizia "existem produtos sem confiança" sem informação acionável.
+Pedido explícito: todo produto que vendeu ao menos uma vez na janela
+vira linha individual, mín/média/máx calculado sobre as ocorrências que
+tiver (mesmo que seja só 1, caso em que mín = média = máx).
+
+Mudança na proc: perde o parâmetro `p_min_occurrences` (de 6 pra 5
+parâmetros); result set 1 perde o `WHERE occurrences >=
+p_min_occurrences` (agora devolve todo produto de `tmp_product_forecast`
+sem filtro); result set 2 ("outros", `GROUP BY secao, grupo, subgrupo`,
+introduzido no v3 acima) é removido inteiramente — não sobra nada pra
+agregar.
+
+Efeito esperado (registrado antes de medir, ver plano): como o result
+set 2 era justamente o que explicava o salto v2→v3 (178ms→281ms, ver
+entrada acima), removê-lo devolveria a proc a algo perto de 178ms.
+
+Protocolo de sempre: candidata testada sob o nome
+`production_forecast_v4_candidate` em produção via SSH, medida com
+`scripts/bench-procs.sh` (dois cenários novos, mesmo padrão do v2/v3:
+`producao_v4_sem_filtro` e `producao_v4_com_filtro`).
+
+**Sem filtro**: mediana **278ms** (dispersão 1,25x, confiável) —
+praticamente igual à baseline v3 de 281ms, não a queda esperada.
+**Com filtro de seção**: primeira medição deu 1,87x de dispersão
+(`<-- HIGH SPREAD, don't trust`), repetida; mediana **211ms**
+(dispersão 1,05x, confiável) — 7% abaixo da baseline v3 de 226ms,
+dentro do que se espera de uma proc mais simples, mas longe dos 178ms
+do v2.
+
+**A hipótese estava errada: o result set 2 não era o custo dominante.**
+Se fosse, sem filtro teria voltado perto de 178ms. `tmp_product_forecast`
+(o `GROUP BY prod_code` com `MIN/AVG/MAX/COUNT` sobre
+`sales_prod_daily_agg`, compartilhado por v2/v3/v4 sem mudança) já
+materializa o grão fino primeiro; agregar essa temporária já pronta por
+`secao, grupo, subgrupo` (o que o v3 fazia a mais) é barato comparado a
+produzi-la. O salto v2→v3 provavelmente veio de outro lugar não
+isolado nesta medição (possivelmente o próprio `ORDER BY`/tamanho do
+result set 1, que no v3 já carregava `grupo`/`subgrupo` extras por
+linha) — não investigado a fundo porque 278ms/211ms continuam rápidos
+em termos absolutos (mesma ordem de grandeza da baseline original de
+250ms) e não bloqueiam a decisão de prosseguir.
+
+Hash não é comparável ao baseline v3: a mudança é proposital no
+resultado, não só na velocidade (menos colunas, mais linhas
+individuais — 3.549 linhas sem filtro contra a fixture texto do plano
+de ~1.253 individuais + outros antes). Correção verificada pelos
+testes de unidade reescritos (`production.functions.test.ts` e
+afins) e por navegação real na tela antes do rename definitivo, não
+por comparação de hash com uma versão de resultado diferente por
+design.

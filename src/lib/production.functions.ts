@@ -5,7 +5,6 @@ import db from "./db";
 import {
   ProductionForecastResult,
   ProductionSecaoForecast,
-  ProductionOutrosBucket,
   ProductionForecastProduct,
   ProductionFilterOption,
   asArray,
@@ -17,15 +16,6 @@ import {
 import { ProductionForecastSchema, SingleStoreCodeSchema } from "./schemas";
 import { CACHE_TTL_SHORT, CACHE_TTL_LONG } from "./cache";
 
-/**
- * Confidence floor for a product to be forecast individually (see
- * docs/planejamento-producao-perecveis-2026-08-07.md): needs at least this
- * many occurrences of the target weekday within the lookback window.
- * Starting point, not measured against real precision yet -- calibrate with
- * scripts/bench-procs.sh/validate-procs.sh before changing.
- */
-export const PRODUCTION_MIN_OCCURRENCES = 4;
-
 /** How many weekday occurrences the average is computed over. */
 export const PRODUCTION_LOOKBACK_OCCURRENCES = 8;
 
@@ -34,15 +24,14 @@ export const getProductionForecast = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ProductionForecastSchema.parse(d))
   .handler(async ({ data }): Promise<ProductionForecastResult> => {
     const query = async (): Promise<ProductionForecastResult> => {
-      const [rs] = await db.query("CALL production_forecast(?, ?, ?, ?, ?, ?)", [
+      const [rs] = await db.query("CALL production_forecast(?, ?, ?, ?, ?)", [
         data.storeCode,
         data.targetDate,
-        PRODUCTION_MIN_OCCURRENCES,
         PRODUCTION_LOOKBACK_OCCURRENCES,
         JSON.stringify(data.secoes ?? []),
         JSON.stringify(data.grupos ?? []),
       ]);
-      const [individualRows, outrosRows, secoesRows, metaRows] = rs as unknown[];
+      const [individualRows, secoesRows, metaRows] = rs as unknown[];
       const meta = asRecord(asArray(metaRows)[0]);
 
       const individual: ProductionForecastProduct[] = asArray(individualRows).map((r) => {
@@ -61,30 +50,15 @@ export const getProductionForecast = createServerFn({ method: "POST" })
       });
 
       // Grouped by secao only -- individual rows already carry their own
-      // grupo/subgrupo (used by the Subgrupo filter and by outrosBySubgrupo
-      // below), and are already in secao/grupo/subgrupo/valor order (the
-      // proc's `ORDER BY` guarantees it), so a plain push preserves it.
+      // grupo/subgrupo (used by the Subgrupo filter), and are already in
+      // secao/grupo/subgrupo/valor order (the proc's `ORDER BY`
+      // guarantees it), so a plain push preserves it.
       const produtosBySecao = new Map<string, ProductionForecastProduct[]>();
       for (const p of individual) {
         const secao = p.secao ?? "";
         const list = produtosBySecao.get(secao);
         if (list) list.push(p);
         else produtosBySecao.set(secao, [p]);
-      }
-
-      const outrosBySecao = new Map<string, ProductionOutrosBucket[]>();
-      for (const r of asArray(outrosRows)) {
-        const o = asRecord(r);
-        const secao = str(o.secao);
-        const bucket: ProductionOutrosBucket = {
-          grupo: strOrNull(o.grupo),
-          subgrupo: strOrNull(o.subgrupo),
-          numProdutos: num(o.num_produtos),
-          outrosVal: num(o.outros_val),
-        };
-        const list = outrosBySecao.get(secao);
-        if (list) list.push(bucket);
-        else outrosBySecao.set(secao, [bucket]);
       }
 
       // secoesRows (product_universe) is the source of truth for WHICH
@@ -94,17 +68,13 @@ export const getProductionForecast = createServerFn({ method: "POST" })
       const secoes: ProductionSecaoForecast[] = asArray(secoesRows).map((r) => {
         const secao = str(asRecord(r).secao);
         const produtos = produtosBySecao.get(secao) ?? [];
-        const outrosBySubgrupo = outrosBySecao.get(secao) ?? [];
-        const totalSecao =
-          produtos.reduce((sum, p) => sum + p.forecastVal, 0) +
-          outrosBySubgrupo.reduce((sum, o) => sum + o.outrosVal, 0);
-        return { secao, produtos, outrosBySubgrupo, totalSecao };
+        const totalSecao = produtos.reduce((sum, p) => sum + p.forecastVal, 0);
+        return { secao, produtos, totalSecao };
       });
 
       return {
         secoes,
         weekdayNum: num(meta.weekday_num),
-        minOccurrences: num(meta.min_occurrences),
         lookbackOccurrences: num(meta.lookback_occurrences),
       };
     };
