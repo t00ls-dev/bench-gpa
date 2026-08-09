@@ -1,14 +1,16 @@
 import { Fragment, useMemo } from "react";
 import { fmtBRL } from "@/lib/utils";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
-import { computeVisibleSecoes, mergeOutros, OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
+import { computeVisibleSecoes } from "@/lib/production-filter";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 
 /**
- * No virtualization here on purpose: the row count is the number of
- * individual products of PERECIVEIS at ONE store, dozens to a few hundred
- * rows, well below AreaTable's volume.
+ * No virtualization here on purpose: the row count is every individual
+ * product of PERECIVEIS at ONE store that sold at least once in the
+ * lookback window, which can run into the low thousands for a busy store
+ * -- if that ever becomes a real UX problem, virtualizing is the fix, not
+ * hiding rows again.
  *
  * Each product already carries its own grupo/subgrupo (used by the
  * Subgrupo filter and to keep the list in secao/grupo/subgrupo/valor
@@ -81,44 +83,30 @@ export function ProductionTable({
       )}
 
       <div className="divide-y">
-        {visibleSecoes.map((s) => {
-          const outros = mergeOutros(s.outrosBySubgrupo);
-          return (
-            <Fragment key={s.secao}>
-              <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
-                <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
+        {visibleSecoes.map((s) => (
+          <Fragment key={s.secao}>
+            <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
+              <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
+            </div>
+            {s.produtos.map((p) => (
+              <div
+                key={p.prodCode}
+                className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
+              >
+                <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
+                  <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
+                </span>
+                <span className="text-right whitespace-nowrap">
+                  <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
+                  </span>
+                </span>
               </div>
-              {s.produtos.map((p) => (
-                <div
-                  key={p.prodCode}
-                  className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
-                >
-                  <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
-                    <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
-                  </span>
-                  <span className="text-right whitespace-nowrap">
-                    <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
-                    </span>
-                  </span>
-                </div>
-              ))}
-              {outros && (
-                <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm text-muted-foreground italic">
-                  <span>
-                    <span className="block">
-                      Outros produtos com histórico no dia ({outros.numProdutos})
-                    </span>
-                    <span className="block text-xs">{OUTROS_CAVEAT_TEXT}</span>
-                  </span>
-                  <span className="whitespace-nowrap">{fmtBRL(outros.outrosVal)}</span>
-                </div>
-              )}
-            </Fragment>
-          );
-        })}
+            ))}
+          </Fragment>
+        ))}
       </div>
     </div>
   );

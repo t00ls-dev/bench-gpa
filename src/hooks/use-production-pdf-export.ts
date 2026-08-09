@@ -4,7 +4,7 @@ import type { CellInput } from "jspdf-autotable";
 import { fmtBRL, fmtBRShort } from "@/lib/utils";
 import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
-import { computeVisibleSecoes, mergeOutros, OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
+import { computeVisibleSecoes } from "@/lib/production-filter";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
 
 interface Params {
@@ -14,7 +14,6 @@ interface Params {
   storeLabel: string;
   targetDate: string;
   lookbackOccurrences: number;
-  minOccurrences: number;
 }
 
 type Row = CellInput[];
@@ -39,7 +38,6 @@ export function useProductionPdfExport({
   storeLabel,
   targetDate,
   lookbackOccurrences,
-  minOccurrences,
 }: Params) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const pdfElapsed = useElapsedSeconds(pdfLoading);
@@ -72,26 +70,17 @@ export function useProductionPdfExport({
       doc.text("Loja: " + storeLabel, mX, 18);
       doc.text("Dia: " + fmtBRShort(targetDate), mX, 22.5);
       doc.text(
-        `Baseado nas últimas ${lookbackOccurrences} ocorrências deste dia da semana ` +
-          `(mínimo de ${minOccurrences} vendas para entrar individualmente).`,
+        `Baseado nas últimas ${lookbackOccurrences} ocorrências deste dia da semana.`,
         mX,
         27,
       );
       doc.text("Total geral: " + fmtBRL(totalGeral), mX, 31.5);
 
       // Every row a plain string tuple, except a seção header (a single
-      // colSpan:6 cell) and an "outros" row (individually styled cells) --
-      // only the leaf product is printed (Grupo/Subgrupo aren't shown as
-      // their own rows; products are already in secao/grupo/subgrupo/valor
-      // order, and mergeOutros collapses that seção's outros buckets into
-      // one). outrosRowIndices tracks which body index needs the
-      // italic/gray styling, since a row's own content can't be trusted to
-      // identify it (a real product could coincidentally have an empty
-      // PLU/name).
+      // colSpan:6 cell) -- only the leaf product is printed (Grupo/Subgrupo
+      // aren't shown as their own rows; products are already in
+      // secao/grupo/subgrupo/valor order).
       const body: Row[] = [];
-      const outrosRowIndices = new Set<number>();
-      let hasOutros = false;
-
       for (const s of visibleSecoes) {
         body.push([
           {
@@ -100,7 +89,6 @@ export function useProductionPdfExport({
             styles: { fillColor: [238, 238, 238], fontStyle: "bold", halign: "left" },
           },
         ]);
-        const outros = mergeOutros(s.outrosBySubgrupo);
         for (const p of s.produtos) {
           body.push([
             p.prodCode,
@@ -109,18 +97,6 @@ export function useProductionPdfExport({
             fmtBRL(p.forecastVal),
             fmtBRL(p.forecastMax),
             "",
-          ]);
-        }
-        if (outros) {
-          hasOutros = true;
-          outrosRowIndices.add(body.length);
-          body.push([
-            "",
-            `Outros produtos (${outros.numProdutos})*`,
-            "-",
-            fmtBRL(outros.outrosVal),
-            "-",
-            "-",
           ]);
         }
       }
@@ -161,12 +137,6 @@ export function useProductionPdfExport({
           4: { cellWidth: 20, halign: "right" },
           5: { cellWidth: 28 },
         },
-        didParseCell: (h) => {
-          if (h.section === "body" && outrosRowIndices.has(h.row.index)) {
-            h.cell.styles.fontStyle = "italic";
-            h.cell.styles.textColor = [102, 102, 102];
-          }
-        },
         willDrawCell: (h) => {
           if (h.section === "body" && h.column.index === 1) {
             const raw = Array.isArray(h.cell.text)
@@ -182,13 +152,6 @@ export function useProductionPdfExport({
           }
         },
       });
-
-      if (hasOutros) {
-        const endY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-        doc.setFontSize(7);
-        doc.setTextColor(102, 102, 102);
-        doc.text(`* Outros produtos: ${OUTROS_CAVEAT_TEXT}.`, mX, endY + 5);
-      }
 
       const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
       const filename = `previsao-venda-${slugifyFilename(storeLabel)}-${targetDate}-${timestamp}.pdf`;

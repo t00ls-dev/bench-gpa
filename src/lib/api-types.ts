@@ -94,33 +94,23 @@ export interface ProductionForecastProduct {
   forecastMin: number;
   forecastMax: number;
 }
-/** Aggregate for products below PRODUCTION_MIN_OCCURRENCES within one
- * (secao, grupo, subgrupo) -- no individual PLU/min/max, see
- * OUTROS_CAVEAT_TEXT (src/lib/production-filter.ts) for why. Tagged with
- * grupo/subgrupo (not nested under them) so the Subgrupo filter can match
- * against it without needing a tree -- only the filter cares about this
- * level of granularity, the screen/PDF always show one merged total per
- * seção (see mergeOutros in production-filter.ts). */
-export interface ProductionOutrosBucket {
-  grupo: string | null;
-  subgrupo: string | null;
-  numProdutos: number;
-  outrosVal: number;
-}
 export interface ProductionSecaoForecast {
   secao: string;
-  // Already flat and in secao/grupo/subgrupo/valor order (the proc's
-  // ORDER BY guarantees it) -- [] when the seção had nothing this weekday,
-  // it still shows (built from product_universe's full catalog, see
+  // Every product that sold at least once in the window, no confidence
+  // floor -- a product with a single occurrence just has
+  // forecastMin === forecastVal === forecastMax, a visible single data
+  // point instead of an unnamed aggregate (removed 2026-08-09, see
+  // docs/plano-forecast-remove-piso-confianca-2026-08-09.md). Already
+  // flat and in secao/grupo/subgrupo/valor order (the proc's ORDER BY
+  // guarantees it) -- [] when the seção had nothing this weekday, it
+  // still shows (built from product_universe's full catalog, see
   // production.functions.ts).
   produtos: ProductionForecastProduct[];
-  outrosBySubgrupo: ProductionOutrosBucket[];
   totalSecao: number;
 }
 export interface ProductionForecastResult {
   secoes: ProductionSecaoForecast[];
   weekdayNum: number;
-  minOccurrences: number;
   lookbackOccurrences: number;
 }
 

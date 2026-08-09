@@ -1300,21 +1300,27 @@ END//
 --
 -- grupo/subgrupo added to result sets 1/2 (added 2026-08-08, measured as
 -- a v3 candidate): the screen/PDF now group Seção -> Grupo -> Subgrupo
--- instead of just Seção, so "outros" (result set 2) had to move from
--- GROUP BY secao to GROUP BY secao, grupo, subgrupo -- a much more
--- granular aggregation. Measured: 281ms sem filtro (+58% vs the 178ms v2
--- baseline, dispersion 1.12x), 226ms com filtro de seção (~same as the
--- 229ms v2 baseline, dispersion 1.16x) -- see docs/medicao-performance.md.
--- The asymmetry matches the mechanism: the unfiltered scenario groups the
--- whole store's PERECIVEIS catalog (hundreds of secao/grupo/subgrupo
--- combos), the filtered one only a handful, so the extra GROUP BY
--- granularity costs proportionally more there. Accepted anyway: still
--- well under a second, same order of magnitude as the original 250ms
--- baseline, and the app has only 1-2 concurrent users.
+-- instead of just Seção, so "outros" (result set 2 at the time) had to
+-- move from GROUP BY secao to GROUP BY secao, grupo, subgrupo -- a much
+-- more granular aggregation. Measured: 281ms sem filtro (+58% vs the
+-- 178ms v2 baseline, dispersion 1.12x), 226ms com filtro de seção
+-- (~same as the 229ms v2 baseline, dispersion 1.16x).
+--
+-- p_min_occurrences and the whole "outros" result set removed (2026-08-09,
+-- measured as a v4 candidate): the confidence-floor line ("Outros
+-- produtos... poucas vendas no período") summarized every product below
+-- the floor into one PLU-less bucket -- user feedback was that it carried
+-- no actionable information. Every product with at least one sale in the
+-- window is now its own row (min = avg = max for a single occurrence).
+-- Measured: 278ms sem filtro (disp 1.25x) / 211ms com filtro de seção
+-- (disp 1.05x, first attempt at 1.87x discarded) -- roughly flat vs the
+-- v3 baseline, not the drop back to ~178ms expected from dropping an
+-- entire GROUP BY: tmp_product_forecast (the scan+aggregate below) was
+-- already the dominant cost, not the "outros" rollup on top of it -- see
+-- docs/medicao-performance.md.
 CREATE PROCEDURE production_forecast(
   p_store_code VARCHAR(20),
   p_target_date DATE,
-  p_min_occurrences INT,
   p_lookback_occurrences INT,
   p_secoes JSON,
   p_grupos JSON
@@ -1355,35 +1361,24 @@ BEGIN
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
   GROUP BY prod_code;
 
-  -- Result set 1: individual products (confidence floor reached), now
-  -- with the min/max range alongside the average -- mirrors GPA's own
-  -- internal "Planejamento de Produção" report (QTD_MINIMA/IDEAL/MAXIMA),
-  -- built from real sales history instead of imported as a separate feed
-  -- (see docs/planejamento-producao-perecveis-2026-08-07.md). Also carries
+  -- Result set 1: every product with at least one occurrence in the
+  -- window, no confidence floor, with the min/max range alongside the
+  -- average -- mirrors GPA's own internal "Planejamento de Produção"
+  -- report (QTD_MINIMA/IDEAL/MAXIMA), built from real sales history
+  -- instead of imported as a separate feed (see
+  -- docs/planejamento-producao-perecveis-2026-08-07.md). Also carries
   -- grupo/subgrupo so the screen/PDF can group by them, not just secao.
   SELECT prod_code, prod_name, secao, grupo, subgrupo, occurrences, forecast_val, forecast_min, forecast_max
   FROM tmp_product_forecast
-  WHERE occurrences >= p_min_occurrences
   ORDER BY secao, grupo, subgrupo, forecast_val DESC;
 
-  -- Result set 2: "Outros" now per (secao, grupo, subgrupo) instead of
-  -- just secao -- matches the new grouping granularity on screen/PDF. No
-  -- min/max: a range doesn't have a clean meaning for a SUM across
-  -- different products (same limit GPA's own report would have for an
-  -- aggregated bucket).
-  SELECT secao, grupo, subgrupo, COUNT(*) AS num_produtos, SUM(forecast_val) AS outros_val
-  FROM tmp_product_forecast
-  WHERE occurrences < p_min_occurrences
-  GROUP BY secao, grupo, subgrupo
-  ORDER BY secao, grupo, subgrupo;
-
-  -- Result set 3: every section of PERECIVEIS at this store (from
-  -- product_universe), now also respecting the secao/grupo filters -- an
-  -- explicit user filter is different from the automatic confidence
-  -- floor: narrowing scope on purpose is not "hiding data without
-  -- warning". Still just secao (unlike Result set 1/2): Grupo/Subgrupo
-  -- only exist in the tree when they actually have data, unlike Seção
-  -- which is always padded from the full catalog.
+  -- Result set 2: every section of PERECIVEIS at this store (from
+  -- product_universe), respecting the secao/grupo filters -- an explicit
+  -- user filter is different from the removed confidence floor: narrowing
+  -- scope on purpose is not "hiding data without warning". Still just
+  -- secao (unlike Result set 1): Grupo/Subgrupo only exist in the tree
+  -- when they actually have data, unlike Seção which is always padded
+  -- from the full catalog.
   SELECT DISTINCT secao
   FROM product_universe
   WHERE store_code = p_store_code AND depto = 'PERECIVEIS'
@@ -1391,7 +1386,6 @@ BEGIN
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL));
 
   SELECT DAYOFWEEK(p_target_date) AS weekday_num,
-         p_min_occurrences AS min_occurrences,
          p_lookback_occurrences AS lookback_occurrences;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_product_forecast;

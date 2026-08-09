@@ -112,7 +112,6 @@ function ProductionPage() {
     storeLabel,
     targetDate: targetDate ?? "",
     lookbackOccurrences: data?.lookbackOccurrences ?? 0,
-    minOccurrences: data?.minOccurrences ?? 0,
   });
 
   return (
@@ -162,8 +161,7 @@ function ProductionPage() {
         <>
           {data && (
             <p className="mb-2 text-xs text-muted-foreground">
-              Com base nas últimas {data.lookbackOccurrences} ocorrências deste dia da semana
-              (mínimo de {data.minOccurrences} vendas para entrar individualmente).
+              Com base nas últimas {data.lookbackOccurrences} ocorrências deste dia da semana.
             </p>
           )}
           <ProductionTable
