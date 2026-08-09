@@ -20,37 +20,28 @@ const VAL_TOTAL_SECAO = VAL_INDIVIDUAL + VAL_OUTROS;
 const SECOES: ProductionSecaoForecast[] = [
   {
     secao: "CARNES E AVES",
-    grupos: [
+    produtos: [
       {
+        prodCode: "1",
+        prodName: "PICANHA",
+        secao: "CARNES E AVES",
         grupo: "BOVINOS",
-        subgrupos: [
-          {
-            subgrupo: "CORTES NOBRES",
-            produtos: [
-              {
-                prodCode: "1",
-                prodName: "PICANHA",
-                secao: "CARNES E AVES",
-                grupo: "BOVINOS",
-                subgrupo: "CORTES NOBRES",
-                occurrences: 6,
-                forecastVal: VAL_INDIVIDUAL,
-                forecastMin: 380,
-                forecastMax: 610,
-              },
-            ],
-            outros: { numProdutos: 3, outrosVal: VAL_OUTROS },
-            totalSubgrupo: VAL_TOTAL_SECAO,
-          },
-        ],
-        totalGrupo: VAL_TOTAL_SECAO,
+        subgrupo: "CORTES NOBRES",
+        occurrences: 6,
+        forecastVal: VAL_INDIVIDUAL,
+        forecastMin: 380,
+        forecastMax: 610,
       },
+    ],
+    outrosBySubgrupo: [
+      { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: VAL_OUTROS },
     ],
     totalSecao: VAL_TOTAL_SECAO,
   },
   {
     secao: "BACALHAU",
-    grupos: [],
+    produtos: [],
+    outrosBySubgrupo: [],
     totalSecao: 0,
   },
 ];
