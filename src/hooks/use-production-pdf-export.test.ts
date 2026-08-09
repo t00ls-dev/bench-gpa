@@ -5,12 +5,7 @@ import { fmtBRL } from "@/lib/utils";
 import { slugifyFilename } from "@/lib/export-pdf";
 import { OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
 import { useProductionPdfExport } from "./use-production-pdf-export";
-import type {
-  ProductionForecastProduct,
-  ProductionGrupoForecast,
-  ProductionSecaoForecast,
-  ProductionSubgrupoForecast,
-} from "@/lib/api-types";
+import type { ProductionForecastProduct, ProductionSecaoForecast } from "@/lib/api-types";
 
 const { openPdfBlob } = vi.hoisted(() => ({ openPdfBlob: vi.fn() }));
 vi.mock("@/lib/export-pdf", async (importOriginal) => {
@@ -58,29 +53,11 @@ function produto(overrides: Partial<ProductionForecastProduct> = {}): Production
   };
 }
 
-function subgrupo(overrides: Partial<ProductionSubgrupoForecast> = {}): ProductionSubgrupoForecast {
-  return {
-    subgrupo: "CORTES NOBRES",
-    produtos: [produto()],
-    outros: null,
-    totalSubgrupo: 500,
-    ...overrides,
-  };
-}
-
-function grupo(overrides: Partial<ProductionGrupoForecast> = {}): ProductionGrupoForecast {
-  return {
-    grupo: "BOVINOS",
-    subgrupos: [subgrupo()],
-    totalGrupo: 500,
-    ...overrides,
-  };
-}
-
 function secao(overrides: Partial<ProductionSecaoForecast> = {}): ProductionSecaoForecast {
   return {
     secao: "CARNES E AVES",
-    grupos: [grupo()],
+    produtos: [produto()],
+    outrosBySubgrupo: [],
     totalSecao: 500,
     ...overrides,
   };
@@ -132,7 +109,7 @@ describe("useProductionPdfExport", () => {
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
-    const expectedPrefix = `planejamento-producao-${slugifyFilename("1516 - LEBLON")}-2026-07-13-`;
+    const expectedPrefix = `previsao-venda-${slugifyFilename("1516 - LEBLON")}-2026-07-13-`;
     expect(openPdfBlob).toHaveBeenCalledWith(
       expect.anything(),
       expect.stringMatching(new RegExp(`^${expectedPrefix}\\d{8}-\\d{6}\\.pdf$`)),
@@ -164,23 +141,12 @@ describe("useProductionPdfExport", () => {
     });
   });
 
-  it("respects productFilter: drops outros and narrows to the selected products, same as the screen", async () => {
+  it("respects productFilter: drops every outros bucket and narrows to the selected products, same as the screen", async () => {
     const secoes = [
       secao({
-        grupos: [
-          grupo({
-            subgrupos: [
-              subgrupo({
-                produtos: [
-                  produto({ prodCode: "1" }),
-                  produto({ prodCode: "2", prodName: "COSTELA" }),
-                ],
-                outros: { numProdutos: 3, outrosVal: 90 },
-                totalSubgrupo: 590,
-              }),
-            ],
-            totalGrupo: 590,
-          }),
+        produtos: [produto({ prodCode: "1" }), produto({ prodCode: "2", prodName: "COSTELA" })],
+        outrosBySubgrupo: [
+          { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
         ],
         totalSecao: 590,
       }),
@@ -196,19 +162,16 @@ describe("useProductionPdfExport", () => {
     expect(body.some((r) => String(r[1] ?? "").includes("Outros produtos"))).toBe(false);
   });
 
-  it("respects subgrupoFilter: narrows to the selected subgrupo and KEEPS its outros", async () => {
+  it("respects subgrupoFilter: narrows to the selected subgrupo's products and outros, keeping the outros", async () => {
     const secoes = [
       secao({
-        grupos: [
-          grupo({
-            subgrupos: [
-              subgrupo({ subgrupo: "CORTES NOBRES", produtos: [produto({ prodCode: "1" })] }),
-              subgrupo({
-                subgrupo: "OUTRO",
-                produtos: [produto({ prodCode: "2", prodName: "COSTELA", subgrupo: "OUTRO" })],
-              }),
-            ],
-          }),
+        produtos: [
+          produto({ prodCode: "1" }),
+          produto({ prodCode: "2", prodName: "COSTELA", subgrupo: "OUTRO" }),
+        ],
+        outrosBySubgrupo: [
+          { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
+          { grupo: "BOVINOS", subgrupo: "OUTRO", numProdutos: 1, outrosVal: 20 },
         ],
       }),
     ];
@@ -221,18 +184,15 @@ describe("useProductionPdfExport", () => {
     const body = autoTableCalls[0].body;
     expect(body.some((r) => r[0] === "1")).toBe(true);
     expect(body.some((r) => r[0] === "2")).toBe(false);
+    const outrosRow = body.find((r) => String(r[1] ?? "").startsWith("Outros produtos"));
+    expect(outrosRow).toEqual(["", "Outros produtos (3)*", "-", fmtBRL(90), "-", "-"]);
   });
 
   it("shows the Outros row with the aggregate value and a footnote when no productFilter is active", async () => {
     const secoes = [
       secao({
-        grupos: [
-          grupo({
-            subgrupos: [
-              subgrupo({ outros: { numProdutos: 3, outrosVal: 90 }, totalSubgrupo: 590 }),
-            ],
-            totalGrupo: 590,
-          }),
+        outrosBySubgrupo: [
+          { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
         ],
         totalSecao: 590,
       }),
