@@ -4,11 +4,7 @@ import type { CellInput } from "jspdf-autotable";
 import { fmtBRL, fmtBRShort } from "@/lib/utils";
 import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
-import {
-  computeVisibleSecoes,
-  flattenSecaoRows,
-  OUTROS_CAVEAT_TEXT,
-} from "@/lib/production-filter";
+import { computeVisibleSecoes, mergeOutros, OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
 
 interface Params {
@@ -57,8 +53,12 @@ export function useProductionPdfExport({
         subgrupoFilter,
       );
 
-      const jsPDF = (await import("jspdf")).default;
-      const autoTable = (await import("jspdf-autotable")).default;
+      // Independent chunks -- fetched/parsed concurrently instead of one
+      // after another.
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const mX = 10;
 
@@ -82,9 +82,9 @@ export function useProductionPdfExport({
       // Every row a plain string tuple, except a seção header (a single
       // colSpan:6 cell) and an "outros" row (individually styled cells) --
       // only the leaf product is printed (Grupo/Subgrupo aren't shown as
-      // their own rows, flattenSecaoRows already put products in
-      // secao/grupo/subgrupo/valor order and merged "outros" back into one
-      // per seção). outrosRowIndices tracks which body index needs the
+      // their own rows; products are already in secao/grupo/subgrupo/valor
+      // order, and mergeOutros collapses that seção's outros buckets into
+      // one). outrosRowIndices tracks which body index needs the
       // italic/gray styling, since a row's own content can't be trusted to
       // identify it (a real product could coincidentally have an empty
       // PLU/name).
@@ -100,8 +100,8 @@ export function useProductionPdfExport({
             styles: { fillColor: [238, 238, 238], fontStyle: "bold", halign: "left" },
           },
         ]);
-        const { produtos, outros } = flattenSecaoRows(s);
-        for (const p of produtos) {
+        const outros = mergeOutros(s.outrosBySubgrupo);
+        for (const p of s.produtos) {
           body.push([
             p.prodCode,
             p.prodName,
@@ -191,7 +191,7 @@ export function useProductionPdfExport({
       }
 
       const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
-      const filename = `planejamento-producao-${slugifyFilename(storeLabel)}-${targetDate}-${timestamp}.pdf`;
+      const filename = `previsao-venda-${slugifyFilename(storeLabel)}-${targetDate}-${timestamp}.pdf`;
       await openPdfBlob(doc, filename);
     } finally {
       setPdfLoading(false);
