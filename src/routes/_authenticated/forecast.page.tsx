@@ -6,6 +6,7 @@ import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useProductionPdfExport } from "@/hooks/use-production-pdf-export";
+import { cascadePatch } from "@/lib/filter-cascade";
 import { ProductionFilters } from "@/components/production-filters";
 import { ProductionTable } from "@/components/production-table";
 import type { MSOption } from "@/components/multi-select";
@@ -86,9 +87,7 @@ function ProductionPage() {
   const productOptions: MSOption[] = useMemo(() => {
     const seen = new Set<string>();
     const opts: Array<MSOption & { prodName: string }> = [];
-    const produtos = (data?.secoes ?? []).flatMap((s) =>
-      s.grupos.flatMap((g) => g.subgrupos.flatMap((sg) => sg.produtos)),
-    );
+    const produtos = (data?.secoes ?? []).flatMap((s) => s.produtos);
     for (const p of produtos) {
       if (seen.has(p.prodCode)) continue;
       seen.add(p.prodCode);
@@ -102,12 +101,10 @@ function ProductionPage() {
     return opts.sort((a, b) => a.prodName.localeCompare(b.prodName));
   }, [data]);
 
-  const storeLabel = storeCode
-    ? (() => {
-        const s = stores.find((x) => x.store_code === storeCode);
-        return s ? `${s.store_code} - ${s.store_name}` : storeCode;
-      })()
-    : "";
+  const foundStore = stores.find((x) => x.store_code === storeCode);
+  const storeLabel = foundStore
+    ? `${foundStore.store_code} - ${foundStore.store_name}`
+    : (storeCode ?? "");
   const { pdfLoading, pdfElapsed, openPdfInNewTab } = useProductionPdfExport({
     secoes: data?.secoes ?? [],
     productFilter,
@@ -144,11 +141,11 @@ function ProductionPage() {
         productOptions={productOptions}
         productFilter={productFilter}
         onStoreChange={(v) =>
-          patch({ storeCode: v[0], secoes: [], grupos: [], subgrupos: [], productFilter: [] })
+          patch({ storeCode: v[0], productFilter: [], ...cascadePatch("secoes", []) })
         }
         onTargetDateChange={(v) => patch({ targetDate: v, productFilter: [] })}
-        onSecoesChange={(v) => patch({ secoes: v, subgrupos: [] })}
-        onGruposChange={(v) => patch({ grupos: v, subgrupos: [] })}
+        onSecoesChange={(v) => patch(cascadePatch("secoes", v))}
+        onGruposChange={(v) => patch(cascadePatch("grupos", v))}
         onSubgruposChange={(v) => patch({ subgrupos: v })}
         onProductFilterChange={(v) => patch({ productFilter: v })}
       />

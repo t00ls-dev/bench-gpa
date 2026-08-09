@@ -96,31 +96,25 @@ export interface ProductionForecastProduct {
 }
 /** Aggregate for products below PRODUCTION_MIN_OCCURRENCES within one
  * (secao, grupo, subgrupo) -- no individual PLU/min/max, see
- * OUTROS_CAVEAT_TEXT (src/lib/production-filter.ts) for why. */
-export interface ProductionOutrosAggregate {
+ * OUTROS_CAVEAT_TEXT (src/lib/production-filter.ts) for why. Tagged with
+ * grupo/subgrupo (not nested under them) so the Subgrupo filter can match
+ * against it without needing a tree -- only the filter cares about this
+ * level of granularity, the screen/PDF always show one merged total per
+ * seção (see mergeOutros in production-filter.ts). */
+export interface ProductionOutrosBucket {
+  grupo: string | null;
+  subgrupo: string | null;
   numProdutos: number;
   outrosVal: number;
 }
-export interface ProductionSubgrupoForecast {
-  /** null = "Sem subgrupo" (nullable in sales_prod_daily_agg/product_universe). */
-  subgrupo: string | null;
-  produtos: ProductionForecastProduct[];
-  outros: ProductionOutrosAggregate | null;
-  totalSubgrupo: number;
-}
-export interface ProductionGrupoForecast {
-  /** null = "Sem grupo". */
-  grupo: string | null;
-  subgrupos: ProductionSubgrupoForecast[];
-  totalGrupo: number;
-}
 export interface ProductionSecaoForecast {
   secao: string;
-  // [] when the seção had nothing this weekday -- it still shows (built
-  // from product_universe's full catalog, see production.functions.ts),
-  // just with an empty tree. Grupo/Subgrupo, unlike Seção, only exist here
-  // when they actually have data: nothing pads them from the catalog.
-  grupos: ProductionGrupoForecast[];
+  // Already flat and in secao/grupo/subgrupo/valor order (the proc's
+  // ORDER BY guarantees it) -- [] when the seção had nothing this weekday,
+  // it still shows (built from product_universe's full catalog, see
+  // production.functions.ts).
+  produtos: ProductionForecastProduct[];
+  outrosBySubgrupo: ProductionOutrosBucket[];
   totalSecao: number;
 }
 export interface ProductionForecastResult {

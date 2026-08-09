@@ -1,11 +1,7 @@
-import { Fragment } from "react";
+import { Fragment, useMemo } from "react";
 import { fmtBRL } from "@/lib/utils";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
-import {
-  computeVisibleSecoes,
-  flattenSecaoRows,
-  OUTROS_CAVEAT_TEXT,
-} from "@/lib/production-filter";
+import { computeVisibleSecoes, mergeOutros, OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
 import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 
@@ -14,10 +10,9 @@ import { FileText, Loader2 } from "lucide-react";
  * individual products of PERECIVEIS at ONE store, dozens to a few hundred
  * rows, well below AreaTable's volume.
  *
- * Only the leaf product is shown per row -- Grupo/Subgrupo aren't rendered
- * as their own headers, just used (via computeVisibleSecoes/
- * flattenSecaoRows) to keep products in secao/grupo/subgrupo/valor order
- * and to power the Subgrupo filter.
+ * Each product already carries its own grupo/subgrupo (used by the
+ * Subgrupo filter and to keep the list in secao/grupo/subgrupo/valor
+ * order) but only the leaf product renders -- no Grupo/Subgrupo headers.
  */
 export function ProductionTable({
   secoes,
@@ -36,7 +31,12 @@ export function ProductionTable({
   pdfLoading?: boolean;
   pdfElapsed?: number;
 }) {
-  const { visibleSecoes, totalGeral } = computeVisibleSecoes(secoes, productFilter, subgrupoFilter);
+  // Memoized so a re-render that only ticks pdfElapsed (once a second while
+  // the PDF is generating) doesn't redo the filter/reduce pass over secoes.
+  const { visibleSecoes, totalGeral } = useMemo(
+    () => computeVisibleSecoes(secoes, productFilter, subgrupoFilter),
+    [secoes, productFilter, subgrupoFilter],
+  );
 
   return (
     <div className="kpi-card overflow-hidden">
@@ -82,14 +82,14 @@ export function ProductionTable({
 
       <div className="divide-y">
         {visibleSecoes.map((s) => {
-          const { produtos, outros } = flattenSecaoRows(s);
+          const outros = mergeOutros(s.outrosBySubgrupo);
           return (
             <Fragment key={s.secao}>
               <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
                 <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
                 <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
               </div>
-              {produtos.map((p) => (
+              {s.produtos.map((p) => (
                 <div
                   key={p.prodCode}
                   className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"

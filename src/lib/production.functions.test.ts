@@ -85,21 +85,25 @@ interface Input {
   secoes?: string[];
   grupos?: string[];
 }
-interface Subgrupo {
-  subgrupo: string | null;
-  produtos: unknown[];
-  outros: { numProdutos: number; outrosVal: number } | null;
-  totalSubgrupo: number;
-}
-interface Grupo {
+interface OutrosBucket {
   grupo: string | null;
-  subgrupos: Subgrupo[];
-  totalGrupo: number;
+  subgrupo: string | null;
+  numProdutos: number;
+  outrosVal: number;
+}
+interface Produto {
+  prodCode: string;
+  grupo: string | null;
+  subgrupo: string | null;
+  forecastVal: number;
+  forecastMin: number;
+  forecastMax: number;
 }
 type Fn = (d: Input) => Promise<{
   secoes: {
     secao: string;
-    grupos: Grupo[];
+    produtos: Produto[];
+    outrosBySubgrupo: OutrosBucket[];
     totalSecao: number;
   }[];
   weekdayNum: number;
@@ -119,19 +123,13 @@ beforeEach(() => {
 });
 
 describe("getProductionForecast", () => {
-  it("maps individual products, outros, and reconciles totals up to the seção", async () => {
+  it("maps individual products and outros, tagged with grupo/subgrupo, and reconciles the seção total", async () => {
     const r = await call();
     expect(r.secoes).toHaveLength(2);
 
     const carnes = r.secoes.find((s) => s.secao === "CARNES E AVES");
-    expect(carnes?.grupos).toHaveLength(1);
-    const bovinos = carnes?.grupos[0];
-    expect(bovinos?.grupo).toBe("BOVINOS");
-    expect(bovinos?.subgrupos).toHaveLength(1);
-    const cortesNobres = bovinos?.subgrupos[0];
-    expect(cortesNobres?.subgrupo).toBe("CORTES NOBRES");
-    expect(cortesNobres?.produtos).toHaveLength(1);
-    expect(cortesNobres?.produtos[0]).toMatchObject({
+    expect(carnes?.produtos).toHaveLength(1);
+    expect(carnes?.produtos[0]).toMatchObject({
       prodCode: "1",
       grupo: "BOVINOS",
       subgrupo: "CORTES NOBRES",
@@ -139,22 +137,22 @@ describe("getProductionForecast", () => {
       forecastMin: 380,
       forecastMax: 610,
     });
-    expect(cortesNobres?.outros).toEqual({ numProdutos: 3, outrosVal: 90 });
-    // Reconciliation: sum of individual + outros bubbles up unchanged
-    // through subgrupo -> grupo -> seção, by construction.
-    expect(cortesNobres?.totalSubgrupo).toBe(590);
-    expect(bovinos?.totalGrupo).toBe(590);
+    expect(carnes?.outrosBySubgrupo).toEqual([
+      { grupo: "BOVINOS", subgrupo: "CORTES NOBRES", numProdutos: 3, outrosVal: 90 },
+    ]);
+    // Reconciliation: sum of individual + outros, by construction.
     expect(carnes?.totalSecao).toBe(590);
   });
 
-  it("keeps a section with no products at all present, with R$0 and no grupos", async () => {
+  it("keeps a section with no products at all present, with R$0 and no produtos", async () => {
     const r = await call();
     const bacalhau = r.secoes.find((s) => s.secao === "BACALHAU");
-    expect(bacalhau?.grupos).toHaveLength(0);
+    expect(bacalhau?.produtos).toHaveLength(0);
+    expect(bacalhau?.outrosBySubgrupo).toHaveLength(0);
     expect(bacalhau?.totalSecao).toBe(0);
   });
 
-  it("handles a subgrupo that's only individual products (no outros)", async () => {
+  it("handles a seção that's only individual products (no outros)", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [
         [
@@ -174,13 +172,11 @@ describe("getProductionForecast", () => {
       ],
     ] as never);
     const r = await call();
-    const subgrupo = r.secoes[0].grupos[0].subgrupos[0];
-    expect(subgrupo.outros).toBeNull();
-    expect(subgrupo.totalSubgrupo).toBe(100);
+    expect(r.secoes[0].outrosBySubgrupo).toEqual([]);
     expect(r.secoes[0].totalSecao).toBe(100);
   });
 
-  it("handles a subgrupo that's only outros (no product reaches the confidence floor) -- no individual row at all", async () => {
+  it("handles a seção that's only outros (no product reaches the confidence floor) -- no individual row at all", async () => {
     vi.mocked(db.query).mockResolvedValue([
       [
         [],
@@ -198,13 +194,10 @@ describe("getProductionForecast", () => {
       ],
     ] as never);
     const r = await call();
-    const grupo = r.secoes[0].grupos[0];
-    expect(grupo.grupo).toBe("PEIXES");
-    const subgrupo = grupo.subgrupos[0];
-    expect(subgrupo.subgrupo).toBe("PEIXES CONGELADOS");
-    expect(subgrupo.produtos).toEqual([]);
-    expect(subgrupo.outros).toEqual({ numProdutos: 12, outrosVal: 340 });
-    expect(subgrupo.totalSubgrupo).toBe(340);
+    expect(r.secoes[0].produtos).toEqual([]);
+    expect(r.secoes[0].outrosBySubgrupo).toEqual([
+      { grupo: "PEIXES", subgrupo: "PEIXES CONGELADOS", numProdutos: 12, outrosVal: 340 },
+    ]);
     expect(r.secoes[0].totalSecao).toBe(340);
   });
 
@@ -214,7 +207,7 @@ describe("getProductionForecast", () => {
     ] as never);
     const r = await call();
     expect(r.secoes).toHaveLength(2);
-    expect(r.secoes.every((s) => s.totalSecao === 0 && s.grupos.length === 0)).toBe(true);
+    expect(r.secoes.every((s) => s.totalSecao === 0 && s.produtos.length === 0)).toBe(true);
   });
 
   describe("cache", () => {
