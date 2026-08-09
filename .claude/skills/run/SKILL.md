@@ -94,7 +94,23 @@ bun run scripts/create-test-admin.ts
 # mysql -u bench_gpa -pdevpass123 bench_gpa_dev -e "DELETE FROM users WHERE username='test';"
 ```
 
-## 5. Subir o dev server
+## 5. Antes de subir: checar processos órfãos
+
+Sessões anteriores nem sempre limpam direito (passo 8). Já apareceu um
+`node .output/server/index.mjs` de build de produção, de uma sessão
+3 dias mais velha, ainda vivo e consumindo 100% de um núcleo sozinho
+sem ninguém escutando a porta:
+
+```bash
+ps aux | grep -E "vite|bun run dev|node.*index\.mjs|chromium" | grep -v grep
+ss -tlnp | grep -E ":300[0-9]"   # confirma se algo real está escutando
+```
+
+Se achar algo velho (`START` de dias atrás) sem porta correspondente
+aberta, é lixo de sessão anterior: `kill -9 <pid>` antes de seguir. Não
+presumir ambiente limpo só porque é a primeira ação desta sessão.
+
+## 6. Subir o dev server
 
 ```bash
 bun run dev
@@ -111,7 +127,7 @@ reloading` no Vite, que recarrega o bundle client no meio da
   (deixe o server rodando de 5 a 10s após o primeiro `curl`/`goto`, ou
   simplesmente tente de novo) antes de confiar em uma falha de login.
 
-## 6. Dirigir de verdade (login e screenshot)
+## 7. Dirigir de verdade (login e screenshot)
 
 O projeto já tem um script de referência em Puppeteer,
 `scripts/test-production.mjs`, que faz login e navega o dashboard.
@@ -154,7 +170,7 @@ Para dashboard com dados reais (não "Sem dados"), rodar
 `bun run cli:import` sobre um XLSX de exemplo antes do login (ver
 `docs/*` sobre o formato esperado, fora do escopo deste skill).
 
-## 7. Alternativa: build de produção local
+## 8. Alternativa: build de produção local
 
 ```bash
 bun run build
@@ -166,7 +182,7 @@ bash scripts/start-prod.sh   # lê .env e roda .output/server/index.mjs
 Útil para reproduzir bugs específicos de SSR/produção (o dev server
 usa HMR e não passa pelo mesmo pipeline de build do Nitro).
 
-## 8. Limpeza
+## 9. Limpeza
 
 ```bash
 pkill -f "vite dev"          # ou: kill o PID do bun run dev
