@@ -90,6 +90,7 @@ function makeParams(overrides: Record<string, unknown> = {}) {
   return {
     secoes: [secao()],
     productFilter: [] as string[],
+    subgrupoFilter: [] as string[],
     storeLabel: "1516 - LEBLON",
     targetDate: "2026-07-13",
     lookbackOccurrences: 8,
@@ -150,20 +151,15 @@ describe("useProductionPdfExport", () => {
     expect(productRow).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610), ""]);
   });
 
-  it("prints Seção/Grupo/Subgrupo header rows, in that order, spanning all columns with each subtotal", async () => {
+  it("prints only a Seção header row (no Grupo/Subgrupo rows), spanning all columns with the seção subtotal", async () => {
     const { result } = renderHook(() => useProductionPdfExport(makeParams()));
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
     const body = autoTableCalls[0].body as unknown as { content: string; colSpan: number }[][];
-    const [secaoRow, grupoRow, subgrupoRow] = body;
-    expect(secaoRow[0]).toMatchObject({
+    expect(body).toHaveLength(2); // seção header + the one product row
+    expect(body[0][0]).toMatchObject({
       content: "CARNES E AVES — Total: " + fmtBRL(500),
-      colSpan: 6,
-    });
-    expect(grupoRow[0]).toMatchObject({ content: "  BOVINOS — Total: " + fmtBRL(500), colSpan: 6 });
-    expect(subgrupoRow[0]).toMatchObject({
-      content: "    CORTES NOBRES — Total: " + fmtBRL(500),
       colSpan: 6,
     });
   });
@@ -198,6 +194,33 @@ describe("useProductionPdfExport", () => {
     const body = autoTableCalls[0].body;
     expect(body.some((r) => r[0] === "2")).toBe(false);
     expect(body.some((r) => String(r[1] ?? "").includes("Outros produtos"))).toBe(false);
+  });
+
+  it("respects subgrupoFilter: narrows to the selected subgrupo and KEEPS its outros", async () => {
+    const secoes = [
+      secao({
+        grupos: [
+          grupo({
+            subgrupos: [
+              subgrupo({ subgrupo: "CORTES NOBRES", produtos: [produto({ prodCode: "1" })] }),
+              subgrupo({
+                subgrupo: "OUTRO",
+                produtos: [produto({ prodCode: "2", prodName: "COSTELA", subgrupo: "OUTRO" })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ];
+    const { result } = renderHook(() =>
+      useProductionPdfExport(makeParams({ secoes, subgrupoFilter: ["CORTES NOBRES"] })),
+    );
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+    const body = autoTableCalls[0].body;
+    expect(body.some((r) => r[0] === "1")).toBe(true);
+    expect(body.some((r) => r[0] === "2")).toBe(false);
   });
 
   it("shows the Outros row with the aggregate value and a footnote when no productFilter is active", async () => {
