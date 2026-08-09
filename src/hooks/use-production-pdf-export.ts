@@ -65,7 +65,7 @@ export function useProductionPdfExport({
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.setTextColor(17, 17, 17);
-      doc.text("Previsão de Produção", mX, 12);
+      doc.text("Previsão de Venda", mX, 12);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);

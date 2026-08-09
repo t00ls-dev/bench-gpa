@@ -123,7 +123,7 @@ function ProductionPage() {
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-            <ClipboardList className="size-7 text-primary shrink-0" /> Previsão de Produção
+            <ClipboardList className="size-7 text-primary shrink-0" /> Previsão de Venda
           </h1>
           <p className="text-sm text-muted-foreground">
             Venda esperada por produto de Perecíveis, numa loja, para um dia futuro (ou já passado,
