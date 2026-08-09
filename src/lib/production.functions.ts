@@ -154,12 +154,16 @@ export const getProductionFilterOptions = createServerFn({ method: "POST" })
       `production-filter-options:${data.storeCode}`,
       async () => {
         const [rows] = await db.query(
-          "SELECT DISTINCT secao, grupo FROM product_universe WHERE store_code = ? AND depto = 'PERECIVEIS'",
+          "SELECT DISTINCT secao, grupo, subgrupo FROM product_universe WHERE store_code = ? AND depto = 'PERECIVEIS'",
           [data.storeCode],
         );
         return asArray(rows).map((r) => {
           const p = asRecord(r);
-          return { secao: str(p.secao), grupo: strOrNull(p.grupo) };
+          return {
+            secao: str(p.secao),
+            grupo: strOrNull(p.grupo),
+            subgrupo: strOrNull(p.subgrupo),
+          };
         });
       },
       CACHE_TTL_LONG,

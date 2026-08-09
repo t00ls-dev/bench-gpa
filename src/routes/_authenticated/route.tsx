@@ -206,7 +206,7 @@ function AuthedLayout() {
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/product", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
-    { to: "/forecast", label: "Previsão de Produção", icon: ClipboardList },
+    { to: "/forecast", label: "Previsão de Venda", icon: ClipboardList },
     { to: "/howto", label: "Como usar", icon: HelpCircle },
   ] as const;
 

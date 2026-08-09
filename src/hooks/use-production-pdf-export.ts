@@ -4,12 +4,17 @@ import type { CellInput } from "jspdf-autotable";
 import { fmtBRL, fmtBRShort } from "@/lib/utils";
 import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
-import { computeVisibleSecoes, OUTROS_CAVEAT_TEXT } from "@/lib/production-filter";
+import {
+  computeVisibleSecoes,
+  flattenSecaoRows,
+  OUTROS_CAVEAT_TEXT,
+} from "@/lib/production-filter";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
 
 interface Params {
   secoes: ProductionSecaoForecast[];
   productFilter: string[];
+  subgrupoFilter: string[];
   storeLabel: string;
   targetDate: string;
   lookbackOccurrences: number;
@@ -34,6 +39,7 @@ type Row = CellInput[];
 export function useProductionPdfExport({
   secoes,
   productFilter,
+  subgrupoFilter,
   storeLabel,
   targetDate,
   lookbackOccurrences,
@@ -45,7 +51,11 @@ export function useProductionPdfExport({
   const openPdfInNewTab = async () => {
     setPdfLoading(true);
     try {
-      const { visibleSecoes, totalGeral } = computeVisibleSecoes(secoes, productFilter);
+      const { visibleSecoes, totalGeral } = computeVisibleSecoes(
+        secoes,
+        productFilter,
+        subgrupoFilter,
+      );
 
       const jsPDF = (await import("jspdf")).default;
       const autoTable = (await import("jspdf-autotable")).default;
@@ -55,7 +65,7 @@ export function useProductionPdfExport({
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.setTextColor(17, 17, 17);
-      doc.text("Previsão de Produção", mX, 12);
+      doc.text("Previsão de Venda", mX, 12);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);
@@ -69,13 +79,15 @@ export function useProductionPdfExport({
       );
       doc.text("Total geral: " + fmtBRL(totalGeral), mX, 31.5);
 
-      // Every row a plain string tuple, except a Seção/Grupo/Subgrupo header
-      // (a single colSpan:6 cell, one style per level -- decreasing
-      // emphasis mirrors the screen's indent/fill scheme) and an "outros"
-      // row (individually styled cells) -- outrosRowIndices tracks which
-      // body index needs the italic/gray styling, since a row's own
-      // content can't be trusted to identify it (a real product could
-      // coincidentally have an empty PLU/name).
+      // Every row a plain string tuple, except a seção header (a single
+      // colSpan:6 cell) and an "outros" row (individually styled cells) --
+      // only the leaf product is printed (Grupo/Subgrupo aren't shown as
+      // their own rows, flattenSecaoRows already put products in
+      // secao/grupo/subgrupo/valor order and merged "outros" back into one
+      // per seção). outrosRowIndices tracks which body index needs the
+      // italic/gray styling, since a row's own content can't be trusted to
+      // identify it (a real product could coincidentally have an empty
+      // PLU/name).
       const body: Row[] = [];
       const outrosRowIndices = new Set<number>();
       let hasOutros = false;
@@ -88,55 +100,28 @@ export function useProductionPdfExport({
             styles: { fillColor: [238, 238, 238], fontStyle: "bold", halign: "left" },
           },
         ]);
-        for (const g of s.grupos) {
+        const { produtos, outros } = flattenSecaoRows(s);
+        for (const p of produtos) {
           body.push([
-            {
-              content: `  ${g.grupo ?? "Sem grupo"} — Total: ${fmtBRL(g.totalGrupo)}`,
-              colSpan: 6,
-              styles: {
-                fillColor: [246, 246, 246],
-                fontStyle: "bold",
-                halign: "left",
-                fontSize: 7.5,
-              },
-            },
+            p.prodCode,
+            p.prodName,
+            fmtBRL(p.forecastMin),
+            fmtBRL(p.forecastVal),
+            fmtBRL(p.forecastMax),
+            "",
           ]);
-          for (const sg of g.subgrupos) {
-            body.push([
-              {
-                content: `    ${sg.subgrupo ?? "Sem subgrupo"} — Total: ${fmtBRL(sg.totalSubgrupo)}`,
-                colSpan: 6,
-                styles: {
-                  fontStyle: "italic",
-                  halign: "left",
-                  textColor: [102, 102, 102],
-                  fontSize: 7,
-                },
-              },
-            ]);
-            for (const p of sg.produtos) {
-              body.push([
-                p.prodCode,
-                p.prodName,
-                fmtBRL(p.forecastMin),
-                fmtBRL(p.forecastVal),
-                fmtBRL(p.forecastMax),
-                "",
-              ]);
-            }
-            if (sg.outros) {
-              hasOutros = true;
-              outrosRowIndices.add(body.length);
-              body.push([
-                "",
-                `Outros produtos (${sg.outros.numProdutos})*`,
-                "-",
-                fmtBRL(sg.outros.outrosVal),
-                "-",
-                "-",
-              ]);
-            }
-          }
+        }
+        if (outros) {
+          hasOutros = true;
+          outrosRowIndices.add(body.length);
+          body.push([
+            "",
+            `Outros produtos (${outros.numProdutos})*`,
+            "-",
+            fmtBRL(outros.outrosVal),
+            "-",
+            "-",
+          ]);
         }
       }
 
