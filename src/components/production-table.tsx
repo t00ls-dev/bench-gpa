@@ -82,31 +82,33 @@ export function ProductionTable({
         </p>
       )}
 
-      <div className="divide-y">
-        {visibleSecoes.map((s) => (
-          <Fragment key={s.secao}>
-            <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
-              <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
-            </div>
-            {s.produtos.map((p) => (
-              <div
-                key={p.prodCode}
-                className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
-              >
-                <span className="truncate" title={`PLU ${p.prodCode} · ${p.prodName}`}>
-                  <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
-                </span>
-                <span className="text-right whitespace-nowrap">
-                  <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
-                  </span>
-                </span>
+      <div className="overflow-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="min-w-[420px] divide-y">
+          {visibleSecoes.map((s) => (
+            <Fragment key={s.secao}>
+              <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
+                <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
               </div>
-            ))}
-          </Fragment>
-        ))}
+              {s.produtos.map((p) => (
+                <div
+                  key={p.prodCode}
+                  className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
+                >
+                  <span className="whitespace-nowrap" title={`PLU ${p.prodCode} · ${p.prodName}`}>
+                    <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
+                  </span>
+                  <span className="text-right whitespace-nowrap">
+                    <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </Fragment>
+          ))}
+        </div>
       </div>
     </div>
   );
