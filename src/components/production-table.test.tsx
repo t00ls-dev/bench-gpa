@@ -126,6 +126,10 @@ describe("ProductionTable", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} onExportPDF={onExportPDF} />);
       fireEvent.click(screen.getByRole("button", { name: /exportar planejamento em pdf/i }));
       expect(onExportPDF).toHaveBeenCalledTimes(1);
+      expect(onExportPDF).toHaveBeenCalledWith([
+        expect.objectContaining({ prodCode: "2" }),
+        expect.objectContaining({ prodCode: "1" }),
+      ]);
     });
 
     it("shows the elapsed time and disables the button while generating", () => {

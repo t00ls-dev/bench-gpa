@@ -57,7 +57,6 @@ function AreaPage() {
     noSale,
     totalRows,
     totalPages,
-    daysSinceNum,
     pathParts,
   } = view;
 
@@ -67,7 +66,6 @@ function AreaPage() {
     search,
     sortKey,
     sortDir,
-    daysSinceNum,
     daysSinceLabel,
     total,
     noSale,
@@ -75,7 +73,6 @@ function AreaPage() {
     plusTotal: data?.plusTotal ?? 0,
     plusWithSale: data?.plusWithSale ?? 0,
     avgPerPlu: data?.avgPerPlu ?? 0,
-    visibleProducts: products,
   });
 
   return (

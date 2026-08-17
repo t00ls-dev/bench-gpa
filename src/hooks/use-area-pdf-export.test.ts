@@ -187,11 +187,8 @@ describe("useAreaPdfExport", () => {
     ]);
   });
 
-  it("filters products by search term across prod_code and prod_name", async () => {
-    const products = [
-      product({ prod_code: "P1", prod_name: "Produto Alpha" }),
-      product({ prod_code: "P2", prod_name: "Produto Bravo" }),
-    ];
+  it("uses the server result already filtered by the search term", async () => {
+    const products = [product({ prod_code: "P1", prod_name: "Produto Alpha" })];
     const getArea = vi.fn().mockResolvedValue({ products });
     const { result } = renderHook(() => useAreaPdfExport(makeParams({ getArea, search: "alpha" })));
     await act(async () => {
@@ -200,6 +197,11 @@ describe("useAreaPdfExport", () => {
     const body = autoTableCalls[1].body;
     expect(body).toHaveLength(1);
     expect(body[0][0]).toBe("P1");
+    expect(getArea).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ search: "alpha", pageSize: EXPORT_PAGE_SIZE }),
+      }),
+    );
   });
 
   it("shows a placeholder row when no product matches", async () => {
@@ -211,13 +213,17 @@ describe("useAreaPdfExport", () => {
     expect(autoTableCalls[1].body).toEqual([["", "Nenhum produto.", "", ""]]);
   });
 
-  it("sorts by val ascending/descending", async () => {
-    const products = [
+  it("preserves the server ordering for val ascending/descending", async () => {
+    const descProducts = [
       product({ prod_code: "P3", val: 30 }),
-      product({ prod_code: "P1", val: 10 }),
       product({ prod_code: "P2", val: 20 }),
+      product({ prod_code: "P1", val: 10 }),
     ];
-    const getArea = vi.fn().mockResolvedValue({ products });
+    const ascProducts = [...descProducts].reverse();
+    const getArea = vi
+      .fn()
+      .mockResolvedValueOnce({ products: descProducts })
+      .mockResolvedValueOnce({ products: ascProducts });
 
     const desc = renderHook(() =>
       useAreaPdfExport(makeParams({ getArea, sortKey: "val", sortDir: "desc" })),
@@ -237,13 +243,17 @@ describe("useAreaPdfExport", () => {
     expect(autoTableCalls[1].body.map((r) => r[0])).toEqual(["P1", "P2", "P3"]);
   });
 
-  it("sorts by daysSince, placing never-sold items first when descending", async () => {
-    const products = [
-      product({ prod_code: "P3", lastSaleDate: "5" }),
+  it("preserves the server ordering for daysSince", async () => {
+    const descProducts = [
       product({ prod_code: "P1", lastSaleDate: null }),
+      product({ prod_code: "P3", lastSaleDate: "5" }),
       product({ prod_code: "P2", lastSaleDate: "1" }),
     ];
-    const getArea = vi.fn().mockResolvedValue({ products });
+    const ascProducts = [descProducts[2], descProducts[1], descProducts[0]];
+    const getArea = vi
+      .fn()
+      .mockResolvedValueOnce({ products: descProducts })
+      .mockResolvedValueOnce({ products: ascProducts });
 
     const desc = renderHook(() =>
       useAreaPdfExport(makeParams({ getArea, sortKey: "daysSince", sortDir: "desc" })),
