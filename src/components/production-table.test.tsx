@@ -153,9 +153,7 @@ describe("ProductionTable", () => {
 
     it("shows the empty state when nothing matches", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
-      expect(
-        screen.getByText("Nenhum produto encontrado para os filtros selecionados."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Nenhum produto encontrado.")).toBeInTheDocument();
     });
 
     it("shows every product again once the selection is cleared", () => {
@@ -175,9 +173,7 @@ describe("ProductionTable", () => {
 
     it("shows the empty state when nothing matches the subgrupo", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} subgrupoFilter={["nada-aqui"]} />);
-      expect(
-        screen.getByText("Nenhum produto encontrado para os filtros selecionados."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Nenhum produto encontrado.")).toBeInTheDocument();
     });
   });
 });
