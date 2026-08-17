@@ -28,7 +28,7 @@ export const getProductionForecast = createServerFn({ method: "POST" })
         data.storeCode,
         data.targetDate,
         PRODUCTION_LOOKBACK_OCCURRENCES,
-        JSON.stringify(data.secoes ?? []),
+        JSON.stringify(data.secao ? [data.secao] : []),
         JSON.stringify(data.grupos ?? []),
       ]);
       const [individualRows, secoesRows, metaRows] = rs as unknown[];
@@ -84,7 +84,7 @@ export const getProductionForecast = createServerFn({ method: "POST" })
     // not on every clock tick. Nothing here is more special than
     // getAreaAnalysis in that respect.
     const { cache } = await import("./cache");
-    const key = `production:${data.storeCode}:${data.targetDate}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
+    const key = `production:${data.storeCode}:${data.targetDate}:${data.secao ?? ""}:${(data.grupos ?? []).join(",")}`;
     return cache.wrap(key, query, CACHE_TTL_SHORT);
   });
 

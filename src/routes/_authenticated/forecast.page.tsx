@@ -6,7 +6,6 @@ import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useProductionPdfExport } from "@/hooks/use-production-pdf-export";
-import { cascadePatch } from "@/lib/filter-cascade";
 import { ProductionFilters } from "@/components/production-filters";
 import { ProductionTable } from "@/components/production-table";
 import type { MSOption } from "@/components/multi-select";
@@ -16,7 +15,7 @@ import { Route } from "./forecast";
 interface ForecastFilters {
   storeCode: string | undefined;
   targetDate: string | undefined;
-  secoes: string[];
+  secao: string | undefined;
   grupos: string[];
   subgrupos: string[];
   productFilter: string[];
@@ -28,13 +27,13 @@ function ProductionPage() {
   const [ff, setFf] = usePersistentState<ForecastFilters>("bench-gpa:filters:forecast:v1", {
     storeCode: undefined,
     targetDate: undefined,
-    secoes: [],
+    secao: undefined,
     grupos: [],
     subgrupos: [],
     productFilter: [],
   });
   const patch = (p: Partial<ForecastFilters>) => setFf((prev) => ({ ...prev, ...p }));
-  const { storeCode, targetDate, secoes, grupos, subgrupos, productFilter } = ff;
+  const { storeCode, targetDate, secao, grupos, subgrupos, productFilter } = ff;
 
   // Deep link / hotkey navigation (?store=&targetDate=) takes over the
   // persisted filters once per visit, same spirit as Area's dashboard
@@ -69,10 +68,10 @@ function ProductionPage() {
 
   const forecastFn = useServerFn(getProductionForecast);
   const { data, isFetching, isError, error } = useQuery({
-    queryKey: ["production-forecast", storeCode, targetDate, secoes, grupos],
+    queryKey: ["production-forecast", storeCode, targetDate, secao, grupos],
     queryFn: () =>
       forecastFn({
-        data: { storeCode: storeCode!, targetDate: targetDate!, secoes, grupos },
+        data: { storeCode: storeCode!, targetDate: targetDate!, secao, grupos },
       }),
     enabled: !!storeCode && !!targetDate,
     staleTime: QUERY_STALE_CORE,
@@ -134,18 +133,20 @@ function ProductionPage() {
         storeCode={storeCode}
         targetDate={targetDate}
         filterOptions={filterOptions}
-        secoes={secoes}
+        secao={secao}
         grupos={grupos}
         subgrupos={subgrupos}
         productOptions={productOptions}
         productFilter={productFilter}
         onStoreChange={(v) =>
-          patch({ storeCode: v[0], productFilter: [], ...cascadePatch("secoes", []) })
+          patch({ storeCode: v[0], secao: undefined, grupos: [], subgrupos: [], productFilter: [] })
         }
-        onTargetDateChange={(v) => patch({ targetDate: v, productFilter: [] })}
-        onSecoesChange={(v) => patch(cascadePatch("secoes", v))}
-        onGruposChange={(v) => patch(cascadePatch("grupos", v))}
-        onSubgruposChange={(v) => patch({ subgrupos: v })}
+        onTargetDateChange={(v) =>
+          patch({ targetDate: v, secao: undefined, grupos: [], subgrupos: [], productFilter: [] })
+        }
+        onSecaoChange={(v) => patch({ secao: v[0], grupos: [], subgrupos: [], productFilter: [] })}
+        onGruposChange={(v) => patch({ grupos: v, subgrupos: [], productFilter: [] })}
+        onSubgruposChange={(v) => patch({ subgrupos: v, productFilter: [] })}
         onProductFilterChange={(v) => patch({ productFilter: v })}
       />
 

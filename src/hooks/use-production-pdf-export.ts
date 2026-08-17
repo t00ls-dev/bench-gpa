@@ -76,19 +76,10 @@ export function useProductionPdfExport({
       );
       doc.text("Total geral: " + fmtBRL(totalGeral), mX, 31.5);
 
-      // Every row a plain string tuple, except a seção header (a single
-      // colSpan:6 cell) -- only the leaf product is printed (Grupo/Subgrupo
-      // aren't shown as their own rows; products are already in
-      // secao/grupo/subgrupo/valor order).
+      // Flat rows only, matching the on-screen table. The exported PDF is
+      // just the filtered product list with min/med/max columns.
       const body: Row[] = [];
       for (const s of visibleSecoes) {
-        body.push([
-          {
-            content: `${s.secao} — Total: ${fmtBRL(s.totalSecao)}`,
-            colSpan: 6,
-            styles: { fillColor: [238, 238, 238], fontStyle: "bold", halign: "left" },
-          },
-        ]);
         for (const p of s.produtos) {
           body.push([
             p.prodCode,

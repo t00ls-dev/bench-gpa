@@ -55,35 +55,43 @@ const SECOES: ProductionSecaoForecast[] = [
 ];
 
 describe("ProductionTable", () => {
-  it("shows every section, including one with no products at all", () => {
+  it("shows the flat table header and the new title", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getByText("CARNES E AVES")).toBeInTheDocument();
-    expect(screen.getByText("BACALHAU")).toBeInTheDocument();
+    expect(screen.getByText("Previsão de venda")).toBeInTheDocument();
+    expect(screen.getByText("PLU")).toBeInTheDocument();
+    expect(screen.getByText("Produto")).toBeInTheDocument();
+    expect(screen.getByText("Mín")).toBeInTheDocument();
+    expect(screen.getByText("Méd")).toBeInTheDocument();
+    expect(screen.getByText("Máx")).toBeInTheDocument();
   });
 
-  it("does not render Grupo/Subgrupo as their own header rows -- only the leaf product", () => {
+  it("does not render section, grupo or subgrupo headers in the body", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
+    expect(screen.queryByText("CARNES E AVES")).not.toBeInTheDocument();
+    expect(screen.queryByText("BACALHAU")).not.toBeInTheDocument();
     expect(screen.queryByText("BOVINOS")).not.toBeInTheDocument();
     expect(screen.queryByText("CORTES NOBRES")).not.toBeInTheDocument();
   });
 
-  it("shows every product individually, with no aggregate 'outros' bucket", () => {
+  it("shows every product individually with separate min/med/max columns", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
-    expect(screen.getByText(exactText("PLU 2 · COSTELA"))).toBeInTheDocument();
+    expect(screen.getByText(exactText("1"))).toBeInTheDocument();
+    expect(screen.getByText(exactText("PICANHA"))).toBeInTheDocument();
+    expect(screen.getByText(exactText("2"))).toBeInTheDocument();
+    expect(screen.getByText(exactText("COSTELA"))).toBeInTheDocument();
     expect(screen.queryByText(/outros produtos/i)).not.toBeInTheDocument();
   });
 
   it("shows min === val === max for a product with a single occurrence", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(
-      screen.getByText(exactText(`mín ${fmtBRL(VAL_B)} / máx ${fmtBRL(VAL_B)}`)),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(exactText(fmtBRL(VAL_B)))).toHaveLength(3);
   });
 
-  it("reconciles: section total equals the sum of its products", () => {
+  it("reconciles the total from the visible products", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getAllByText(exactText(fmtBRL(VAL_TOTAL_SECAO))).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText((_, el) => el?.textContent === `Total: ${fmtBRL(VAL_TOTAL_SECAO)}`),
+    ).not.toHaveLength(0);
     expect(screen.getByText(exactText(fmtBRL(VAL_A)))).toBeInTheDocument();
   });
 
@@ -94,16 +102,17 @@ describe("ProductionTable", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the min/max range under the average for a product", () => {
+  it("shows the three value columns for a product", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(
-      screen.getByText(exactText(`mín ${fmtBRL(380)} / máx ${fmtBRL(610)}`)),
-    ).toBeInTheDocument();
+    expect(screen.getByText(exactText(fmtBRL(380)))).toBeInTheDocument();
+    expect(screen.getByText(exactText(fmtBRL(500)))).toBeInTheDocument();
+    expect(screen.getByText(exactText(fmtBRL(610)))).toBeInTheDocument();
   });
 
-  it("shows the PLU alongside the product name", () => {
+  it("shows PLU and product name in separate cells", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
+    expect(screen.getByText(exactText("1"))).toBeInTheDocument();
+    expect(screen.getByText(exactText("PICANHA"))).toBeInTheDocument();
   });
 
   describe("export PDF button", () => {
@@ -143,30 +152,32 @@ describe("ProductionTable", () => {
   describe("productFilter", () => {
     it("keeps only the selected products", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
-      expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
-      expect(screen.queryByText(exactText("PLU 2 · COSTELA"))).not.toBeInTheDocument();
-      expect(screen.queryByText("BACALHAU")).not.toBeInTheDocument();
+      expect(screen.getByText(exactText("PICANHA"))).toBeInTheDocument();
+      expect(screen.queryByText(exactText("COSTELA"))).not.toBeInTheDocument();
     });
 
-    it("hides a section with no selected product in it", () => {
+    it("shows the empty state when nothing matches", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
-      expect(screen.queryByText("CARNES E AVES")).not.toBeInTheDocument();
-      expect(screen.queryByText("BACALHAU")).not.toBeInTheDocument();
       expect(
         screen.getByText("Nenhum produto encontrado para os filtros selecionados."),
       ).toBeInTheDocument();
     });
 
-    it("shows every section again once the selection is cleared", () => {
+    it("shows every product again once the selection is cleared", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={[]} />);
-      expect(screen.getByText("CARNES E AVES")).toBeInTheDocument();
-      expect(screen.getByText("BACALHAU")).toBeInTheDocument();
+      expect(screen.getByText(exactText("PICANHA"))).toBeInTheDocument();
+      expect(screen.getByText(exactText("COSTELA"))).toBeInTheDocument();
     });
 
     it("recomputes the totals from just the visible rows while filtering", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
-      expect(screen.getAllByText(exactText(fmtBRL(VAL_A))).length).toBeGreaterThan(1);
-      expect(screen.queryByText(exactText(fmtBRL(VAL_TOTAL_SECAO)))).not.toBeInTheDocument();
+      expect(screen.getByText(exactText(fmtBRL(VAL_A)))).toBeInTheDocument();
+      expect(
+        screen.getAllByText((_, el) => el?.textContent === `Total: ${fmtBRL(VAL_A)}`),
+      ).not.toHaveLength(0);
+      expect(
+        screen.queryAllByText((_, el) => el?.textContent === `Total: ${fmtBRL(VAL_TOTAL_SECAO)}`),
+      ).toHaveLength(0);
     });
 
     it("shows a R$0 total when nothing matches the selection", () => {
@@ -180,12 +191,14 @@ describe("ProductionTable", () => {
       render(
         <ProductionTable secoes={SECOES} isFetching={false} subgrupoFilter={["CORTES NOBRES"]} />,
       );
-      expect(screen.getByText(exactText("PLU 1 · PICANHA"))).toBeInTheDocument();
+      expect(screen.getByText(exactText("PICANHA"))).toBeInTheDocument();
     });
 
-    it("hides a section with no matching subgrupo", () => {
+    it("shows the empty state when nothing matches the subgrupo", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} subgrupoFilter={["nada-aqui"]} />);
-      expect(screen.queryByText("CARNES E AVES")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Nenhum produto encontrado para os filtros selecionados."),
+      ).toBeInTheDocument();
     });
   });
 });

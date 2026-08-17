@@ -101,10 +101,19 @@ describe("ProductionForecastSchema", () => {
     ).toThrow();
   });
 
-  it("defaults secoes/grupos to empty arrays", () => {
+  it("accepts a single secao and defaults groups to empty arrays", () => {
     const result = ProductionForecastSchema.parse({ storeCode: "1516", targetDate: "2026-01-01" });
-    expect(result.secoes).toEqual([]);
+    expect(result.secao).toBeUndefined();
     expect(result.grupos).toEqual([]);
+  });
+
+  it("keeps a single secao when provided", () => {
+    const result = ProductionForecastSchema.parse({
+      storeCode: "1516",
+      targetDate: "2026-01-01",
+      secao: "CARNES E AVES",
+    });
+    expect(result.secao).toBe("CARNES E AVES");
   });
 });
 

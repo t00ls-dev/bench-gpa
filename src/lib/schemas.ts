@@ -67,8 +67,8 @@ export const DashboardRankingsSchema = FilterSchema.extend({
 /**
  * Store and target date are always required singles here (never optional
  * multi-value filters like FilterSchema's): the Production Planning
- * screen always plans for exactly one store, one day. secoes/grupos ARE
- * optional multi-value filters (added 2026-08-08), same shape as
+ * screen always plans for exactly one store, one day. secao/grupos ARE
+ * optional filters (added 2026-08-08), same shape as
  * FilterSchema's, narrowing the fixed PERECIVEIS scope further.
  *
  * targetDate has no past/future restriction (removed 2026-08-08): a
@@ -80,7 +80,7 @@ export const DashboardRankingsSchema = FilterSchema.extend({
 export const ProductionForecastSchema = z.object({
   storeCode: z.string().min(1),
   targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
-  secoes: z.array(z.string()).optional().default([]),
+  secao: z.string().optional(),
   grupos: z.array(z.string()).optional().default([]),
 });
 
