@@ -43,9 +43,9 @@ export function ProductionTable({
   const visibleProducts = useMemo(() => visibleSecoes.flatMap((s) => s.produtos), [visibleSecoes]);
 
   return (
-    <div className="kpi-card overflow-hidden">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-medium">Produtos da previsão</span>
+    <div className="kpi-card min-w-0 overflow-hidden">
+      <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
+        <h2 className="font-display text-lg font-semibold">Produtos da previsão</h2>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-2 text-sm font-semibold">
             {isFetching && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
