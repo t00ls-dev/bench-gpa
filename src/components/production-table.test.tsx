@@ -14,8 +14,6 @@ const exactText = (text: string) => (_: string, el: Element | null) => el?.textC
 
 const VAL_A = 500;
 const VAL_B = 90;
-const VAL_TOTAL_SECAO = VAL_A + VAL_B;
-
 const SECOES: ProductionSecaoForecast[] = [
   {
     secao: "CARNES E AVES",
@@ -45,7 +43,7 @@ const SECOES: ProductionSecaoForecast[] = [
         forecastMax: VAL_B,
       },
     ],
-    totalSecao: VAL_TOTAL_SECAO,
+    totalSecao: VAL_A + VAL_B,
   },
   {
     secao: "BACALHAU",
@@ -87,12 +85,9 @@ describe("ProductionTable", () => {
     expect(screen.getAllByText(exactText(fmtBRL(VAL_B)))).toHaveLength(3);
   });
 
-  it("reconciles the total from the visible products", () => {
+  it("does not render a total value in the header", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(
-      screen.getAllByText((_, el) => el?.textContent === `Total: ${fmtBRL(VAL_TOTAL_SECAO)}`),
-    ).not.toHaveLength(0);
-    expect(screen.getByText(exactText(fmtBRL(VAL_A)))).toBeInTheDocument();
+    expect(screen.queryByText(/Total:/i)).not.toBeInTheDocument();
   });
 
   it("shows the empty-state message when there are no sections at all", () => {
@@ -167,22 +162,6 @@ describe("ProductionTable", () => {
       render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={[]} />);
       expect(screen.getByText(exactText("PICANHA"))).toBeInTheDocument();
       expect(screen.getByText(exactText("COSTELA"))).toBeInTheDocument();
-    });
-
-    it("recomputes the totals from just the visible rows while filtering", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["1"]} />);
-      expect(screen.getByText(exactText(fmtBRL(VAL_A)))).toBeInTheDocument();
-      expect(
-        screen.getAllByText((_, el) => el?.textContent === `Total: ${fmtBRL(VAL_A)}`),
-      ).not.toHaveLength(0);
-      expect(
-        screen.queryAllByText((_, el) => el?.textContent === `Total: ${fmtBRL(VAL_TOTAL_SECAO)}`),
-      ).toHaveLength(0);
-    });
-
-    it("shows a R$0 total when nothing matches the selection", () => {
-      render(<ProductionTable secoes={SECOES} isFetching={false} productFilter={["nada-aqui"]} />);
-      expect(screen.getAllByText(exactText(`Total: ${fmtBRL(0)}`)).length).toBeGreaterThan(0);
     });
   });
 

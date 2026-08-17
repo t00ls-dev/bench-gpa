@@ -36,21 +36,18 @@ export function ProductionTable({
 }) {
   // Memoized so a re-render that only ticks pdfElapsed (once a second while
   // the PDF is generating) doesn't redo the filter/reduce pass over secoes.
-  const { visibleSecoes, totalGeral } = useMemo(
+  const { visibleSecoes } = useMemo(
     () => computeVisibleSecoes(secoes, productFilter, subgrupoFilter),
     [secoes, productFilter, subgrupoFilter],
   );
   const visibleProducts = useMemo(() => visibleSecoes.flatMap((s) => s.produtos), [visibleSecoes]);
 
   return (
-    <div className="kpi-card min-w-0 overflow-hidden">
-      <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
+    <div className="kpi-card min-w-0">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="font-display text-lg font-semibold">Produtos da previsão</h2>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            {isFetching && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-            Total: {fmtBRL(totalGeral)}
-          </span>
+        {isFetching && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+        <div className="ml-auto flex items-center gap-2">
           {onExportPDF && secoes.length > 0 && (
             <Button
               variant="outline"
