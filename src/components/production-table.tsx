@@ -198,7 +198,7 @@ export function ProductionTable({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onExportPDF(pagedProducts)}
+                onClick={() => onExportPDF(products)}
                 className="h-9 shrink-0"
                 disabled={pdfLoading}
                 title="Exporta o planejamento filtrado em PDF, com campo em branco pra anotar a quantidade produzida"
