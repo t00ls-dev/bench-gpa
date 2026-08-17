@@ -6,7 +6,7 @@ import { EXPORT_PAGE_SIZE } from "@/lib/schemas";
 import { fmtBRL, fmtInt, fmtBRShort } from "@/lib/utils";
 import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
-import type { AreaFilters, AreaSortKey } from "@/hooks/use-area-products-view";
+import type { AreaFilters, AreaProduct, AreaSortKey } from "@/hooks/use-area-products-view";
 
 interface Params {
   getArea: ReturnType<typeof useServerFn<typeof getAreaAnalysis>>;
@@ -22,6 +22,7 @@ interface Params {
   plusTotal: number;
   plusWithSale: number;
   avgPerPlu: number;
+  visibleProducts?: AreaProduct[];
 }
 
 /**
@@ -44,6 +45,7 @@ export function useAreaPdfExport({
   plusTotal,
   plusWithSale,
   avgPerPlu,
+  visibleProducts,
 }: Params) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const pdfElapsed = useElapsedSeconds(pdfLoading);
@@ -62,53 +64,53 @@ export function useAreaPdfExport({
     setPdfLoading(true);
     try {
       const area = pathParts.join(" › ");
-      const allData = await getArea({
-        data: {
-          dateFrom,
-          dateTo,
-          stores: fStores,
-          deptos: fDeptos,
-          secoes: fSecoes,
-          grupos: fGrupos,
-          subgrupos: fSubgrupos,
-          search: search.trim(),
-          sortBy: sortKey,
-          sortDir,
-          page: 1,
-          // The PDF needs the entire listing, not the displayed page. The
-          // value comes from schemas.ts because three things depend on it at
-          // once: the AreaAnalysisSchema cap, the threshold that keeps this
-          // response out of the cache (area.functions.ts), and the size of
-          // the PLU universe.
-          pageSize: EXPORT_PAGE_SIZE,
-        },
-      });
-      const searchTerm = search.trim().toLowerCase();
-      const filtered = [...(allData.products ?? [])]
-        .filter(
-          (p) =>
-            !searchTerm ||
-            p.prod_code.toLowerCase().includes(searchTerm) ||
-            p.prod_name.toLowerCase().includes(searchTerm),
-        )
-        .sort((a, b) => {
-          let cmp = 0;
-          if (sortKey === "val") cmp = a.val - b.val;
-          else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
-          else if (sortKey === "prod_name") cmp = a.prod_name.localeCompare(b.prod_name);
-          else if (sortKey === "daysSince") {
-            const aD = daysSinceNum(a.lastSaleDate),
-              bD = daysSinceNum(b.lastSaleDate);
-            const aN = aD === null,
-              bN = bD === null;
-            if (aN && bN) cmp = 0;
-            else if (aN) cmp = 1;
-            else if (bN) cmp = -1;
-            else cmp = aD - bD;
-          }
-          if (cmp === 0) cmp = a.prod_code.localeCompare(b.prod_code);
-          return sortDir === "desc" ? -cmp : cmp;
+      let filtered: AreaProduct[];
+      if (visibleProducts) {
+        filtered = visibleProducts;
+      } else {
+        const allData = await getArea({
+          data: {
+            dateFrom,
+            dateTo,
+            stores: fStores,
+            deptos: fDeptos,
+            secoes: fSecoes,
+            grupos: fGrupos,
+            subgrupos: fSubgrupos,
+            search: search.trim(),
+            sortBy: sortKey,
+            sortDir,
+            page: 1,
+            pageSize: EXPORT_PAGE_SIZE,
+          },
         });
+        const searchTerm = search.trim().toLowerCase();
+        filtered = [...(allData.products ?? [])]
+          .filter(
+            (p) =>
+              !searchTerm ||
+              p.prod_code.toLowerCase().includes(searchTerm) ||
+              p.prod_name.toLowerCase().includes(searchTerm),
+          )
+          .sort((a, b) => {
+            let cmp = 0;
+            if (sortKey === "val") cmp = a.val - b.val;
+            else if (sortKey === "prod_code") cmp = a.prod_code.localeCompare(b.prod_code);
+            else if (sortKey === "prod_name") cmp = a.prod_name.localeCompare(b.prod_name);
+            else if (sortKey === "daysSince") {
+              const aD = daysSinceNum(a.lastSaleDate),
+                bD = daysSinceNum(b.lastSaleDate);
+              const aN = aD === null,
+                bN = bD === null;
+              if (aN && bN) cmp = 0;
+              else if (aN) cmp = 1;
+              else if (bN) cmp = -1;
+              else cmp = aD - bD;
+            }
+            if (cmp === 0) cmp = a.prod_code.localeCompare(b.prod_code);
+            return sortDir === "desc" ? -cmp : cmp;
+          });
+      }
 
       const jsPDF = (await import("jspdf")).default;
       const autoTable = (await import("jspdf-autotable")).default;
@@ -164,17 +166,15 @@ export function useAreaPdfExport({
       autoTable(doc, {
         startY: kpiEndY + 4,
         margin: { left: mX, right: mX },
-        head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
+        head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA"]],
         body: filtered.length
           ? filtered.map((p) => [
               p.prod_code,
               p.prod_name,
               fmtBRL(p.val),
               daysSinceLabel(p.lastSaleDate),
-              "",
-              "",
             ])
-          : [["", "Nenhum produto.", "", "", "", ""]],
+          : [["", "Nenhum produto.", "", ""]],
         theme: "grid",
         styles: {
           font: "helvetica",
@@ -195,15 +195,9 @@ export function useAreaPdfExport({
         },
         columnStyles: {
           0: { cellWidth: 16 },
-          1: { cellWidth: 82, overflow: "hidden" },
+          1: { cellWidth: 102, overflow: "hidden" },
           2: { cellWidth: 23, halign: "right" },
           3: { cellWidth: 24, halign: "right" },
-          4: { cellWidth: 20 },
-          5: { cellWidth: 25 },
-        },
-        didParseCell: (h) => {
-          if (h.section === "body" && (h.column.index === 4 || h.column.index === 5))
-            h.cell.text = [];
         },
         willDrawCell: (h) => {
           if (h.section === "body" && h.column.index === 1) {

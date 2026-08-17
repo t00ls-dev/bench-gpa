@@ -75,6 +75,7 @@ function AreaPage() {
     plusTotal: data?.plusTotal ?? 0,
     plusWithSale: data?.plusWithSale ?? 0,
     avgPerPlu: data?.avgPerPlu ?? 0,
+    visibleProducts: products,
   });
 
   return (
