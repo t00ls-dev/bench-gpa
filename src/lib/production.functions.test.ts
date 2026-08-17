@@ -86,7 +86,7 @@ const PROC_RESULT_MIXED = [
 interface Input {
   storeCode: string;
   targetDate: string;
-  secoes?: string[];
+  secao?: string;
   grupos?: string[];
 }
 interface Produto {
@@ -176,15 +176,15 @@ describe("getProductionForecast", () => {
       expect(db.query).toHaveBeenCalledTimes(3);
     });
 
-    it("does not collide across different secoes/grupos filters", async () => {
-      await call({ secoes: [] });
-      await call({ secoes: ["CARNES E AVES"] });
+    it("does not collide across different secao/grupos filters", async () => {
+      await call({ secao: undefined });
+      await call({ secao: "CARNES E AVES" });
       await call({ grupos: ["BOVINOS"] });
       expect(db.query).toHaveBeenCalledTimes(3);
     });
   });
 
-  describe("secoes/grupos filters", () => {
+  describe("secao/grupos filters", () => {
     it("passes the filters through to the proc as JSON arrays, defaulting to empty", async () => {
       await call();
       expect(db.query).toHaveBeenCalledWith(expect.any(String), [
@@ -196,8 +196,8 @@ describe("getProductionForecast", () => {
       ]);
     });
 
-    it("JSON-stringifies non-empty secoes/grupos for the proc call", async () => {
-      await call({ secoes: ["CARNES E AVES"], grupos: ["BOVINOS"] });
+    it("JSON-stringifies a secao plus non-empty grupos for the proc call", async () => {
+      await call({ secao: "CARNES E AVES", grupos: ["BOVINOS"] });
       expect(db.query).toHaveBeenCalledWith(expect.any(String), [
         "1516",
         "2026-08-14",

@@ -113,7 +113,7 @@ describe("useProductionPdfExport", () => {
     );
   });
 
-  it("prints PLU/PRODUTO/MÍN/MÉDIA/MÁX/QTD PRODUZIDA header, leaving QTD PRODUZIDA blank per product", async () => {
+  it("prints PLU/PRODUTO/MÍN/MÉDIA/MÁX/QTD PRODUZIDA and leaves the last column blank", async () => {
     const { result } = renderHook(() => useProductionPdfExport(makeParams()));
     await act(async () => {
       await result.current.openPdfInNewTab();
@@ -151,17 +151,14 @@ describe("useProductionPdfExport", () => {
     expect(row2).toEqual(["2", "COSTELA", fmtBRL(90), fmtBRL(90), fmtBRL(90), ""]);
   });
 
-  it("prints only a Seção header row (no Grupo/Subgrupo rows), spanning all columns with the seção subtotal", async () => {
+  it("prints a flat table with PLU/PRODUTO/MÍN/MÉDIA/MÁX/QTD PRODUZIDA", async () => {
     const { result } = renderHook(() => useProductionPdfExport(makeParams()));
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
     const body = autoTableCalls[0].body as unknown as { content: string; colSpan: number }[][];
-    expect(body).toHaveLength(2); // seção header + the one product row
-    expect(body[0][0]).toMatchObject({
-      content: "CARNES E AVES — Total: " + fmtBRL(500),
-      colSpan: 6,
-    });
+    expect(body).toHaveLength(1);
+    expect(body[0]).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610), ""]);
   });
 
   it("respects productFilter: narrows to the selected products, same as the screen", async () => {

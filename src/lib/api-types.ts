@@ -96,15 +96,6 @@ export interface ProductionForecastProduct {
 }
 export interface ProductionSecaoForecast {
   secao: string;
-  // Every product that sold at least once in the window, no confidence
-  // floor -- a product with a single occurrence just has
-  // forecastMin === forecastVal === forecastMax, a visible single data
-  // point instead of an unnamed aggregate (removed 2026-08-09, see
-  // docs/plano-forecast-remove-piso-confianca-2026-08-09.md). Already
-  // flat and in secao/grupo/subgrupo/valor order (the proc's ORDER BY
-  // guarantees it) -- [] when the seção had nothing this weekday, it
-  // still shows (built from product_universe's full catalog, see
-  // production.functions.ts).
   produtos: ProductionForecastProduct[];
   totalSecao: number;
 }

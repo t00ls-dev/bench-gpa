@@ -14,14 +14,14 @@ export function ProductionFilters({
   storeCode,
   targetDate,
   filterOptions,
-  secoes,
+  secao,
   grupos,
   subgrupos,
   productOptions,
   productFilter,
   onStoreChange,
   onTargetDateChange,
-  onSecoesChange,
+  onSecaoChange,
   onGruposChange,
   onSubgruposChange,
   onProductFilterChange,
@@ -30,14 +30,14 @@ export function ProductionFilters({
   storeCode: string | undefined;
   targetDate: string | undefined;
   filterOptions: ProductionFilterOption[];
-  secoes: string[];
+  secao: string | undefined;
   grupos: string[];
   subgrupos: string[];
   productOptions: MSOption[];
   productFilter: string[];
   onStoreChange: (v: string[]) => void;
   onTargetDateChange: (v: string) => void;
-  onSecoesChange: (v: string[]) => void;
+  onSecaoChange: (v: string[]) => void;
   onGruposChange: (v: string[]) => void;
   onSubgruposChange: (v: string[]) => void;
   onProductFilterChange: (v: string[]) => void;
@@ -48,29 +48,26 @@ export function ProductionFilters({
     [filterOptions],
   );
 
-  // Cascade: with no seção selected, every grupo is available; once one or
-  // more seções are picked, narrow to only the grupos that occur under them
-  // (same in-memory cascade spirit as computeAreaCascadeOptions, but for
-  // just these levels).
+  // Cascade: with no seção selected, every grupo is available; once a
+  // seção is picked, narrow to only the grupos that occur under it.
   const grupoOptions = useMemo(() => {
-    const scoped =
-      secoes.length === 0 ? filterOptions : filterOptions.filter((o) => secoes.includes(o.secao));
+    const scoped = secao ? filterOptions.filter((o) => o.secao === secao) : filterOptions;
     return [...new Set(scoped.map((o) => o.grupo).filter((g): g is string => g !== null))]
       .sort()
       .map((g) => ({ value: g, label: g }));
-  }, [filterOptions, secoes]);
+  }, [filterOptions, secao]);
 
-  // Same cascade, one level deeper: scoped by both seção and grupo when
-  // either is selected.
+  // Same cascade, one level deeper: scoped by seção and/or grupo when
+  // selected.
   const subgrupoOptions = useMemo(() => {
     let scoped = filterOptions;
-    if (secoes.length > 0) scoped = scoped.filter((o) => secoes.includes(o.secao));
+    if (secao) scoped = scoped.filter((o) => o.secao === secao);
     if (grupos.length > 0)
       scoped = scoped.filter((o) => o.grupo !== null && grupos.includes(o.grupo));
     return [...new Set(scoped.map((o) => o.subgrupo).filter((sg): sg is string => sg !== null))]
       .sort()
       .map((sg) => ({ value: sg, label: sg }));
-  }, [filterOptions, secoes, grupos]);
+  }, [filterOptions, secao, grupos]);
 
   return (
     <div className="kpi-card mb-4 space-y-3 min-w-0 overflow-hidden">
@@ -94,10 +91,11 @@ export function ProductionFilters({
         </FilterField>
         <FilterField label="Seção">
           <MultiSelect
+            single
             label="Todas"
             options={secaoOptions}
-            value={secoes}
-            onChange={onSecoesChange}
+            value={secao ? [secao] : []}
+            onChange={onSecaoChange}
           />
         </FilterField>
         <FilterField label="Grupo">

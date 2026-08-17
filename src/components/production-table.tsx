@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { useMemo } from "react";
 import { fmtBRL } from "@/lib/utils";
 import type { ProductionSecaoForecast } from "@/lib/api-types";
 import { computeVisibleSecoes } from "@/lib/production-filter";
@@ -14,7 +14,8 @@ import { FileText, Loader2 } from "lucide-react";
  *
  * Each product already carries its own grupo/subgrupo (used by the
  * Subgrupo filter and to keep the list in secao/grupo/subgrupo/valor
- * order) but only the leaf product renders -- no Grupo/Subgrupo headers.
+ * order), but the table renders flat rows only, without section or
+ * subgroup headers.
  */
 export function ProductionTable({
   secoes,
@@ -39,11 +40,12 @@ export function ProductionTable({
     () => computeVisibleSecoes(secoes, productFilter, subgrupoFilter),
     [secoes, productFilter, subgrupoFilter],
   );
+  const visibleProducts = useMemo(() => visibleSecoes.flatMap((s) => s.produtos), [visibleSecoes]);
 
   return (
     <div className="kpi-card overflow-hidden">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-medium">Venda esperada por seção</span>
+        <span className="text-sm font-medium">Previsão de venda</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-2 text-sm font-semibold">
             {isFetching && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
@@ -76,38 +78,44 @@ export function ProductionTable({
         </p>
       )}
 
-      {secoes.length > 0 && visibleSecoes.length === 0 && (
+      {secoes.length > 0 && visibleProducts.length === 0 && (
         <p className="px-3 py-6 text-center text-sm text-muted-foreground">
           Nenhum produto encontrado para os filtros selecionados.
         </p>
       )}
 
       <div className="overflow-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-        <div className="min-w-[420px] divide-y">
-          {visibleSecoes.map((s) => (
-            <Fragment key={s.secao}>
-              <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide">{s.secao}</span>
-                <span className="text-xs font-semibold">{fmtBRL(s.totalSecao)}</span>
-              </div>
-              {s.produtos.map((p) => (
-                <div
-                  key={p.prodCode}
-                  className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-1.5 text-sm"
-                >
-                  <span className="whitespace-nowrap" title={`PLU ${p.prodCode} · ${p.prodName}`}>
-                    <span className="text-muted-foreground">PLU {p.prodCode}</span> · {p.prodName}
-                  </span>
-                  <span className="text-right whitespace-nowrap">
-                    <span className="block font-medium">{fmtBRL(p.forecastVal)}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      mín {fmtBRL(p.forecastMin)} / máx {fmtBRL(p.forecastMax)}
-                    </span>
-                  </span>
+        <div className="min-w-[640px] text-sm">
+          <div className="grid grid-cols-[16%_44%_13%_13%_14%] border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <div className="py-2 px-3">PLU</div>
+            <div className="py-2 px-3">Produto</div>
+            <div className="py-2 px-3 text-right">Mín</div>
+            <div className="py-2 px-3 text-right">Méd</div>
+            <div className="py-2 px-3 text-right">Máx</div>
+          </div>
+          <div>
+            {visibleProducts.map((p) => (
+              <div
+                key={p.prodCode}
+                className="grid grid-cols-[16%_44%_13%_13%_14%] items-center border-b border-border/60 hover:bg-muted/40"
+                title={`PLU ${p.prodCode} · ${p.prodName}`}
+              >
+                <div className="self-center font-mono text-xs px-3 whitespace-nowrap">
+                  {p.prodCode}
                 </div>
-              ))}
-            </Fragment>
-          ))}
+                <div className="self-center px-3 whitespace-nowrap">{p.prodName}</div>
+                <div className="self-center px-3 text-right whitespace-nowrap">
+                  {fmtBRL(p.forecastMin)}
+                </div>
+                <div className="self-center px-3 text-right whitespace-nowrap font-medium">
+                  {fmtBRL(p.forecastVal)}
+                </div>
+                <div className="self-center px-3 text-right whitespace-nowrap">
+                  {fmtBRL(p.forecastMax)}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
