@@ -7,6 +7,7 @@ import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useProductionPdfExport } from "@/hooks/use-production-pdf-export";
 import { ProductionFilters } from "@/components/production-filters";
+import { ForecastContextCards } from "@/components/forecast-context-cards";
 import { ProductionTable } from "@/components/production-table";
 import type { MSOption } from "@/components/multi-select";
 import { ClipboardList } from "lucide-react";
@@ -147,6 +148,8 @@ function ProductionPage() {
         onSubgruposChange={(v) => patch({ subgrupos: v, productFilter: [] })}
         onProductFilterChange={(v) => patch({ productFilter: v })}
       />
+
+      <ForecastContextCards storeCode={storeCode} targetDate={targetDate} secao={secao} />
 
       {!storeCode || !targetDate || !secao ? (
         <div className="kpi-card px-3 py-6 text-center text-sm text-muted-foreground">
