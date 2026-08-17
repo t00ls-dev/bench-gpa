@@ -118,9 +118,11 @@ describe("useProductionPdfExport", () => {
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
-    expect(autoTableCalls[0].head).toEqual([["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX"]]);
+    expect(autoTableCalls[0].head).toEqual([
+      ["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX", "QTD PRODUZIDA"],
+    ]);
     const productRow = autoTableCalls[0].body.find((r) => r[0] === "1");
-    expect(productRow).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610)]);
+    expect(productRow).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610), ""]);
   });
 
   it("prints every product individually, including one with a single occurrence (min === val === max)", async () => {
@@ -146,7 +148,7 @@ describe("useProductionPdfExport", () => {
     });
     const body = autoTableCalls[0].body;
     const row2 = body.find((r) => r[0] === "2");
-    expect(row2).toEqual(["2", "COSTELA", fmtBRL(90), fmtBRL(90), fmtBRL(90)]);
+    expect(row2).toEqual(["2", "COSTELA", fmtBRL(90), fmtBRL(90), fmtBRL(90), ""]);
   });
 
   it("prints a flat table with the visible columns", async () => {
@@ -156,7 +158,7 @@ describe("useProductionPdfExport", () => {
     });
     const body = autoTableCalls[0].body as unknown as { content: string; colSpan: number }[][];
     expect(body).toHaveLength(1);
-    expect(body[0]).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610)]);
+    expect(body[0]).toEqual(["1", "PICANHA", fmtBRL(380), fmtBRL(500), fmtBRL(610), ""]);
   });
 
   it("respects productFilter: narrows to the selected products, same as the screen", async () => {

@@ -210,7 +210,7 @@ describe("useAreaPdfExport", () => {
     await act(async () => {
       await result.current.openPdfInNewTab();
     });
-    expect(autoTableCalls[1].body).toEqual([["", "Nenhum produto.", "", ""]]);
+    expect(autoTableCalls[1].body).toEqual([["", "Nenhum produto.", "", "", "", ""]]);
   });
 
   it("preserves the server ordering for val ascending/descending", async () => {
