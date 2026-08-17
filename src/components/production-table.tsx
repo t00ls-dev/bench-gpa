@@ -83,7 +83,7 @@ export function ProductionTable({
   isFetching: boolean;
   productFilter?: string[];
   subgrupoFilter?: string[];
-  onExportPDF?: () => void;
+  onExportPDF?: (products: ProductionForecastProduct[]) => void;
   pdfLoading?: boolean;
   pdfElapsed?: number;
 }) {
@@ -198,7 +198,7 @@ export function ProductionTable({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onExportPDF}
+                onClick={() => onExportPDF(pagedProducts)}
                 className="h-9 shrink-0"
                 disabled={pdfLoading}
                 title="Exporta o planejamento filtrado em PDF, com campo em branco pra anotar a quantidade produzida"

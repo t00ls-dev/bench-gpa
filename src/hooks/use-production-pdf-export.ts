@@ -5,7 +5,7 @@ import { fmtBRL, fmtBRShort } from "@/lib/utils";
 import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 import { useElapsedSeconds } from "@/hooks/use-elapsed-seconds";
 import { computeVisibleSecoes } from "@/lib/production-filter";
-import type { ProductionSecaoForecast } from "@/lib/api-types";
+import type { ProductionForecastProduct, ProductionSecaoForecast } from "@/lib/api-types";
 
 interface Params {
   secoes: ProductionSecaoForecast[];
@@ -14,6 +14,7 @@ interface Params {
   storeLabel: string;
   targetDate: string;
   lookbackOccurrences: number;
+  visibleProducts?: ProductionForecastProduct[];
 }
 
 type Row = CellInput[];
@@ -38,18 +39,16 @@ export function useProductionPdfExport({
   storeLabel,
   targetDate,
   lookbackOccurrences,
+  visibleProducts,
 }: Params) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const pdfElapsed = useElapsedSeconds(pdfLoading);
 
-  const openPdfInNewTab = async () => {
+  const openPdfInNewTab = async (products = visibleProducts) => {
     setPdfLoading(true);
     try {
-      const { visibleSecoes, totalGeral } = computeVisibleSecoes(
-        secoes,
-        productFilter,
-        subgrupoFilter,
-      );
+      const fallback = computeVisibleSecoes(secoes, productFilter, subgrupoFilter);
+      const rows = products ?? fallback.visibleSecoes.flatMap((section) => section.produtos);
 
       // Independent chunks -- fetched/parsed concurrently instead of one
       // after another.
@@ -74,29 +73,25 @@ export function useProductionPdfExport({
         mX,
         27,
       );
-      doc.text("Total geral: " + fmtBRL(totalGeral), mX, 31.5);
 
       // Flat rows only, matching the on-screen table. The exported PDF is
       // just the filtered product list with min/med/max columns.
       const body: Row[] = [];
-      for (const s of visibleSecoes) {
-        for (const p of s.produtos) {
-          body.push([
-            p.prodCode,
-            p.prodName,
-            fmtBRL(p.forecastMin),
-            fmtBRL(p.forecastVal),
-            fmtBRL(p.forecastMax),
-            "",
-          ]);
-        }
+      for (const p of rows) {
+        body.push([
+          p.prodCode,
+          p.prodName,
+          fmtBRL(p.forecastMin),
+          fmtBRL(p.forecastVal),
+          fmtBRL(p.forecastMax),
+        ]);
       }
 
       autoTable(doc, {
-        startY: 35,
+        startY: 31.5,
         margin: { left: mX, right: mX },
-        head: [["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX", "QTD PRODUZIDA"]],
-        body: body.length ? body : [["", "Nenhum produto.", "", "", "", ""]],
+        head: [["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX"]],
+        body: body.length ? body : [["", "Nenhum produto.", "", "", ""]],
         theme: "grid",
         styles: {
           font: "helvetica",
@@ -114,19 +109,13 @@ export function useProductionPdfExport({
           fontStyle: "bold",
           fontSize: 8,
           halign: "center",
-          // "QTD PRODUZIDA" doesn't fit that column's width on one line at
-          // this font size -- overrides the body's overflow:"hidden" (set
-          // per-column below) so the header wraps to two lines instead of
-          // being silently clipped.
-          overflow: "linebreak",
         },
         columnStyles: {
           0: { cellWidth: 16 },
-          1: { cellWidth: 74, overflow: "hidden" },
+          1: { cellWidth: 102, overflow: "hidden" },
           2: { cellWidth: 20, halign: "right" },
           3: { cellWidth: 22, halign: "right" },
           4: { cellWidth: 20, halign: "right" },
-          5: { cellWidth: 28 },
         },
         willDrawCell: (h) => {
           if (h.section === "body" && h.column.index === 1) {
