@@ -84,14 +84,15 @@ export function useProductionPdfExport({
           fmtBRL(p.forecastMin),
           fmtBRL(p.forecastVal),
           fmtBRL(p.forecastMax),
+          "",
         ]);
       }
 
       autoTable(doc, {
         startY: 31.5,
         margin: { left: mX, right: mX },
-        head: [["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX"]],
-        body: body.length ? body : [["", "Nenhum produto.", "", "", ""]],
+        head: [["PLU", "PRODUTO", "MÍN", "MÉDIA", "MÁX", "QTD PRODUZIDA"]],
+        body: body.length ? body : [["", "Nenhum produto.", "", "", "", ""]],
         theme: "grid",
         styles: {
           font: "helvetica",
@@ -109,13 +110,15 @@ export function useProductionPdfExport({
           fontStyle: "bold",
           fontSize: 8,
           halign: "center",
+          overflow: "linebreak",
         },
         columnStyles: {
           0: { cellWidth: 16 },
-          1: { cellWidth: 102, overflow: "hidden" },
+          1: { cellWidth: 74, overflow: "hidden" },
           2: { cellWidth: 20, halign: "right" },
           3: { cellWidth: 22, halign: "right" },
           4: { cellWidth: 20, halign: "right" },
+          5: { cellWidth: 28 },
         },
         willDrawCell: (h) => {
           if (h.section === "body" && h.column.index === 1) {

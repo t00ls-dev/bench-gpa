@@ -132,15 +132,17 @@ export function useAreaPdfExport({
       autoTable(doc, {
         startY: kpiEndY + 4,
         margin: { left: mX, right: mX },
-        head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA"]],
+        head: [["PLU", "PRODUTO", "VENDA", "DIAS S/ VENDA", "QTD", "VALIDADE"]],
         body: filtered.length
           ? filtered.map((p) => [
               p.prod_code,
               p.prod_name,
               fmtBRL(p.val),
               daysSinceLabel(p.lastSaleDate),
+              "",
+              "",
             ])
-          : [["", "Nenhum produto.", "", ""]],
+          : [["", "Nenhum produto.", "", "", "", ""]],
         theme: "grid",
         styles: {
           font: "helvetica",
@@ -161,9 +163,15 @@ export function useAreaPdfExport({
         },
         columnStyles: {
           0: { cellWidth: 16 },
-          1: { cellWidth: 102, overflow: "hidden" },
+          1: { cellWidth: 82, overflow: "hidden" },
           2: { cellWidth: 23, halign: "right" },
           3: { cellWidth: 24, halign: "right" },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 25 },
+        },
+        didParseCell: (h) => {
+          if (h.section === "body" && (h.column.index === 4 || h.column.index === 5))
+            h.cell.text = [];
         },
         willDrawCell: (h) => {
           if (h.section === "body" && h.column.index === 1) {
