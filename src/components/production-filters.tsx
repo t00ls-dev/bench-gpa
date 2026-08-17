@@ -48,20 +48,19 @@ export function ProductionFilters({
     [filterOptions],
   );
 
-  // Cascade: with no seção selected, every grupo is available; once a
-  // seção is picked, narrow to only the grupos that occur under it.
+  // Cascade: the forecast only becomes meaningful after a seção is
+  // picked, so grupos stay scoped to that seção instead of listing the
+  // whole store catalog.
   const grupoOptions = useMemo(() => {
-    const scoped = secao ? filterOptions.filter((o) => o.secao === secao) : filterOptions;
+    const scoped = secao ? filterOptions.filter((o) => o.secao === secao) : [];
     return [...new Set(scoped.map((o) => o.grupo).filter((g): g is string => g !== null))]
       .sort()
       .map((g) => ({ value: g, label: g }));
   }, [filterOptions, secao]);
 
-  // Same cascade, one level deeper: scoped by seção and/or grupo when
-  // selected.
+  // Same idea one level deeper, no seção means no subgrupo scope yet.
   const subgrupoOptions = useMemo(() => {
-    let scoped = filterOptions;
-    if (secao) scoped = scoped.filter((o) => o.secao === secao);
+    let scoped = secao ? filterOptions.filter((o) => o.secao === secao) : [];
     if (grupos.length > 0)
       scoped = scoped.filter((o) => o.grupo !== null && grupos.includes(o.grupo));
     return [...new Set(scoped.map((o) => o.subgrupo).filter((sg): sg is string => sg !== null))]
