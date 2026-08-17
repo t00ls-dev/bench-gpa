@@ -67,13 +67,13 @@ function ProductionPage() {
   });
 
   const forecastFn = useServerFn(getProductionForecast);
-  const { data, isFetching, isError, error } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["production-forecast", storeCode, targetDate, secao, grupos],
     queryFn: () =>
       forecastFn({
         data: { storeCode: storeCode!, targetDate: targetDate!, secao, grupos },
       }),
-    enabled: !!storeCode && !!targetDate,
+    enabled: !!storeCode && !!targetDate && !!secao,
     staleTime: QUERY_STALE_CORE,
     placeholderData: (prev) => prev,
   });
@@ -115,17 +115,15 @@ function ProductionPage() {
 
   return (
     <div>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-            <ClipboardList className="size-7 text-primary shrink-0" /> Previsão de Venda
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Venda esperada por produto de Perecíveis, numa loja, para um dia futuro (ou já passado,
-            pra conferência). Baseado na média das últimas ocorrências do mesmo dia da semana antes
-            dessa data.
-          </p>
-        </div>
+      <header className="mb-6">
+        <h1 className="font-display flex items-center gap-2 text-3xl font-bold">
+          <ClipboardList className="size-7 shrink-0 text-primary" /> Previsão de Venda
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Venda esperada por produto de Perecíveis, numa loja, para um dia futuro (ou já passado,
+          pra conferência). Baseado na média das últimas ocorrências do mesmo dia da semana antes
+          dessa data.
+        </p>
       </header>
 
       <ProductionFilters
@@ -150,18 +148,28 @@ function ProductionPage() {
         onProductFilterChange={(v) => patch({ productFilter: v })}
       />
 
-      {!storeCode || !targetDate ? (
+      {!storeCode || !targetDate || !secao ? (
         <div className="kpi-card px-3 py-6 text-center text-sm text-muted-foreground">
-          Selecione uma loja e um dia para ver a previsão.
+          Selecione ao menos uma Loja e uma Seção para iniciar a previsão.
         </div>
       ) : isError ? (
-        <div className="kpi-card px-3 py-6 text-center text-sm text-destructive">
-          {error instanceof Error ? error.message : "Erro ao carregar a previsão."}
+        <div className="kpi-card px-3 py-6 text-center">
+          <p className="text-sm text-destructive mb-3">
+            Não foi possível carregar a previsão:{" "}
+            {error instanceof Error ? error.message : "erro desconhecido"}.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : (
         <>
           {data && (
-            <p className="mb-2 text-xs text-muted-foreground">
+            <p className="mb-4 text-sm text-muted-foreground">
               Com base nas últimas {data.lookbackOccurrences} ocorrências deste dia da semana.
             </p>
           )}

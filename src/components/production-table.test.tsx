@@ -57,7 +57,7 @@ const SECOES: ProductionSecaoForecast[] = [
 describe("ProductionTable", () => {
   it("shows the flat table header and the new title", () => {
     render(<ProductionTable secoes={SECOES} isFetching={false} />);
-    expect(screen.getByText("Previsão de venda")).toBeInTheDocument();
+    expect(screen.getByText("Produtos da previsão")).toBeInTheDocument();
     expect(screen.getByText("PLU")).toBeInTheDocument();
     expect(screen.getByText("Produto")).toBeInTheDocument();
     expect(screen.getByText("Mín")).toBeInTheDocument();

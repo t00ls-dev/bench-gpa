@@ -45,7 +45,7 @@ export function ProductionTable({
   return (
     <div className="kpi-card overflow-hidden">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-medium">Previsão de venda</span>
+        <span className="text-sm font-medium">Produtos da previsão</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-2 text-sm font-semibold">
             {isFetching && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
