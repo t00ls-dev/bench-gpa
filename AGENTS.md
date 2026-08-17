@@ -153,7 +153,7 @@ Depois de modificar, validar:
 
 - Lint (`bun run lint`)
 - Type-check (`bun run typecheck`)
-- Testes (`bun run check` roda lint, typecheck e test)
+- Testes (`bun run check` roda lint e test; type-check é separado)
 - Build (`bun run build` antes de finalizar qualquer sessão com mudança de
   código)
 - Funcionamento. Ver skill `run` para rodar a aplicação de verdade
@@ -170,28 +170,28 @@ em vez de commit direto em `main`.
 - Commits que alteram schema de DB ou auth exigem migração documentada em
   `scripts/migrations/`
 - Prefira múltiplos commits pequenos e atômicos a um grande
-- CI/CD (`.github/workflows/ci.yml`) roda lint, typecheck, test, build e
-  schema-check antes de liberar o deploy: o gate é a própria CI, não um
-  job separado
+- CI/CD (`.github/workflows/ci.yml`) usa os jobs separados `ci` (lint,
+  typecheck, test e build) e `schema-check` como gates do deploy
 - PM2 roda em `fork`/1 instância (não `cluster`): a VPS tem 1 núcleo físico
   só, então uma segunda instância nunca teve paralelismo de CPU real pra
   entregar, só dobrava o consumo de memória numa máquina de 1,9GB já
   compartilhada com outros sites. Cluster mode foi tentado de 04 a
   06/08/2026 só pelo reload gradual do PM2 (mais perto de zero-downtime),
   mas causou incidentes reais de produção (ver `docs/medicao-performance.md`,
-  entradas de 08/06) sem entregar o zero-downtime completo — foi revertido.
+  entradas de 08/06) sem entregar o zero-downtime completo. Foi revertido.
   Não reabrir sem medir de novo, e só se a VPS ganhar mais núcleos.
   **Gotcha**: `pm2 startOrReload`/`reload` nunca aplica mudança de
   `instances`/`exec_mode` num app já rodando, só recarrega código/env dos
-  workers existentes — mudar topologia exige `pm2 delete` + `pm2 start`
+  workers existentes. Mudar topologia exige `pm2 delete` + `pm2 start`
   manual (com `cd` pro diretório do app antes, já que o `script` do
   `ecosystem.config.cjs` é caminho relativo).
 - Deploy é atômico: cada build vira uma release versionada em
-  `releases/<sha>/` no VPS, e o symlink `current` troca atomicamente para
-  ela (nunca sobrescreve o conteúdo de uma release em uso — nasceu de um
+  `releases/<timestamp>-<sha-curto>/` no VPS, e o symlink `current` troca
+  atomicamente para ela (nunca sobrescreve o conteúdo de uma release em uso; nasceu de um
   bug do cluster mode, mas o padrão vale independente do modo de execução
   atual). Se o health-check pós-reload do PM2 falhar, o workflow reverte
-  sozinho o symlink para a release anterior
+  sozinho o symlink para a release anterior. Após o health-check, somente
+  as cinco releases mais recentes são mantidas
 - Deploy real é CI Actions para a VPS Hestia (`sv1.t00ls.dev`,
   `gpa.t00ls.dev`). Não há PaaS
 
@@ -200,7 +200,7 @@ em vez de commit direto em `main`.
 ## Padrões de código
 
 - **TypeScript**: strict mode, sem `any`, sem `@ts-ignore`/`@ts-expect-error`.
-  Fixo em `^6.0.3` de propósito: `typescript-eslint` (8.66.0 no momento)
+  Fixo em `^6.0.3` de propósito: `typescript-eslint` (8.67.0 no momento)
   recusa rodar sob TS 7.0, e o suporte upstream está longe
   ([typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940),
   "many months away from being stable" segundo os mantenedores). Bump pra
@@ -214,8 +214,7 @@ em vez de commit direto em `main`.
   (`../../`)
 - **Arquivo**: uma responsabilidade por arquivo
 - **Nomes**: arquivos em kebab-case, exports nomeados. Exceção: páginas
-  (`.page.tsx`) usam `export default function` (exigência do TanStack
-  Router)
+  (`.page.tsx`) usam export default (exigência do TanStack Router)
 
 ### Idioma
 
@@ -243,7 +242,7 @@ planilha de exportação da GPA (`NOM_DEPTO | NOM_SECAO | NOM_GRUPO |
 NOM_SUBGRUPO | NOM_PROD | VAL_VDA`, ver comentário em
 `scripts/migrate-schema.sql`). Traduzir criaria uma camada permanente de
 tradução mental entre o que a planilha manda e o que o banco guarda, sem
-ganho real, tocando 9 stored procedures com histórico documentado de
+ganho real, tocando 10 stored procedures com histórico documentado de
 regressão de performance (ver
 `docs/plano-padronizacao-nomenclatura-ingles-2026-08-05.md`). Decisão do
 usuário, 2026-08-05: não renomear.

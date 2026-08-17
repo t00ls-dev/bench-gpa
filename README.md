@@ -19,7 +19,7 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 | Paleta de comandos | cmdk                                                                         |
 | Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                                |
 | CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
-| Segurança          | CSP nonce, HSTS, rate limiting sliding window (4 tiers por IP + 1 por conta) |
+| Segurança          | CSP nonce, HSTS, rate limiting em janela fixa (4 tiers por IP + 1 por conta) |
 
 ## Pré-requisitos
 
@@ -52,18 +52,19 @@ bun run lint
 
 ## Rotas
 
-| Rota            | Path               | Auth  | Descrição                                                 |
-| --------------- | ------------------ | ----- | --------------------------------------------------------- |
-| Login           | `/auth`            | Não   | Login usuário ou matrícula + senha, Turnstile CAPTCHA     |
-| Primeiro acesso | `/first-access`    | Não   | Define a senha inicial (usuário ou matrícula), auto-login |
-| Trocar senha    | `/change-password` | Sim   | Troca voluntária ou forçada (senha expirada há 30+ dias)  |
-| Dashboard       | `/`                | Sim   | KPIs, evolução diária, top lojas, rankings, PDF export    |
-| Produto         | `/product`         | Sim   | Análise de produto com weekday-aware, PDF export          |
-| Área            | `/area`            | Sim   | Drill-down hierárquico, tabela virtualizada, PDF export   |
-| Previsão de Venda | `/forecast`      | Sim   | Venda esperada por produto de Perecíveis numa loja/dia, PDF export |
-| Upload          | `/upload`          | Admin | Upload de planilhas XLSX                                  |
-| Admin           | `/admin`           | Admin | Gestão de usuários                                        |
-| Como usar       | `/howto`           | Sim   | Guia do sistema, atalhos, exportação                      |
+| Rota              | Path               | Auth  | Descrição                                                              |
+| ----------------- | ------------------ | ----- | ---------------------------------------------------------------------- |
+| Login             | `/auth`            | Não   | Login usuário ou matrícula + senha, Turnstile CAPTCHA                  |
+| Primeiro acesso   | `/first-access`    | Não   | Define a senha inicial (usuário ou matrícula), auto-login              |
+| Trocar senha      | `/change-password` | Sim   | Troca voluntária ou forçada (senha expirada há 30+ dias)               |
+| Dashboard         | `/`                | Sim   | KPIs, evolução diária, top lojas e rankings                            |
+| Produto           | `/product`         | Sim   | Análise de produto com weekday-aware                                   |
+| Área              | `/area`            | Sim   | Drill-down hierárquico, tabela virtualizada e PDF export               |
+| Previsão de Venda | `/forecast`        | Sim   | Venda esperada por produto de Perecíveis numa loja/dia, com PDF export |
+| Upload            | `/upload`          | Admin | Upload de planilhas XLSX                                               |
+| Admin             | `/admin`           | Admin | Gestão de usuários                                                     |
+| Documentação      | `/admin/docs`      | Admin | Documentação interna                                                   |
+| Como usar         | `/howto`           | Sim   | Guia do sistema, atalhos e exportação                                  |
 
 ## Importação de Dados
 
@@ -104,21 +105,24 @@ comandos. As crons ativas são a purga e a atualização de produtos/filtros:
 30 3 * * *   bun run cli:refresh-universe >> logs/refresh-universe.log 2>&1  # produtos + hierarquia de filtros (03h30, após a purga)
 ```
 
-Instalada via `bash scripts/setup-crons.sh` (fonte da verdade das crons).
+Em ambientes standalone, as crons são instaladas via
+`bash scripts/setup-crons.sh`. Em produção, a fonte da verdade é o cron do
+HestiaCP (`/usr/local/hestia/data/users/admin/cron.conf`); o script não deve ser
+executado na VPS de produção.
 
 ## Arquitetura
 
 - **Auth**: JWT próprio (bcrypt + jsonwebtoken), login por username ou matrícula, + Turnstile CAPTCHA (fail-closed). Rate limiting: 10/min IP (tier Auth) + 10/15min por conta (chave = id resolvido, não a string digitada).
-- **Rate limiting**: Sliding window in-memory por IP + global. 4 tiers por IP: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min), mais um balde independente por conta no login (10/15min, chaveado pelo id do usuário resolvido), contra credential stuffing distribuído por vários IPs.
-- **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard e rankings (60s), hierarquia área e opções de filtro (5min), datas importadas (60s), role (5min/user).
+- **Rate limiting**: Janela fixa em memória por IP + global, iniciada na primeira requisição de cada chave. 4 tiers por IP: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min), mais um balde independente por conta no login (10/15min, chaveado pelo id do usuário resolvido), contra credential stuffing distribuído por vários IPs.
+- **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard e rankings (60s), hierarquia área e opções de filtro (5min), datas importadas (60s), veredito de administrador (5min/usuário).
 - **PWA**: `manifest.json` + ícones (favicon, apple-touch-icon, maskable) versionados com o hash do commit, cache-busting automático a cada deploy, independente do cache do Cloudflare. Instalável em mobile; não funciona offline (dados vêm sempre do servidor).
-- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile, rate limit em todas as server functions autenticadas (`requireRateLimit`, hoje 27 usos em 8 arquivos `*.functions.ts`).
+- **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile e rate limit nas server functions autenticadas via `requireRateLimit`.
 - **Auditoria & monitoramento**: `audit_log` registra ações sensíveis (login ok/falho, logout, primeiro acesso ok/falho, troca de senha própria, criação/alteração de usuário, reset de senha por admin, atualização de identificadores, purga); IP resolvido atrás do Cloudflare (`CF-Connecting-IP`). `cron_heartbeat` grava a última execução de cada cron (`purge`, `refresh-universe`) com status e duração, sinalizando atrasos. Ambos visíveis em `/admin` → aba **Auditoria**.
 - **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Sem cron: pela tela `/upload` ou por `cli:import`/`cli:watch`, sob demanda (ver seção "Importação de Dados" acima).
 - **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). `cli:watch` usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria: evita o loop importar→purgar→reimportar.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
-- **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Dashboard, Produto, Área, Previsão de Venda).
-- **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → nova release em `releases/<sha>/`, symlink `current` trocado atomicamente, reload PM2 (`fork`/1 instância — VPS tem 1 núcleo só, cluster mode foi tentado e revertido em 2026-08-06) com rollback automático. Não há PaaS. Docs em `docs/`.
+- **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Área e Previsão de Venda).
+- **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → nova release em `releases/<timestamp>-<sha-curto>/`, symlink `current` trocado atomicamente, reload PM2 (`fork`/1 instância, VPS tem 1 núcleo só, cluster mode foi tentado e revertido em 2026-08-06) com rollback automático. As cinco releases mais recentes são mantidas. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
 
 ## Estrutura
