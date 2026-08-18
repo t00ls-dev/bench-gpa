@@ -5,6 +5,7 @@ import { parseAnyWorkbook } from "../src/lib/xlsx-parser";
 import { STAGING_COLS, toStagingRow } from "../src/lib/staging-row";
 import db from "../src/lib/db";
 import { IMPORT_CHUNK_SIZE } from "../src/lib/import-config";
+import { parseImportChunkSize } from "../src/lib/import-cli";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -14,7 +15,7 @@ Usage: bun run scripts/import.ts <file.xlsx> [options]
 
 Options:
   --user-id UUID     ID of the user performing the import
-  --chunk-size N     Rows per batch (default ${IMPORT_CHUNK_SIZE})
+  --chunk-size N     Rows per batch, 1-${IMPORT_CHUNK_SIZE} (default ${IMPORT_CHUNK_SIZE})
   --help             Show this message
 `);
     process.exit(0);
@@ -22,7 +23,7 @@ Options:
 
   const filePath = args.find((a) => !a.startsWith("--"))!;
   const userId = extractArg(args, "--user-id");
-  const chunkSize = parseInt(extractArg(args, "--chunk-size") ?? String(IMPORT_CHUNK_SIZE), 10);
+  const chunkSize = parseImportChunkSize(args);
 
   return { filePath, userId, chunkSize };
 }

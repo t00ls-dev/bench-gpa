@@ -3,12 +3,24 @@
 ## Status
 
 Análise concluída em 18/08/2026 sobre o commit `d1cc783` e a release de
-produção `20260818113700-d1cc783`.
+produção `20260818113700-d1cc783`. Os achados abaixo preservam o estado
+observado naquele ponto.
 
-**Decisão do usuário em 18/08/2026:** não dedicar atenção às correções neste
-momento. Este documento preserva contexto e evidências para uma decisão
-futura. Nenhum achado abaixo representa autorização para alterar código,
-nginx, firewall, Cloudflare ou dados de produção.
+Em 18/08/2026, o usuário autorizou um lote de correções de baixo risco,
+publicado no commit `1cd1f04` e na release `20260818195445-1cd1f04`:
+
+- [x] Aplicar no backend os limites de linhas, chunks, lojas e produtos.
+- [x] Limitar campos de autenticação e limpar o balde por conta após sucesso.
+- [x] Limpar PDFs expirados no boot e periodicamente.
+- [x] Fazer o teste de limpeza do limiter exercitar o timer real.
+
+Na revisão subsequente do contrato de importação:
+
+- [x] Validar `--chunk-size` no CLI entre 1 e 1.000.
+
+Continuam adiados os ajustes de infraestrutura, `Retry-After`, concorrência de
+uploads e capacidade acumulada de PDFs. Nenhum achado restante representa
+autorização para alterar nginx, firewall, Cloudflare ou dados de produção.
 
 ## Escopo
 
