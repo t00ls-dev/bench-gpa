@@ -1,27 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
-import { z } from "zod";
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import { asArray, asRecord, str, num, dateTimeStr } from "./api-types";
-import { SaleRowSchema } from "./schemas";
+import { BeginImportSchema, FinalizeImportSchema, InsertSalesChunkSchema } from "./schemas";
 import { STAGING_COLS, toStagingRow } from "./staging-row";
 import { CACHE_TTL_SHORT } from "./cache";
 
 export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit("upload")])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        sale_date: z.string(),
-        batch_id: z.string(),
-        total_rows: z.number().int().nonnegative(),
-        stores: z.array(z.object({ store_code: z.string(), store_name: z.string() })),
-        products: z.array(z.object({ prod_code: z.string(), prod_name: z.string() })),
-      })
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => BeginImportSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
@@ -49,11 +38,7 @@ export const beginImport = createServerFn({ method: "POST" })
 
 export const insertSalesChunk = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit("upload")])
-  .inputValidator((d: unknown) =>
-    z
-      .object({ sale_date: z.string(), batch_id: z.string(), rows: z.array(SaleRowSchema) })
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => InsertSalesChunkSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
@@ -102,15 +87,7 @@ export const getImportedDates = createServerFn({ method: "GET" })
 
 export const finalizeImport = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit("upload")])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        sale_date: z.string(),
-        batch_id: z.string(),
-        row_count: z.number().int().nonnegative(),
-      })
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => FinalizeImportSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 

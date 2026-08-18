@@ -119,10 +119,24 @@ describe("RateLimiter", () => {
     smallLimiter.destroy();
   });
 
-  it("cleanup removes expired entries", () => {
+  it("the cleanup timer removes expired entries without another check", () => {
     limiter.check("1.2.3.4");
-    vi.advanceTimersByTime(60_001);
-    expect(limiter.check("1.2.3.4").allowed).toBe(true);
+    const windows = Reflect.get(limiter, "windows") as Map<string, unknown>;
+    expect(windows.size).toBe(1);
+
+    vi.advanceTimersByTime(60_000);
+    expect(windows.size).toBe(0);
+  });
+
+  it("resets one key without affecting other keys", () => {
+    limiter.check("1.2.3.4");
+    limiter.check("5.6.7.8");
+
+    limiter.reset("1.2.3.4");
+
+    const windows = Reflect.get(limiter, "windows") as Map<string, unknown>;
+    expect(windows.has("1.2.3.4")).toBe(false);
+    expect(windows.has("5.6.7.8")).toBe(true);
   });
 });
 

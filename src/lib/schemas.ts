@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  IMPORT_CHUNK_SIZE,
+  IMPORT_MAX_PRODUCTS,
+  IMPORT_MAX_ROWS,
+  IMPORT_MAX_STORES,
+} from "./import-config";
 
 const DateRangeSchema = z.object({
   dateFrom: z.string().optional().nullable(),
@@ -98,6 +104,7 @@ export const UsernameSchema = z
   .string()
   .trim()
   .toLowerCase()
+  .max(60)
   .regex(
     /^(?!\d+$)[a-z0-9._-]+$/,
     "Username deve conter letras, números, ._- e não pode ser só dígitos",
@@ -107,20 +114,59 @@ export const UsernameSchema = z
 export const EmployeeIdSchema = z
   .string()
   .trim()
+  .max(30)
   .regex(/^\d+$/, "Matrícula deve conter só dígitos");
 
-export const PasswordSchema = z.string().min(8, "Senha deve ter ao menos 8 caracteres").max(128);
+const MAX_AUTH_IDENTIFIER_LENGTH = 60;
+const MAX_PASSWORD_LENGTH = 128;
+
+export const AuthIdentifierSchema = z.string().trim().min(1).max(MAX_AUTH_IDENTIFIER_LENGTH);
+export const AuthPasswordInputSchema = z.string().min(1).max(MAX_PASSWORD_LENGTH);
+export const PasswordSchema = z
+  .string()
+  .min(8, "Senha deve ter ao menos 8 caracteres")
+  .max(MAX_PASSWORD_LENGTH);
 
 export const SaleRowSchema = z.object({
-  store_code: z.string(),
-  store_name: z.string(),
-  depto: z.string().nullable(),
-  secao: z.string().nullable(),
-  grupo: z.string().nullable(),
-  subgrupo: z.string().nullable(),
-  prod_code: z.string(),
-  prod_name: z.string(),
+  store_code: z.string().max(20),
+  store_name: z.string().max(255),
+  depto: z.string().max(100).nullable(),
+  secao: z.string().max(100).nullable(),
+  grupo: z.string().max(100).nullable(),
+  subgrupo: z.string().max(100).nullable(),
+  prod_code: z.string().max(20),
+  prod_name: z.string().max(255),
   val_vda: z.number(),
+});
+
+const ImportStoreSchema = z.object({
+  store_code: z.string().max(20),
+  store_name: z.string().max(255),
+});
+
+const ImportProductSchema = z.object({
+  prod_code: z.string().max(20),
+  prod_name: z.string().max(255),
+});
+
+export const BeginImportSchema = z.object({
+  sale_date: z.string(),
+  batch_id: z.string().max(36),
+  total_rows: z.number().int().nonnegative().max(IMPORT_MAX_ROWS),
+  stores: z.array(ImportStoreSchema).max(IMPORT_MAX_STORES),
+  products: z.array(ImportProductSchema).max(IMPORT_MAX_PRODUCTS),
+});
+
+export const InsertSalesChunkSchema = z.object({
+  sale_date: z.string(),
+  batch_id: z.string().max(36),
+  rows: z.array(SaleRowSchema).min(1).max(IMPORT_CHUNK_SIZE),
+});
+
+export const FinalizeImportSchema = z.object({
+  sale_date: z.string(),
+  batch_id: z.string().max(36),
+  row_count: z.number().int().nonnegative().max(IMPORT_MAX_ROWS),
 });
 
 export const SingleSlugSchema = z.object({ slug: z.string().min(1) });

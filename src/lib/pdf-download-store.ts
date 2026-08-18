@@ -20,13 +20,10 @@ import { join } from "node:path";
  * manager falls back to the blob URL's own UUID as the name. See Mozilla
  * Bugzilla #1282407).
  *
- * On disk, not in memory: PM2 in cluster mode runs more than one Node
- * process serving the same port, and the POST that writes can land on a
- * different worker than the GET that fetches. Since the two only need to
- * see each other within the same host (not across machines), a shared
- * directory on local disk solves it without needing Redis or writing the
- * entire PDF as a BLOB in the database (60s of transient data, no reason
- * to weigh down MariaDB's binlog).
+ * On disk, not in memory: these buffers can reach 50 MB and only need to
+ * survive for 60s on the same host. The local temporary directory keeps
+ * them out of the Node heap without needing Redis or writing transient
+ * data as BLOBs in MariaDB.
  *
  * Deliberately NOT single-use: it used to be (a real bug, fixed on
  * 08/01/2026): Firefox makes more than one request to the download URL
@@ -36,8 +33,8 @@ import { join } from "node:path";
  * (60s) + per-user isolation are already enough protection; a token is
  * only valid for whoever generated it and only for a short time, it
  * doesn't also need to die on the first read. `takePdf` never deletes a
- * file: only `cleanupExpired` (called on every `storePdf`) removes what's
- * already past its TTL.
+ * file: only `cleanupExpired` (on boot, periodically, and on `storePdf`)
+ * removes what's already past its TTL.
  */
 
 interface Meta {
@@ -77,7 +74,7 @@ function cleanupExpired(): void {
     let expired: boolean;
     try {
       const meta = JSON.parse(readFileSync(metaPath(token), "utf8")) as Meta;
-      expired = now > meta.expiresAt;
+      expired = now >= meta.expiresAt;
     } catch {
       // meta corrupted or disappeared mid-read: treat as expired, don't let
       // orphan garbage pile up in the directory.
@@ -96,6 +93,10 @@ function cleanupExpired(): void {
     }
   }
 }
+
+cleanupExpired();
+const cleanupTimer = setInterval(cleanupExpired, TTL_MS);
+if (cleanupTimer.unref) cleanupTimer.unref();
 
 export function storePdf(userId: string, bytes: Uint8Array, filename: string): string {
   cleanupExpired();
@@ -118,7 +119,7 @@ export function takePdf(
   } catch {
     return undefined;
   }
-  if (meta.userId !== userId || Date.now() > meta.expiresAt) return undefined;
+  if (meta.userId !== userId || Date.now() >= meta.expiresAt) return undefined;
 
   try {
     return { bytes: new Uint8Array(readFileSync(binPath(token))), filename: meta.filename };

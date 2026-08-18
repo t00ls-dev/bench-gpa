@@ -82,7 +82,7 @@ vi.mock("jsonwebtoken", () => ({ default: { sign: vi.fn(), verify: vi.fn() } }))
 vi.mock("./turnstile", () => ({ verifyTurnstile: vi.fn(), isTurnstileEnabled: vi.fn() }));
 vi.mock("./rate-limit", () => ({
   authLimiter: { check: vi.fn() },
-  authAccountLimiter: { check: vi.fn() },
+  authAccountLimiter: { check: vi.fn(), reset: vi.fn() },
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 vi.mock("./rate-limit.middleware", () => ({
@@ -196,6 +196,7 @@ describe("login", () => {
       "jwt-token",
       expect.objectContaining({ httpOnly: true, path: "/", sameSite: "lax", maxAge: 3600 }),
     );
+    expect(authAccountLimiter.reset).toHaveBeenCalledWith("user:u1");
   });
 
   it("with rememberMe, issues a 7-day persistent session", async () => {
@@ -239,6 +240,7 @@ describe("login", () => {
       "Usuário/matrícula ou senha inválidos",
     );
     expect(setCookie).not.toHaveBeenCalled();
+    expect(authAccountLimiter.reset).not.toHaveBeenCalled();
   });
 
   it("throws when user is inactive", async () => {
@@ -389,7 +391,7 @@ describe("logout", () => {
     expect(deleteCookie).toHaveBeenCalledWith("session", { path: "/" });
   });
 
-  it("revoga o token no servidor incrementando token_version", async () => {
+  it("revokes the server-side token by incrementing token_version", async () => {
     await logout();
     expect(db.query).toHaveBeenCalledWith(
       "UPDATE users SET token_version = token_version + 1 WHERE id = ?",
@@ -436,6 +438,7 @@ describe("setInitialPassword", () => {
       ["$2b$12$newhash", "u1"],
     );
     expect(setCookie).toHaveBeenCalled();
+    expect(authAccountLimiter.reset).toHaveBeenCalledWith("user:u1");
   });
 
   it("also resolves by employee_id, same resolution as login", async () => {

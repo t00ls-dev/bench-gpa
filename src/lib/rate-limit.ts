@@ -58,6 +58,10 @@ export class RateLimiter {
     };
   }
 
+  reset(ip: string): void {
+    this.windows.delete(ip);
+  }
+
   private cleanup() {
     const now = Date.now();
     for (const [key, entry] of this.windows) {

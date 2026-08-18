@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// The state is now a fixed directory on disk (needs to be the same path
-// across processes/workers, see the comment in pdf-download-store.ts), no
-// longer a module-level Map: vi.resetModules() alone no longer isolates
-// one test from another, so it clears the directory before each test.
+// The state is a fixed directory on disk, no longer a module-level Map:
+// vi.resetModules() alone no longer isolates one test from another, so the
+// directory is cleared before each test.
 // Still keeps resetModules()/dynamic import, for consistency with the
 // project's pattern for singleton module state.
 const DIR = join(tmpdir(), "bench-gpa-pdf-downloads");
@@ -78,6 +77,35 @@ describe("pdf-download-store", () => {
     expect(takePdf(token, "user-1")).toBeUndefined();
   });
 
+  it("periodically removes expired files without another store or take", async () => {
+    const { storePdf } = await freshStore();
+    const token = storePdf("user-1", BYTES, "relatorio.pdf");
+    const bytesPath = join(DIR, `${token}.bin`);
+    const metadataPath = join(DIR, `${token}.meta.json`);
+    expect(existsSync(bytesPath)).toBe(true);
+    expect(existsSync(metadataPath)).toBe(true);
+
+    vi.advanceTimersByTime(60_000);
+
+    expect(existsSync(bytesPath)).toBe(false);
+    expect(existsSync(metadataPath)).toBe(false);
+  });
+
+  it("removes files that were already expired when the module starts", async () => {
+    const token = "00000000-0000-4000-8000-000000000001";
+    mkdirSync(DIR, { recursive: true });
+    writeFileSync(join(DIR, `${token}.bin`), BYTES);
+    writeFileSync(
+      join(DIR, `${token}.meta.json`),
+      JSON.stringify({ userId: "user-1", filename: "old.pdf", expiresAt: Date.now() - 1 }),
+    );
+
+    await freshStore();
+
+    expect(existsSync(join(DIR, `${token}.bin`))).toBe(false);
+    expect(existsSync(join(DIR, `${token}.meta.json`))).toBe(false);
+  });
+
   it("stays valid within the TTL", async () => {
     const { storePdf, takePdf } = await freshStore();
     const token = storePdf("user-1", BYTES, "relatorio.pdf");
@@ -94,9 +122,7 @@ describe("pdf-download-store", () => {
     expect(takePdf(t2, "user-1")?.filename).toBe("b.pdf");
   });
 
-  // Covers the very reason for the change: two different "processes"
-  // (here, two module instances via separate dynamic import, without
-  // resetModules() between them) seeing the same token through disk.
+  // Separate module instances must see the same token through disk.
   it("a token written by one module instance is read by another", async () => {
     const store1 = await freshStore();
     const token = store1.storePdf("user-1", BYTES, "relatorio.pdf");

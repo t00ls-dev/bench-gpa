@@ -21,8 +21,11 @@
  */
 export const IMPORT_CHUNK_SIZE = 1000;
 
+/** Maximum spreadsheet size accepted by the browser before parsing. */
+export const IMPORT_MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 /**
- * Row cap per file, checked on the screen before starting.
+ * Row cap per file, checked on the screen and by every server import stage.
  *
  * This is a sanity barrier, not a technical limit: real daily spreadsheets
  * sit around 48k rows, so anything above this is a sign of the wrong file
@@ -30,3 +33,9 @@ export const IMPORT_CHUNK_SIZE = 1000;
  * upfront than to discover it partway through a multi-minute import.
  */
 export const IMPORT_MAX_ROWS = 200_000;
+
+// Both ceilings are intentionally well above production's current shape
+// (~13.6k products and far fewer than 1k stores), while still bounding the
+// metadata sent in beginImport independently from the row chunks.
+export const IMPORT_MAX_STORES = 1_000;
+export const IMPORT_MAX_PRODUCTS = 50_000;

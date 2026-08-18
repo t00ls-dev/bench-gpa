@@ -12,7 +12,7 @@ import { issueSession, resolveSession } from "./session";
 import { requireAuthAllowExpiredPassword } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { rejectRateLimit } from "./rate-limit-response";
-import { PasswordSchema } from "./schemas";
+import { AuthIdentifierSchema, AuthPasswordInputSchema, PasswordSchema } from "./schemas";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -49,8 +49,8 @@ export const login = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        identifier: z.string().trim().min(1),
-        password: z.string().min(1),
+        identifier: AuthIdentifierSchema,
+        password: AuthPasswordInputSchema,
         turnstileToken: z.string().optional(),
         // "Keep me signed in": fixed 7-day session instead of the normal one
         // (slides by activity, 24h cap). See src/lib/auth-config.ts.
@@ -108,9 +108,8 @@ export const login = createServerFn({ method: "POST" })
     // by employee_id for the SAME account doesn't reset the bucket. Account
     // not found falls back to a key by the raw identifier, keeping the same
     // coverage against brute-force of a nonexistent account.
-    const rlAccount = authAccountLimiter.check(
-      user ? `user:${user.id}` : `identifier:${identifier}`,
-    );
+    const accountRateKey = user ? `user:${user.id}` : `identifier:${identifier}`;
+    const rlAccount = authAccountLimiter.check(accountRateKey);
     if (!rlAccount.allowed) {
       await auditFail("excesso de tentativas na conta (rate limit)", user?.id, user?.username);
       rejectRateLimit(
@@ -138,6 +137,7 @@ export const login = createServerFn({ method: "POST" })
       await auditFail("senha incorreta", user.id, user.username);
       throw new Error("Usuário/matrícula ou senha inválidos.");
     }
+    authAccountLimiter.reset(accountRateKey);
     issueSession(
       { id: user.id, role: user.role, tokenVersion: user.token_version },
       data.rememberMe,
@@ -225,7 +225,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     refinePasswordsMatch(
       z.object({
-        identifier: z.string().trim().min(1),
+        identifier: AuthIdentifierSchema,
         turnstileToken: z.string().optional(),
         ...NewPasswordFields,
       }),
@@ -264,9 +264,8 @@ export const setInitialPassword = createServerFn({ method: "POST" })
     }[];
     const user = rows[0] ?? null;
 
-    const rlAccount = authAccountLimiter.check(
-      user ? `user:${user.id}` : `identifier:${identifier}`,
-    );
+    const accountRateKey = user ? `user:${user.id}` : `identifier:${identifier}`;
+    const rlAccount = authAccountLimiter.check(accountRateKey);
     if (!rlAccount.allowed) {
       rejectRateLimit(rlAccount, "Muitas tentativas. Aguarde alguns minutos.");
     }
@@ -291,6 +290,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
       hash,
       user.id,
     ]);
+    authAccountLimiter.reset(accountRateKey);
     // Auto-login: the user just proved possession of the identifier AND
     // chose their own password in the same request, requiring a fresh login
     // right after gains no security at all, just adds a round trip.
@@ -318,7 +318,7 @@ export const changePassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     refinePasswordsMatch(
       z.object({
-        currentPassword: z.string().min(1),
+        currentPassword: AuthPasswordInputSchema,
         ...NewPasswordFields,
       }),
     ).parse(d),

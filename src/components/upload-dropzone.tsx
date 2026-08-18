@@ -2,8 +2,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Upload, Loader2 } from "lucide-react";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
+import { IMPORT_MAX_FILE_BYTES } from "@/lib/import-config";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_MB = IMPORT_MAX_FILE_BYTES / (1024 * 1024);
 
 interface FileEntry {
   file: File;
@@ -68,7 +69,7 @@ export function UploadDropzone({
           <Upload className="mb-3 size-8 text-muted-foreground" />
           <div className="font-medium">Arraste arquivos ou clique para selecionar</div>
           <div className="mt-1 text-xs text-muted-foreground">
-            .xlsx, .xls (múltiplos arquivos, máx. 10 MB cada)
+            .xlsx, .xls (múltiplos arquivos, máx. {MAX_FILE_SIZE_MB} MB cada)
           </div>
         </>
       )}
@@ -81,11 +82,13 @@ export function UploadDropzone({
         className="sr-only"
         onChange={async (e) => {
           const selected = Array.from(e.target.files ?? []);
-          const oversized = selected.filter((f) => f.size > MAX_FILE_SIZE);
+          const oversized = selected.filter((f) => f.size > IMPORT_MAX_FILE_BYTES);
           if (oversized.length > 0) {
-            toast.error(`${oversized.length} arquivo(s) excedem o limite de 10 MB.`);
+            toast.error(
+              `${oversized.length} arquivo(s) excedem o limite de ${MAX_FILE_SIZE_MB} MB.`,
+            );
           }
-          const valid = selected.filter((f) => f.size <= MAX_FILE_SIZE);
+          const valid = selected.filter((f) => f.size <= IMPORT_MAX_FILE_BYTES);
           setParsing(true);
           const parsed: FileEntry[] = [];
           let parseErrors = 0;

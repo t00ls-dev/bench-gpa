@@ -4,9 +4,15 @@ import {
   AreaAnalysisSchema,
   UsernameSchema,
   EmployeeIdSchema,
+  AuthIdentifierSchema,
+  AuthPasswordInputSchema,
   PasswordSchema,
   ProductionForecastSchema,
+  BeginImportSchema,
+  InsertSalesChunkSchema,
+  FinalizeImportSchema,
 } from "./schemas";
+import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
 
 describe("FilterSchema", () => {
   it("parses valid input with defaults", () => {
@@ -68,6 +74,10 @@ describe("UsernameSchema", () => {
   it("rejects a character outside the charset", () => {
     expect(() => UsernameSchema.parse("joao@silva")).toThrow();
   });
+
+  it("rejects a value longer than the database column", () => {
+    expect(() => UsernameSchema.parse(`a${"b".repeat(60)}`)).toThrow();
+  });
 });
 
 describe("EmployeeIdSchema", () => {
@@ -81,6 +91,10 @@ describe("EmployeeIdSchema", () => {
 
   it("rejects a letter", () => {
     expect(() => EmployeeIdSchema.parse("123a5")).toThrow();
+  });
+
+  it("rejects a value longer than the database column", () => {
+    expect(() => EmployeeIdSchema.parse("1".repeat(31))).toThrow();
   });
 });
 
@@ -124,5 +138,88 @@ describe("PasswordSchema", () => {
 
   it("rejects short password", () => {
     expect(() => PasswordSchema.parse("1234567")).toThrow();
+  });
+});
+
+describe("authentication input schemas", () => {
+  it("bounds identifiers to the database column length", () => {
+    expect(AuthIdentifierSchema.parse("a".repeat(60))).toHaveLength(60);
+    expect(() => AuthIdentifierSchema.parse("a".repeat(61))).toThrow();
+  });
+
+  it("bounds login passwords without applying new-password complexity rules", () => {
+    expect(AuthPasswordInputSchema.parse("x")).toBe("x");
+    expect(AuthPasswordInputSchema.parse("a".repeat(128))).toHaveLength(128);
+    expect(() => AuthPasswordInputSchema.parse("a".repeat(129))).toThrow();
+  });
+});
+
+const saleRow = {
+  store_code: "1",
+  store_name: "Loja",
+  depto: null,
+  secao: null,
+  grupo: null,
+  subgrupo: null,
+  prod_code: "10",
+  prod_name: "Produto",
+  val_vda: 1,
+};
+
+describe("import input schemas", () => {
+  it("rejects a total above the maximum import size", () => {
+    expect(() =>
+      BeginImportSchema.parse({
+        sale_date: "2026-08-18",
+        batch_id: "batch",
+        total_rows: IMPORT_MAX_ROWS + 1,
+        stores: [],
+        products: [],
+      }),
+    ).toThrow();
+  });
+
+  it("bounds store metadata independently from sales rows", () => {
+    const store = { store_code: "1", store_name: "Loja" };
+    expect(() =>
+      BeginImportSchema.parse({
+        sale_date: "2026-08-18",
+        batch_id: "batch",
+        total_rows: 1,
+        stores: Array(IMPORT_MAX_STORES + 1).fill(store),
+        products: [],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects empty and oversized chunks", () => {
+    const input = { sale_date: "2026-08-18", batch_id: "batch" };
+    expect(() => InsertSalesChunkSchema.parse({ ...input, rows: [] })).toThrow();
+    expect(() =>
+      InsertSalesChunkSchema.parse({
+        ...input,
+        rows: Array(IMPORT_CHUNK_SIZE + 1).fill(saleRow),
+      }),
+    ).toThrow();
+  });
+
+  it("rejects row fields that exceed their database columns", () => {
+    expect(() =>
+      InsertSalesChunkSchema.parse({
+        sale_date: "2026-08-18",
+        batch_id: "batch",
+        rows: [{ ...saleRow, prod_name: "x".repeat(256) }],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a final row count above the import maximum", () => {
+    expect(() =>
+      FinalizeImportSchema.parse({
+        sale_date: "2026-08-18",
+        batch_id: "batch",
+        row_count: IMPORT_MAX_ROWS + 1,
+      }),
+    ).toThrow();
   });
 });
