@@ -30,7 +30,6 @@ export default defineConfig({
         "src/**/*.config.*",
         "src/router.tsx",
         "src/ssr.tsx",
-        "src/server.ts",
         "src/styles.css.ts",
       ],
       // Single source, shared with the summary generator -- see
