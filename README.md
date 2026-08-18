@@ -19,7 +19,7 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 | Paleta de comandos | cmdk                                                                         |
 | Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                                |
 | CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
-| Segurança          | CSP nonce, HSTS, rate limiting em janela fixa (4 tiers por IP + 1 por conta) |
+| Segurança          | CSP nonce, HSTS, rate limiting em janela fixa (7 tiers por IP + 1 por conta) |
 
 ## Pré-requisitos
 
@@ -113,7 +113,7 @@ executado na VPS de produção.
 ## Arquitetura
 
 - **Auth**: JWT próprio (bcrypt + jsonwebtoken), login por username ou matrícula, + Turnstile CAPTCHA (fail-closed). Rate limiting: 10/min IP (tier Auth) + 10/15min por conta (chave = id resolvido, não a string digitada).
-- **Rate limiting**: Janela fixa em memória por IP + global, iniciada na primeira requisição de cada chave. 4 tiers por IP: SSR (300/min), API (300/min), Upload (200/min), Auth (10/min), mais um balde independente por conta no login (10/15min, chaveado pelo id do usuário resolvido), contra credential stuffing distribuído por vários IPs.
+- **Rate limiting**: Janela fixa em memória por IP + global, iniciada na primeira requisição de cada chave. 7 tiers por IP: SSR (300/min), entrada de server functions (300/min), API (300/min), Upload (250/min), Auth (10/min), PDF (10/min) e monitoramento (60/min), mais um balde independente por conta no login (10/15min, chaveado pelo id do usuário resolvido), contra credential stuffing distribuído por vários IPs. Respostas bloqueadas usam HTTP `429` e `Retry-After`.
 - **Cache**: SimpleCache com TTL + dedup in-flight. Dashboard e rankings (60s), hierarquia área e opções de filtro (5min), datas importadas (60s), veredito de administrador (5min/usuário).
 - **PWA**: `manifest.json` + ícones (favicon, apple-touch-icon, maskable) versionados com o hash do commit, cache-busting automático a cada deploy, independente do cache do Cloudflare. Instalável em mobile; não funciona offline (dados vêm sempre do servidor).
 - **Segurança**: CSP nonce (script-src nonce+strict-dynamic), HSTS, Turnstile e rate limit nas server functions autenticadas via `requireRateLimit`.

@@ -3,6 +3,12 @@ interface WindowEntry {
   resetAt: number;
 }
 
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+}
+
 export class RateLimiter {
   private windows = new Map<string, WindowEntry>();
   private globalWindows = new Map<string, WindowEntry>();
@@ -17,51 +23,33 @@ export class RateLimiter {
     if (this.cleanupTimer.unref) this.cleanupTimer.unref();
   }
 
-  /**
-   * The order of the two budgets matters: the per-IP ceiling is evaluated
-   * FIRST, and if it already fails, the request leaves without touching the
-   * global counter.
-   *
-   * Both counters used to be incremented at once, before any verdict: so
-   * the abuser's own rejections kept pushing the shared counter. With
-   * authLimiter (10/IP, 40 global), a single-IP curl loop was enough: the
-   * first 10 passed, from the 11th on they were rejected but kept adding
-   * up, and on reaching 41 login went down for EVERYONE: an attacker
-   * amplified to 100% of the user base, no botnet needed.
-   *
-   * With the short-circuit, an IP's maximum contribution to the global
-   * budget is maxPerIp. The global ceiling goes back to being what it
-   * should be: an aggregate-load circuit breaker, that only trips with
-   * traffic that's actually distributed.
-   */
-  check(ip: string): { allowed: boolean; remaining: number; resetAt: number } {
+  check(ip: string): RateLimitResult {
     const now = Date.now();
 
-    let ipEntry = this.windows.get(ip);
-    if (!ipEntry || now > ipEntry.resetAt) {
-      ipEntry = { count: 0, resetAt: now + this.windowMs };
-      this.windows.set(ip, ipEntry);
-    }
-    ipEntry.count++;
-
-    if (ipEntry.count > this.maxPerIp) {
-      return { allowed: false, remaining: 0, resetAt: ipEntry.resetAt };
-    }
-
     let gEntry = this.globalWindows.get("global");
-    if (!gEntry || now > gEntry.resetAt) {
+    if (!gEntry || now >= gEntry.resetAt) {
       gEntry = { count: 0, resetAt: now + this.windowMs };
       this.globalWindows.set("global", gEntry);
     }
-    gEntry.count++;
 
-    if (gEntry.count > this.maxGlobal) {
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: Math.max(ipEntry.resetAt, gEntry.resetAt),
-      };
+    // Reject before allocating a key. Otherwise a distributed flood grows
+    // the map for every blocked IP while the global window is saturated.
+    if (gEntry.count >= this.maxGlobal) {
+      return { allowed: false, remaining: 0, resetAt: gEntry.resetAt };
     }
+
+    let ipEntry = this.windows.get(ip);
+    if (!ipEntry || now >= ipEntry.resetAt) {
+      ipEntry = { count: 0, resetAt: now + this.windowMs };
+      this.windows.set(ip, ipEntry);
+    }
+
+    if (ipEntry.count >= this.maxPerIp) {
+      return { allowed: false, remaining: 0, resetAt: ipEntry.resetAt };
+    }
+
+    ipEntry.count++;
+    gEntry.count++;
 
     return {
       allowed: true,
@@ -73,10 +61,10 @@ export class RateLimiter {
   private cleanup() {
     const now = Date.now();
     for (const [key, entry] of this.windows) {
-      if (now > entry.resetAt) this.windows.delete(key);
+      if (now >= entry.resetAt) this.windows.delete(key);
     }
     for (const [key, entry] of this.globalWindows) {
-      if (now > entry.resetAt) this.globalWindows.delete(key);
+      if (now >= entry.resetAt) this.globalWindows.delete(key);
     }
   }
 
@@ -125,11 +113,12 @@ export function getClientIp(request?: Request): string {
 }
 
 /**
- * Counting window for the four tiers. One minute for all of them: the value
+ * Counting window for the rate-limit tiers. One minute for all of them: the value
  * used to be repeated literally in each construction, giving the impression
  * they were separately adjustable when in practice they never diverged.
  */
 const RATE_LIMIT_WINDOW_MS = 60_000;
+export const UPLOAD_RATE_LIMIT_PER_IP = 250;
 
 /**
  * Ceilings per tier: `[perIp, global]`.
@@ -158,13 +147,19 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMITS = {
   api: [300, 1000],
   auth: [10, 40],
-  upload: [200, 500],
+  upload: [UPLOAD_RATE_LIMIT_PER_IP, 500],
+  serverFn: [300, 1500],
+  pdf: [10, 50],
+  monitoring: [60, 300],
   ssr: [300, 1500],
 } as const;
 
 export const apiLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.api);
 export const authLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.auth);
 export const uploadLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.upload);
+export const serverFnLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.serverFn);
+export const pdfLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.pdf);
+export const monitoringLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.monitoring);
 export const ssrLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, ...RATE_LIMITS.ssr);
 
 /**

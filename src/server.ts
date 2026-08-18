@@ -12,7 +12,14 @@ import {
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { runWithCspNonce } from "./lib/csp-server";
-import { ssrLimiter, getClientIp } from "./lib/rate-limit";
+import {
+  getClientIp,
+  monitoringLimiter,
+  pdfLimiter,
+  serverFnLimiter,
+  ssrLimiter,
+  type RateLimitResult,
+} from "./lib/rate-limit";
 import { assertSafeBoot } from "./lib/boot-guards";
 import { parseCookie } from "cookie";
 import { SESSION_COOKIE } from "./lib/auth-config";
@@ -20,6 +27,8 @@ import { resolveSession } from "./lib/session";
 import { storePdf, takePdf } from "./lib/pdf-download-store";
 import { contentDispositionHeader } from "./lib/content-disposition";
 import { ServerResponse } from "node:http";
+
+const PDF_MAX_BYTES = 50 * 1024 * 1024;
 
 /**
  * Sentry's same-origin tunnel: /monitoring receives the browser's envelope
@@ -134,7 +143,34 @@ async function handlePdfDownload(request: Request, url: URL): Promise<Response> 
   if (request.method === "POST" && url.pathname === "/api/pdf-download") {
     const filenameHeader = request.headers.get("x-filename");
     if (!filenameHeader) return new Response("x-filename ausente", { status: 400 });
-    const bytes = new Uint8Array(await request.arrayBuffer());
+
+    const declaredLength = Number(request.headers.get("content-length"));
+    if (Number.isFinite(declaredLength) && declaredLength > PDF_MAX_BYTES) {
+      return new Response("PDF excede o limite de 50 MB", { status: 413 });
+    }
+
+    const reader = request.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > PDF_MAX_BYTES) {
+          await reader.cancel();
+          return new Response("PDF excede o limite de 50 MB", { status: 413 });
+        }
+        chunks.push(value);
+      }
+    }
+
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
     const downloadToken = storePdf(session.userId, bytes, decodeURIComponent(filenameHeader));
     return Response.json({ url: `/api/pdf-download/${downloadToken}` });
   }
@@ -166,6 +202,16 @@ async function handlePdfDownload(request: Request, url: URL): Promise<Response> 
   }
 
   return new Response("Not found", { status: 404 });
+}
+
+function rateLimitResponse(result: RateLimitResult): Response {
+  return new Response("Muitas requisições. Aguarde um momento.", {
+    status: 429,
+    headers: {
+      "Retry-After": String(Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000))),
+      "content-type": "text/plain; charset=utf-8",
+    },
+  });
 }
 
 function applySecurityHeaders(
@@ -216,20 +262,19 @@ function applySecurityHeaders(
 const serverEntry: ServerEntry = {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     const ip = getClientIp(request);
-    const rl = ssrLimiter.check(ip);
-    if (!rl.allowed) {
-      return new Response("Muitas requisições. Aguarde um momento.", {
-        status: 429,
-        headers: {
-          "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
-          "content-type": "text/plain; charset=utf-8",
-        },
-      });
-    }
+    const url = new URL(request.url);
+    const isServerFn = url.pathname.startsWith("/_serverFn/");
+    const limiter = isServerFn
+      ? serverFnLimiter
+      : url.pathname.startsWith("/api/pdf-download")
+        ? pdfLimiter
+        : request.method === "POST" && url.pathname === "/monitoring"
+          ? monitoringLimiter
+          : ssrLimiter;
+    const rl = limiter.check(ip);
+    if (!rl.allowed) return rateLimitResponse(rl);
 
     try {
-      const url = new URL(request.url);
-      const isServerFn = url.pathname.startsWith("/_serverFn/");
       if (isServerFn) {
         const handler = await getServerEntry();
         return await handler.fetch(request, env, ctx);

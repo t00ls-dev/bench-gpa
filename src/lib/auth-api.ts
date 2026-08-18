@@ -11,6 +11,7 @@ import { SESSION_COOKIE, BCRYPT_COST } from "./auth-config";
 import { issueSession, resolveSession } from "./session";
 import { requireAuthAllowExpiredPassword } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
+import { rejectRateLimit } from "./rate-limit-response";
 import { PasswordSchema } from "./schemas";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -77,7 +78,21 @@ export const login = createServerFn({ method: "POST" })
     const rl = authLimiter.check(ip);
     if (!rl.allowed) {
       await auditFail("excesso de tentativas (rate limit)");
-      throw new Error("Muitas tentativas de login. Aguarde um minuto.");
+      rejectRateLimit(rl, "Muitas tentativas de login. Aguarde um minuto.");
+    }
+
+    // Validate the challenge before looking up the account or consuming its
+    // bucket, so invalid CAPTCHA traffic cannot lock out a real user.
+    if (isTurnstileEnabled() && !data.turnstileToken) {
+      await auditFail("Turnstile ausente");
+      throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+    }
+    if (data.turnstileToken) {
+      const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
+      if (!turnstileOk) {
+        await auditFail("falha no Turnstile");
+        throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+      }
     }
 
     const [rowsRaw] = await db.query(
@@ -98,21 +113,10 @@ export const login = createServerFn({ method: "POST" })
     );
     if (!rlAccount.allowed) {
       await auditFail("excesso de tentativas na conta (rate limit)", user?.id, user?.username);
-      throw new Error("Muitas tentativas de login para esta conta. Aguarde alguns minutos.");
-    }
-
-    // Fail-closed: when Turnstile is active, the token is required. Omitting
-    // it can't be a shortcut to skip the CAPTCHA (credential stuffing).
-    if (isTurnstileEnabled() && !data.turnstileToken) {
-      await auditFail("Turnstile ausente", user?.id, user?.username);
-      throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
-    }
-    if (data.turnstileToken) {
-      const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
-      if (!turnstileOk) {
-        await auditFail("falha no Turnstile", user?.id, user?.username);
-        throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
-      }
+      rejectRateLimit(
+        rlAccount,
+        "Muitas tentativas de login para esta conta. Aguarde alguns minutos.",
+      );
     }
 
     if (!user) {
@@ -148,57 +152,63 @@ export const login = createServerFn({ method: "POST" })
     return { ok: true } as const;
   });
 
-export const getMe = createServerFn({ method: "GET" }).handler(async () => {
-  const token = getCookie(SESSION_COOKIE);
-  try {
-    // slide: false (getMe runs on every navigation, cached 60s in the route
-    // guard) and shouldn't have the side effect of re-issuing the cookie;
-    // requireAuth is what renews the session by activity, called by the
-    // functions that actually fetch data.
-    const session = await resolveSession(token, { slide: false });
-    return {
-      id: session.userId,
-      username: session.userUsername,
-      employeeId: session.userEmployeeId,
-      name: session.userName,
-      role: session.userRole,
-      passwordChangeRequired: session.passwordChangeRequired,
-    };
-  } catch {
-    return null;
-  }
-});
-
-export const logout = createServerFn({ method: "POST" }).handler(async () => {
-  const token = getCookie(SESSION_COOKIE);
-  if (token) {
+export const getMe = createServerFn({ method: "GET" })
+  .middleware([requireRateLimit()])
+  .handler(async () => {
+    const token = getCookie(SESSION_COOKIE);
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
-      const [rowsRaw] = await db.query("SELECT username FROM users WHERE id = ?", [payload.userId]);
-      const rows = rowsRaw as unknown as { username: string | null }[];
-      // token_version + 1 revokes the JWT server-side, not just the browser
-      // cookie (same pattern as resetPassword in admin-users.functions.ts).
-      // Without this, a token captured before logout (proxy, shared device,
-      // etc.) would keep being accepted until it expired on its own (up to
-      // 7 days on a "keep me signed in" session, see auth-config.ts).
-      // Accepted side effect: logs out all of the user's sessions, not just
-      // this one.
-      await db.query("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [
-        payload.userId,
-      ]);
-      await recordAudit({
-        action: "auth.logout",
-        actorId: payload.userId,
-        actorUsername: rows[0]?.username ?? null,
-        targetType: "session",
-      });
+      // slide: false (getMe runs on every navigation, cached 60s in the route
+      // guard) and shouldn't have the side effect of re-issuing the cookie;
+      // requireAuth is what renews the session by activity, called by the
+      // functions that actually fetch data.
+      const session = await resolveSession(token, { slide: false });
+      return {
+        id: session.userId,
+        username: session.userUsername,
+        employeeId: session.userEmployeeId,
+        name: session.userName,
+        role: session.userRole,
+        passwordChangeRequired: session.passwordChangeRequired,
+      };
     } catch {
-      // Invalid/expired token: nothing to revoke or audit.
+      return null;
     }
-  }
-  clearSessionCookie();
-  return { ok: true } as const;
-});
+  });
+
+export const logout = createServerFn({ method: "POST" })
+  .middleware([requireRateLimit()])
+  .handler(async () => {
+    const token = getCookie(SESSION_COOKIE);
+    if (token) {
+      try {
+        const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+        const [rowsRaw] = await db.query("SELECT username FROM users WHERE id = ?", [
+          payload.userId,
+        ]);
+        const rows = rowsRaw as unknown as { username: string | null }[];
+        // token_version + 1 revokes the JWT server-side, not just the browser
+        // cookie (same pattern as resetPassword in admin-users.functions.ts).
+        // Without this, a token captured before logout (proxy, shared device,
+        // etc.) would keep being accepted until it expired on its own (up to
+        // 7 days on a "keep me signed in" session, see auth-config.ts).
+        // Accepted side effect: logs out all of the user's sessions, not just
+        // this one.
+        await db.query("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [
+          payload.userId,
+        ]);
+        await recordAudit({
+          action: "auth.logout",
+          actorId: payload.userId,
+          actorUsername: rows[0]?.username ?? null,
+          targetType: "session",
+        });
+      } catch {
+        // Invalid/expired token: nothing to revoke or audit.
+      }
+    }
+    clearSessionCookie();
+    return { ok: true } as const;
+  });
 
 /**
  * Sets the password for an account with no password (first access, or after
@@ -228,7 +238,17 @@ export const setInitialPassword = createServerFn({ method: "POST" })
 
     const rl = authLimiter.check(ip);
     if (!rl.allowed) {
-      throw new Error("Muitas tentativas. Aguarde um minuto.");
+      rejectRateLimit(rl, "Muitas tentativas. Aguarde um minuto.");
+    }
+
+    if (isTurnstileEnabled() && !data.turnstileToken) {
+      throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+    }
+    if (data.turnstileToken) {
+      const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
+      if (!turnstileOk) {
+        throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
+      }
     }
 
     const [rowsRaw] = await db.query(
@@ -248,17 +268,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
       user ? `user:${user.id}` : `identifier:${identifier}`,
     );
     if (!rlAccount.allowed) {
-      throw new Error("Muitas tentativas. Aguarde alguns minutos.");
-    }
-
-    if (isTurnstileEnabled() && !data.turnstileToken) {
-      throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
-    }
-    if (data.turnstileToken) {
-      const turnstileOk = await verifyTurnstile(data.turnstileToken, ip);
-      if (!turnstileOk) {
-        throw new Error("Falha na verificação de segurança. Recarregue e tente novamente.");
-      }
+      rejectRateLimit(rlAccount, "Muitas tentativas. Aguarde alguns minutos.");
     }
 
     // Generic message for both a nonexistent identifier and an account

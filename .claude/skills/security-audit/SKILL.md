@@ -38,9 +38,13 @@ corrigiu, e pegar as óbvias antes de chegar em produção.
 ### Rate limiting
 
 - `requireRateLimit` (`src/lib/rate-limit.ts`) em toda server function
-  autenticada: 4 tiers por IP (SSR 300/min, API 300/min, Upload 200/min,
-  Auth 10/min) mais um balde por conta no login (5/15min por e-mail),
-  contra credential stuffing distribuído.
+  autenticada: 7 tiers por IP (SSR 300/min, entrada de server functions
+  300/min, API 300/min, Upload 250/min, Auth 10/min, PDF 10/min e
+  monitoramento 60/min), mais um balde por conta no login (10/15min por id
+  resolvido), contra credential stuffing distribuído.
+- Bloqueios retornam HTTP `429` com `Retry-After`. O limite global deve ser
+  verificado antes de criar uma entrada para um IP novo, para evitar
+  crescimento do mapa durante saturação.
 - IP resolvido via `getClientIp()` respeitando a cadeia de confiança
   Cloudflare para nginx (ver `docs/seguranca-ip-e-cloudflare.md`). Nunca
   confie em `X-Forwarded-For` bruto sem essa ordem.

@@ -43,6 +43,18 @@ vi.mock("@tanstack/react-start", () => {
             return fn({ data: input, context: ctx });
           },
         }),
+        handler: (fn: Handler) => async (input?: unknown) => {
+          let ctx = {};
+          for (const m of chain.middlewares) {
+            const r = (await m({
+              next: (c: unknown) => c,
+              context: ctx,
+              data: input,
+            })) as { context?: unknown } | undefined;
+            if (r?.context) ctx = r.context;
+          }
+          return fn({ data: input, context: ctx });
+        },
       };
     };
     chain.inputValidator = () => chain;
@@ -60,6 +72,8 @@ vi.mock("@tanstack/react-start/server", () => ({
   getCookie: vi.fn(() => "valid-jwt"),
   setCookie: vi.fn(),
   deleteCookie: vi.fn(),
+  setResponseStatus: vi.fn(),
+  setResponseHeader: vi.fn(),
 }));
 
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
@@ -97,7 +111,13 @@ vi.mock("./auth-middleware", () => ({
 }));
 
 import { login, getMe, logout, setInitialPassword, changePassword } from "./auth-api";
-import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
+import {
+  deleteCookie,
+  getCookie,
+  setCookie,
+  setResponseHeader,
+  setResponseStatus,
+} from "@tanstack/react-start/server";
 import db from "./db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -252,6 +272,8 @@ describe("login", () => {
     await expect(login({ identifier: "test", password: "x" } as never)).rejects.toThrow(
       "Muitas tentativas",
     );
+    expect(setResponseStatus).toHaveBeenCalledWith(429);
+    expect(setResponseHeader).toHaveBeenCalledWith("Retry-After", "60");
   });
 
   it("throws when account-level rate limit exceeded (per account, not per IP)", async () => {
@@ -284,6 +306,11 @@ describe("login", () => {
     await expect(
       login({ identifier: "test", password: "x", turnstileToken: "bad-token" } as never),
     ).rejects.toThrow("Falha na verificação");
+    expect(db.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("SELECT id, username"),
+      expect.anything(),
+    );
+    expect(authAccountLimiter.check).not.toHaveBeenCalled();
   });
 
   it("fail-closed: refuses login without a token when Turnstile is active", async () => {
@@ -293,6 +320,11 @@ describe("login", () => {
     );
     expect(bcrypt.compare).not.toHaveBeenCalled();
     expect(setCookie).not.toHaveBeenCalled();
+    expect(db.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("SELECT id, username"),
+      expect.anything(),
+    );
+    expect(authAccountLimiter.check).not.toHaveBeenCalled();
   });
 });
 
@@ -465,6 +497,22 @@ describe("setInitialPassword", () => {
         confirmPassword: "Str0ng!Pass",
       } as never),
     ).rejects.toThrow("Muitas tentativas");
+  });
+
+  it("validates Turnstile before querying or consuming the account bucket", async () => {
+    vi.mocked(isTurnstileEnabled).mockReturnValue(true);
+    vi.mocked(verifyTurnstile).mockResolvedValue(false);
+
+    await expect(
+      setInitialPassword({
+        identifier: "novo",
+        newPassword: "Str0ng!Pass",
+        confirmPassword: "Str0ng!Pass",
+        turnstileToken: "bad-token",
+      } as never),
+    ).rejects.toThrow("Falha na verificação");
+    expect(db.query).not.toHaveBeenCalled();
+    expect(authAccountLimiter.check).not.toHaveBeenCalled();
   });
 });
 

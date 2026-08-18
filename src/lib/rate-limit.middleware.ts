@@ -1,6 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { apiLimiter, uploadLimiter, authLimiter, getClientIp } from "./rate-limit";
+import { rejectRateLimit } from "./rate-limit-response";
 
 export function requireRateLimit(tier: "api" | "upload" | "auth" = "api") {
   // "auth": same ceiling as login (10/IP, 40 global) -- changePassword does a
@@ -15,7 +16,7 @@ export function requireRateLimit(tier: "api" | "upload" | "auth" = "api") {
     const result = limiter.check(ip);
 
     if (!result.allowed) {
-      throw new Error("Muitas requisições. Aguarde um minuto e tente novamente.");
+      rejectRateLimit(result, "Muitas requisições. Aguarde um minuto e tente novamente.");
     }
 
     return next();

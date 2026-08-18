@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RateLimiter, getClientIp } from "./rate-limit";
+import { RateLimiter, UPLOAD_RATE_LIMIT_PER_IP, getClientIp } from "./rate-limit";
+import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS } from "./import-config";
 
 function req(headers: Record<string, string>): Request {
   return new Request("http://x/", { headers });
@@ -104,10 +105,31 @@ describe("RateLimiter", () => {
     smallLimiter.destroy();
   });
 
+  it("does not allocate new IP entries after the global limit is saturated", () => {
+    const smallLimiter = new RateLimiter(60_000, 100, 3);
+    for (let i = 0; i < 3; i++) smallLimiter.check(`10.0.0.${i}`);
+
+    const windows = Reflect.get(smallLimiter, "windows") as Map<string, unknown>;
+    expect(windows.size).toBe(3);
+    for (let i = 0; i < 100; i++) {
+      expect(smallLimiter.check(`192.0.2.${i}`).allowed).toBe(false);
+    }
+    expect(windows.size).toBe(3);
+
+    smallLimiter.destroy();
+  });
+
   it("cleanup removes expired entries", () => {
     limiter.check("1.2.3.4");
     vi.advanceTimersByTime(60_001);
     expect(limiter.check("1.2.3.4").allowed).toBe(true);
+  });
+});
+
+describe("upload rate-limit budget", () => {
+  it("fits the largest accepted file plus begin and finalize calls", () => {
+    const requests = Math.ceil(IMPORT_MAX_ROWS / IMPORT_CHUNK_SIZE) + 2;
+    expect(requests).toBeLessThanOrEqual(UPLOAD_RATE_LIMIT_PER_IP);
   });
 });
 
