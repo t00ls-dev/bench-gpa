@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-18T10:31:43.841Z, thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-18T20:13:25.492Z, thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 51.1% ok | 49.8% ok | 36.8% ok | 43.1% ok |
+| **Total** | 51.7% ok | 50.5% ok | 37.0% ok | 43.4% ok |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -86,20 +86,20 @@ _Gerado em 2026-08-18T10:31:43.841Z, thresholds: lines 20%, statements 20%, func
 | `src/server.ts` | 69.0% ok | 68.3% ok | 80.0% ok | 57.5% ok |
 | `src/hooks/use-area-pdf-export.ts` | 76.2% ok | 74.4% ok | 60.0% ok | 14.3% ok |
 | `src/lib/admin-users.functions.ts` | 77.5% ok | 76.0% ok | 42.9% ok | 55.9% ok |
-| `src/lib/pdf-download-store.ts` | 77.8% ok | 80.0% ok | 100.0% ok | 91.7% ok |
 | `src/hooks/use-production-pdf-export.ts` | 78.4% ok | 76.9% ok | 75.0% ok | 23.5% ok |
 | `src/components/production-table.tsx` | 78.4% ok | 75.9% ok | 69.2% ok | 72.2% ok |
 | `src/lib/product.functions.ts` | 81.3% ok | 81.3% ok | 50.0% ok | 92.8% ok |
 | `src/components/admin-user-management.tsx` | 87.0% ok | 87.3% ok | 73.9% ok | 81.1% ok |
 | `src/lib/audit.ts` | 88.9% ok | 88.9% ok | 100.0% ok | 75.0% ok |
 | `src/lib/cache.ts` | 89.3% ok | 84.8% ok | 77.8% ok | 80.0% ok |
+| `src/lib/pdf-download-store.ts` | 89.7% ok | 90.9% ok | 100.0% ok | 92.8% ok |
 | `src/lib/upload.functions.ts` | 90.9% ok | 92.1% ok | 78.6% ok | 100.0% ok |
 | `src/hooks/use-wake-lock.ts` | 91.3% ok | 92.3% ok | 85.7% ok | 83.3% ok |
 | `src/lib/dashboard.functions.ts` | 91.4% ok | 91.7% ok | 81.3% ok | 68.3% ok |
 | `src/components/ui/select.tsx` | 91.7% ok | 91.7% ok | 71.4% ok | 100.0% ok |
 | `src/lib/admin-docs.functions.ts` | 93.1% ok | 94.1% ok | 75.0% ok | 72.2% ok |
 | `src/lib/production.functions.ts` | 93.9% ok | 94.3% ok | 80.0% ok | 92.8% ok |
-| `src/lib/auth-api.ts` | 94.2% ok | 93.4% ok | 58.3% ok | 90.6% ok |
+| `src/lib/auth-api.ts` | 94.4% ok | 93.6% ok | 58.3% ok | 90.6% ok |
 | `src/hooks/use-persistent-state.ts` | 95.0% ok | 91.7% ok | 85.7% ok | 81.3% ok |
 | `src/lib/utils.ts` | 97.7% ok | 88.2% ok | 100.0% ok | 78.9% ok |
 | `src/hooks/use-area-products-view.ts` | 98.0% ok | 98.4% ok | 96.4% ok | 89.0% ok |
@@ -125,13 +125,14 @@ _Gerado em 2026-08-18T10:31:43.841Z, thresholds: lines 20%, statements 20%, func
 | `src/lib/error-page.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/export-pdf.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/filter-cascade.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
+| `src/lib/import-cli.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/import-config.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/instrument-server.ts` | 100.0% ok | 80.0% ok | 100.0% ok | 66.7% ok |
 | `src/lib/production-filter.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/query-config.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/rate-limit-response.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/rate-limit.middleware.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 85.7% ok |
-| `src/lib/rate-limit.ts` | 100.0% ok | 98.3% ok | 100.0% ok | 86.1% ok |
+| `src/lib/rate-limit.ts` | 100.0% ok | 98.4% ok | 100.0% ok | 86.1% ok |
 | `src/lib/retention.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/sanitize-next.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/schemas.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
