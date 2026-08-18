@@ -14,6 +14,12 @@ cache, código morto, `noUnusedLocals`/`no-unused-vars`, e a limpeza de
 documento para o estado mais recente antes de assumir que algo listado
 como "aberto" aqui ainda está aberto.
 
+Auditoria posterior, em 18/08/2026: riscos, capacidade para dois usuários e
+decisões adiadas sobre rate limiting estão registrados em
+`docs/auditoria-rate-limiting-2026-08-18.md`. O usuário optou por não tratar o
+tema naquele momento; o documento preserva evidências e opções para retomada,
+sem autorizar alterações de código ou infraestrutura.
+
 ## Como trabalhar aqui
 
 - **Branch + PR, nunca commit direto na `main`.** Push na `main` dispara deploy em
