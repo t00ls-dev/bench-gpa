@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-18T20:13:25.492Z, thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-19T03:56:24.767Z, thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 51.7% ok | 50.5% ok | 37.0% ok | 43.4% ok |
+| **Total** | 52.1% ok | 50.8% ok | 37.0% ok | 43.5% ok |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -93,7 +93,7 @@ _Gerado em 2026-08-18T20:13:25.492Z, thresholds: lines 20%, statements 20%, func
 | `src/lib/audit.ts` | 88.9% ok | 88.9% ok | 100.0% ok | 75.0% ok |
 | `src/lib/cache.ts` | 89.3% ok | 84.8% ok | 77.8% ok | 80.0% ok |
 | `src/lib/pdf-download-store.ts` | 89.7% ok | 90.9% ok | 100.0% ok | 92.8% ok |
-| `src/lib/upload.functions.ts` | 90.9% ok | 92.1% ok | 78.6% ok | 100.0% ok |
+| `src/lib/upload.functions.ts` | 91.1% ok | 91.7% ok | 73.3% ok | 100.0% ok |
 | `src/hooks/use-wake-lock.ts` | 91.3% ok | 92.3% ok | 85.7% ok | 83.3% ok |
 | `src/lib/dashboard.functions.ts` | 91.4% ok | 91.7% ok | 81.3% ok | 68.3% ok |
 | `src/components/ui/select.tsx` | 91.7% ok | 91.7% ok | 71.4% ok | 100.0% ok |
@@ -127,6 +127,7 @@ _Gerado em 2026-08-18T20:13:25.492Z, thresholds: lines 20%, statements 20%, func
 | `src/lib/filter-cascade.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/import-cli.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/import-config.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
+| `src/lib/import-errors.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 80.0% ok |
 | `src/lib/instrument-server.ts` | 100.0% ok | 80.0% ok | 100.0% ok | 66.7% ok |
 | `src/lib/production-filter.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/query-config.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
