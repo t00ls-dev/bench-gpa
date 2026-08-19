@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   beginImport,
+  cancelImport,
   insertSalesChunk,
   finalizeImport,
   getImportedDates,
@@ -28,7 +29,12 @@ import { ImportHistory } from "@/components/import-history";
 import { DataCoverage } from "@/components/admin-data-coverage";
 import { fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
-import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS } from "@/lib/import-config";
+import {
+  IMPORT_BUSY_MESSAGE,
+  IMPORT_CANCEL_FAILED_MESSAGE,
+  IMPORT_CHUNK_SIZE,
+  IMPORT_MAX_ROWS,
+} from "@/lib/import-config";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 
 interface FileEntry {
@@ -67,6 +73,7 @@ const IDLE_STATE: ProcessingState = {
 export default function UploadPage() {
   const getImported = useServerFn(getImportedDates);
   const doBeginImport = useServerFn(beginImport);
+  const doCancelImport = useServerFn(cancelImport);
   const doInsertChunk = useServerFn(insertSalesChunk);
   const doFinalizeImport = useServerFn(finalizeImport);
   const imported = useQuery({
@@ -143,24 +150,6 @@ export default function UploadPage() {
     });
     update({ status: "processing" });
 
-    const stores = [
-      ...new Map(
-        parsed.sales.map((r) => [
-          r.store_code,
-          { store_code: r.store_code, store_name: r.store_name },
-        ]),
-      ).values(),
-    ];
-    const seen = new Set<string>();
-    const products = parsed.sales
-      .filter((r) => {
-        const k = r.prod_code;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      })
-      .map((r) => ({ prod_code: r.prod_code, prod_name: r.prod_name }));
-
     // Retry at the whole-file level, not per chunk. insertSalesChunk does a
     // plain INSERT with no duplicate protection (no ON DUPLICATE KEY, no
     // chunk-sequence column): resending just the chunk that failed risks
@@ -181,27 +170,49 @@ export default function UploadPage() {
       if (attempt > 0) {
         toast.info(`Falhou, tentando novamente (${attempt + 1}/${MAX_FILE_RETRIES + 1})… ${date}`);
         await new Promise((r) => setTimeout(r, FILE_RETRY_DELAY_MS));
+        if (cancelRef.current) {
+          update({ status: "error", errorMsg: "Cancelado" });
+          return;
+        }
       }
+      let activeBatchId: string | null = null;
       try {
         const batchId = crypto.randomUUID();
+        activeBatchId = batchId;
         await doBeginImport({
           data: {
             sale_date: date,
             batch_id: batchId,
             total_rows: parsed.sales.length,
-            stores,
-            products,
+            stores: parsed.stores,
+            products: parsed.products,
           },
         });
 
         const totalChunks = Math.ceil(parsed.sales.length / IMPORT_CHUNK_SIZE);
         for (let i = 0; i < totalChunks; i++) {
           if (cancelRef.current) {
+            try {
+              await doCancelImport({ data: { batch_id: batchId } });
+            } catch {
+              throw new Error(IMPORT_CANCEL_FAILED_MESSAGE);
+            }
+            activeBatchId = null;
             update({ status: "error", errorMsg: "Cancelado" });
             return;
           }
           const chunk = parsed.sales.slice(i * IMPORT_CHUNK_SIZE, (i + 1) * IMPORT_CHUNK_SIZE);
           await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
+          if (cancelRef.current) {
+            try {
+              await doCancelImport({ data: { batch_id: batchId } });
+            } catch {
+              throw new Error(IMPORT_CANCEL_FAILED_MESSAGE);
+            }
+            activeBatchId = null;
+            update({ status: "error", errorMsg: "Cancelado" });
+            return;
+          }
           const processed = Math.min((i + 1) * IMPORT_CHUNK_SIZE, parsed.sales.length);
           processedTotalRef.current += chunk.length;
           const elapsed = (Date.now() - startTimeRef.current) / 1000;
@@ -219,11 +230,26 @@ export default function UploadPage() {
         await doFinalizeImport({
           data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length },
         });
+        activeBatchId = null;
 
         update({ status: "done", totalLines: parsed.sales.length });
         return;
       } catch (err) {
         lastError = err;
+        if (activeBatchId) {
+          try {
+            await doCancelImport({ data: { batch_id: activeBatchId } });
+            activeBatchId = null;
+          } catch {
+            lastError = new Error(IMPORT_CANCEL_FAILED_MESSAGE);
+            break;
+          }
+        }
+        if (cancelRef.current) {
+          update({ status: "error", errorMsg: "Cancelado" });
+          return;
+        }
+        if (err instanceof Error && err.message.includes(IMPORT_BUSY_MESSAGE)) break;
       }
     }
     const msg = lastError instanceof Error ? lastError.message : "Erro desconhecido";

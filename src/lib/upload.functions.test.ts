@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const mockConnection = vi.hoisted(() => ({
+  beginTransaction: vi.fn(),
+  query: vi.fn(),
+  commit: vi.fn(),
+  rollback: vi.fn(),
+  release: vi.fn(),
+}));
+
 type Middleware = (opts: {
   next: (ctx: unknown) => unknown;
   context: unknown;
@@ -60,10 +68,13 @@ vi.mock("./rate-limit.middleware", () => ({
   ),
 }));
 vi.mock("./admin-utils", () => ({ assertAdmin: vi.fn() }));
-vi.mock("./db", () => ({ default: { query: vi.fn() } }));
+vi.mock("./db", () => ({
+  default: { query: vi.fn(), getConnection: vi.fn(async () => mockConnection) },
+}));
 
 import {
   beginImport,
+  cancelImport,
   insertSalesChunk,
   getImportedDates,
   finalizeImport,
@@ -75,6 +86,10 @@ import { cache } from "./cache";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(db.query).mockResolvedValue([{ affectedRows: 1 }] as never);
+  mockConnection.beginTransaction.mockResolvedValue(undefined);
+  mockConnection.query.mockResolvedValue([{ affectedRows: 1 }] as never);
+  mockConnection.commit.mockResolvedValue(undefined);
+  mockConnection.rollback.mockResolvedValue(undefined);
   cache.destroy();
   (cache as unknown as { store: Map<string, unknown> }).store.clear();
 });
@@ -88,22 +103,18 @@ describe("beginImport", () => {
     products: [{ prod_code: "1", prod_name: "Produto 1" }],
   };
 
-  it("clears the date's staging, upserts stores and products, returns ok", async () => {
+  it("acquires the global lock and returns ok", async () => {
     const result = await (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput);
     expect(result).toEqual({ ok: true, batch_id: "b1" });
     expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
-    expect(db.query).toHaveBeenNthCalledWith(1, "DELETE FROM staging_sales WHERE sale_date = ?", [
+    expect(db.query).toHaveBeenNthCalledWith(1, "CALL acquire_import_lock(?, ?, ?, ?, ?)", [
+      "b1",
       "2026-07-20",
-    ]);
-    expect(db.query).toHaveBeenNthCalledWith(
-      2,
-      "INSERT INTO stores (store_code, store_name) VALUES (?, ?) ON DUPLICATE KEY UPDATE store_name = VALUES(store_name)",
-      ["1516", "Loja Centro"],
-    );
-    expect(db.query).toHaveBeenNthCalledWith(3, "CALL upsert_products_bulk(?, ?)", [
+      "admin-u1",
+      JSON.stringify(baseInput.stores),
       JSON.stringify(baseInput.products),
-      "2026-07-20",
     ]);
+    expect(db.query).toHaveBeenCalledTimes(1);
   });
 
   it("rejects total_rows zero before touching the database", async () => {
@@ -113,23 +124,13 @@ describe("beginImport", () => {
     expect(db.query).not.toHaveBeenCalled();
   });
 
-  it("skips the stores INSERT when stores is empty", async () => {
-    await (beginImport as (d: typeof baseInput) => Promise<unknown>)({ ...baseInput, stores: [] });
-    // Only DELETE (staging) + CALL upsert_products_bulk: no call with "INSERT INTO stores".
-    expect(db.query).toHaveBeenCalledTimes(2);
-    expect(db.query).not.toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO stores"),
-      expect.anything(),
-    );
-  });
+  it("maps an occupied lock to a user-facing error without releasing its owner", async () => {
+    vi.mocked(db.query).mockRejectedValueOnce(new Error("IMPORT_IN_PROGRESS") as never);
 
-  it("skips the products upsert when products is empty", async () => {
-    await (beginImport as (d: typeof baseInput) => Promise<unknown>)({
-      ...baseInput,
-      products: [],
-    });
-    expect(db.query).toHaveBeenCalledTimes(2);
-    expect(db.query).not.toHaveBeenCalledWith("CALL upsert_products_bulk(?, ?)", expect.anything());
+    await expect(
+      (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput),
+    ).rejects.toThrow("Outra importação está em andamento");
+    expect(db.query).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -157,7 +158,14 @@ describe("insertSalesChunk", () => {
     )({ sale_date: "2026-07-20", batch_id: "b1", rows });
 
     expect(result).toEqual({ inserted: 1 });
-    expect(db.query).toHaveBeenCalledWith(
+    expect(mockConnection.beginTransaction).toHaveBeenCalledOnce();
+    expect(mockConnection.query).toHaveBeenNthCalledWith(1, "CALL renew_import_lock(?, ?, ?)", [
+      "b1",
+      "2026-07-20",
+      "admin-u1",
+    ]);
+    expect(mockConnection.query).toHaveBeenNthCalledWith(
+      2,
       expect.stringContaining("INSERT INTO staging_sales"),
       // toStagingRow: sale_date, batch_id first, then the columns in STAGING_COLS order.
       [
@@ -174,6 +182,8 @@ describe("insertSalesChunk", () => {
         100.5,
       ],
     );
+    expect(mockConnection.commit).toHaveBeenCalledOnce();
+    expect(mockConnection.release).toHaveBeenCalledOnce();
   });
 
   it("missing depto/secao/grupo/subgrupo become NULL, not 0 (trap documented in staging-row.ts)", async () => {
@@ -194,9 +204,69 @@ describe("insertSalesChunk", () => {
       }) => Promise<unknown>
     )({ sale_date: "2026-07-20", batch_id: "b1", rows });
 
-    const [, values] = vi.mocked(db.query).mock.calls[0] as unknown as [string, unknown[]];
+    const [, values] = mockConnection.query.mock.calls[1] as unknown as [string, unknown[]];
     // Indexes 6-9 of STAGING_COLS are depto/secao/grupo/subgrupo.
     expect(values.slice(6, 10)).toEqual([null, null, null, null]);
+  });
+
+  it("does not insert when the lease was lost", async () => {
+    mockConnection.query.mockRejectedValueOnce(new Error("IMPORT_LEASE_LOST") as never);
+
+    await expect(
+      (
+        insertSalesChunk as (d: {
+          sale_date: string;
+          batch_id: string;
+          rows: Array<Record<string, unknown>>;
+        }) => Promise<unknown>
+      )({
+        sale_date: "2026-07-20",
+        batch_id: "b1",
+        rows: [
+          {
+            store_code: "1516",
+            store_name: "Loja",
+            prod_code: "1",
+            prod_name: "Produto",
+            val_vda: 1,
+          },
+        ],
+      }),
+    ).rejects.toThrow("perdeu o bloqueio exclusivo");
+    expect(mockConnection.query).toHaveBeenCalledTimes(1);
+    expect(mockConnection.rollback).toHaveBeenCalledOnce();
+    expect(mockConnection.release).toHaveBeenCalledOnce();
+  });
+
+  it("rolls back and releases the connection when the INSERT fails", async () => {
+    mockConnection.query
+      .mockResolvedValueOnce([{ affectedRows: 1 }] as never)
+      .mockRejectedValueOnce(new Error("insert failed") as never);
+
+    await expect(
+      (
+        insertSalesChunk as (d: {
+          sale_date: string;
+          batch_id: string;
+          rows: Array<Record<string, unknown>>;
+        }) => Promise<unknown>
+      )({
+        sale_date: "2026-07-20",
+        batch_id: "b1",
+        rows: [
+          {
+            store_code: "1516",
+            store_name: "Loja",
+            prod_code: "1",
+            prod_name: "Produto",
+            val_vda: 1,
+          },
+        ],
+      }),
+    ).rejects.toThrow("insert failed");
+    expect(mockConnection.rollback).toHaveBeenCalledOnce();
+    expect(mockConnection.commit).not.toHaveBeenCalled();
+    expect(mockConnection.release).toHaveBeenCalledOnce();
   });
 });
 
@@ -223,18 +293,9 @@ describe("getImportedDates", () => {
 });
 
 describe("finalizeImport", () => {
-  // `row_count` here is just the parameter the client SENDS
-  // (parsed.sales.length, computed before any chunk has actually been
-  // inserted). This test proves the server function passes it through as
-  // received, not that it's trustworthy. The real reconciliation lives
-  // inside the `finalize_import` procedure (migrate-schema.sql):
-  // `import_log.row_count` records `v_staging_count` (the staging's real
-  // count, already verified > 0 in the same procedure), not
-  // `p_row_count`: a mocked `db.query` doesn't run real SQL, so this part
-  // was validated manually against real MariaDB (see
-  // docs/auditoria-qa-2026-08-01.md, item 8): `CALL finalize_import(...,
-  // 999, ...)` with only 3 real rows in staging recorded `row_count = 3`
-  // in `import_log`, not 999.
+  // The server passes the expected count through; finalize_import compares
+  // it with the measured staging count inside the same transaction that
+  // replaces aggregates.
   it("calls finalize_import with batch_id/sale_date/row_count/userId and returns ok", async () => {
     const result = await (
       finalizeImport as (d: {
@@ -252,5 +313,31 @@ describe("finalizeImport", () => {
       500,
       "admin-u1",
     ]);
+  });
+
+  it("maps a row count mismatch to a user-facing integrity error", async () => {
+    vi.mocked(db.query).mockRejectedValueOnce(new Error("IMPORT_ROW_COUNT_MISMATCH") as never);
+
+    await expect(
+      (
+        finalizeImport as (d: {
+          sale_date: string;
+          batch_id: string;
+          row_count: number;
+        }) => Promise<unknown>
+      )({ sale_date: "2026-07-20", batch_id: "b1", row_count: 500 }),
+    ).rejects.toThrow("Nenhum dado foi publicado");
+  });
+});
+
+describe("cancelImport", () => {
+  it("releases only the authenticated user's batch", async () => {
+    const result = await (cancelImport as (d: { batch_id: string }) => Promise<{ ok: true }>)({
+      batch_id: "b1",
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
+    expect(db.query).toHaveBeenCalledWith("CALL release_import_lock(?, ?)", ["b1", "admin-u1"]);
   });
 });

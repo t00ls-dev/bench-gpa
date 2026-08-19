@@ -11,6 +11,7 @@ import {
   BeginImportSchema,
   InsertSalesChunkSchema,
   FinalizeImportSchema,
+  CancelImportSchema,
 } from "./schemas";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
 
@@ -167,6 +168,32 @@ const saleRow = {
 };
 
 describe("import input schemas", () => {
+  it("rejects an empty batch id in every import stage", () => {
+    expect(
+      BeginImportSchema.safeParse({
+        sale_date: "2026-08-18",
+        batch_id: "",
+        total_rows: 1,
+        stores: [],
+        products: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      InsertSalesChunkSchema.safeParse({
+        sale_date: "2026-08-18",
+        batch_id: "",
+        rows: [saleRow],
+      }).success,
+    ).toBe(false);
+    expect(
+      FinalizeImportSchema.safeParse({
+        sale_date: "2026-08-18",
+        batch_id: "",
+        row_count: 1,
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a total above the maximum import size", () => {
     expect(() =>
       BeginImportSchema.parse({
@@ -179,7 +206,7 @@ describe("import input schemas", () => {
     ).toThrow();
   });
 
-  it("bounds store metadata independently from sales rows", () => {
+  it("bounds metadata that is persisted with the import lease", () => {
     const store = { store_code: "1", store_name: "Loja" };
     expect(() =>
       BeginImportSchema.parse({
@@ -221,5 +248,18 @@ describe("import input schemas", () => {
         row_count: IMPORT_MAX_ROWS + 1,
       }),
     ).toThrow();
+    expect(() =>
+      FinalizeImportSchema.parse({
+        sale_date: "2026-08-18",
+        batch_id: "batch",
+        row_count: 0,
+      }),
+    ).toThrow();
+  });
+
+  it("requires a bounded batch id when cancelling", () => {
+    expect(CancelImportSchema.parse({ batch_id: "batch" })).toEqual({ batch_id: "batch" });
+    expect(() => CancelImportSchema.parse({ batch_id: "" })).toThrow();
+    expect(() => CancelImportSchema.parse({ batch_id: "x".repeat(37) })).toThrow();
   });
 });

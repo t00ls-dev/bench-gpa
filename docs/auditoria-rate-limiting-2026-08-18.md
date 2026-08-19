@@ -18,8 +18,18 @@ Na revisão subsequente do contrato de importação:
 
 - [x] Validar `--chunk-size` no CLI entre 1 e 1.000.
 
+Em 19/08/2026, o usuário decidiu que importações simultâneas devem ser
+bloqueadas, em vez de aumentar os limites para suportar concorrência:
+
+- [x] Serializar app e CLI com uma lease global persistida no MariaDB.
+- [x] Renovar a lease por chunk e liberar ao finalizar ou cancelar.
+- [x] Expirar importações abandonadas após 10 minutos sem atividade.
+- [x] Reconciliar a contagem real do staging antes de substituir agregados.
+- [x] Aplicar lojas e produtos somente na transação final, sem mutação parcial
+  em importações canceladas ou inválidas.
+
 Continuam adiados os ajustes de infraestrutura, `Retry-After`, concorrência de
-uploads e capacidade acumulada de PDFs. Nenhum achado restante representa
+PDFs e capacidade acumulada de PDFs. Nenhum achado restante representa
 autorização para alterar nginx, firewall, Cloudflare ou dados de produção.
 
 ## Escopo

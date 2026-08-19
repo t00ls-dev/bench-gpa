@@ -4,9 +4,19 @@ import { requireRateLimit } from "./rate-limit.middleware";
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import { asArray, asRecord, str, num, dateTimeStr } from "./api-types";
-import { BeginImportSchema, FinalizeImportSchema, InsertSalesChunkSchema } from "./schemas";
+import {
+  BeginImportSchema,
+  CancelImportSchema,
+  FinalizeImportSchema,
+  InsertSalesChunkSchema,
+} from "./schemas";
 import { STAGING_COLS, toStagingRow } from "./staging-row";
 import { CACHE_TTL_SHORT } from "./cache";
+import { mapImportError } from "./import-errors";
+
+async function releaseImportLock(batchId: string, userId: string): Promise<void> {
+  await db.query("CALL release_import_lock(?, ?)", [batchId, userId]);
+}
 
 export const beginImport = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit("upload")])
@@ -15,22 +25,16 @@ export const beginImport = createServerFn({ method: "POST" })
     await assertAdmin(context);
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
 
-    await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [data.sale_date]);
-
-    if (data.stores.length) {
-      const placeholders = data.stores.map(() => "(?, ?)").join(", ");
-      const values = data.stores.flatMap((s) => [s.store_code, s.store_name]);
-      await db.query(
-        `INSERT INTO stores (store_code, store_name) VALUES ${placeholders} ON DUPLICATE KEY UPDATE store_name = VALUES(store_name)`,
-        values,
-      );
-    }
-
-    if (data.products.length) {
-      await db.query("CALL upsert_products_bulk(?, ?)", [
-        JSON.stringify(data.products),
+    try {
+      await db.query("CALL acquire_import_lock(?, ?, ?, ?, ?)", [
+        data.batch_id,
         data.sale_date,
+        context.userId,
+        JSON.stringify(data.stores),
+        JSON.stringify(data.products),
       ]);
+    } catch (error) {
+      throw mapImportError(error);
     }
 
     return { ok: true, batch_id: data.batch_id };
@@ -41,24 +45,36 @@ export const insertSalesChunk = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => InsertSalesChunkSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const connection = await db.getConnection();
 
-    // Layout and defaults come from staging-row.ts, the same module the CLI
-    // import uses. This function used to keep its own copy of the column
-    // list: that exact duplication is what let the two paths diverge before
-    // (the CLI with `?? 0`, this one with `?? null`), and the `?? 0` turned
-    // a null category into the string "0". A single source eliminates that
-    // whole class of bug.
-    const placeholders = data.rows
-      .map(() => `(${STAGING_COLS.map(() => "?").join(", ")})`)
-      .join(", ");
-    const values = data.rows.flatMap((r) =>
-      toStagingRow(r as Record<string, unknown>, data.batch_id, data.sale_date),
-    );
+    try {
+      await connection.beginTransaction();
+      await connection.query("CALL renew_import_lock(?, ?, ?)", [
+        data.batch_id,
+        data.sale_date,
+        context.userId,
+      ]);
 
-    await db.query(
-      `INSERT INTO staging_sales (${STAGING_COLS.join(", ")}) VALUES ${placeholders}`,
-      values,
-    );
+      // The lease row remains locked until this INSERT commits. Cancellation
+      // or stale takeover cannot slip between renewal and insertion.
+      const placeholders = data.rows
+        .map(() => `(${STAGING_COLS.map(() => "?").join(", ")})`)
+        .join(", ");
+      const values = data.rows.flatMap((r) =>
+        toStagingRow(r as Record<string, unknown>, data.batch_id, data.sale_date),
+      );
+
+      await connection.query(
+        `INSERT INTO staging_sales (${STAGING_COLS.join(", ")}) VALUES ${placeholders}`,
+        values,
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw mapImportError(error);
+    } finally {
+      connection.release();
+    }
 
     return { inserted: data.rows.length };
   });
@@ -91,12 +107,25 @@ export const finalizeImport = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
-    await db.query("CALL finalize_import(?, ?, ?, ?)", [
-      data.batch_id,
-      data.sale_date,
-      data.row_count,
-      context.userId,
-    ]);
+    try {
+      await db.query("CALL finalize_import(?, ?, ?, ?)", [
+        data.batch_id,
+        data.sale_date,
+        data.row_count,
+        context.userId,
+      ]);
+    } catch (error) {
+      throw mapImportError(error);
+    }
 
     return { ok: true };
+  });
+
+export const cancelImport = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit("upload")])
+  .inputValidator((d: unknown) => CancelImportSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    await releaseImportLock(data.batch_id, context.userId);
+    return { ok: true } as const;
   });

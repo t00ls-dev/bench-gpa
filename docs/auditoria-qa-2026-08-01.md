@@ -285,6 +285,14 @@ finalize_import`) era o que o CLIENTE afirmava
    passada. Comentário adicionado em `upload.functions.test.ts` apontando
    pra essa validação, já que `db.query` mockado não executa SQL de
    verdade (**médio**, esforço médio).
+
+   Revisado em 19/08/2026: gravar a contagem real no log não impedia uma
+   publicação parcial, apenas fazia o log refletir a parcialidade. A lease
+   global de importação passou a exigir `v_staging_count = p_row_count`
+   dentro da mesma transação que substitui os agregados. Divergência agora
+   causa rollback com `IMPORT_ROW_COUNT_MISMATCH`. Validado novamente em
+   MariaDB real, incluindo rollback dos agregados e preservação do staging
+   para diagnóstico.
 9. Concluído em 01/08: **1 teste de componente real**:
    `admin-user-management.test.tsx` (7 testes, `render()`+`fireEvent`, não
    `renderHook`): skeleton de carregamento, lista vazia, renderização de

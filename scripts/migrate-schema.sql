@@ -11,6 +11,9 @@ DROP PROCEDURE IF EXISTS product_search;
 DROP PROCEDURE IF EXISTS get_product_by_code;
 DROP PROCEDURE IF EXISTS product_analysis;
 DROP PROCEDURE IF EXISTS upsert_products_bulk;
+DROP PROCEDURE IF EXISTS acquire_import_lock;
+DROP PROCEDURE IF EXISTS renew_import_lock;
+DROP PROCEDURE IF EXISTS release_import_lock;
 DROP PROCEDURE IF EXISTS finalize_import;
 DROP PROCEDURE IF EXISTS imported_dates;
 DROP PROCEDURE IF EXISTS purge_old_aggs;
@@ -101,6 +104,22 @@ CREATE TABLE IF NOT EXISTS staging_sales (
   INDEX idx_staging_batch (batch_id),
   INDEX idx_staging_sale_date (sale_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Singleton lease for the import pipeline. A database lease, rather than
+-- process memory, also covers the direct CLI and survives app reloads.
+CREATE TABLE IF NOT EXISTS import_locks (
+  lock_name    VARCHAR(32) NOT NULL PRIMARY KEY,
+  batch_id     VARCHAR(36) NULL,
+  sale_date    DATE NULL,
+  user_id      VARCHAR(36) NULL,
+  stores_json  JSON NULL,
+  products_json JSON NULL,
+  acquired_at DATETIME(3) NULL,
+  heartbeat_at DATETIME(3) NULL,
+  expires_at   DATETIME(3) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO import_locks (lock_name) VALUES ('sales_import');
 
 -- VAL_VDA is the ONLY measure that exists. Don't look for quantity, cost,
 -- returns, or margin: the GPA export doesn't carry any of that.
@@ -244,7 +263,7 @@ CREATE TABLE IF NOT EXISTS cron_heartbeat (
 
 DELIMITER //
 
--- 1/17: dashboard_metrics
+-- 1/20: dashboard_metrics
 CREATE PROCEDURE dashboard_metrics(
   p_date_from DATE,
   p_date_to DATE,
@@ -361,7 +380,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 2/17: dashboard_rankings
+-- 2/20: dashboard_rankings
 CREATE PROCEDURE dashboard_rankings(
   p_date_from DATE,
   p_date_to DATE,
@@ -489,7 +508,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 3/17: filter_options (uses filter_hierarchy, 21k rows instead of 942k)
+-- 3/20: filter_options (uses filter_hierarchy, 21k rows instead of 942k)
 CREATE PROCEDURE filter_options(
   p_date_from DATE,
   p_date_to DATE,
@@ -594,7 +613,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 4/17: area_analysis
+-- 4/20: area_analysis
 --
 -- Do NOT rewrite this proc into the "one scan + temp table" model without
 -- measuring the entire proc. It's been tried before (PR #9) and REGRESSED
@@ -829,7 +848,7 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
 END//
 
--- 5/17: area_filter_hierarchy
+-- 5/20: area_filter_hierarchy
 CREATE PROCEDURE area_filter_hierarchy()
 BEGIN
   SELECT MAX(sale_date) AS latest_date FROM import_log;
@@ -841,7 +860,7 @@ BEGIN
   SELECT DISTINCT sale_date FROM import_log ORDER BY sale_date ASC;
 END//
 
--- 6/17: product_search
+-- 6/20: product_search
 CREATE PROCEDURE product_search(p_q VARCHAR(255))
 BEGIN
   SELECT DISTINCT prod_code, prod_name
@@ -851,7 +870,7 @@ BEGIN
   LIMIT 20;
 END//
 
--- 7/17: get_product_by_code
+-- 7/20: get_product_by_code
 CREATE PROCEDURE get_product_by_code(p_code VARCHAR(20))
 BEGIN
   SELECT DISTINCT prod_code, prod_name
@@ -860,7 +879,7 @@ BEGIN
   LIMIT 1;
 END//
 
--- 8/17: product_analysis
+-- 8/20: product_analysis
 --
 -- p_store_codes is JSON (an array of store codes), no longer a single
 -- VARCHAR: supports comparing a specific subset of stores, not just "one
@@ -951,7 +970,7 @@ BEGIN
   LIMIT 4;
 END//
 
--- 9/17: upsert_products_bulk
+-- 9/20: upsert_products_bulk
 CREATE PROCEDURE upsert_products_bulk(
   p_rows JSON,
   p_sale_date DATE
@@ -982,15 +1001,17 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tmp_products;
 END//
 
--- 10/17: finalize_import
-CREATE PROCEDURE finalize_import(
+-- 10/20: acquire_import_lock
+CREATE PROCEDURE acquire_import_lock(
   p_batch_id VARCHAR(36),
   p_sale_date DATE,
-  p_row_count INT,
-  p_imported_by VARCHAR(36)
+  p_user_id VARCHAR(36),
+  p_stores JSON,
+  p_products JSON
 )
 BEGIN
-  DECLARE v_staging_count INT DEFAULT 0;
+  DECLARE v_batch_id VARCHAR(36) DEFAULT NULL;
+  DECLARE v_expires_at DATETIME(3) DEFAULT NULL;
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     ROLLBACK;
@@ -999,10 +1020,153 @@ BEGIN
 
   START TRANSACTION;
 
-  SELECT COUNT(*) INTO v_staging_count FROM staging_sales WHERE batch_id = p_batch_id AND sale_date = p_sale_date;
-  IF v_staging_count = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No staging rows found for given batch_id and sale_date';
+  INSERT IGNORE INTO import_locks (lock_name) VALUES ('sales_import');
+  SELECT batch_id, expires_at
+    INTO v_batch_id, v_expires_at
+    FROM import_locks
+    WHERE lock_name = 'sales_import'
+    FOR UPDATE;
+
+  IF v_batch_id IS NOT NULL AND v_expires_at > CURRENT_TIMESTAMP(3) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'IMPORT_IN_PROGRESS';
   END IF;
+
+  -- With no active owner, every staging row is stale. Clearing all dates
+  -- prevents abandoned batches from accumulating indefinitely.
+  DELETE FROM staging_sales;
+
+  UPDATE import_locks
+  SET batch_id = p_batch_id,
+      sale_date = p_sale_date,
+      user_id = p_user_id,
+      stores_json = p_stores,
+      products_json = p_products,
+      acquired_at = CURRENT_TIMESTAMP(3),
+      heartbeat_at = CURRENT_TIMESTAMP(3),
+      expires_at = CURRENT_TIMESTAMP(3) + INTERVAL 10 MINUTE
+  WHERE lock_name = 'sales_import';
+
+  COMMIT;
+END//
+
+-- 11/20: renew_import_lock
+CREATE PROCEDURE renew_import_lock(
+  p_batch_id VARCHAR(36),
+  p_sale_date DATE,
+  p_user_id VARCHAR(36)
+)
+BEGIN
+  UPDATE import_locks
+  SET heartbeat_at = CURRENT_TIMESTAMP(3),
+      expires_at = CURRENT_TIMESTAMP(3) + INTERVAL 10 MINUTE
+  WHERE lock_name = 'sales_import'
+    AND batch_id = p_batch_id
+    AND sale_date = p_sale_date
+    AND (user_id <=> p_user_id)
+    AND expires_at > CURRENT_TIMESTAMP(3);
+
+  IF ROW_COUNT() <> 1 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'IMPORT_LEASE_LOST';
+  END IF;
+END//
+
+-- 12/20: release_import_lock
+CREATE PROCEDURE release_import_lock(
+  p_batch_id VARCHAR(36),
+  p_user_id VARCHAR(36)
+)
+BEGIN
+  DECLARE v_active_batch_id VARCHAR(36) DEFAULT NULL;
+  DECLARE v_active_user_id VARCHAR(36) DEFAULT NULL;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+
+  START TRANSACTION;
+  SELECT batch_id, user_id
+    INTO v_active_batch_id, v_active_user_id
+    FROM import_locks
+    WHERE lock_name = 'sales_import'
+    FOR UPDATE;
+
+  IF v_active_batch_id = p_batch_id AND (v_active_user_id <=> p_user_id) THEN
+    DELETE FROM staging_sales WHERE batch_id = p_batch_id;
+    UPDATE import_locks
+    SET batch_id = NULL,
+        sale_date = NULL,
+        user_id = NULL,
+        stores_json = NULL,
+        products_json = NULL,
+        acquired_at = NULL,
+        heartbeat_at = NULL,
+        expires_at = NULL
+    WHERE lock_name = 'sales_import';
+  END IF;
+  COMMIT;
+END//
+
+-- 13/20: finalize_import
+CREATE PROCEDURE finalize_import(
+  p_batch_id VARCHAR(36),
+  p_sale_date DATE,
+  p_row_count INT,
+  p_imported_by VARCHAR(36)
+)
+BEGIN
+  DECLARE v_staging_count INT DEFAULT 0;
+  DECLARE v_active_batch_id VARCHAR(36) DEFAULT NULL;
+  DECLARE v_active_sale_date DATE DEFAULT NULL;
+  DECLARE v_active_user_id VARCHAR(36) DEFAULT NULL;
+  DECLARE v_stores_json LONGTEXT DEFAULT NULL;
+  DECLARE v_products_json LONGTEXT DEFAULT NULL;
+  DECLARE v_expires_at DATETIME(3) DEFAULT NULL;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    RESIGNAL;
+  END;
+
+  START TRANSACTION;
+
+  SELECT batch_id, sale_date, user_id, stores_json, products_json, expires_at
+    INTO v_active_batch_id, v_active_sale_date, v_active_user_id, v_stores_json, v_products_json, v_expires_at
+    FROM import_locks
+    WHERE lock_name = 'sales_import'
+    FOR UPDATE;
+
+  IF v_active_batch_id IS NULL
+     OR v_active_batch_id <> p_batch_id
+     OR NOT (v_active_sale_date <=> p_sale_date)
+     OR NOT (v_active_user_id <=> p_imported_by)
+     OR v_expires_at IS NULL
+     OR v_expires_at <= CURRENT_TIMESTAMP(3) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'IMPORT_LEASE_LOST';
+  END IF;
+
+  SELECT COUNT(*) INTO v_staging_count FROM staging_sales WHERE batch_id = p_batch_id AND sale_date = p_sale_date;
+  IF p_row_count <= 0 OR v_staging_count <> p_row_count THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'IMPORT_ROW_COUNT_MISMATCH';
+  END IF;
+
+  INSERT INTO stores (store_code, store_name)
+  SELECT j.store_code, MAX(j.store_name)
+  FROM JSON_TABLE(COALESCE(v_stores_json, '[]'), '$[*]' COLUMNS (
+    store_code VARCHAR(20) PATH '$.store_code',
+    store_name VARCHAR(255) PATH '$.store_name'
+  )) AS j
+  GROUP BY j.store_code
+  ON DUPLICATE KEY UPDATE store_name = VALUES(store_name);
+
+  INSERT INTO products (prod_code, prod_name, sale_date)
+  SELECT j.prod_code, MAX(j.prod_name), p_sale_date
+  FROM JSON_TABLE(COALESCE(v_products_json, '[]'), '$[*]' COLUMNS (
+    prod_code VARCHAR(20) PATH '$.prod_code',
+    prod_name VARCHAR(255) PATH '$.prod_name'
+  )) AS j
+  GROUP BY j.prod_code
+  ON DUPLICATE KEY UPDATE prod_name = VALUES(prod_name);
 
   DELETE FROM sales_daily_agg WHERE sale_date = p_sale_date;
   DELETE FROM sales_prod_daily_agg WHERE sale_date = p_sale_date;
@@ -1033,14 +1197,8 @@ BEGIN
 
   DELETE FROM staging_sales WHERE batch_id = p_batch_id AND sale_date = p_sale_date;
 
-  -- v_staging_count, not p_row_count: the value the client sends is only
-  -- what it INTENDED to import (parsed.sales.length, computed before any
-  -- chunk has actually been inserted): it's never cross-checked against
-  -- what actually arrived in staging. A silently lost chunk would record
-  -- the wrong number in import_log with zero detection (see
-  -- docs/auditoria-qa-2026-08-01.md, item 8). v_staging_count was already
-  -- counted and verified > 0 above in this same procedure: it's the only
-  -- trustworthy source.
+  -- Persist the measured count only after reconciling it with the expected
+  -- count above. A missing chunk now rolls back before replacing aggregates.
   INSERT INTO import_log (sale_date, row_count, imported_by, batch_id)
   VALUES (p_sale_date, v_staging_count, p_imported_by, p_batch_id)
   ON DUPLICATE KEY UPDATE
@@ -1048,6 +1206,17 @@ BEGIN
     imported_by = VALUES(imported_by),
     imported_at = CURRENT_TIMESTAMP,
     batch_id = VALUES(batch_id);
+
+  UPDATE import_locks
+  SET batch_id = NULL,
+      sale_date = NULL,
+      user_id = NULL,
+      stores_json = NULL,
+      products_json = NULL,
+      acquired_at = NULL,
+      heartbeat_at = NULL,
+      expires_at = NULL
+  WHERE lock_name = 'sales_import' AND batch_id = p_batch_id;
 
   -- Until 07/30/2026, this called
   -- refresh_filter_hierarchy()/refresh_product_universe() right here: every
@@ -1063,7 +1232,7 @@ BEGIN
   COMMIT;
 END//
 
--- 11/17: imported_dates
+-- 14/20: imported_dates
 CREATE PROCEDURE imported_dates()
 BEGIN
   SELECT sale_date, row_count, imported_at
@@ -1071,7 +1240,7 @@ BEGIN
   ORDER BY sale_date DESC;
 END//
 
--- 12/17: purge_old_aggs
+-- 15/20: purge_old_aggs
 --
 -- The other end of the retention invariant; the JS side is in
 -- src/lib/retention.ts (isWithinRetention), used by import-watch to avoid
@@ -1147,7 +1316,7 @@ BEGIN
   SELECT v_deleted AS deleted;
 END//
 
--- 13/17: db_health_check
+-- 16/20: db_health_check
 CREATE PROCEDURE db_health_check()
 BEGIN
   SELECT VERSION() AS version, NOW() AS time;
@@ -1166,7 +1335,7 @@ BEGIN
   ORDER BY size_mb DESC;
 END//
 
--- 14/17: refresh_filter_hierarchy
+-- 17/20: refresh_filter_hierarchy
 --
 -- DELETE, not TRUNCATE. Both empty the table, but TRUNCATE is DDL: it
 -- causes an implicit commit and doesn't respect MVCC. Measured on
@@ -1217,7 +1386,7 @@ BEGIN
   COMMIT;
 END//
 
--- 15/17: refresh_product_universe
+-- 18/20: refresh_product_universe
 -- Regenerates product_universe from scratch (same pattern as
 -- refresh_filter_hierarchy: the table is derived, so it's recreated, never
 -- edited in place).
@@ -1263,7 +1432,7 @@ BEGIN
   COMMIT;
 END//
 
--- 16/17: has_role
+-- 19/20: has_role
 CREATE PROCEDURE has_role(p_user_id VARCHAR(36), p_role VARCHAR(20))
 BEGIN
   SELECT COUNT(*) > 0 AS has_role
@@ -1271,7 +1440,7 @@ BEGIN
   WHERE id = p_user_id AND role = p_role AND is_active = TRUE;
 END//
 
--- 17/17: production_forecast
+-- 20/20: production_forecast
 --
 -- See docs/planejamento-producao-perecveis-2026-08-07.md for the design.
 -- Measured as a candidate before adopting this name (docs/medicao-

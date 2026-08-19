@@ -6,6 +6,7 @@ import { STAGING_COLS, toStagingRow } from "../src/lib/staging-row";
 import db from "../src/lib/db";
 import { IMPORT_CHUNK_SIZE } from "../src/lib/import-config";
 import { parseImportChunkSize } from "../src/lib/import-cli";
+import { mapImportError } from "../src/lib/import-errors";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -50,73 +51,90 @@ async function main() {
 
   // Same check as upload.functions.ts:beginImport: a file with the date
   // marker but zero product rows (an empty spreadsheet, exported wrong)
-  // would arrive here intact and only blow up inside finalize_import
-  // (SIGNAL SQLSTATE '45000' from staging_count=0), a raw database error
-  // instead of this message.
+  // should fail before acquiring the global import lock.
   if (totalRows === 0) {
     throw new Error("No sale rows to import.");
   }
 
-  // ---- beginImport ----
-  console.log(`\nStarting import (batch ${batchId})...`);
-  await db.query("DELETE FROM staging_sales WHERE sale_date = ?", [parsed.sale_date]);
-  console.log("   OK: staging cleared");
-
-  if (parsed.stores.length) {
-    const ph = parsed.stores.map(() => "(?, ?)").join(", ");
-    const vals = parsed.stores.flatMap((s) => [s.store_code, s.store_name]);
-    await db.query(
-      `INSERT INTO stores (store_code, store_name) VALUES ${ph} ON DUPLICATE KEY UPDATE store_name = VALUES(store_name)`,
-      vals,
-    );
-    console.log(`   OK: ${parsed.stores.length} stores`);
-  }
-
-  if (parsed.products.length) {
-    await db.query("CALL upsert_products_bulk(?, ?)", [
-      JSON.stringify(parsed.products),
+  let lockAcquired = false;
+  try {
+    // ---- beginImport ----
+    console.log(`\nStarting import (batch ${batchId})...`);
+    await db.query("CALL acquire_import_lock(?, ?, ?, ?, ?)", [
+      batchId,
       parsed.sale_date,
+      userId ?? null,
+      JSON.stringify(parsed.stores),
+      JSON.stringify(parsed.products),
     ]);
-    console.log(`   OK: ${parsed.products.length} products`);
+    lockAcquired = true;
+    console.log("   OK: exclusive import lock acquired");
+
+    // ---- insertSalesChunk ----
+    const saleRows = parsed.sales.map((r) => ({
+      ...r,
+      sale_date: parsed.sale_date,
+      batch_id: batchId,
+    }));
+
+    let inserted = 0;
+    for (let i = 0; i < saleRows.length; i += chunkSize) {
+      const chunk = saleRows.slice(i, i + chunkSize);
+      const rowPH = `(${STAGING_COLS.map(() => "?").join(", ")})`;
+      const allPH = chunk.map(() => rowPH).join(", ");
+      const values = chunk.flatMap((r) => toStagingRow(r, batchId, parsed.sale_date));
+      const connection = await db.getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.query("CALL renew_import_lock(?, ?, ?)", [
+          batchId,
+          parsed.sale_date,
+          userId ?? null,
+        ]);
+        await connection.query(
+          `INSERT INTO staging_sales (${STAGING_COLS.join(", ")}) VALUES ${allPH}`,
+          values,
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+      inserted += chunk.length;
+      const pct = Math.round((inserted / totalRows) * 100);
+      console.log(`   OK: chunk ${i / chunkSize + 1}: ${chunk.length} rows (${pct}%)`);
+    }
+
+    // ---- finalizeImport ----
+    console.log("\nFinalizing...");
+    await db.query("CALL finalize_import(?, ?, ?, ?)", [
+      batchId,
+      parsed.sale_date,
+      totalRows,
+      userId ?? null,
+    ]);
+    lockAcquired = false;
+    console.log("   OK: import finalized");
+
+    console.log(`\nImport completed successfully.`);
+  } finally {
+    if (lockAcquired) {
+      try {
+        await db.query("CALL release_import_lock(?, ?)", [batchId, userId ?? null]);
+      } catch (releaseError) {
+        console.error(
+          "Failed to release import lock:",
+          releaseError instanceof Error ? releaseError.message : releaseError,
+        );
+      }
+    }
   }
-
-  // ---- insertSalesChunk ----
-  const saleRows = parsed.sales.map((r) => ({
-    ...r,
-    sale_date: parsed.sale_date,
-    batch_id: batchId,
-  }));
-
-  let inserted = 0;
-  for (let i = 0; i < saleRows.length; i += chunkSize) {
-    const chunk = saleRows.slice(i, i + chunkSize);
-    const rowPH = `(${STAGING_COLS.map(() => "?").join(", ")})`;
-    const allPH = chunk.map(() => rowPH).join(", ");
-    const values = chunk.flatMap((r) => toStagingRow(r, batchId, parsed.sale_date));
-    await db.query(
-      `INSERT INTO staging_sales (${STAGING_COLS.join(", ")}) VALUES ${allPH}`,
-      values,
-    );
-    inserted += chunk.length;
-    const pct = Math.round((inserted / totalRows) * 100);
-    console.log(`   OK: chunk ${i / chunkSize + 1}: ${chunk.length} rows (${pct}%)`);
-  }
-
-  // ---- finalizeImport ----
-  console.log("\nFinalizing...");
-  await db.query("CALL finalize_import(?, ?, ?, ?)", [
-    batchId,
-    parsed.sale_date,
-    totalRows,
-    userId ?? null,
-  ]);
-  console.log("   OK: import finalized");
-
-  console.log(`\nImport completed successfully.`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err instanceof Error ? err.message : String(err));
+  console.error("Fatal error:", mapImportError(err).message);
   process.exit(1);
 });

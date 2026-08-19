@@ -34,8 +34,16 @@ export const IMPORT_MAX_FILE_BYTES = 10 * 1024 * 1024;
  */
 export const IMPORT_MAX_ROWS = 200_000;
 
-// Both ceilings are intentionally well above production's current shape
-// (~13.6k products and far fewer than 1k stores), while still bounding the
-// metadata sent in beginImport independently from the row chunks.
+// Metadata includes stores and products with zero sales, which do not
+// produce staging rows but still belong to the imported spreadsheet.
 export const IMPORT_MAX_STORES = 1_000;
 export const IMPORT_MAX_PRODUCTS = 50_000;
+
+export const IMPORT_BUSY_MESSAGE =
+  "Outra importação está em andamento. Aguarde a conclusão para tentar novamente.";
+export const IMPORT_LEASE_LOST_MESSAGE =
+  "A importação expirou ou perdeu o bloqueio exclusivo. Tente novamente.";
+export const IMPORT_ROW_COUNT_MISMATCH_MESSAGE =
+  "A quantidade de linhas recebida não confere com o arquivo. Nenhum dado foi publicado.";
+export const IMPORT_CANCEL_FAILED_MESSAGE =
+  "Não foi possível confirmar o cancelamento. O bloqueio será liberado após 10 minutos sem atividade.";

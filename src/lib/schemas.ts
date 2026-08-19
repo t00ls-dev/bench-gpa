@@ -151,7 +151,7 @@ const ImportProductSchema = z.object({
 
 export const BeginImportSchema = z.object({
   sale_date: z.string(),
-  batch_id: z.string().max(36),
+  batch_id: z.string().min(1).max(36),
   total_rows: z.number().int().nonnegative().max(IMPORT_MAX_ROWS),
   stores: z.array(ImportStoreSchema).max(IMPORT_MAX_STORES),
   products: z.array(ImportProductSchema).max(IMPORT_MAX_PRODUCTS),
@@ -159,14 +159,18 @@ export const BeginImportSchema = z.object({
 
 export const InsertSalesChunkSchema = z.object({
   sale_date: z.string(),
-  batch_id: z.string().max(36),
+  batch_id: z.string().min(1).max(36),
   rows: z.array(SaleRowSchema).min(1).max(IMPORT_CHUNK_SIZE),
 });
 
 export const FinalizeImportSchema = z.object({
   sale_date: z.string(),
-  batch_id: z.string().max(36),
-  row_count: z.number().int().nonnegative().max(IMPORT_MAX_ROWS),
+  batch_id: z.string().min(1).max(36),
+  row_count: z.number().int().positive().max(IMPORT_MAX_ROWS),
+});
+
+export const CancelImportSchema = z.object({
+  batch_id: z.string().min(1).max(36),
 });
 
 export const SingleSlugSchema = z.object({ slug: z.string().min(1) });

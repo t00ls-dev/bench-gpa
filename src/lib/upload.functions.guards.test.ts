@@ -76,8 +76,8 @@ describe("beginImport: real admin guard (assertAdmin not mocked)", () => {
         },
       }),
     ).rejects.toThrow("Apenas administradores");
-    // Only assertAdmin's own check ran: the DELETE on staging_sales (which
-    // would wipe the day's data for any caller) never fired.
+    // Only assertAdmin's own check ran: lock acquisition and staging cleanup
+    // never fired.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
   });
