@@ -80,8 +80,8 @@ mexer nesse glob primeiro, nada nessa frente é possível.
 **Componentes com lógica não-trivial e zero teste**, por complexidade
 (hooks internos): `admin-user-management.tsx` (9), `multi-select.tsx` (12),
 `area-table.tsx` (2, mas virtualizado + PDF), `admin-audit-panel.tsx` (2),
-`filter-bar.tsx` (3), `date-range-picker.tsx` (6), `command-palette.tsx`
-(8), entre outros 9 componentes menores. Maior risco de negócio:
+`filter-bar.tsx` (3) e `date-range-picker.tsx` (6), entre outros componentes
+menores. Maior risco de negócio:
 `admin-user-management.tsx` (alimenta o path não testado de `listUsers`,
 ver A.2) e `multi-select.tsx`/`filter-bar.tsx` (cascata de filtro
 compartilhada por Dashboard/Área/Produto).

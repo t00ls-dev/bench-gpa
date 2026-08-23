@@ -163,10 +163,6 @@ contrário de "Produção" isolado). Lugares a trocar:
 - `src/components/mobile-nav.tsx:25` -- label da nav mobile, hoje só
   `"Produção"`; troca pra `"Previsão"` (forma curta, mesmo estilo de
   "Dashboard"/"Produto"/"Área" já usado ali).
-- `src/components/command-palette.tsx:29` -- label na paleta de comandos
-  (Cmd+K).
-- `src/components/help-overlay.tsx:10` -- texto do atalho `g + e`
-  ("Ir para Previsão de Produção").
 - `src/hooks/use-production-pdf-export.ts:58` -- título impresso no PDF.
 
 Nomes de arquivo/rota/variável/função continuam em inglês
@@ -185,6 +181,6 @@ aplicada quando `/producao` virou `/forecast`).
   de 3 níveis, um caso de "outros" dentro de um subgrupo específico,
   filtro de Produto ainda funcionando (narrowing recursivo), gerar o
   PDF de novo e comparar com `pdftotext`/`pdftoppm`. Conferir também o
-  rebranding: título da página, menu lateral, nav mobile, paleta de
-  comandos (Cmd+K), overlay de ajuda (`?`) e título do PDF todos
+  rebranding: título da página, menu lateral, nav mobile, overlay de ajuda
+  (`?`) e título do PDF todos
   mostrando "Previsão de Produção" (ou "Previsão" na nav mobile).

@@ -95,7 +95,7 @@ para os XLSX).
 | `src/components/ui/toggle.tsx` órfão (0 imports)          | `ui/toggle.tsx`                                                                         | Baixo            | Baixa      |
 | 4 scripts de debug ad-hoc, credenciais/portas obsoletas   | `scripts/debug-*.mjs`, `test-viewports.mjs`                                             | Baixo            | Baixa      |
 | `backfill-null-categories.ts` solto na raiz de `scripts/` | `scripts/backfill-null-categories.ts`                                                   | Médio            | Baixa      |
-| ~10 exports/tipos sem consumidor externo                  | `filter-cascade.ts`, `rate-limit.ts`, `schemas.ts`, `use-hotkey.ts`, `extract-date.ts`… | Baixo            | Baixa      |
+| ~10 exports/tipos sem consumidor externo                  | `filter-cascade.ts`, `rate-limit.ts`, `schemas.ts`, `extract-date.ts`…                  | Baixo            | Baixa      |
 
 ## Dependências
 

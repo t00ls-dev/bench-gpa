@@ -1,12 +1,12 @@
 # Cobertura de testes
 
-_Gerado em 2026-08-19T03:56:24.767Z, thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
+_Gerado em 2026-08-23T16:18:37.237Z, thresholds: lines 20%, statements 20%, functions 15%, branches 12%_
 
 ## Total
 
 | | Lines | Statements | Functions | Branches |
 |---|---|---|---|---|
-| **Total** | 52.1% ok | 50.8% ok | 37.0% ok | 43.5% ok |
+| **Total** | 52.9% ok | 51.7% ok | 38.0% ok | 43.4% ok |
 
 ## Por arquivo (ordenado por cobertura de linhas, pior primeiro)
 
@@ -23,7 +23,6 @@ _Gerado em 2026-08-19T03:56:24.767Z, thresholds: lines 20%, statements 20%, func
 | `src/components/area-filters.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok |
 | `src/components/area-kpi-cards.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok |
 | `src/components/area-table.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
-| `src/components/command-palette.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/create-user-dialog.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/dashboard-charts.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/date-range-picker.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
@@ -31,7 +30,6 @@ _Gerado em 2026-08-19T03:56:24.767Z, thresholds: lines 20%, statements 20%, func
 | `src/components/error-boundary.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/filter-bar.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/filter-field.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok |
-| `src/components/help-overlay.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok |
 | `src/components/import-calendar.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/import-history.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/import-progress.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
@@ -97,7 +95,7 @@ _Gerado em 2026-08-19T03:56:24.767Z, thresholds: lines 20%, statements 20%, func
 | `src/hooks/use-wake-lock.ts` | 91.3% ok | 92.3% ok | 85.7% ok | 83.3% ok |
 | `src/lib/dashboard.functions.ts` | 91.4% ok | 91.7% ok | 81.3% ok | 68.3% ok |
 | `src/components/ui/select.tsx` | 91.7% ok | 91.7% ok | 71.4% ok | 100.0% ok |
-| `src/lib/admin-docs.functions.ts` | 93.1% ok | 94.1% ok | 75.0% ok | 72.2% ok |
+| `src/lib/admin-docs.functions.ts` | 93.1% ok | 94.1% ok | 75.0% ok | 77.8% ok |
 | `src/lib/production.functions.ts` | 93.9% ok | 94.3% ok | 80.0% ok | 92.8% ok |
 | `src/lib/auth-api.ts` | 94.4% ok | 93.6% ok | 58.3% ok | 90.6% ok |
 | `src/hooks/use-persistent-state.ts` | 95.0% ok | 91.7% ok | 85.7% ok | 81.3% ok |
@@ -140,5 +138,4 @@ _Gerado em 2026-08-19T03:56:24.767Z, thresholds: lines 20%, statements 20%, func
 | `src/lib/session.ts` | 100.0% ok | 96.4% ok | 100.0% ok | 96.2% ok |
 | `src/lib/staging-row.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
 | `src/lib/turnstile.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 100.0% ok |
-| `src/lib/use-hotkey.ts` | 100.0% ok | 100.0% ok | 100.0% ok | 96.7% ok |
 | `src/lib/xlsx-parser.ts` | 100.0% ok | 93.3% ok | 100.0% ok | 86.1% ok |
