@@ -1,10 +1,15 @@
 import { fmtBRL } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface Item {
-  name?: string;
+export interface RankingItem {
+  name: string;
   code?: string;
   val: number;
+  depto?: string;
+  secao?: string;
+  grupo?: string;
+  subgrupo?: string;
+  context?: string;
 }
 
 export function RankingCard({
@@ -14,9 +19,9 @@ export function RankingCard({
   onItemClick,
 }: {
   title: string;
-  items: Item[];
+  items: RankingItem[];
   isLoading?: boolean;
-  onItemClick?: (item: Item) => void;
+  onItemClick?: (item: RankingItem) => void;
 }) {
   return (
     <div className="kpi-card min-w-0">
@@ -31,7 +36,9 @@ export function RankingCard({
           </thead>
           <tbody>
             {items.map((it, i) => {
-              const label = it.code ? `${it.code} - ${it.name ?? ""}` : (it.name ?? "");
+              const label = it.code
+                ? `${it.code} - ${it.name ?? ""}`
+                : `${it.name ?? ""}${it.context ? ` (${it.context})` : ""}`;
               return (
                 <tr
                   key={`${label}-${i}`}

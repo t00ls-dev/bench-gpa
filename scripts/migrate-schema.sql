@@ -6,6 +6,7 @@ DROP PROCEDURE IF EXISTS dashboard_metrics;
 DROP PROCEDURE IF EXISTS dashboard_rankings;
 DROP PROCEDURE IF EXISTS filter_options;
 DROP PROCEDURE IF EXISTS area_analysis;
+DROP PROCEDURE IF EXISTS area_analysis_v2;
 DROP PROCEDURE IF EXISTS area_filter_hierarchy;
 DROP PROCEDURE IF EXISTS product_search;
 DROP PROCEDURE IF EXISTS get_product_by_code;
@@ -151,12 +152,9 @@ CREATE TABLE IF NOT EXISTS sales_daily_agg (
 -- and docs/medicao-performance.md): identical hash across the procs, no
 -- read regression. Don't recreate a standalone one without measuring again.
 --
--- idx_prod_daily_store_depto_date below is a DIFFERENT case, added
--- 2026-08-07 for production_forecast: store_code/depto are MANDATORY,
--- single-value parameters there (not optional multi-value filters like
--- area_analysis/dashboard_metrics), so the access pattern genuinely
--- benefits. See scripts/migrations/0012_add_index_sales_prod_daily_agg_store_depto_date.sql
--- for the full before/after measurement (127x on the read side).
+-- The composite index below is a DIFFERENT case: production_forecast always
+-- filters one store and joins current product identity over a date range.
+-- Migration 0014 documents why it replaced the historical-depto index.
 CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   sale_date   DATE NOT NULL,
   store_code  VARCHAR(20) NOT NULL,
@@ -168,7 +166,7 @@ CREATE TABLE IF NOT EXISTS sales_prod_daily_agg (
   subgrupo    VARCHAR(100),
   val_vda     DECIMAL(15,2) NOT NULL DEFAULT 0,
   PRIMARY KEY (sale_date, store_code, prod_code),
-  INDEX idx_prod_daily_store_depto_date (store_code, depto, sale_date),
+  INDEX idx_prod_daily_store_prod_date (store_code, prod_code, sale_date),
   INDEX idx_prod_daily_prod_code (prod_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -281,7 +279,7 @@ BEGIN
     secao VARCHAR(100),
     grupo VARCHAR(100),
     subgrupo VARCHAR(100)
-  ) ENGINE=MEMORY;
+  ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
   IF JSON_LENGTH(p_stores) > 0 THEN
     INSERT INTO tmp_filters (store_code)
@@ -325,21 +323,22 @@ BEGIN
   -- the type SUM produces, with no risk of truncating into a hand-picked DECIMAL.
   DROP TEMPORARY TABLE IF EXISTS tmp_period;
   CREATE TEMPORARY TABLE tmp_period ENGINE=InnoDB AS
-  SELECT a.sale_date, a.store_code, a.depto, SUM(a.val_vda) AS val
+  SELECT a.sale_date, a.store_code, u.depto, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
+  INNER JOIN product_universe u ON u.prod_code = a.prod_code AND u.store_code = a.store_code
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL)
-      OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+      OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL)
-      OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+      OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL)
-      OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+      OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL)
-      OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+      OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
     AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL)
-      OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-  GROUP BY a.sale_date, a.store_code, a.depto;
+      OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+  GROUP BY a.sale_date, a.store_code, u.depto;
 
   -- Result set 1: aggregates
   -- Only `total` is read (callMetrics, in src/lib/api-types.ts). This
@@ -399,7 +398,7 @@ BEGIN
     secao VARCHAR(100),
     grupo VARCHAR(100),
     subgrupo VARCHAR(100)
-  ) ENGINE=MEMORY;
+  ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
   IF JSON_LENGTH(p_stores) > 0 THEN
     INSERT INTO tmp_filters (store_code)
@@ -447,17 +446,18 @@ BEGIN
   -- read. One pays off; two don't.
   DROP TEMPORARY TABLE IF EXISTS tmp_period;
   CREATE TEMPORARY TABLE tmp_period ENGINE=InnoDB AS
-  SELECT a.depto, a.secao, a.grupo, a.subgrupo, a.prod_code, a.prod_name,
+  SELECT u.depto, u.secao, u.grupo, u.subgrupo, a.prod_code, u.prod_name,
          SUM(a.val_vda) AS v
   FROM sales_prod_daily_agg a
+  INNER JOIN product_universe u ON u.prod_code = a.prod_code AND u.store_code = a.store_code
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
-  GROUP BY a.depto, a.secao, a.grupo, a.subgrupo, a.prod_code, a.prod_name;
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+  GROUP BY u.depto, u.secao, u.grupo, u.subgrupo, a.prod_code, u.prod_name;
 
   -- The temp table's column is named `v`, not `val`: the rollups return
   -- `SUM(v) AS val` and order by `val`. If the column were also named
@@ -477,30 +477,30 @@ BEGIN
   DEALLOCATE PREPARE stmt;
 
   -- bySecao
-  PREPARE stmt FROM 'SELECT secao AS name, SUM(v) AS val
+  PREPARE stmt FROM 'SELECT depto, secao AS name, SUM(v) AS val
     FROM tmp_period WHERE secao IS NOT NULL
-    GROUP BY secao ORDER BY val DESC LIMIT ?';
+    GROUP BY depto, secao ORDER BY val DESC LIMIT ?';
   EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- byGrupo
-  PREPARE stmt FROM 'SELECT grupo AS name, SUM(v) AS val
+  PREPARE stmt FROM 'SELECT depto, secao, grupo AS name, SUM(v) AS val
     FROM tmp_period WHERE grupo IS NOT NULL
-    GROUP BY grupo ORDER BY val DESC LIMIT ?';
+    GROUP BY depto, secao, grupo ORDER BY val DESC LIMIT ?';
   EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- bySubgrupo
-  PREPARE stmt FROM 'SELECT subgrupo AS name, SUM(v) AS val
+  PREPARE stmt FROM 'SELECT depto, secao, grupo, subgrupo AS name, SUM(v) AS val
     FROM tmp_period WHERE subgrupo IS NOT NULL
-    GROUP BY subgrupo ORDER BY val DESC LIMIT ?';
+    GROUP BY depto, secao, grupo, subgrupo ORDER BY val DESC LIMIT ?';
   EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
   -- byProduto
-  PREPARE stmt FROM 'SELECT prod_code AS code, prod_name AS name, SUM(v) AS val
+  PREPARE stmt FROM 'SELECT prod_code AS code, MAX(prod_name) AS name, SUM(v) AS val
     FROM tmp_period
-    GROUP BY prod_code, prod_name ORDER BY val DESC LIMIT ?';
+    GROUP BY prod_code ORDER BY val DESC LIMIT ?';
   EXECUTE stmt USING @limit_val;
   DEALLOCATE PREPARE stmt;
 
@@ -526,7 +526,7 @@ BEGIN
     depto VARCHAR(100),
     secao VARCHAR(100),
     grupo VARCHAR(100)
-  ) ENGINE=MEMORY;
+  ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
   IF JSON_LENGTH(p_stores) > 0 THEN
     INSERT INTO tmp_filters (store_code)
@@ -626,7 +626,7 @@ END//
 -- The same model WORKED in dashboard_metrics (46.3s -> 10.1s) and
 -- dashboard_rankings (32.4s -> 19.0s), which don't do the LEFT JOIN
 -- against product_universe. That's where the difference lies, not in the idea.
-CREATE PROCEDURE area_analysis(
+CREATE PROCEDURE area_analysis_v2(
   p_date_from DATE,
   p_date_to DATE,
   p_stores JSON,
@@ -634,6 +634,7 @@ CREATE PROCEDURE area_analysis(
   p_secoes JSON,
   p_grupos JSON,
   p_subgrupos JSON,
+  p_products JSON,
   p_page INT,
   p_page_size INT,
   p_search VARCHAR(255),
@@ -646,6 +647,7 @@ BEGIN
   DECLARE v_total DECIMAL(18,2) DEFAULT 0;
   DECLARE v_with_sale INT DEFAULT 0;
   DECLARE v_universe INT DEFAULT 0;
+  DECLARE v_total_products INT DEFAULT 0;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
   CREATE TEMPORARY TABLE tmp_filters (
@@ -653,8 +655,9 @@ BEGIN
     depto VARCHAR(100),
     secao VARCHAR(100),
     grupo VARCHAR(100),
-    subgrupo VARCHAR(100)
-  ) ENGINE=MEMORY;
+    subgrupo VARCHAR(100),
+    prod_code VARCHAR(20)
+  ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
   IF JSON_LENGTH(p_stores) > 0 THEN
     INSERT INTO tmp_filters (store_code) SELECT DISTINCT value FROM JSON_TABLE(p_stores, '$[*]' COLUMNS (value VARCHAR(20) PATH '$')) AS j;
@@ -671,6 +674,31 @@ BEGIN
   IF JSON_LENGTH(p_subgrupos) > 0 THEN
     INSERT INTO tmp_filters (subgrupo) SELECT DISTINCT value FROM JSON_TABLE(p_subgrupos, '$[*]' COLUMNS (value VARCHAR(100) PATH '$')) AS j;
   END IF;
+  IF JSON_LENGTH(p_products) > 0 THEN
+    INSERT INTO tmp_filters (prod_code) SELECT DISTINCT value FROM JSON_TABLE(p_products, '$[*]' COLUMNS (value VARCHAR(20) PATH '$')) AS j;
+  END IF;
+
+  -- One source of truth for the selected current hierarchy. Historical sales
+  -- join by store + PLU instead of reapplying the category recorded on each
+  -- sale, so a reclassified product cannot contribute to one area while being
+  -- listed in another.
+  DROP TEMPORARY TABLE IF EXISTS tmp_area_scope;
+  CREATE TEMPORARY TABLE tmp_area_scope (
+    prod_code VARCHAR(20) NOT NULL,
+    store_code VARCHAR(20) NOT NULL,
+    PRIMARY KEY (prod_code, store_code),
+    KEY idx_tmp_area_scope_store_prod (store_code, prod_code)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+  INSERT INTO tmp_area_scope (prod_code, store_code)
+  SELECT u.prod_code, u.store_code
+  FROM product_universe u
+  WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.prod_code IS NOT NULL) OR u.prod_code IN (SELECT t.prod_code FROM tmp_filters t WHERE t.prod_code IS NOT NULL));
 
   IF p_page IS NOT NULL AND p_page_size IS NOT NULL THEN
     SET v_offset = (p_page - 1) * p_page_size;
@@ -692,28 +720,14 @@ BEGIN
   SELECT COALESCE(SUM(a.val_vda), 0), COUNT(DISTINCT a.prod_code)
     INTO v_total, v_with_sale
   FROM sales_prod_daily_agg a
+  INNER JOIN tmp_area_scope scope ON scope.prod_code = a.prod_code AND scope.store_code = a.store_code
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
-    AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+    AND (p_date_to IS NULL OR a.sale_date <= p_date_to);
 
-  SELECT COUNT(DISTINCT u.prod_code) INTO v_universe
-  FROM product_universe u
-  WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR u.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR u.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR u.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL));
+  SELECT COUNT(DISTINCT prod_code) INTO v_universe FROM tmp_area_scope;
 
-  -- GREATEST guards against two cases where the universe can momentarily be
-  -- smaller than the period: an out-of-date product_universe (the import
-  -- wrote the agg but the refresh failed) and a reclassified PLU: the
-  -- universe keeps the category from the last sale, so under a category
-  -- filter it can show up in the period but not the universe. Neither one
-  -- can turn into a negative KPI.
+  -- GREATEST still guards an out-of-date product_universe if an import wrote
+  -- aggregates but the daily universe refresh has not completed yet.
   SELECT
     v_total                                  AS total,
     GREATEST(v_universe, v_with_sale)        AS plus_total,
@@ -724,29 +738,22 @@ BEGIN
   -- Counts the same set the listing (result set 4) returns: the universe
   -- under the filters, not just who sold in the period. If it counted the
   -- period, pagination would promise fewer pages than the list actually has.
-  -- (As before, doesn't account for p_search: the search narrows the list
-  -- but not this total. Pre-existing limitation, kept to avoid changing
-  -- two things at once.)
-  --
-  -- v_universe (result set 1) is already exactly this count: same table,
-  -- same WHERE, computed a few lines above. Reuses it instead of scanning
-  -- product_universe again. Do NOT confuse this with the regression
-  -- documented in docs/medicao-performance.md: that one touched
-  -- sales_prod_daily_agg via CREATE TEMPORARY TABLE ... AS SELECT; this
-  -- just reuses an already-computed variable, without changing the plan of
-  -- any scan on the big table.
-  SELECT v_universe AS total_products;
+  IF p_search IS NOT NULL AND p_search != '' THEN
+    SELECT COUNT(DISTINCT u.prod_code) INTO v_total_products
+    FROM product_universe u
+    INNER JOIN tmp_area_scope scope ON scope.prod_code = u.prod_code AND scope.store_code = u.store_code
+    WHERE u.prod_name LIKE CONCAT('%', p_search, '%') OR u.prod_code LIKE CONCAT('%', p_search, '%');
+  ELSE
+    SET v_total_products = v_universe;
+  END IF;
+  SELECT v_total_products AS total_products;
 
   -- Result set 3: byDate evolution
   SELECT a.sale_date AS date, SUM(a.val_vda) AS val
   FROM sales_prod_daily_agg a
+  INNER JOIN tmp_area_scope scope ON scope.prod_code = a.prod_code AND scope.store_code = a.store_code
   WHERE (p_date_from IS NULL OR a.sale_date >= p_date_from)
     AND (p_date_to IS NULL OR a.sale_date <= p_date_to)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
   GROUP BY a.sale_date ORDER BY a.sale_date;
 
   -- Result set 4: paginated products
@@ -797,18 +804,26 @@ BEGIN
   SET @sql = CONCAT(
      'SELECT u.prod_code, u.prod_name, u.depto, u.secao, u.grupo, u.subgrupo,
              COALESCE(s.val, 0) AS val,
-             COALESCE(s.last_in_period, u.last_sale_date) AS last_sale_date
+             COALESCE(
+               s.last_in_period,
+               IF(
+                 ? IS NULL OR u.last_sale_date <= ?,
+                 u.last_sale_date,
+                 (SELECT MAX(a2.sale_date)
+                  FROM sales_prod_daily_agg a2
+                  INNER JOIN tmp_area_scope scope2
+                    ON scope2.prod_code = a2.prod_code AND scope2.store_code = a2.store_code
+                  WHERE a2.prod_code = u.prod_code AND a2.sale_date <= ?)
+               )
+             ) AS last_sale_date
       FROM (
         SELECT uu.prod_code,
                MAX(uu.prod_name) AS prod_name, MAX(uu.depto) AS depto,
                MAX(uu.secao) AS secao, MAX(uu.grupo) AS grupo,
                MAX(uu.subgrupo) AS subgrupo, MAX(uu.last_sale_date) AS last_sale_date
         FROM product_universe uu
-        WHERE (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR uu.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR uu.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR uu.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR uu.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR uu.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))',
+        INNER JOIN tmp_area_scope scope ON scope.prod_code = uu.prod_code AND scope.store_code = uu.store_code
+        WHERE 1 = 1',
     IF(p_search IS NOT NULL AND p_search != '',
       ' AND (uu.prod_name LIKE ? OR uu.prod_code LIKE ?)', ''),
     '   GROUP BY uu.prod_code
@@ -817,35 +832,56 @@ BEGIN
         SELECT a.prod_code, SUM(a.val_vda) AS val,
                MAX(a.sale_date) AS last_in_period
         FROM sales_prod_daily_agg a
+        INNER JOIN tmp_area_scope scope ON scope.prod_code = a.prod_code AND scope.store_code = a.store_code
         WHERE (? IS NULL OR a.sale_date >= ?)
           AND (? IS NULL OR a.sale_date <= ?)
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.store_code IS NOT NULL) OR a.store_code IN (SELECT t.store_code FROM tmp_filters t WHERE t.store_code IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.depto IS NOT NULL) OR a.depto IN (SELECT t.depto FROM tmp_filters t WHERE t.depto IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR a.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR a.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-          AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.subgrupo IS NOT NULL) OR a.subgrupo IN (SELECT t.subgrupo FROM tmp_filters t WHERE t.subgrupo IS NOT NULL))
         GROUP BY a.prod_code
       ) s ON s.prod_code = u.prod_code',
-    CONCAT(' ORDER BY ', @sort_col, ' ', @sort_dir),
+    CONCAT(' ORDER BY ', @sort_col, ' ', @sort_dir, ', prod_code ASC'),
     IF(v_limit > 0, CONCAT(' LIMIT ', v_limit), ''),
     IF(v_offset > 0, CONCAT(' OFFSET ', v_offset), '')
   );
 
-  -- Placeholder order: the search filter now lives in the universe
-  -- subquery, which comes BEFORE the period subquery, which is why
-  -- @search_param precedes the dates here.
+  -- Placeholder order: the last-sale expression precedes both subqueries,
+  -- then the optional search precedes the period dates. The historical
+  -- lookup only runs when product_universe's latest sale is after dateTo.
   IF p_search IS NOT NULL AND p_search != '' THEN
     SET @search_param = CONCAT('%', p_search, '%');
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING @search_param, @search_param, p_date_from, p_date_from, p_date_to, p_date_to;
+    EXECUTE stmt USING p_date_to, p_date_to, p_date_to, @search_param, @search_param, p_date_from, p_date_from, p_date_to, p_date_to;
     DEALLOCATE PREPARE stmt;
   ELSE
     PREPARE stmt FROM @sql;
-    EXECUTE stmt USING p_date_from, p_date_from, p_date_to, p_date_to;
+    EXECUTE stmt USING p_date_to, p_date_to, p_date_to, p_date_from, p_date_from, p_date_to, p_date_to;
     DEALLOCATE PREPARE stmt;
   END IF;
 
+  DROP TEMPORARY TABLE IF EXISTS tmp_area_scope;
   DROP TEMPORARY TABLE IF EXISTS tmp_filters;
+END//
+
+-- Keep the previous signature valid while migrations run before the atomic
+-- release swap. The new application calls area_analysis_v2 with products.
+CREATE PROCEDURE area_analysis(
+  p_date_from DATE,
+  p_date_to DATE,
+  p_stores JSON,
+  p_deptos JSON,
+  p_secoes JSON,
+  p_grupos JSON,
+  p_subgrupos JSON,
+  p_page INT,
+  p_page_size INT,
+  p_search VARCHAR(255),
+  p_sort_by VARCHAR(32),
+  p_sort_dir VARCHAR(4)
+)
+BEGIN
+  CALL area_analysis_v2(
+    p_date_from, p_date_to, p_stores, p_deptos, p_secoes, p_grupos,
+    p_subgrupos, JSON_ARRAY(), p_page, p_page_size, p_search, p_sort_by,
+    p_sort_dir
+  );
 END//
 
 -- 5/20: area_filter_hierarchy
@@ -898,20 +934,32 @@ CREATE PROCEDURE product_analysis(
 BEGIN
   DECLARE v_ref_date DATE;
 
-  SET v_ref_date = COALESCE(p_ref_date, (SELECT MAX(sale_date) FROM sales_prod_daily_agg WHERE prod_code = p_prod_code));
-
-  -- Result set 1: product metadata (always returns row from products even without sales)
-  SELECT p.prod_code, p.prod_name, h.depto, h.secao, h.grupo, h.subgrupo
-  FROM products p
-  LEFT JOIN (
-    SELECT prod_code, depto, secao, grupo, subgrupo
+  SET v_ref_date = COALESCE(p_ref_date, (
+    SELECT MAX(sale_date)
     FROM sales_prod_daily_agg
+    WHERE prod_code = p_prod_code
+      AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(store_code)))
+  ));
+
+  -- Result set 1: current metadata under the same store scope as the metrics.
+  -- If selected stores disagree on the hierarchy, all category fields are
+  -- returned as NULL instead of silently showing one store's path as if it
+  -- represented the whole selection.
+  SELECT p.prod_code, p.prod_name,
+         IF(COUNT(DISTINCT CONCAT_WS(CHAR(31), COALESCE(u.depto, ''), COALESCE(u.secao, ''), COALESCE(u.grupo, ''), COALESCE(u.subgrupo, ''))) = 1, MAX(u.depto), NULL) AS depto,
+         IF(COUNT(DISTINCT CONCAT_WS(CHAR(31), COALESCE(u.depto, ''), COALESCE(u.secao, ''), COALESCE(u.grupo, ''), COALESCE(u.subgrupo, ''))) = 1, MAX(u.secao), NULL) AS secao,
+         IF(COUNT(DISTINCT CONCAT_WS(CHAR(31), COALESCE(u.depto, ''), COALESCE(u.secao, ''), COALESCE(u.grupo, ''), COALESCE(u.subgrupo, ''))) = 1, MAX(u.grupo), NULL) AS grupo,
+         IF(COUNT(DISTINCT CONCAT_WS(CHAR(31), COALESCE(u.depto, ''), COALESCE(u.secao, ''), COALESCE(u.grupo, ''), COALESCE(u.subgrupo, ''))) = 1, MAX(u.subgrupo), NULL) AS subgrupo
+  FROM (
+    SELECT prod_code, prod_name
+    FROM products
     WHERE prod_code = p_prod_code
     ORDER BY sale_date DESC
     LIMIT 1
-  ) h ON true
-  WHERE p.prod_code = p_prod_code
-  LIMIT 1;
+  ) p
+  LEFT JOIN product_universe u ON u.prod_code = p.prod_code
+    AND (JSON_LENGTH(p_store_codes) = 0 OR JSON_CONTAINS(p_store_codes, JSON_QUOTE(u.store_code)))
+  GROUP BY p.prod_code, p.prod_name;
 
   -- Result set 2: refValue + refDate
   SELECT v_ref_date AS ref_date, COALESCE(SUM(val_vda), 0) AS ref_value
@@ -985,7 +1033,7 @@ BEGIN
   CREATE TEMPORARY TABLE tmp_products (
     prod_code VARCHAR(20),
     prod_name VARCHAR(255)
-  ) ENGINE=MEMORY;
+  ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
   INSERT INTO tmp_products (prod_code, prod_name)
   SELECT j.prod_code, j.prod_name
@@ -1373,15 +1421,15 @@ BEGIN
 
   INSERT INTO filter_hierarchy (store_code, store_name, depto, secao, grupo, subgrupo)
   SELECT DISTINCT
-    a.store_code,
-    COALESCE(s.store_name, a.store_code),
-    a.depto,
-    a.secao,
-    a.grupo,
-    a.subgrupo
-  FROM sales_prod_daily_agg a
-  LEFT JOIN stores s ON s.store_code = a.store_code
-  WHERE a.depto IS NOT NULL OR a.secao IS NOT NULL OR a.grupo IS NOT NULL OR a.subgrupo IS NOT NULL;
+    u.store_code,
+    COALESCE(s.store_name, u.store_code),
+    u.depto,
+    u.secao,
+    u.grupo,
+    u.subgrupo
+  FROM product_universe u
+  LEFT JOIN stores s ON s.store_code = u.store_code
+  WHERE u.depto IS NOT NULL OR u.secao IS NOT NULL OR u.grupo IS NOT NULL OR u.subgrupo IS NOT NULL;
 
   COMMIT;
 END//
@@ -1443,12 +1491,10 @@ END//
 -- 20/20: production_forecast
 --
 -- See docs/planejamento-producao-perecveis-2026-08-07.md for the design.
--- Measured as a candidate before adopting this name (docs/medicao-
--- performance.md's rule): 31,826 ms -> 250 ms (127x) after adding
--- idx_prod_daily_store_depto_date (see migration 0012), same hash
--- before/after. Without that index the optimizer scanned the entire table
--- via idx_prod_daily_prod_code to avoid a filesort on GROUP BY prod_code,
--- ignoring the sale_date range entirely -- confirmed with EXPLAIN.
+-- Historical sales are joined by the product's current product_universe
+-- classification. idx_prod_daily_store_prod_date supports that identity and
+-- date-range access path; migration 0014 replaces the former historical
+-- depto index, which cannot safely filter a reclassified product.
 --
 -- p_store_code/p_target_date are always required singles (not JSON like
 -- area_analysis's optional multi-value filters): this screen always plans
@@ -1503,7 +1549,7 @@ BEGIN
   CREATE TEMPORARY TABLE tmp_filters (
     secao VARCHAR(100),
     grupo VARCHAR(100)
-  ) ENGINE=MEMORY;
+  ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
   IF JSON_LENGTH(p_secoes) > 0 THEN
     INSERT INTO tmp_filters (secao)
@@ -1516,19 +1562,20 @@ BEGIN
 
   DROP TEMPORARY TABLE IF EXISTS tmp_product_forecast;
   CREATE TEMPORARY TABLE tmp_product_forecast ENGINE=InnoDB AS
-  SELECT prod_code, MAX(prod_name) AS prod_name, MAX(secao) AS secao, MAX(grupo) AS grupo,
-         MAX(subgrupo) AS subgrupo,
+  SELECT u.prod_code, u.prod_name, u.secao, u.grupo, u.subgrupo,
          COUNT(*) AS occurrences,
-         AVG(val_vda) AS forecast_val, MIN(val_vda) AS forecast_min, MAX(val_vda) AS forecast_max
-  FROM sales_prod_daily_agg
-  WHERE store_code = p_store_code
-    AND depto = 'PERECIVEIS'
-    AND sale_date >= v_window_start
-    AND sale_date < p_target_date
-    AND DAYOFWEEK(sale_date) = DAYOFWEEK(p_target_date)
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
-    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
-  GROUP BY prod_code;
+         AVG(a.val_vda) AS forecast_val, MIN(a.val_vda) AS forecast_min, MAX(a.val_vda) AS forecast_max
+  FROM product_universe u
+  INNER JOIN sales_prod_daily_agg a
+    ON a.prod_code = u.prod_code AND a.store_code = u.store_code
+  WHERE u.store_code = p_store_code
+    AND u.depto = 'PERECIVEIS'
+    AND a.sale_date >= v_window_start
+    AND a.sale_date < p_target_date
+    AND DAYOFWEEK(a.sale_date) = DAYOFWEEK(p_target_date)
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.secao IS NOT NULL) OR u.secao IN (SELECT t.secao FROM tmp_filters t WHERE t.secao IS NOT NULL))
+    AND (NOT EXISTS (SELECT 1 FROM tmp_filters t WHERE t.grupo IS NOT NULL) OR u.grupo IN (SELECT t.grupo FROM tmp_filters t WHERE t.grupo IS NOT NULL))
+  GROUP BY u.prod_code, u.prod_name, u.secao, u.grupo, u.subgrupo;
 
   -- Result set 1: every product with at least one occurrence in the
   -- window, no confidence floor, with the min/max range alongside the

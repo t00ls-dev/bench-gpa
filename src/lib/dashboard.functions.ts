@@ -14,18 +14,25 @@ import {
   num,
   asRecord,
   parseNameVal,
+  parseHierarchyNameVal,
   parseCodeNameVal,
   dateTimeStr,
 } from "./api-types";
 import { FilterSchema, DashboardRankingsSchema } from "./schemas";
 import { CACHE_TTL_SHORT, CACHE_TTL_LONG } from "./cache";
+import { buildCacheKey } from "./cache-key";
 
 export const getFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => FilterSchema.omit({ subgrupos: true }).parse(d ?? {}))
   .handler(async ({ data }): Promise<FilterOptionsResult> => {
     const { cache } = await import("./cache");
-    const key = `filter_options:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}`;
+    const key = buildCacheKey("filter-options", {
+      stores: data.stores,
+      deptos: data.deptos,
+      secoes: data.secoes,
+      grupos: data.grupos,
+    });
     return cache.wrap(
       key,
       async () => {
@@ -106,7 +113,16 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
     // (docs/medicao-performance.md). Still expensive enough for the cache to
     // be worth it.
     const { cache } = await import("./cache");
-    const key = `rankings:${data.dateFrom ?? ""}:${data.dateTo ?? ""}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.limit ?? 10}`;
+    const key = buildCacheKey("rankings", {
+      dateFrom: data.dateFrom,
+      dateTo: data.dateTo,
+      stores: data.stores,
+      deptos: data.deptos,
+      secoes: data.secoes,
+      grupos: data.grupos,
+      subgrupos: data.subgrupos,
+      limit: data.limit,
+    });
     return cache.wrap(
       key,
       async () => {
@@ -123,9 +139,9 @@ export const getDashboardRankings = createServerFn({ method: "POST" })
         const [byDepto, bySecao, byGrupo, bySubgrupo, byProduto] = rs2 as unknown[];
         return {
           byDepto: parseNameVal(byDepto),
-          bySecao: parseNameVal(bySecao),
-          byGrupo: parseNameVal(byGrupo),
-          bySubgrupo: parseNameVal(bySubgrupo),
+          bySecao: parseHierarchyNameVal(bySecao, "secao"),
+          byGrupo: parseHierarchyNameVal(byGrupo, "grupo"),
+          bySubgrupo: parseHierarchyNameVal(bySubgrupo, "subgrupo"),
           byProduto: parseCodeNameVal(byProduto),
         };
       },

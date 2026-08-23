@@ -5,6 +5,7 @@ import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/prod
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useProductStoreCodes } from "@/hooks/use-product-store-codes";
 import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
@@ -52,7 +53,7 @@ function ProductPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
-  const [storeCodes, setStoreCodes] = useState<string[]>(store ? [store] : []);
+  const [storeCodes, setStoreCodes] = useProductStoreCodes(store, !!plu);
   const [recentProducts, setRecentProducts] = usePersistentState<RecentProduct[]>(
     "bench-gpa:produto:recentes",
     [],
@@ -109,7 +110,6 @@ function ProductPage() {
       }),
     enabled: !!selected,
     staleTime: QUERY_STALE_CORE,
-    placeholderData: (prev) => prev,
   });
 
   // byStore (the proc's result set 3) always brings back ALL stores:

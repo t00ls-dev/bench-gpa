@@ -72,10 +72,11 @@ D28=$(M -e "SELECT DATE_SUB('$LAST', INTERVAL 27 DAY);")
 DEPTO=$(M -e "SELECT depto FROM sales_prod_daily_agg WHERE depto IS NOT NULL GROUP BY depto ORDER BY COUNT(*) DESC LIMIT 1;")
 SECAO=$(M -e "SELECT secao FROM sales_prod_daily_agg WHERE secao IS NOT NULL GROUP BY secao ORDER BY COUNT(*) DESC LIMIT 1;")
 STORE=$(M -e "SELECT store_code FROM sales_prod_daily_agg GROUP BY store_code ORDER BY COUNT(*) DESC LIMIT 1;")
+PROD=$(M -e "SELECT prod_code FROM product_universe ORDER BY last_sale_date DESC LIMIT 1;")
 
 N='JSON_ARRAY()'
 esc() { printf '%s' "$1" | sed 's/"/\\"/g'; }
-JD="'[\"$(esc "$DEPTO")\"]'"; JS="'[\"$(esc "$SECAO")\"]'"; JL="'[\"$STORE\"]'"
+JD="'[\"$(esc "$DEPTO")\"]'"; JS="'[\"$(esc "$SECAO")\"]'"; JL="'[\"$STORE\"]'"; JP="'[\"$(esc "$PROD")\"]'"
 
 CASES=(
   # dashboard_metrics
@@ -100,24 +101,25 @@ CASES=(
   "r_datas_nulas|CALL dashboard_rankings(NULL,NULL,$N,$N,$N,$N,$N,10)"
   "r_vazio|CALL dashboard_rankings('1999-01-01','1999-01-02',$N,$N,$N,$N,$N,10)"
   # area_analysis
-  "a_padrao|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_pag2|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,2,50,NULL,'val','desc')"
-  "a_sort_val_asc|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'val','asc')"
-  "a_sort_code|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'prod_code','asc')"
-  "a_sort_name|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'prod_name','asc')"
-  "a_sort_lastsale|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'last_sale_date','desc')"
-  "a_sort_invalido|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'x; DROP','desc')"
-  "a_busca|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,'A','val','desc')"
-  "a_busca_vazia|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,'','val','desc')"
-  "a_busca_sem_match|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50,'ZZZQQQ','val','desc')"
-  "a_depto|CALL area_analysis('$D7','$LAST',$N,$JD,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_loja|CALL area_analysis('$D7','$LAST',$JL,$N,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_combo|CALL area_analysis('$D7','$LAST',$JL,$JD,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_um_dia|CALL area_analysis('$LAST','$LAST',$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_datas_nulas|CALL area_analysis(NULL,NULL,$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_vazio|CALL area_analysis('1999-01-01','1999-01-02',$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
-  "a_pagina_nula|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,NULL,NULL,NULL,'val','desc')"
-  "a_export|CALL area_analysis('$D7','$LAST',$N,$N,$N,$N,$N,1,50000,NULL,'val','desc')"
+  "a_padrao|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_pag2|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,2,50,NULL,'val','desc')"
+  "a_sort_val_asc|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'val','asc')"
+  "a_sort_code|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'prod_code','asc')"
+  "a_sort_name|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'prod_name','asc')"
+  "a_sort_lastsale|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'last_sale_date','desc')"
+  "a_sort_invalido|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'x; DROP','desc')"
+  "a_busca|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,'A','val','desc')"
+  "a_busca_vazia|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,'','val','desc')"
+  "a_busca_sem_match|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50,'ZZZQQQ','val','desc')"
+  "a_depto|CALL area_analysis_v2('$D7','$LAST',$N,$JD,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_loja|CALL area_analysis_v2('$D7','$LAST',$JL,$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_combo|CALL area_analysis_v2('$D7','$LAST',$JL,$JD,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_produto|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$JP,1,50,NULL,'val','desc')"
+  "a_um_dia|CALL area_analysis_v2('$LAST','$LAST',$N,$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_datas_nulas|CALL area_analysis_v2(NULL,NULL,$N,$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_vazio|CALL area_analysis_v2('1999-01-01','1999-01-02',$N,$N,$N,$N,$N,$N,1,50,NULL,'val','desc')"
+  "a_pagina_nula|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,NULL,NULL,NULL,'val','desc')"
+  "a_export|CALL area_analysis_v2('$D7','$LAST',$N,$N,$N,$N,$N,$N,1,50000,NULL,'val','desc')"
 )
 
 : > "$OUT"

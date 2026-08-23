@@ -15,12 +15,7 @@ interface Params {
   sortKey: AreaSortKey;
   sortDir: "asc" | "desc";
   daysSinceLabel: (iso: string | null) => string;
-  total: number;
-  noSale: number;
   pathParts: string[];
-  plusTotal: number;
-  plusWithSale: number;
-  avgPerPlu: number;
 }
 
 /**
@@ -36,12 +31,7 @@ export function useAreaPdfExport({
   sortKey,
   sortDir,
   daysSinceLabel,
-  total,
-  noSale,
   pathParts,
-  plusTotal,
-  plusWithSale,
-  avgPerPlu,
 }: Params) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const pdfElapsed = useElapsedSeconds(pdfLoading);
@@ -54,6 +44,7 @@ export function useAreaPdfExport({
     secoes: fSecoes,
     grupos: fGrupos,
     subgrupos: fSubgrupos,
+    products: fProducts,
   } = af;
 
   const openPdfInNewTab = async () => {
@@ -69,6 +60,7 @@ export function useAreaPdfExport({
           secoes: fSecoes,
           grupos: fGrupos,
           subgrupos: fSubgrupos,
+          products: fProducts,
           search: search.trim(),
           sortBy: sortKey,
           sortDir,
@@ -102,11 +94,11 @@ export function useAreaPdfExport({
         head: [["VENDA TOTAL", "PLUS (ÁREA)", "PLUS C/ VENDA", "PLUS S/ VENDA", "VENDA MÉDIA/PLU"]],
         body: [
           [
-            fmtBRL(total),
-            fmtInt(plusTotal),
-            fmtInt(plusWithSale),
-            fmtInt(noSale),
-            fmtBRL(avgPerPlu),
+            fmtBRL(allData.total),
+            fmtInt(allData.plusTotal),
+            fmtInt(allData.plusWithSale),
+            fmtInt(allData.plusWithoutSale),
+            fmtBRL(allData.avgPerPlu),
           ],
         ],
         theme: "grid",
