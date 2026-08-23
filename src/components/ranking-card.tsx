@@ -36,9 +36,7 @@ export function RankingCard({
           </thead>
           <tbody>
             {items.map((it, i) => {
-              const label = it.code
-                ? `${it.code} - ${it.name ?? ""}`
-                : `${it.name ?? ""}${it.context ? ` (${it.context})` : ""}`;
+              const label = it.code ? `${it.code} - ${it.name ?? ""}` : (it.name ?? "");
               return (
                 <tr
                   key={`${label}-${i}`}
