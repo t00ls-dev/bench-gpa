@@ -401,4 +401,33 @@ describe("useAreaProductsView", () => {
     expect(result.current.totalRows).toBe(1);
     expect(result.current.totalPages).toBe(1);
   });
+
+  it("keeps the table mounted while a search request is pending", async () => {
+    let resolveSearch: ((value: ReturnType<typeof areaResult>) => void) | undefined;
+    const pendingSearch = new Promise<ReturnType<typeof areaResult>>((resolve) => {
+      resolveSearch = resolve;
+    });
+    const getArea = vi
+      .fn()
+      .mockResolvedValueOnce(areaResult([product({ prod_code: "P1" })]))
+      .mockReturnValueOnce(pendingSearch);
+    const { result } = renderHook(() => useAreaProductsView(getArea, noSearchParams()), {
+      wrapper: makeWrapper(),
+    });
+
+    act(() => {
+      result.current.setStores(["1"]);
+      result.current.setDeptos(["MERC"]);
+    });
+    await waitFor(() => expect(result.current.products).toHaveLength(1));
+
+    act(() => result.current.setSearch("a"));
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.search).toBe("a");
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.products).toHaveLength(1);
+
+    resolveSearch?.(areaResult([]));
+    await waitFor(() => expect(result.current.isFetching).toBe(false));
+  });
 });
