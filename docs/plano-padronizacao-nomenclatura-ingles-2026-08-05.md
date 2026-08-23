@@ -155,8 +155,8 @@ comentários (`//` e `/** */`), sem mudança de comportamento, verificado via
   `area-filters.tsx`, `error-boundary.tsx`, `product-charts.tsx`,
   `edit-user-identifiers-dialog.tsx`, `date-range-picker.tsx`,
   `dashboard-charts.tsx`, `admin-user-management.tsx`,
-  `upload-dropzone.tsx`, `create-user-dialog.tsx`, `command-palette.tsx`,
-  `admin-gate.tsx`). Os demais arquivos do diretório não tinham comentários
+  `upload-dropzone.tsx`, `create-user-dialog.tsx`, `admin-gate.tsx`). Os demais
+  arquivos do diretório não tinham comentários
   em português. **`src/components/` está completo.**
 - **Etapa 7** (concluída, PR #215): 15 scripts não-SQL de `scripts/` com
   comentários em português (`bench-procs.sh`, `import-watch.ts`,

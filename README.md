@@ -16,7 +16,6 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 | PDF                | jsPDF + jspdf-autotable                                                      |
 | Virtualização      | @tanstack/react-virtual                                                      |
 | Drawer (mobile)    | vaul                                                                         |
-| Paleta de comandos | cmdk                                                                         |
 | Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                                |
 | CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
 | Segurança          | CSP nonce, HSTS, rate limiting em janela fixa (7 tiers por IP + 1 por conta) |
@@ -121,7 +120,7 @@ executado na VPS de produção.
 - **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Sem cron: pela tela `/upload` ou por `cli:import`/`cli:watch`, sob demanda (ver seção "Importação de Dados" acima).
 - **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). `cli:watch` usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria: evita o loop importar→purgar→reimportar.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
-- **UX**: Atalhos de teclado (g+letra), command palette (Cmd+K), help overlay (Shift+/), bottom tab bar mobile, View Transitions API, exportação PDF (Área e Previsão de Venda).
+- **UX**: Bottom tab bar mobile, View Transitions API e exportação PDF (Área e Previsão de Venda).
 - **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → nova release em `releases/<timestamp>-<sha-curto>/`, symlink `current` trocado atomicamente, reload PM2 (`fork`/1 instância, VPS tem 1 núcleo só, cluster mode foi tentado e revertido em 2026-08-06) com rollback automático. As cinco releases mais recentes são mantidas. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
 

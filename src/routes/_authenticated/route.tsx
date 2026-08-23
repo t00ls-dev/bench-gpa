@@ -8,7 +8,7 @@ import {
   useLocation,
 } from "@tanstack/react-router";
 import * as Sentry from "@sentry/tanstackstart-react";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { FC } from "react";
 import {
   LayoutDashboard,
@@ -27,7 +27,6 @@ import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
-import { useGotoHotkey, useHotkey } from "@/lib/use-hotkey";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 import { MobileNav } from "@/components/mobile-nav";
@@ -46,13 +45,6 @@ import {
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
-
-const CommandPalette = lazy(() =>
-  import("@/components/command-palette").then((m) => ({ default: m.CommandPalette })),
-);
-const HelpOverlay = lazy(() =>
-  import("@/components/help-overlay").then((m) => ({ default: m.HelpOverlay })),
-);
 
 interface UserProfile {
   id: string;
@@ -172,34 +164,6 @@ function AuthedLayout() {
 
   useVersionCheck();
 
-  const [helpOpen, setHelpOpen] = useState(false);
-  const openHelp = useCallback(() => setHelpOpen(true), []);
-  useHotkey("?", openHelp, !helpOpen);
-
-  useGotoHotkey("d", () => router.navigate({ to: "/" }));
-  useGotoHotkey("p", () =>
-    router.navigate({ to: "/product", search: { plu: undefined, store: undefined } }),
-  );
-  useGotoHotkey("a", () =>
-    router.navigate({
-      to: "/area",
-      search: {
-        store: undefined,
-        depto: undefined,
-        secao: undefined,
-        grupo: undefined,
-        subgrupo: undefined,
-      },
-    }),
-  );
-  useGotoHotkey("e", () =>
-    router.navigate({ to: "/forecast", search: { store: undefined, targetDate: undefined } }),
-  );
-  useGotoHotkey("u", () => router.navigate({ to: "/upload" }));
-  useGotoHotkey("o", () => router.navigate({ to: "/admin/docs" }));
-  useGotoHotkey("n", () => router.navigate({ to: "/admin" }));
-  useGotoHotkey("h", () => router.navigate({ to: "/howto" }));
-
   const isAdmin = user.role === "admin";
 
   const commonNav = [
@@ -308,10 +272,6 @@ function AuthedLayout() {
           onSignOut={signOut}
         />
       </SidebarProvider>
-      <Suspense fallback={null}>
-        <CommandPalette />
-        <HelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
-      </Suspense>
     </>
   );
 }

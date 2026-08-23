@@ -1,27 +1,7 @@
 "use client";
 
 import { Route } from "./howto";
-import { Keyboard, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
-
-const shortcutRows = [
-  { keys: "Cmd / Ctrl + K", desc: "Abrir paleta de comandos" },
-  { keys: "g + d", desc: "Ir para Dashboard" },
-  { keys: "g + p", desc: "Ir para Produto" },
-  { keys: "g + a", desc: "Ir para Área" },
-  { keys: "g + u", desc: "Ir para Importar" },
-  { keys: "g + o", desc: "Ir para Documentação" },
-  { keys: "g + n", desc: "Ir para Administração" },
-  { keys: "g + h", desc: "Ir para Como usar" },
-  { keys: "Shift + ?", desc: "Abrir esta ajuda" },
-];
-
-function Kbd({ children }: { children: string }) {
-  return (
-    <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
-      {children}
-    </kbd>
-  );
-}
+import { Menu, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
 
 function Section({
   title,
@@ -43,22 +23,6 @@ function Section({
   );
 }
 
-function ShortcutTable({ rows }: { rows: { keys: string; desc: string }[] }) {
-  return (
-    <div className="divide-y divide-border/50">
-      {rows.map((r) => (
-        <div
-          key={r.keys}
-          className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
-        >
-          <Kbd>{r.keys}</Kbd>
-          <span className="text-sm text-muted-foreground">{r.desc}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 const cacheRows = [
   { key: "dashboard_metrics", ttl: "1min" },
   { key: "area_filter_hierarchy", ttl: "5min" },
@@ -77,18 +41,16 @@ export default function HowToPage() {
           <HelpCircle className="size-7 text-primary shrink-0" /> Como usar o Bench GPA
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Guia rápido de navegação, funcionalidades e atalhos.
+          Guia rápido de navegação e funcionalidades.
         </p>
       </header>
 
-      <Section title="Navegação" icon={Keyboard}>
+      <Section title="Navegação" icon={Menu}>
         <p className="mb-3 text-sm text-muted-foreground">
           No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas. Em
           mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto,
-          Área, Como usar) e o botão <strong>"Mais"</strong> para funções administrativas. Use
-          também os atalhos de teclado:
+          Área, Como usar) e o botão <strong>"Mais"</strong> para funções administrativas.
         </p>
-        <ShortcutTable rows={shortcutRows} />
       </Section>
 
       <Section title="Dashboard" icon={Gauge}>
@@ -163,7 +125,9 @@ export default function HowToPage() {
                 key={c.key}
                 className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
               >
-                <Kbd>{c.key}</Kbd>
+                <code className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  {c.key}
+                </code>
                 <span className="text-sm text-muted-foreground">TTL: {c.ttl}</span>
               </div>
             ))}

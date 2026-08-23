@@ -47,7 +47,7 @@ sem autorizar alterações de código ou infraestrutura.
 
 ## O que foi feito nesta rodada
 
-Treze PRs mergeados (#14 a #26), em duas frentes.
+PRs mergeados (#14 a #26), em duas frentes.
 
 **Auditoria de performance/segurança/UX** (relatório Top 10 ROI, separado da
 `analise-completa.md`):
@@ -57,7 +57,6 @@ Treze PRs mergeados (#14 a #26), em duas frentes.
 | #14 | 5 correções rápidas de segurança/performance                                                                                                  |
 | #15 | Atualiza `seroval`: vulnerabilidade crítica                                                                                                   |
 | #16 | Atualiza `xlsx` (via CDN do SheetJS, o npm está congelado em 0.18.5): prototype pollution + ReDoS                                             |
-| #17 | Lazy-load de `CommandPalette`/`HelpOverlay`, tira do bundle da `/auth`                                                                        |
 | #18 | Logos convertidas para WebP, redimensionadas pro tamanho real de exibição                                                                     |
 | #19 | Remove 5 dependências npm e 27 componentes shadcn mortos (2240 linhas)                                                                        |
 | #20 | Tempo decorrido no export de PDF da área (era só spinner, sem sinal de progresso)                                                             |

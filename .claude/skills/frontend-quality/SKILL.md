@@ -35,10 +35,6 @@ diferente de fazer a mesma coisa.
 - Radix já cobre grande parte de teclado e ARIA nos primitivos. Não
   sobrescreva `role`/`aria-*` que o Radix já define sem motivo.
 - Contraste e foco visível em qualquer elemento interativo novo.
-- Atalhos de teclado do sistema (g+letra, Cmd+K, Shift+/) não devem
-  colidir com um atalho novo. Checar `src/hooks/use-*shortcut*` antes de
-  adicionar um novo.
-
 ### Formulários
 
 - Validação client-side espelha o schema Zod do server (mesma fonte em
