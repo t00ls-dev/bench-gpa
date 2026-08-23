@@ -1,7 +1,7 @@
 "use client";
 
 import { Route } from "./howto";
-import { Menu, Package, Layers, Upload, Gauge, HelpCircle } from "lucide-react";
+import { Menu, Package, Layers, Upload, Gauge, HelpCircle, ClipboardList } from "lucide-react";
 
 function Section({
   title,
@@ -48,8 +48,9 @@ export default function HowToPage() {
       <Section title="Navegação" icon={Menu}>
         <p className="mb-3 text-sm text-muted-foreground">
           No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas. Em
-          mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto,
-          Área, Como usar) e o botão <strong>"Mais"</strong> para funções administrativas.
+          mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto, Área
+          e Previsão) e o botão <strong>"Mais"</strong> para abrir Como usar, sair e acessar funções
+          administrativas.
         </p>
       </Section>
 
@@ -79,6 +80,7 @@ export default function HowToPage() {
         <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
           <li>Digite pelo menos 3 caracteres para buscar.</li>
           <li>Clique em um resultado para ver a análise completa.</li>
+          <li>Selecione uma ou mais lojas. A seleção permanece salva para o próximo acesso.</li>
           <li>Exporte o relatório em PDF.</li>
         </ul>
       </Section>
@@ -86,13 +88,29 @@ export default function HowToPage() {
       <Section title="Área" icon={Layers}>
         <p className="mb-3 text-sm text-muted-foreground">
           A página Área exibe a análise de todos os produtos no período selecionado, com tabela
-          paginada e filtros hierárquicos (loja → departamento → seção → grupo → subgrupo).
+          paginada e filtros hierárquicos (loja → departamento → seção → grupo → subgrupo →
+          produto).
         </p>
         <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
           <li>Filtre por qualquer nível da hierarquia.</li>
-          <li>Use a busca textual para localizar produtos específicos.</li>
+          <li>Use o filtro Produto ou a busca textual para localizar produtos específicos.</li>
           <li>Ordene por qualquer coluna clicando no cabeçalho.</li>
+          <li>Clique em um produto para abrir sua análise detalhada.</li>
           <li>Exporte a tabela em PDF.</li>
+        </ul>
+      </Section>
+
+      <Section title="Previsão de Venda" icon={ClipboardList}>
+        <p className="mb-3 text-sm text-muted-foreground">
+          A Previsão estima a venda de produtos de Perecíveis para uma loja e uma data com base nas
+          últimas ocorrências do mesmo dia da semana.
+        </p>
+        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+          <li>Selecione Loja, Data da previsão e Seção para carregar os resultados.</li>
+          <li>Refine por Grupo, Subgrupo e Produto.</li>
+          <li>Alterar a data mantém os filtros selecionados.</li>
+          <li>Alterar um nível da hierarquia limpa somente os níveis dependentes.</li>
+          <li>Exporte a previsão em PDF.</li>
         </ul>
       </Section>
 

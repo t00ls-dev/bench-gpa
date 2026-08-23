@@ -247,6 +247,13 @@ regressão de performance (ver
 `docs/plano-padronizacao-nomenclatura-ingles-2026-08-05.md`). Decisão do
 usuário, 2026-08-05: não renomear.
 
+Regra de negócio da hierarquia: Dashboard, Área, Produto e Previsão atribuem
+as vendas históricas conforme a classificação atual de `product_universe`.
+As colunas de categoria em `sales_prod_daily_agg` são o retrato recebido na
+data da importação, não a fonte para drill-down, rankings ou filtros atuais.
+Não volte a filtrar pelas categorias históricas ao otimizar queries. Decisão
+do usuário, 2026-08-23.
+
 Ao tocar um arquivo por outro motivo, aproveite para traduzir os comentários
 em português que encontrar nele (tradução incremental, não uma varredura
 retroativa dedicada).

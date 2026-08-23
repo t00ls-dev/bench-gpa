@@ -1,6 +1,6 @@
 # Bench GPA
 
-Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA). Dashboard, análise de produtos, análise por área hierárquica, upload de planilhas XLSX e gerenciamento de usuários.
+Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA). Dashboard, análise de produtos, análise por área hierárquica, previsão de venda, upload de planilhas XLSX e gerenciamento de usuários.
 
 ## Stack
 
@@ -57,13 +57,13 @@ bun run lint
 | Primeiro acesso   | `/first-access`    | Não   | Define a senha inicial (usuário ou matrícula), auto-login              |
 | Trocar senha      | `/change-password` | Sim   | Troca voluntária ou forçada (senha expirada há 30+ dias)               |
 | Dashboard         | `/`                | Sim   | KPIs, evolução diária, top lojas e rankings                            |
-| Produto           | `/product`         | Sim   | Análise de produto com weekday-aware                                   |
-| Área              | `/area`            | Sim   | Drill-down hierárquico, tabela virtualizada e PDF export               |
+| Produto           | `/product`         | Sim   | Análise de produto por período, dia da semana e lojas persistidas      |
+| Área              | `/area`            | Sim   | Drill-down até Produto, tabela virtualizada e PDF export               |
 | Previsão de Venda | `/forecast`        | Sim   | Venda esperada por produto de Perecíveis numa loja/dia, com PDF export |
 | Upload            | `/upload`          | Admin | Upload de planilhas XLSX                                               |
 | Admin             | `/admin`           | Admin | Gestão de usuários                                                     |
 | Documentação      | `/admin/docs`      | Admin | Documentação interna                                                   |
-| Como usar         | `/howto`           | Sim   | Guia do sistema, atalhos e exportação                                  |
+| Como usar         | `/howto`           | Sim   | Guia do sistema, filtros e exportação                                  |
 
 ## Importação de Dados
 
@@ -119,7 +119,8 @@ executado na VPS de produção.
 - **Auditoria & monitoramento**: `audit_log` registra ações sensíveis (login ok/falho, logout, primeiro acesso ok/falho, troca de senha própria, criação/alteração de usuário, reset de senha por admin, atualização de identificadores, purga); IP resolvido atrás do Cloudflare (`CF-Connecting-IP`). `cron_heartbeat` grava a última execução de cada cron (`purge`, `refresh-universe`) com status e duração, sinalizando atrasos. Ambos visíveis em `/admin` → aba **Auditoria**.
 - **Import**: XLSX → parse → staging → `sales_daily_agg` + `sales_prod_daily_agg` (chunks de 1000 linhas). Sem cron: pela tela `/upload` ou por `cli:import`/`cli:watch`, sob demanda (ver seção "Importação de Dados" acima).
 - **Retenção**: agregados purgados após 180 dias (`purge_old_aggs`, cron diário 03h). `cli:watch` usa o **mesmo** horizonte de 180 dias (`RETENTION_DAYS`) para não reimportar o que o purge apagaria: evita o loop importar→purgar→reimportar.
-- **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo. Dependentes são limpos ao mudar o pai.
+- **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo → Produto na Área; Seção → Grupo → Subgrupo → Produto na Previsão. Dependentes são limpos ao mudar o pai. Alterar somente a data da Previsão preserva os filtros selecionados.
+- **Hierarquia comercial**: `product_universe` é a fonte da classificação atual. Vendas históricas são atribuídas ao Departamento, Seção, Grupo e Subgrupo atuais do produto, não à classificação registrada no dia da venda.
 - **UX**: Bottom tab bar mobile, View Transitions API e exportação PDF (Área e Previsão de Venda).
 - **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → nova release em `releases/<timestamp>-<sha-curto>/`, symlink `current` trocado atomicamente, reload PM2 (`fork`/1 instância, VPS tem 1 núcleo só, cluster mode foi tentado e revertido em 2026-08-06) com rollback automático. As cinco releases mais recentes são mantidas. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
