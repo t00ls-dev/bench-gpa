@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { X } from "lucide-react";
 import { getFilterOptions } from "@/lib/dashboard.functions";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
@@ -9,20 +8,6 @@ import { FilterField } from "@/components/filter-field";
 import { defaultDateWindow } from "@/lib/date-window";
 import { QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import { cascadePatch } from "@/lib/filter-cascade";
-
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onRemove}
-      className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition hover:border-primary/60 hover:bg-primary/15"
-      aria-label={`Remover filtro: ${label}`}
-    >
-      {label}
-      <X className="size-3" />
-    </button>
-  );
-}
 
 export interface Filters {
   dateFrom: string;
@@ -110,13 +95,6 @@ export function FilterBar({ value, onChange }: Props) {
   const setSecoes = (v: string[]) => setF(cascadePatch("secoes", v));
   const setGrupos = (v: string[]) => setF(cascadePatch("grupos", v));
 
-  const hasActiveChips =
-    value.stores.length > 0 ||
-    value.deptos.length > 0 ||
-    value.secoes.length > 0 ||
-    value.grupos.length > 0 ||
-    value.subgrupos.length > 0;
-
   return (
     <div className="kpi-card mb-6 min-w-0 overflow-hidden">
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
@@ -175,49 +153,6 @@ export function FilterBar({ value, onChange }: Props) {
           />
         </FilterField>
       </div>
-
-      {hasActiveChips && (
-        <div className="mt-3 flex flex-wrap gap-1.5 border-t pt-3">
-          {value.stores.map((code) => {
-            const s = stores.find((x) => x.store_code === code);
-            return (
-              <FilterChip
-                key={`store-${code}`}
-                label={s ? `${s.store_code} - ${s.store_name}` : code}
-                onRemove={() => setStores(value.stores.filter((v) => v !== code))}
-              />
-            );
-          })}
-          {value.deptos.map((d) => (
-            <FilterChip
-              key={`depto-${d}`}
-              label={d}
-              onRemove={() => setDeptos(value.deptos.filter((v) => v !== d))}
-            />
-          ))}
-          {value.secoes.map((s) => (
-            <FilterChip
-              key={`secao-${s}`}
-              label={s}
-              onRemove={() => setSecoes(value.secoes.filter((v) => v !== s))}
-            />
-          ))}
-          {value.grupos.map((g) => (
-            <FilterChip
-              key={`grupo-${g}`}
-              label={g}
-              onRemove={() => setGrupos(value.grupos.filter((v) => v !== g))}
-            />
-          ))}
-          {value.subgrupos.map((sg) => (
-            <FilterChip
-              key={`subgrupo-${sg}`}
-              label={sg}
-              onRemove={() => setF({ subgrupos: value.subgrupos.filter((v) => v !== sg) })}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
