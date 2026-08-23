@@ -5,6 +5,7 @@ import db from "./db";
 import {
   AreaAnalysisResult,
   AreaFilterHierarchyResult,
+  AreaProductFilterOption,
   asArray,
   asRecord,
   str,
@@ -12,8 +13,9 @@ import {
   num,
   parseDateVal,
 } from "./api-types";
-import { AreaAnalysisSchema } from "./schemas";
+import { AreaAnalysisSchema, AreaProductFilterOptionsSchema } from "./schemas";
 import { CACHE_TTL_LONG, CACHE_TTL_SHORT } from "./cache";
+import { buildCacheKey } from "./cache-key";
 
 /**
  * Above this page size the response doesn't get cached: this is the PDF
@@ -40,7 +42,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     const sortDir = byDays ? (data.sortDir === "desc" ? "asc" : "desc") : data.sortDir;
 
     const query = async (): Promise<AreaAnalysisResult> => {
-      const [rs] = await db.query("CALL area_analysis(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+      const [rs] = await db.query("CALL area_analysis_v2(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
         data.dateFrom,
         data.dateTo,
         JSON.stringify(data.stores ?? []),
@@ -48,6 +50,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
         JSON.stringify(data.secoes ?? []),
         JSON.stringify(data.grupos ?? []),
         JSON.stringify(data.subgrupos ?? []),
+        JSON.stringify(data.products ?? []),
         data.page ?? null,
         data.pageSize,
         data.search,
@@ -80,7 +83,9 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
         totalProducts,
         page: data.page ?? undefined,
         pageSize: data.pageSize,
-        totalPages: data.pageSize ? Math.ceil(totalProducts / data.pageSize) : undefined,
+        totalPages: data.pageSize
+          ? Math.max(1, Math.ceil(totalProducts / data.pageSize))
+          : undefined,
       };
     };
 
@@ -106,8 +111,70 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
     const { cache } = await import("./cache");
     if ((data.pageSize ?? 0) > CACHE_BYPASS_PAGE_SIZE) return query();
 
-    const key = `area:${data.dateFrom}:${data.dateTo}:${(data.stores ?? []).join(",")}:${(data.deptos ?? []).join(",")}:${(data.secoes ?? []).join(",")}:${(data.grupos ?? []).join(",")}:${(data.subgrupos ?? []).join(",")}:${data.page ?? ""}:${data.pageSize}:${data.search}:${sortBy}:${sortDir}`;
+    const key = buildCacheKey("area", {
+      dateFrom: data.dateFrom,
+      dateTo: data.dateTo,
+      stores: data.stores,
+      deptos: data.deptos,
+      secoes: data.secoes,
+      grupos: data.grupos,
+      subgrupos: data.subgrupos,
+      products: data.products,
+      page: data.page,
+      pageSize: data.pageSize,
+      search: data.search,
+      sortBy,
+      sortDir,
+    });
     return cache.wrap(key, query, CACHE_TTL_SHORT);
+  });
+
+export const getAreaProductFilterOptions = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .inputValidator((d: unknown) => AreaProductFilterOptionsSchema.parse(d))
+  .handler(async ({ data }): Promise<AreaProductFilterOption[]> => {
+    const fields = [
+      ["store_code", data.stores],
+      ["depto", data.deptos],
+      ["secao", data.secoes],
+      ["grupo", data.grupos],
+      ["subgrupo", data.subgrupos],
+    ] as const;
+    const predicates: string[] = [];
+    const params: string[] = [];
+    for (const [column, values] of fields) {
+      if (!values.length) continue;
+      predicates.push(`u.${column} IN (${values.map(() => "?").join(", ")})`);
+      params.push(...values);
+    }
+
+    const key = buildCacheKey("area-product-options", {
+      stores: data.stores,
+      deptos: data.deptos,
+      secoes: data.secoes,
+      grupos: data.grupos,
+      subgrupos: data.subgrupos,
+    });
+    const { cache } = await import("./cache");
+    return cache.wrap(
+      key,
+      async () => {
+        const where = predicates.length ? `WHERE ${predicates.join(" AND ")}` : "";
+        const [rows] = await db.query(
+          `SELECT u.prod_code, MAX(u.prod_name) AS prod_name
+           FROM product_universe u
+           ${where}
+           GROUP BY u.prod_code
+           ORDER BY prod_name, u.prod_code`,
+          params,
+        );
+        return asArray(rows).map((row) => {
+          const record = asRecord(row);
+          return { prodCode: str(record.prod_code), prodName: str(record.prod_name) };
+        });
+      },
+      CACHE_TTL_LONG,
+    );
   });
 
 export const getAreaFilterHierarchy = createServerFn({ method: "POST" })

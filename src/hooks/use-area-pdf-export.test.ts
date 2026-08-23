@@ -47,6 +47,7 @@ function filters(overrides: Partial<AreaFilters> = {}): AreaFilters {
     secoes: [],
     grupos: [],
     subgrupos: [],
+    products: [],
     ...overrides,
   };
 }
@@ -65,6 +66,17 @@ function product(overrides: Partial<AreaProduct>): AreaProduct {
   };
 }
 
+function areaResult(products: AreaProduct[] = []) {
+  return {
+    products,
+    total: 1000,
+    plusTotal: 10,
+    plusWithSale: 8,
+    plusWithoutSale: 2,
+    avgPerPlu: 125,
+  };
+}
+
 // daysSinceNum interprets lastSaleDate itself as a number of days, just to
 // keep the comparator test readable without recomputing dates.
 const daysSinceNum = (iso: string | null): number | null => (iso === null ? null : Number(iso));
@@ -72,19 +84,14 @@ const daysSinceLabel = (iso: string | null): string => (iso === null ? "-" : Str
 
 function makeParams(overrides: Record<string, unknown> = {}) {
   return {
-    getArea: vi.fn().mockResolvedValue({ products: [] }),
+    getArea: vi.fn().mockResolvedValue(areaResult()),
     af: filters(),
     search: "",
     sortKey: "val" as AreaSortKey,
     sortDir: "desc" as "asc" | "desc",
     daysSinceNum,
     daysSinceLabel,
-    total: 1000,
-    noSale: 2,
     pathParts: ["Loja 1 - LEBLON", "MERC"],
-    plusTotal: 10,
-    plusWithSale: 8,
-    avgPerPlu: 125,
     ...overrides,
   };
 }
@@ -100,7 +107,7 @@ describe("useAreaPdfExport", () => {
   });
 
   it("requests the full listing (not the paginated page) with the current filters", async () => {
-    const getArea = vi.fn().mockResolvedValue({ products: [] });
+    const getArea = vi.fn().mockResolvedValue(areaResult());
     const { result } = renderHook(() =>
       useAreaPdfExport(
         makeParams({
@@ -126,6 +133,7 @@ describe("useAreaPdfExport", () => {
         secoes: ["SEC1"],
         grupos: [],
         subgrupos: [],
+        products: [],
         search: "abc",
         sortBy: "prod_name",
         sortDir: "asc",
@@ -177,7 +185,7 @@ describe("useAreaPdfExport", () => {
     );
   });
 
-  it("prints the same 5 KPI numbers shown on screen", async () => {
+  it("prints all KPI values from the same server response as the exported products", async () => {
     const { result } = renderHook(() => useAreaPdfExport(makeParams()));
     await act(async () => {
       await result.current.openPdfInNewTab();
@@ -189,7 +197,7 @@ describe("useAreaPdfExport", () => {
 
   it("uses the server result already filtered by the search term", async () => {
     const products = [product({ prod_code: "P1", prod_name: "Produto Alpha" })];
-    const getArea = vi.fn().mockResolvedValue({ products });
+    const getArea = vi.fn().mockResolvedValue(areaResult(products));
     const { result } = renderHook(() => useAreaPdfExport(makeParams({ getArea, search: "alpha" })));
     await act(async () => {
       await result.current.openPdfInNewTab();
@@ -205,7 +213,7 @@ describe("useAreaPdfExport", () => {
   });
 
   it("shows a placeholder row when no product matches", async () => {
-    const getArea = vi.fn().mockResolvedValue({ products: [] });
+    const getArea = vi.fn().mockResolvedValue(areaResult());
     const { result } = renderHook(() => useAreaPdfExport(makeParams({ getArea, search: "zzz" })));
     await act(async () => {
       await result.current.openPdfInNewTab();
@@ -222,8 +230,8 @@ describe("useAreaPdfExport", () => {
     const ascProducts = [...descProducts].reverse();
     const getArea = vi
       .fn()
-      .mockResolvedValueOnce({ products: descProducts })
-      .mockResolvedValueOnce({ products: ascProducts });
+      .mockResolvedValueOnce(areaResult(descProducts))
+      .mockResolvedValueOnce(areaResult(ascProducts));
 
     const desc = renderHook(() =>
       useAreaPdfExport(makeParams({ getArea, sortKey: "val", sortDir: "desc" })),
@@ -252,8 +260,8 @@ describe("useAreaPdfExport", () => {
     const ascProducts = [descProducts[2], descProducts[1], descProducts[0]];
     const getArea = vi
       .fn()
-      .mockResolvedValueOnce({ products: descProducts })
-      .mockResolvedValueOnce({ products: ascProducts });
+      .mockResolvedValueOnce(areaResult(descProducts))
+      .mockResolvedValueOnce(areaResult(ascProducts));
 
     const desc = renderHook(() =>
       useAreaPdfExport(makeParams({ getArea, sortKey: "daysSince", sortDir: "desc" })),

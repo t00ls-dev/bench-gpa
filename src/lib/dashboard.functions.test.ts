@@ -57,9 +57,17 @@ import { cache } from "./cache";
 const PROC_RESULT = [
   [
     [{ name: "BAZAR", val: 500 }],
-    [{ name: "SECAO A", val: 300 }],
-    [{ name: "GRUPO A", val: 200 }],
-    [{ name: "SUBGRUPO A", val: 100 }],
+    [{ depto: "BAZAR", name: "SECAO A", val: 300 }],
+    [{ depto: "BAZAR", secao: "SECAO A", name: "GRUPO A", val: 200 }],
+    [
+      {
+        depto: "BAZAR",
+        secao: "SECAO A",
+        grupo: "GRUPO A",
+        name: "SUBGRUPO A",
+        val: 100,
+      },
+    ],
     [{ code: "1", name: "P1", val: 90 }],
   ],
 ];
@@ -86,7 +94,13 @@ const FILTERS: RankingsInput = {
   limit: 10,
 };
 
-type RankFn = (d: RankingsInput) => Promise<{ byDepto: unknown[]; byProduto: unknown[] }>;
+type RankFn = (d: RankingsInput) => Promise<{
+  byDepto: unknown[];
+  bySecao: unknown[];
+  byGrupo: unknown[];
+  bySubgrupo: unknown[];
+  byProduto: unknown[];
+}>;
 const call = (d: Partial<RankingsInput>) =>
   (getDashboardRankings as unknown as RankFn)({ ...FILTERS, ...d });
 
@@ -101,6 +115,28 @@ describe("getDashboardRankings", () => {
   it("maps the proc's five rankings", async () => {
     const r = await call({});
     expect(r.byDepto).toEqual([{ name: "BAZAR", val: 500 }]);
+    expect(r.bySecao).toEqual([
+      {
+        name: "SECAO A",
+        val: 300,
+        depto: "BAZAR",
+        secao: "SECAO A",
+        grupo: undefined,
+        subgrupo: undefined,
+        context: "BAZAR",
+      },
+    ]);
+    expect(r.byGrupo).toEqual([
+      expect.objectContaining({ depto: "BAZAR", secao: "SECAO A", grupo: "GRUPO A" }),
+    ]);
+    expect(r.bySubgrupo).toEqual([
+      expect.objectContaining({
+        depto: "BAZAR",
+        secao: "SECAO A",
+        grupo: "GRUPO A",
+        subgrupo: "SUBGRUPO A",
+      }),
+    ]);
     expect(r.byProduto).toEqual([{ code: "1", name: "P1", val: 90 }]);
   });
 

@@ -1,9 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { getDashboard, getDashboardRankings } from "@/lib/dashboard.functions";
-import { getAreaFilterHierarchy } from "@/lib/area.functions";
-import { QUERY_STALE_CORE, QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
+import { QUERY_STALE_CORE } from "@/lib/query-config";
+import type { RankingItem } from "@/components/ranking-card";
 import { FilterBar, type Filters } from "@/components/filter-bar";
 import { KpiCard } from "@/components/kpi-card";
 import { fmtBRL } from "@/lib/utils";
@@ -49,42 +49,19 @@ function Dashboard() {
   const enabled = !!filters.dateFrom && !!filters.dateTo;
 
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const getHierarchy = useServerFn(getAreaFilterHierarchy);
   // Only carries the store over on click-through if the Dashboard was
   // already filtered to a single store: with multiple/no stores, the
   // destination decides on its own.
   const clickThroughStore = filters.stores.length === 1 ? filters.stores[0] : undefined;
-  const goToArea = async (dim: "depto" | "secao" | "grupo" | "subgrupo", name?: string) => {
-    if (!name) return;
-    // Area requires Departamento to show anything at all (`ready` in
-    // area.page.tsx): clicking Seção/Grupo/Subgrupo without resolving the
-    // parent Departamento used to land on an empty screen asking to select
-    // Store and Departamento, with the Seção/Grupo/Subgrupo already applied
-    // under the hood but no data visible. Fetches the hierarchy (same query
-    // and cache, client and server, that Area itself already uses; if Area
-    // was already visited this session, this generates no new request) only
-    // when needed, to find the depto that owns the clicked level.
-    let depto: string | undefined;
-    if (dim === "depto") {
-      depto = name;
-    } else {
-      const hierData = await queryClient.fetchQuery({
-        queryKey: ["area-filter-hierarchy"],
-        queryFn: () => getHierarchy({}),
-        staleTime: QUERY_STALE_REFERENCE,
-        gcTime: QUERY_GC_REFERENCE,
-      });
-      depto = hierData.hierarchy.find((h) => h[dim] === name)?.depto ?? undefined;
-    }
+  const goToArea = (dim: "depto" | "secao" | "grupo" | "subgrupo", item: RankingItem) => {
+    if (!item.name) return;
     const search = {
       store: clickThroughStore,
-      depto,
-      secao: undefined as string | undefined,
-      grupo: undefined as string | undefined,
-      subgrupo: undefined as string | undefined,
+      depto: dim === "depto" ? item.name : item.depto,
+      secao: item.secao,
+      grupo: item.grupo,
+      subgrupo: item.subgrupo,
     };
-    search[dim] = name;
     navigate({ to: "/area", search });
   };
   const goToProduto = (code?: string) => {
@@ -98,7 +75,6 @@ function Dashboard() {
     enabled,
     staleTime: QUERY_STALE_CORE,
     refetchOnWindowFocus: false,
-    placeholderData: (prev) => prev,
   });
 
   const { data: rankings, isFetching: rankingLoading } = useQuery({
@@ -107,7 +83,6 @@ function Dashboard() {
     enabled,
     staleTime: QUERY_STALE_CORE,
     refetchOnWindowFocus: false,
-    placeholderData: (prev) => prev,
   });
 
   const hideStores = filters.stores.length === 1;
@@ -177,7 +152,7 @@ function Dashboard() {
                 title="Top Departamentos"
                 items={rankings?.byDepto ?? []}
                 isLoading={rankingLoading}
-                onItemClick={(it) => goToArea("depto", it.name)}
+                onItemClick={(it) => goToArea("depto", it)}
               />
             )}
           </ErrorBoundary>
@@ -187,7 +162,7 @@ function Dashboard() {
                 title="Top Seções"
                 items={rankings?.bySecao ?? []}
                 isLoading={rankingLoading}
-                onItemClick={(it) => goToArea("secao", it.name)}
+                onItemClick={(it) => goToArea("secao", it)}
               />
             )}
           </ErrorBoundary>
@@ -197,7 +172,7 @@ function Dashboard() {
                 title="Top Grupos"
                 items={rankings?.byGrupo ?? []}
                 isLoading={rankingLoading}
-                onItemClick={(it) => goToArea("grupo", it.name)}
+                onItemClick={(it) => goToArea("grupo", it)}
               />
             )}
           </ErrorBoundary>
@@ -207,7 +182,7 @@ function Dashboard() {
                 title="Top Subgrupos"
                 items={rankings?.bySubgrupo ?? []}
                 isLoading={rankingLoading}
-                onItemClick={(it) => goToArea("subgrupo", it.name)}
+                onItemClick={(it) => goToArea("subgrupo", it)}
               />
             )}
           </ErrorBoundary>

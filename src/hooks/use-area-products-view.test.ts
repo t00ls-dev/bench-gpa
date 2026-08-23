@@ -16,11 +16,13 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("@/lib/area.functions", () => ({
   getAreaAnalysis: vi.fn(),
   getAreaFilterHierarchy: vi.fn(),
+  getAreaProductFilterOptions: vi.fn(),
 }));
 
-import { getAreaFilterHierarchy } from "@/lib/area.functions";
+import { getAreaFilterHierarchy, getAreaProductFilterOptions } from "@/lib/area.functions";
 
 const mockHierarchy = vi.mocked(getAreaFilterHierarchy);
+const mockProductOptions = vi.mocked(getAreaProductFilterOptions);
 
 const STORAGE_KEY = "bench-gpa:filters:area:v2";
 
@@ -109,6 +111,10 @@ describe("useAreaProductsView", () => {
     localStorage.clear();
     mockHierarchy.mockReset();
     mockHierarchy.mockResolvedValue(HIER_FIXTURE);
+    mockProductOptions.mockResolvedValue([
+      { prodCode: "P1", prodName: "Produto 1" },
+      { prodCode: "P2", prodName: "Produto 2" },
+    ]);
   });
 
   afterEach(() => {
@@ -141,6 +147,7 @@ describe("useAreaProductsView", () => {
         secoes: [],
         grupos: [],
         subgrupos: [],
+        products: [],
         page: 1,
         pageSize: 50,
         search: "",
@@ -161,6 +168,7 @@ describe("useAreaProductsView", () => {
       result.current.setSecoes(["SEC1"]);
       result.current.setGrupos(["G1"]);
       result.current.setSubgrupos(["SG1"]);
+      result.current.setProducts(["P1"]);
     });
     expect(result.current.af).toMatchObject({
       stores: ["1"],
@@ -168,6 +176,7 @@ describe("useAreaProductsView", () => {
       secoes: ["SEC1"],
       grupos: ["G1"],
       subgrupos: ["SG1"],
+      products: ["P1"],
     });
 
     act(() => result.current.setDeptos(["OUTRO"]));
@@ -177,6 +186,7 @@ describe("useAreaProductsView", () => {
       secoes: [],
       grupos: [],
       subgrupos: [],
+      products: [],
     });
   });
 
@@ -197,6 +207,29 @@ describe("useAreaProductsView", () => {
 
     rerender({ sp: { store: "9" } });
     expect(result.current.fStores).toEqual(["2"]);
+  });
+
+  it("clears persisted stores for an all-store ranking click-through", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        dateFrom: "2026-07-01",
+        dateTo: "2026-07-20",
+        stores: ["1"],
+        deptos: [],
+        secoes: [],
+        grupos: [],
+        subgrupos: [],
+        products: [],
+      }),
+    );
+
+    const { result } = renderHook(() => useAreaProductsView(vi.fn(), { depto: "MERC" }), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.fDeptos).toEqual(["MERC"]));
+    expect(result.current.fStores).toEqual([]);
   });
 
   it("sanitizes a reversed persisted date range on load", () => {
@@ -319,11 +352,15 @@ describe("useAreaProductsView", () => {
     // sortAsc=false by default when switching columns: never-sold first,
     // then from the most idle to the most recent.
     act(() => result.current.toggleSort("daysSince"));
-    expect(result.current.products.map((p) => p.prod_code)).toEqual(["P1", "P3", "P2"]);
+    await waitFor(() =>
+      expect(result.current.products.map((p) => p.prod_code)).toEqual(["P1", "P3", "P2"]),
+    );
 
     // Clicking the same column again inverts it: most recent first, never-sold at the end.
     act(() => result.current.toggleSort("daysSince"));
-    expect(result.current.products.map((p) => p.prod_code)).toEqual(["P2", "P3", "P1"]);
+    await waitFor(() =>
+      expect(result.current.products.map((p) => p.prod_code)).toEqual(["P2", "P3", "P1"]),
+    );
   });
 
   it("dedupes stores from the hierarchy and builds the breadcrumb", async () => {

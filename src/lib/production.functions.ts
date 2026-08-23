@@ -15,6 +15,7 @@ import {
 } from "./api-types";
 import { ProductionForecastSchema, SingleStoreCodeSchema } from "./schemas";
 import { CACHE_TTL_SHORT, CACHE_TTL_LONG } from "./cache";
+import { buildCacheKey } from "./cache-key";
 
 /** How many weekday occurrences the average is computed over. */
 export const PRODUCTION_LOOKBACK_OCCURRENCES = 8;
@@ -84,7 +85,12 @@ export const getProductionForecast = createServerFn({ method: "POST" })
     // not on every clock tick. Nothing here is more special than
     // getAreaAnalysis in that respect.
     const { cache } = await import("./cache");
-    const key = `production:${data.storeCode}:${data.targetDate}:${data.secao ?? ""}:${(data.grupos ?? []).join(",")}`;
+    const key = buildCacheKey("production", {
+      storeCode: data.storeCode,
+      targetDate: data.targetDate,
+      secao: data.secao,
+      grupos: data.grupos,
+    });
     return cache.wrap(key, query, CACHE_TTL_SHORT);
   });
 

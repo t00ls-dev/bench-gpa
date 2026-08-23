@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { MultiSelect } from "@/components/multi-select";
+import type { MSOption } from "@/components/multi-select";
 import { FilterField } from "@/components/filter-field";
 import { computeAreaCascadeOptions, type HierarchyItem } from "@/lib/filter-cascade";
 
@@ -13,6 +14,8 @@ export function AreaFilters({
   fSecoes,
   fGrupos,
   fSubgrupos,
+  fProducts,
+  productOptions,
   latestDate,
   availableDates,
   onRangeChange,
@@ -21,6 +24,7 @@ export function AreaFilters({
   onSecoesChange,
   onGruposChange,
   onSubgruposChange,
+  onProductsChange,
 }: {
   hierarchy: HierarchyItem[];
   dateFrom: string;
@@ -30,6 +34,8 @@ export function AreaFilters({
   fSecoes: string[];
   fGrupos: string[];
   fSubgrupos: string[];
+  fProducts: string[];
+  productOptions: MSOption[];
   latestDate?: string;
   availableDates: string[];
   onRangeChange: (r: { from: string; to: string }) => void;
@@ -38,6 +44,7 @@ export function AreaFilters({
   onSecoesChange: (v: string[]) => void;
   onGruposChange: (v: string[]) => void;
   onSubgruposChange: (v: string[]) => void;
+  onProductsChange: (v: string[]) => void;
 }) {
   // In-memory cascade: each level filters the subset of the hierarchy that
   // already matches the levels selected above it. Pure logic tested in
@@ -105,6 +112,15 @@ export function AreaFilters({
             options={subgruposOpts.map((s) => ({ value: s, label: s }))}
             value={fSubgrupos}
             onChange={onSubgruposChange}
+          />
+        </FilterField>
+        <FilterField label="Produto" className="md:col-span-2">
+          <MultiSelect
+            searchable
+            label="Todos"
+            options={productOptions}
+            value={fProducts}
+            onChange={onProductsChange}
           />
         </FilterField>
       </div>

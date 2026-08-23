@@ -1,10 +1,18 @@
 import type { Filters } from "./schemas";
 import db from "./db";
 import { CACHE_TTL_SHORT } from "./cache";
+import { buildCacheKey } from "./cache-key";
 
 export interface NameVal {
   name: string;
   val: number;
+}
+export interface HierarchyNameVal extends NameVal {
+  depto?: string;
+  secao?: string;
+  grupo?: string;
+  subgrupo?: string;
+  context?: string;
 }
 export interface CodeNameVal {
   code: string;
@@ -39,9 +47,9 @@ export interface FilterOptionsResult {
 
 export interface DashboardRankingsResult {
   byDepto: NameVal[];
-  bySecao: NameVal[];
-  byGrupo: NameVal[];
-  bySubgrupo: NameVal[];
+  bySecao: HierarchyNameVal[];
+  byGrupo: HierarchyNameVal[];
+  bySubgrupo: HierarchyNameVal[];
   byProduto: Array<{ code: string; name: string; val: number }>;
 }
 
@@ -81,6 +89,10 @@ export interface AreaFilterHierarchyResult {
   latestDate: string | null;
   hierarchy: AreaHierarchyItem[];
   availableDates: string[];
+}
+export interface AreaProductFilterOption {
+  prodCode: string;
+  prodName: string;
 }
 
 export interface ProductionForecastProduct {
@@ -166,6 +178,29 @@ export function parseNameVal(xs: unknown): NameVal[] {
     return { name: str(r.name), val: num(r.val) };
   });
 }
+export function parseHierarchyNameVal(
+  xs: unknown,
+  level: "secao" | "grupo" | "subgrupo",
+): HierarchyNameVal[] {
+  return asArray(xs).map((x) => {
+    const row = asRecord(x);
+    const depto = strOrNull(row.depto) ?? undefined;
+    const secao = strOrNull(row.secao) ?? undefined;
+    const grupo = strOrNull(row.grupo) ?? undefined;
+    const subgrupo = level === "subgrupo" ? (strOrNull(row.name) ?? undefined) : undefined;
+    const parents =
+      level === "secao" ? [depto] : level === "grupo" ? [depto, secao] : [depto, secao, grupo];
+    return {
+      name: str(row.name),
+      val: num(row.val),
+      depto,
+      secao: level === "secao" ? str(row.name) : secao,
+      grupo: level === "grupo" ? str(row.name) : grupo,
+      subgrupo,
+      context: parents.filter(Boolean).join(" › ") || undefined,
+    };
+  });
+}
 export function parseCodeNameVal(xs: unknown): CodeNameVal[] {
   return asArray(xs).map((x) => {
     const r = asRecord(x);
@@ -180,7 +215,15 @@ export function parseDateVal(xs: unknown): DateVal[] {
 }
 
 function metricsCacheKey(f: Filters): string {
-  return `metrics:${f.dateFrom ?? ""}:${f.dateTo ?? ""}:${(f.stores ?? []).join(",")}:${(f.deptos ?? []).join(",")}:${(f.secoes ?? []).join(",")}:${(f.grupos ?? []).join(",")}:${(f.subgrupos ?? []).join(",")}`;
+  return buildCacheKey("metrics", {
+    dateFrom: f.dateFrom,
+    dateTo: f.dateTo,
+    stores: f.stores,
+    deptos: f.deptos,
+    secoes: f.secoes,
+    grupos: f.grupos,
+    subgrupos: f.subgrupos,
+  });
 }
 
 export async function callMetrics(f: Filters): Promise<DashboardMetricsResult> {

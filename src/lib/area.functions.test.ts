@@ -43,7 +43,11 @@ vi.mock("./rate-limit.middleware", () => ({
 }));
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
-import { getAreaAnalysis, CACHE_BYPASS_PAGE_SIZE } from "./area.functions";
+import {
+  getAreaAnalysis,
+  getAreaProductFilterOptions,
+  CACHE_BYPASS_PAGE_SIZE,
+} from "./area.functions";
 import db from "./db";
 import { cache } from "./cache";
 import { AreaAnalysisSchema, EXPORT_PAGE_SIZE } from "./schemas";
@@ -77,6 +81,7 @@ interface AreaInput {
   secoes: string[];
   grupos: string[];
   subgrupos: string[];
+  products: string[];
   page: number;
   pageSize: number;
   search: string;
@@ -92,6 +97,7 @@ const FILTERS: AreaInput = {
   secoes: [],
   grupos: [],
   subgrupos: [],
+  products: [],
   page: 1,
   pageSize: 50,
   search: "",
@@ -99,7 +105,11 @@ const FILTERS: AreaInput = {
   sortDir: "desc",
 };
 
-type AreaFn = (d: AreaInput) => Promise<{ total: number; products: unknown[] }>;
+type AreaFn = (d: AreaInput) => Promise<{
+  total: number;
+  products: unknown[];
+  totalPages?: number;
+}>;
 const call = (d: Partial<AreaInput>) =>
   (getAreaAnalysis as unknown as AreaFn)({ ...FILTERS, ...d });
 
@@ -117,6 +127,16 @@ describe("getAreaAnalysis", () => {
     expect(r.total).toBe(1000);
     expect(r.products).toHaveLength(1);
     expect(r.products[0]).toMatchObject({ prod_code: "1", val: 1000, lastSaleDate: "2026-07-20" });
+  });
+
+  it("keeps pagination on page one when a search has no matches", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [PROC_RESULT[0][0], [{ total_products: 0 }], [], []],
+    ] as never);
+
+    const result = await call({ search: "SEM MATCH" });
+
+    expect(result.totalPages).toBe(1);
   });
 
   // The screen measures 2.1s in prod on the default window and 23.0s at 28
@@ -146,6 +166,12 @@ describe("getAreaAnalysis", () => {
     it("does not collide across different category filters", async () => {
       await call({ deptos: ["BAZAR"] });
       await call({ deptos: ["MERCEARIA"] });
+      expect(db.query).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not collide across different product filters", async () => {
+      await call({ products: ["1"] });
+      await call({ products: ["2"] });
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 
@@ -196,5 +222,40 @@ describe("getAreaAnalysis", () => {
       expect(AreaAnalysisSchema.safeParse({ ...base, pageSize: 0 }).success).toBe(false);
       expect(AreaAnalysisSchema.safeParse({ ...base, page: -5 }).success).toBe(false);
     });
+  });
+
+  it("passes selected products to the stored procedure", async () => {
+    await call({ products: ["1", "2"] });
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining("CALL area_analysis_v2"),
+      expect.arrayContaining(['["1","2"]']),
+    );
+  });
+});
+
+describe("getAreaProductFilterOptions", () => {
+  it("scopes product options by the complete selected hierarchy", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [{ prod_code: "1", prod_name: "Produto" }],
+    ] as never);
+
+    const result = await (
+      getAreaProductFilterOptions as unknown as (data: {
+        stores: string[];
+        deptos: string[];
+        secoes: string[];
+        grupos: string[];
+        subgrupos: string[];
+      }) => Promise<Array<{ prodCode: string; prodName: string }>>
+    )({ stores: ["10"], deptos: ["D"], secoes: ["S"], grupos: ["G"], subgrupos: ["SG"] });
+
+    expect(result).toEqual([{ prodCode: "1", prodName: "Produto" }]);
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining("u.subgrupo IN (?)"), [
+      "10",
+      "D",
+      "S",
+      "G",
+      "SG",
+    ]);
   });
 });

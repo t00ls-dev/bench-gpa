@@ -59,11 +59,20 @@ export const AreaAnalysisSchema = z.object({
   secoes: z.array(z.string()).optional().default([]),
   grupos: z.array(z.string()).optional().default([]),
   subgrupos: z.array(z.string()).optional().default([]),
+  products: z.array(z.string()).optional().default([]),
   page: z.number().int().positive().optional(),
   pageSize: z.number().int().positive().max(MAX_PAGE_SIZE).optional().default(50),
   search: z.string().max(255).optional().default(""),
   sortBy: z.enum(["val", "prod_code", "prod_name", "daysSince"]).optional().default("val"),
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
+});
+
+export const AreaProductFilterOptionsSchema = FilterSchema.pick({
+  stores: true,
+  deptos: true,
+  secoes: true,
+  grupos: true,
+  subgrupos: true,
 });
 
 export const DashboardRankingsSchema = FilterSchema.extend({

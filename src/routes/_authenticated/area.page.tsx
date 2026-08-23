@@ -23,6 +23,7 @@ function AreaPage() {
     setSecoes,
     setGrupos,
     setSubgrupos,
+    setProducts,
     setRange,
     dateFrom,
     dateTo,
@@ -31,6 +32,8 @@ function AreaPage() {
     fSecoes,
     fGrupos,
     fSubgrupos,
+    fProducts,
+    productOptions,
     hierarchy,
     opts,
     baseDateIso,
@@ -67,12 +70,7 @@ function AreaPage() {
     sortKey,
     sortDir,
     daysSinceLabel,
-    total,
-    noSale,
     pathParts,
-    plusTotal: data?.plusTotal ?? 0,
-    plusWithSale: data?.plusWithSale ?? 0,
-    avgPerPlu: data?.avgPerPlu ?? 0,
   });
 
   return (
@@ -95,6 +93,8 @@ function AreaPage() {
         fSecoes={fSecoes}
         fGrupos={fGrupos}
         fSubgrupos={fSubgrupos}
+        fProducts={fProducts}
+        productOptions={productOptions}
         latestDate={opts?.latestDate ?? undefined}
         availableDates={opts?.availableDates ?? []}
         onRangeChange={setRange}
@@ -103,6 +103,7 @@ function AreaPage() {
         onSecoesChange={setSecoes}
         onGruposChange={setGrupos}
         onSubgruposChange={setSubgrupos}
+        onProductsChange={setProducts}
       />
 
       {!ready ? (

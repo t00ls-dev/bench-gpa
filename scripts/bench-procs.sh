@@ -185,12 +185,12 @@ J_SECAO_PEREC="[\"$(printf '%s' "$SECAO_PEREC" | sed 's/"/\\"/g')\"]"
 
 # name | full SQL call
 SCENARIOS=(
-"area_7d_sem_filtro|CALL area_analysis('$D7','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
-"area_28d_sem_filtro|CALL area_analysis('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
-"area_28d_depto|CALL area_analysis('$D28','$LAST',$NUL,'$J_DEPTO',$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
-"area_28d_loja|CALL area_analysis('$D28','$LAST','$J_STORE',$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
-"area_28d_export|CALL area_analysis('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,1,50000,NULL,'val','desc')"
-"area_28d_busca|CALL area_analysis('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,1,50,'ARROZ','val','desc')"
+"area_7d_sem_filtro|CALL area_analysis_v2('$D7','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
+"area_28d_sem_filtro|CALL area_analysis_v2('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
+"area_28d_depto|CALL area_analysis_v2('$D28','$LAST',$NUL,'$J_DEPTO',$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
+"area_28d_loja|CALL area_analysis_v2('$D28','$LAST','$J_STORE',$NUL,$NUL,$NUL,$NUL,$NUL,1,50,NULL,'val','desc')"
+"area_28d_export|CALL area_analysis_v2('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,$NUL,1,50000,NULL,'val','desc')"
+"area_28d_busca|CALL area_analysis_v2('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,$NUL,1,50,'ARROZ','val','desc')"
 "rankings_28d|CALL dashboard_rankings('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL,10)"
 "metrics_28d|CALL dashboard_metrics('$D28','$LAST',$NUL,$NUL,$NUL,$NUL,$NUL)"
 "filtros_28d|CALL filter_options('$D28','$LAST',$NUL,$NUL,$NUL,$NUL)"

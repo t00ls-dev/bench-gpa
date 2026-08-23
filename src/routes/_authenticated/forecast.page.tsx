@@ -6,20 +6,18 @@ import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useProductionPdfExport } from "@/hooks/use-production-pdf-export";
+import {
+  applyForecastSearch,
+  forecastProductsForSubgroups,
+  setForecastStore,
+  setForecastTargetDate,
+  type ForecastFilters,
+} from "@/lib/forecast-filters";
 import { ProductionFilters } from "@/components/production-filters";
 import { ProductionTable } from "@/components/production-table";
 import type { MSOption } from "@/components/multi-select";
 import { ClipboardList } from "lucide-react";
 import { Route } from "./forecast";
-
-interface ForecastFilters {
-  storeCode: string | undefined;
-  targetDate: string | undefined;
-  secao: string | undefined;
-  grupos: string[];
-  subgrupos: string[];
-  productFilter: string[];
-}
 
 function ProductionPage() {
   const { store, targetDate: initialTargetDate } = Route.useSearch();
@@ -44,10 +42,7 @@ function ProductionPage() {
     if (appliedSearchRef.current) return;
     if (!store && !initialTargetDate) return;
     appliedSearchRef.current = true;
-    patch({
-      storeCode: store ?? ff.storeCode,
-      targetDate: initialTargetDate ?? ff.targetDate,
-    });
+    setFf((prev) => applyForecastSearch(prev, { store, targetDate: initialTargetDate }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store, initialTargetDate]);
 
@@ -75,7 +70,6 @@ function ProductionPage() {
       }),
     enabled: !!storeCode && !!targetDate && !!secao,
     staleTime: QUERY_STALE_CORE,
-    placeholderData: (prev) => prev,
   });
 
   // Options for the Produto multiselect come from whatever the forecast
@@ -86,7 +80,7 @@ function ProductionPage() {
   const productOptions: MSOption[] = useMemo(() => {
     const seen = new Set<string>();
     const opts: Array<MSOption & { prodName: string }> = [];
-    const produtos = (data?.secoes ?? []).flatMap((s) => s.produtos);
+    const produtos = forecastProductsForSubgroups(data?.secoes ?? [], subgrupos);
     for (const p of produtos) {
       if (seen.has(p.prodCode)) continue;
       seen.add(p.prodCode);
@@ -98,7 +92,7 @@ function ProductionPage() {
     }
     // Sorted by name (what the user scans for), not by the PLU prefix in the label.
     return opts.sort((a, b) => a.prodName.localeCompare(b.prodName));
-  }, [data]);
+  }, [data, subgrupos]);
 
   const foundStore = stores.find((x) => x.store_code === storeCode);
   const storeLabel = foundStore
@@ -136,12 +130,8 @@ function ProductionPage() {
         subgrupos={subgrupos}
         productOptions={productOptions}
         productFilter={productFilter}
-        onStoreChange={(v) =>
-          patch({ storeCode: v[0], secao: undefined, grupos: [], subgrupos: [], productFilter: [] })
-        }
-        onTargetDateChange={(v) =>
-          patch({ targetDate: v, secao: undefined, grupos: [], subgrupos: [], productFilter: [] })
-        }
+        onStoreChange={(v) => setFf((prev) => setForecastStore(prev, v[0]))}
+        onTargetDateChange={(v) => setFf((prev) => setForecastTargetDate(prev, v))}
         onSecaoChange={(v) => patch({ secao: v[0], grupos: [], subgrupos: [], productFilter: [] })}
         onGruposChange={(v) => patch({ grupos: v, subgrupos: [], productFilter: [] })}
         onSubgruposChange={(v) => patch({ subgrupos: v, productFilter: [] })}

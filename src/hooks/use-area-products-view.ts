@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getAreaAnalysis, getAreaFilterHierarchy } from "@/lib/area.functions";
+import {
+  getAreaAnalysis,
+  getAreaFilterHierarchy,
+  getAreaProductFilterOptions,
+} from "@/lib/area.functions";
 import { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { QUERY_STALE_CORE, QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
@@ -30,6 +34,7 @@ export type AreaFilters = {
   secoes: string[];
   grupos: string[];
   subgrupos: string[];
+  products: string[];
 };
 
 export interface AreaSearchParams {
@@ -63,6 +68,7 @@ export function useAreaProductsView(
   searchParams: AreaSearchParams,
 ) {
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
+  const getProductOptions = useServerFn(getAreaProductFilterOptions);
 
   const [af, setAf] = usePersistentState<AreaFilters>(
     "bench-gpa:filters:area:v2",
@@ -74,6 +80,7 @@ export function useAreaProductsView(
       secoes: [],
       grupos: [],
       subgrupos: [],
+      products: [],
     },
     sanitizeAF,
   );
@@ -85,11 +92,16 @@ export function useAreaProductsView(
   // "win" survives. `setAf(prev => ...)` always starts from the freshest
   // state, even across updates within the same commit.
   const patch = (p: Partial<AreaFilters>) => setAf((prev) => ({ ...prev, ...p }));
-  const setStores = (v: string[]) => patch(cascadePatch("stores", v));
-  const setDeptos = (v: string[]) => patch(cascadePatch("deptos", v));
-  const setSecoes = (v: string[]) => patch(cascadePatch("secoes", v));
-  const setGrupos = (v: string[]) => patch(cascadePatch("grupos", v));
-  const setSubgrupos = (v: string[]) => patch({ subgrupos: v });
+  const withProductsCleared = (p: Partial<AreaFilters>): Partial<AreaFilters> => ({
+    ...p,
+    products: [],
+  });
+  const setStores = (v: string[]) => patch(withProductsCleared(cascadePatch("stores", v)));
+  const setDeptos = (v: string[]) => patch(withProductsCleared(cascadePatch("deptos", v)));
+  const setSecoes = (v: string[]) => patch(withProductsCleared(cascadePatch("secoes", v)));
+  const setGrupos = (v: string[]) => patch(withProductsCleared(cascadePatch("grupos", v)));
+  const setSubgrupos = (v: string[]) => patch({ subgrupos: v, products: [] });
+  const setProducts = (v: string[]) => patch({ products: v });
   const setRange = (r: { from: string; to: string }) => patch({ dateFrom: r.from, dateTo: r.to });
 
   // Dashboard ranking click-through (?store=&depto=&secao=&grupo=&subgrupo=):
@@ -102,13 +114,15 @@ export function useAreaProductsView(
     const { store, depto, secao, grupo, subgrupo } = searchParams;
     if (!store && !depto && !secao && !grupo && !subgrupo) return;
     appliedSearchRef.current = true;
-    patch({
-      stores: store ? [store] : af.stores,
+    setAf((prev) => ({
+      ...prev,
+      stores: store ? [store] : [],
       deptos: depto ? [depto] : [],
       secoes: secao ? [secao] : [],
       grupos: grupo ? [grupo] : [],
       subgrupos: subgrupo ? [subgrupo] : [],
-    });
+      products: [],
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -120,6 +134,7 @@ export function useAreaProductsView(
     secoes: fSecoes,
     grupos: fGrupos,
     subgrupos: fSubgrupos,
+    products: fProducts,
   } = af;
 
   const hierQ = useQuery({
@@ -176,6 +191,45 @@ export function useAreaProductsView(
 
   const ready = !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0;
 
+  const productOptionsQ = useQuery({
+    queryKey: ["area-product-options", fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
+    queryFn: () =>
+      getProductOptions({
+        data: {
+          stores: fStores,
+          deptos: fDeptos,
+          secoes: fSecoes,
+          grupos: fGrupos,
+          subgrupos: fSubgrupos,
+        },
+      }),
+    enabled: ready,
+    staleTime: QUERY_STALE_REFERENCE,
+    gcTime: QUERY_GC_REFERENCE,
+  });
+  const productOptions = useMemo(
+    () =>
+      (productOptionsQ.data ?? []).map((product) => ({
+        value: product.prodCode,
+        label: `PLU ${product.prodCode} · ${product.prodName}`,
+      })),
+    [productOptionsQ.data],
+  );
+  const productSelectionValid =
+    fProducts.length === 0 ||
+    productOptionsQ.isError ||
+    (productOptionsQ.isSuccess &&
+      fProducts.every((code) => productOptions.some((option) => option.value === code)));
+
+  useEffect(() => {
+    if (!productOptionsQ.isSuccess || !fProducts.length) return;
+    const available = new Set(productOptions.map((option) => option.value));
+    const validProducts = fProducts.filter((code) => available.has(code));
+    if (validProducts.length !== fProducts.length) setProducts(validProducts);
+    // Product selections are reconciled only after the complete option request succeeds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productOptionsQ.isSuccess, productOptions, fProducts]);
+
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<AreaSortKey>("val");
   const [sortAsc, setSortAsc] = useState(false);
@@ -196,6 +250,7 @@ export function useAreaProductsView(
       fSecoes,
       fGrupos,
       fSubgrupos,
+      fProducts,
     ],
     () => setPage(1),
   );
@@ -210,6 +265,7 @@ export function useAreaProductsView(
       fSecoes,
       fGrupos,
       fSubgrupos,
+      fProducts,
       page,
       pageSize,
       search,
@@ -226,6 +282,7 @@ export function useAreaProductsView(
           secoes: fSecoes,
           grupos: fGrupos,
           subgrupos: fSubgrupos,
+          products: fProducts,
           page,
           pageSize,
           search,
@@ -233,10 +290,9 @@ export function useAreaProductsView(
           sortDir,
         },
       }),
-    enabled: ready,
+    enabled: ready && productSelectionValid,
     staleTime: QUERY_STALE_CORE,
     retry: 1,
-    placeholderData: (prev) => prev,
   });
 
   const products = useMemo(() => {
@@ -289,6 +345,11 @@ export function useAreaProductsView(
   if (gp) pathParts.push(gp);
   const sg = summarize(fSubgrupos, "subgrupos");
   if (sg) pathParts.push(sg);
+  if (fProducts.length === 1) {
+    pathParts.push(
+      productOptions.find((option) => option.value === fProducts[0])?.label ?? fProducts[0],
+    );
+  } else if (fProducts.length > 1) pathParts.push(`${fProducts.length} produtos`);
 
   return {
     af,
@@ -297,6 +358,7 @@ export function useAreaProductsView(
     setSecoes,
     setGrupos,
     setSubgrupos,
+    setProducts,
     setRange,
     dateFrom,
     dateTo,
@@ -305,6 +367,8 @@ export function useAreaProductsView(
     fSecoes,
     fGrupos,
     fSubgrupos,
+    fProducts,
+    productOptions,
     hierarchy,
     opts,
     baseDateIso,
