@@ -30,14 +30,22 @@ export function setForecastStore(
   };
 }
 
+export function setForecastTargetDate(
+  filters: ForecastFilters,
+  targetDate: string | undefined,
+): ForecastFilters {
+  if (targetDate === filters.targetDate) return filters;
+  return { ...filters, targetDate };
+}
+
 export function applyForecastSearch(
   filters: ForecastFilters,
   search: ForecastSearchParams,
 ): ForecastFilters {
   let next = search.store === undefined ? filters : setForecastStore(filters, search.store);
 
-  if (search.targetDate !== undefined && search.targetDate !== next.targetDate) {
-    next = { ...next, targetDate: search.targetDate };
+  if (search.targetDate !== undefined) {
+    next = setForecastTargetDate(next, search.targetDate);
   }
 
   return next;

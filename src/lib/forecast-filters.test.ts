@@ -4,6 +4,7 @@ import {
   applyForecastSearch,
   forecastProductsForSubgroups,
   setForecastStore,
+  setForecastTargetDate,
   type ForecastFilters,
 } from "./forecast-filters";
 
@@ -55,6 +56,13 @@ describe("Forecast filter hierarchy", () => {
 
   it("preserves restored hierarchy values when the deep-link store is unchanged", () => {
     expect(applyForecastSearch(restoredFilters, { store: "1516" })).toBe(restoredFilters);
+  });
+
+  it("preserves selected filters when the target date changes", () => {
+    expect(setForecastTargetDate(restoredFilters, "2026-08-25")).toEqual({
+      ...restoredFilters,
+      targetDate: "2026-08-25",
+    });
   });
 
   it("only replaces fields present in a target-date-only deep link", () => {

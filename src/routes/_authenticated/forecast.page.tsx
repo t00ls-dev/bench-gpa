@@ -10,6 +10,7 @@ import {
   applyForecastSearch,
   forecastProductsForSubgroups,
   setForecastStore,
+  setForecastTargetDate,
   type ForecastFilters,
 } from "@/lib/forecast-filters";
 import { ProductionFilters } from "@/components/production-filters";
@@ -130,9 +131,7 @@ function ProductionPage() {
         productOptions={productOptions}
         productFilter={productFilter}
         onStoreChange={(v) => setFf((prev) => setForecastStore(prev, v[0]))}
-        onTargetDateChange={(v) =>
-          patch({ targetDate: v, secao: undefined, grupos: [], subgrupos: [], productFilter: [] })
-        }
+        onTargetDateChange={(v) => setFf((prev) => setForecastTargetDate(prev, v))}
         onSecaoChange={(v) => patch({ secao: v[0], grupos: [], subgrupos: [], productFilter: [] })}
         onGruposChange={(v) => patch({ grupos: v, subgrupos: [], productFilter: [] })}
         onSubgruposChange={(v) => patch({ subgrupos: v, productFilter: [] })}
