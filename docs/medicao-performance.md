@@ -858,3 +858,27 @@ testes de unidade reescritos (`production.functions.test.ts` e
 afins) e por navegação real na tela antes do rename definitivo, não
 por comparação de hash com uma versão de resultado diferente por
 design.
+
+## 2026-08-24: Rolldown 1.2.5 sem otimização defeituosa de entrada dinâmica
+
+O Rolldown 1.2.4/1.2.5 introduziu um ciclo entre o facade de uma entrada
+dinâmica e o chunk que hospedava seu módulo (`rolldown#10734`). O build
+terminava com sucesso, mas o bundle SSR falhava em runtime com
+`__exportAll is not a function`. Em vez de manter Rolldown 1.2.3, o Nitro
+passou a desativar somente `avoidRedundantChunkLoads`, que controla o passe
+onde o bug ocorre; `mergeCommonChunks` e o restante do code splitting
+continuam ativos.
+
+Comparação de uma execução de build local, mesmo SO e arquitetura:
+
+| Configuração | Módulos `.mjs` do servidor | Tamanho de `.output/server` | Chunks `server-*` |
+| --- | ---: | ---: | ---: |
+| Rolldown 1.2.3, otimizações padrão | 157 | 14.308 KiB | 1 |
+| Rolldown 1.2.5, `avoidRedundantChunkLoads: false` | 174 | 14.292 KiB | 1 |
+
+O número de arquivos aumentou em 17, resultado esperado ao evitar a remoção
+de carregamentos redundantes, mas o tamanho total caiu 16 KiB. Todos os 174
+módulos passaram em `node --check`; o bundle de produção iniciou e `/auth`
+respondeu HTTP 200 sem erro de namespace ou helper. Não houve perda material
+de tamanho nem necessidade de desativar todo o code splitting com
+`inlineDynamicImports`.

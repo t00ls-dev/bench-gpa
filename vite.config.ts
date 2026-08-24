@@ -50,7 +50,15 @@ export default defineConfig({
       server: { entry: "server" },
       router: { routeFileIgnorePattern: "\\.page\\.tsx" },
     }),
-    nitro({ preset: "node-server" }),
+    nitro({
+      preset: "node-server",
+      rolldownConfig: {
+        experimental: {
+          // Avoids the dynamic-entry facade cycle tracked in rolldown#10734.
+          chunkOptimization: { avoidRedundantChunkLoads: false },
+        },
+      },
+    }),
     react(),
     // Without SENTRY_AUTH_TOKEN (dev, an external PR, an environment
     // without the secrets), the plugin is left out entirely: source map
