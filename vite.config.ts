@@ -52,6 +52,7 @@ export default defineConfig({
     }),
     nitro({
       preset: "node-server",
+      sourcemap: true,
       rolldownConfig: {
         experimental: {
           // Avoids the dynamic-entry facade cycle tracked in rolldown#10734.
