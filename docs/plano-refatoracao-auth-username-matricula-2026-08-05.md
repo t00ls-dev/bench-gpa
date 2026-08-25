@@ -281,7 +281,7 @@ Frontend:
 Scripts: `scripts/create-test-admin.ts` troca para `username`/`matricula`
 fixos de teste, setando `password_changed_at = NOW()` explicitamente (senão
 nasce em estado de senha "expirada" e atrapalha toda verificação manual).
-`.claude/skills/run/SKILL.md` também referencia `input[type=email]` e as
+`.opencode/skills/run/SKILL.md` também referencia `input[type=email]` e as
 credenciais de teste — atualizar junto, senão a skill `run` quebra
 silenciosamente na próxima vez que for usada.
 

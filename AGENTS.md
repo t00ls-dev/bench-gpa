@@ -260,7 +260,7 @@ retroativa dedicada).
 
 Checklists detalhados de auditoria (segurança, performance, banco de dados,
 qualidade de código, dependências, frontend, testes, arquitetura) vivem em
-`.claude/skills/<categoria>/SKILL.md`, carregados sob demanda, não
+`.opencode/skills/<categoria>/SKILL.md`, carregados sob demanda, não
 duplicados aqui.
 
 ---

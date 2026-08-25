@@ -1,7 +1,7 @@
 /**
  * Checks that must stop the process from booting, not just log a warning.
  * `TURNSTILE_BYPASS=true` disables the entire login CAPTCHA: it's a dev/test
- * flag (see .claude/skills/run) that should never leak into production, but
+ * flag (see .opencode/skills/run) that should never leak into production, but
  * today it flows straight from `.env` into the PM2 process
  * (`ecosystem.config.cjs`) with no validation. Called once, when the
  * server's entry module loads (`src/server.ts`): if it throws, the process

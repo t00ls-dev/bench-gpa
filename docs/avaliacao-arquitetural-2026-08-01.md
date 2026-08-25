@@ -5,7 +5,7 @@ Fastify e Drizzle ORM no backend, portabilidade MariaDB/PostgreSQL,
 remoção do ecossistema TanStack em favor de React Router). Antes de
 planejar qualquer execução, cada peça da proposta foi validada contra o
 código e a infraestrutura reais, não aceita "no papel". Ver
-`.claude/skills/architecture-review/SKILL.md` para o processo usado
+`.opencode/skills/architecture-review/SKILL.md` para o processo usado
 (descrever o problema antes da solução, revisitar a decisão atual antes de
 descartá-la, medir custo real da migração).
 
@@ -88,7 +88,7 @@ self-hosted).
 ## Decisão central: TanStack Start/Router/Query/Table
 
 Não migrar. Contra os critérios definidos em
-`.claude/skills/architecture-review/SKILL.md`:
+`.opencode/skills/architecture-review/SKILL.md`:
 
 Sinais de "não vale a pena" presentes: a stack atual funciona hoje, sem
 medição de problema, mantenedor único (qualquer migração estrutural tira a
