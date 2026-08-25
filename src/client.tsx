@@ -6,6 +6,7 @@ import { hydrateRoot } from "react-dom/client";
 import { claimChunkReload } from "@/lib/chunk-reload";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+let recoveredChunkLoadError: unknown;
 
 // tunnel points to the same-origin route in src/server.ts (not directly to
 // Sentry's domain): keeps the CSP's connect-src at just 'self' and isn't
@@ -26,6 +27,10 @@ Sentry.init({
   ],
   beforeSend(event, hint) {
     const error = hint.originalException;
+    if (error === recoveredChunkLoadError) {
+      recoveredChunkLoadError = undefined;
+      return null;
+    }
     if (isRedirect(error) || isNotFound(error)) return null;
     return event;
   },
@@ -39,11 +44,13 @@ Sentry.init({
 // misleading error in TanStack Router (BENCH-GPA-18). Letting the original
 // failure propagate preserves its real stack while the reload recovers the
 // page. The release-scoped marker prevents a persistent failure from looping,
-// but still allows a long-lived tab to recover after future deploys.
+// but still allows a long-lived tab to recover after future deploys. Only the
+// first failure that triggers recovery is suppressed in Sentry; a repeated
+// failure in the same release propagates normally and remains observable.
 window.addEventListener("vite:preloadError", (event) => {
-  Sentry.captureException((event as Event & { payload?: unknown }).payload ?? event);
   if (window.location.pathname.startsWith("/upload")) return;
   if (!claimChunkReload(sessionStorage, __COMMIT_HASH__)) return;
+  recoveredChunkLoadError = (event as Event & { payload?: unknown }).payload ?? event;
   window.location.reload();
 });
 
