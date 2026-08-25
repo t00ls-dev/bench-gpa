@@ -3,6 +3,7 @@ import { isRedirect, isNotFound } from "@tanstack/react-router";
 import { StartClient } from "@tanstack/react-start/client";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
+import { claimChunkReload } from "@/lib/chunk-reload";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 
@@ -30,27 +31,19 @@ Sentry.init({
   },
 });
 
-const CHUNK_RELOAD_KEY = "bench-gpa:chunk-reload-attempted";
-
 // Vite fires this event (cancelable, node_modules/vite/.../handlePreloadError)
 // before letting a failed dynamic import() blow up - a chunk removed by a
 // mid-session deploy, or an unstable network mid-load (common on mobile:
-// BENCH-GPA-Q). preventDefault() takes over recovery instead of letting it
-// become an unhandled exception: reports to Sentry first (otherwise the
-// capture is lost, since it no longer reaches onUncaughtError) and reloads
-// once. sessionStorage avoids a loop if the reload fails for the same
-// reason (e.g. the user is genuinely offline) - the second failure in the
-// same tab falls through to the normal error screen instead of reloading
-// again. Skipped on /upload for the same reason as useVersionCheck: a
-// multi-step flow can't be interrupted by a reload.
+// BENCH-GPA-Q). The event must not be canceled: Vite treats a canceled error
+// as a successful import with an undefined module, which then causes a second
+// misleading error in TanStack Router (BENCH-GPA-18). Letting the original
+// failure propagate preserves its real stack while the reload recovers the
+// page. The release-scoped marker prevents a persistent failure from looping,
+// but still allows a long-lived tab to recover after future deploys.
 window.addEventListener("vite:preloadError", (event) => {
   Sentry.captureException((event as Event & { payload?: unknown }).payload ?? event);
-  event.preventDefault();
-
   if (window.location.pathname.startsWith("/upload")) return;
-  if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
-
-  sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+  if (!claimChunkReload(sessionStorage, __COMMIT_HASH__)) return;
   window.location.reload();
 });
 
