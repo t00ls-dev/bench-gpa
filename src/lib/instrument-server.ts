@@ -4,6 +4,7 @@
 // any other server code.
 import * as Sentry from "@sentry/tanstackstart-react";
 import { isRedirect, isNotFound } from "@tanstack/react-router";
+import { isExpectedServerRequestAbort } from "./sentry-error-filter";
 
 // Direct reference to the client, not the ambient lookup
 // (Sentry.getClient()): inside a TanStack Start server function's
@@ -47,7 +48,9 @@ export const sentryServerClient = Sentry.init({
   // in Sentry.
   beforeSend(event, hint) {
     const error = hint.originalException;
-    if (isRedirect(error) || isNotFound(error)) return null;
+    if (isRedirect(error) || isNotFound(error) || isExpectedServerRequestAbort(error, event)) {
+      return null;
+    }
     return event;
   },
 });
