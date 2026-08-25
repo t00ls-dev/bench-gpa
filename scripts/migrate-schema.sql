@@ -1385,41 +1385,36 @@ END//
 
 -- 17/20: refresh_filter_hierarchy
 --
--- DELETE, not TRUNCATE. Both empty the table, but TRUNCATE is DDL: it
--- causes an implicit commit and doesn't respect MVCC. Measured on
--- 2026-07-25, with 164k rows in product_universe: during the refresh's
--- ~33s, a concurrent reader saw ZERO rows in the table, and the Area
--- screen starts from the universe, so it went empty on every import, right
--- in the middle of business hours (the cron runs 10am-10pm). With DELETE,
--- the reader keeps seeing the previous version until COMMIT.
+-- Build the replacement in a temporary table before touching the published
+-- table. DELETE and the final copy still share one transaction, so readers
+-- see either the previous or the complete new version. Keeping the expensive
+-- DISTINCT outside that transaction also prevents dashboard reads from
+-- waiting behind the refresh for its full duration.
 --
--- DELETE's measured cost over TRUNCATE was +11% (32.8s -> 36.5s), which is
--- cheap for what it buys: besides visibility, DELETE is transactional, so
--- a failure mid-refresh rolls back to the previous state instead of
--- leaving the table truncated. See the atomicity note in finalize_import.
---
--- Fix on 07/31/2026: the guarantee above is only real with the DELETE and
--- the INSERT in the SAME transaction: without an explicit START
--- TRANSACTION, every statement is already its own implicit transaction
--- (autocommit) and the reader saw the table momentarily empty between the
--- two, exactly the symptom DELETE was supposed to avoid. It was harmless
--- while this proc was only called from inside finalize_import (which
--- already wrapped everything in a transaction); it stopped being true
--- once it became a standalone call from the dedicated cron
--- (scripts/refresh-universe.ts, docs/continuar.md item 5).
+-- TRUNCATE is deliberately not used: it causes an implicit commit and a
+-- concurrent reader can observe an empty table. See the atomicity note in
+-- finalize_import and scripts/migrations/0015_stage_refresh_tables.sql.
 CREATE PROCEDURE refresh_filter_hierarchy()
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     ROLLBACK;
+    DROP TEMPORARY TABLE IF EXISTS tmp_filter_hierarchy_refresh;
     RESIGNAL;
   END;
 
-  START TRANSACTION;
+  DROP TEMPORARY TABLE IF EXISTS tmp_filter_hierarchy_refresh;
+  CREATE TEMPORARY TABLE tmp_filter_hierarchy_refresh (
+    store_code VARCHAR(20) NOT NULL,
+    store_name VARCHAR(255) NOT NULL,
+    depto VARCHAR(100),
+    secao VARCHAR(100),
+    grupo VARCHAR(100),
+    subgrupo VARCHAR(100)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-  DELETE FROM filter_hierarchy;
-
-  INSERT INTO filter_hierarchy (store_code, store_name, depto, secao, grupo, subgrupo)
+  INSERT INTO tmp_filter_hierarchy_refresh
+    (store_code, store_name, depto, secao, grupo, subgrupo)
   SELECT DISTINCT
     u.store_code,
     COALESCE(s.store_name, u.store_code),
@@ -1431,7 +1426,17 @@ BEGIN
   LEFT JOIN stores s ON s.store_code = u.store_code
   WHERE u.depto IS NOT NULL OR u.secao IS NOT NULL OR u.grupo IS NOT NULL OR u.subgrupo IS NOT NULL;
 
+  START TRANSACTION;
+
+  DELETE FROM filter_hierarchy;
+
+  INSERT INTO filter_hierarchy (store_code, store_name, depto, secao, grupo, subgrupo)
+  SELECT store_code, store_name, depto, secao, grupo, subgrupo
+  FROM tmp_filter_hierarchy_refresh;
+
   COMMIT;
+
+  DROP TEMPORARY TABLE IF EXISTS tmp_filter_hierarchy_refresh;
 END//
 
 -- 18/20: refresh_product_universe
@@ -1446,25 +1451,32 @@ END//
 -- is (sale_date, store_code, prod_code), the JOIN returns exactly one row
 -- per pair.
 --
--- DELETE instead of TRUNCATE for the same reason as
--- refresh_filter_hierarchy: with TRUNCATE the table is visibly empty to
--- anyone reading during the refresh. Same 07/31/2026 fix documented there:
--- DELETE + INSERT need to be in the same transaction for the visibility
--- guarantee to actually hold, especially here: area_analysis does a LEFT
--- JOIN of the period over this table to decide which products exist.
+-- The expensive aggregation is staged before the transaction for the same
+-- reason as refresh_filter_hierarchy. The short DELETE + copy transaction
+-- preserves the old-version visibility guarantee for area_analysis and the
+-- dashboard procedures without holding target-table locks during the scan.
 CREATE PROCEDURE refresh_product_universe()
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     ROLLBACK;
+    DROP TEMPORARY TABLE IF EXISTS tmp_product_universe_refresh;
     RESIGNAL;
   END;
 
-  START TRANSACTION;
+  DROP TEMPORARY TABLE IF EXISTS tmp_product_universe_refresh;
+  CREATE TEMPORARY TABLE tmp_product_universe_refresh (
+    prod_code VARCHAR(20) NOT NULL,
+    store_code VARCHAR(20) NOT NULL,
+    prod_name VARCHAR(255),
+    depto VARCHAR(100),
+    secao VARCHAR(100),
+    grupo VARCHAR(100),
+    subgrupo VARCHAR(100),
+    last_sale_date DATE NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-  DELETE FROM product_universe;
-
-  INSERT INTO product_universe
+  INSERT INTO tmp_product_universe_refresh
     (prod_code, store_code, prod_name, depto, secao, grupo, subgrupo, last_sale_date)
   SELECT a.prod_code, a.store_code, a.prod_name, a.depto, a.secao, a.grupo, a.subgrupo, a.sale_date
   FROM sales_prod_daily_agg a
@@ -1477,7 +1489,18 @@ BEGIN
    AND m.store_code = a.store_code
    AND m.ult = a.sale_date;
 
+  START TRANSACTION;
+
+  DELETE FROM product_universe;
+
+  INSERT INTO product_universe
+    (prod_code, store_code, prod_name, depto, secao, grupo, subgrupo, last_sale_date)
+  SELECT prod_code, store_code, prod_name, depto, secao, grupo, subgrupo, last_sale_date
+  FROM tmp_product_universe_refresh;
+
   COMMIT;
+
+  DROP TEMPORARY TABLE IF EXISTS tmp_product_universe_refresh;
 END//
 
 -- 19/20: has_role
