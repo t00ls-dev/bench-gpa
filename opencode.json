@@ -5,17 +5,20 @@
     "build": {
       "model": "openai/gpt-5.6-sol",
       "mode": "primary",
-      "description": "Build, compilation, and deployment tasks"
+      "description": "Build, compilation, and deployment tasks",
+      "color": "success"
     },
     "plan": {
       "model": "opencode/nemotron-3-ultra-free",
       "mode": "primary",
-      "description": "Planning, analysis, and architectural decisions"
+      "description": "Planning, analysis, and architectural decisions",
+      "color": "primary"
     },
     "explore": {
       "model": "opencode/nemotron-3.5-lightning-free",
       "mode": "subagent",
-      "description": "Code exploration, search, and discovery"
+      "description": "Code exploration, search, and discovery",
+      "color": "info"
     }
   }
 }
