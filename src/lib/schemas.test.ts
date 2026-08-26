@@ -12,6 +12,9 @@ import {
   InsertSalesChunkSchema,
   FinalizeImportSchema,
   CancelImportSchema,
+  SavedAreaAnalysisIdSchema,
+  CreateSavedAreaAnalysisSchema,
+  UpdateSavedAreaAnalysisSchema,
 } from "./schemas";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
 
@@ -56,6 +59,54 @@ describe("AreaAnalysisSchema", () => {
 
   it("rejects missing dateFrom", () => {
     expect(() => AreaAnalysisSchema.parse({ dateTo: "2024-01-31" })).toThrow();
+  });
+});
+
+describe("saved area analysis schemas", () => {
+  const id = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts one store and a specific product composition", () => {
+    expect(
+      CreateSavedAreaAnalysisSchema.parse({
+        name: "  Ponta de gôndola  ",
+        storeCode: " 1516 ",
+        productCodes: ["100", "200"],
+      }),
+    ).toEqual({
+      name: "Ponta de gôndola",
+      storeCode: "1516",
+      productCodes: ["100", "200"],
+    });
+  });
+
+  it("requires at least one unique product", () => {
+    expect(
+      CreateSavedAreaAnalysisSchema.safeParse({
+        name: "Área",
+        storeCode: "1516",
+        productCodes: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      CreateSavedAreaAnalysisSchema.safeParse({
+        name: "Área",
+        storeCode: "1516",
+        productCodes: ["100", "100"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a partial update but rejects an empty update", () => {
+    expect(UpdateSavedAreaAnalysisSchema.parse({ id, name: "Novo nome" })).toEqual({
+      id,
+      name: "Novo nome",
+    });
+    expect(UpdateSavedAreaAnalysisSchema.safeParse({ id }).success).toBe(false);
+  });
+
+  it("requires UUID analysis identifiers", () => {
+    expect(SavedAreaAnalysisIdSchema.parse({ id })).toEqual({ id });
+    expect(SavedAreaAnalysisIdSchema.safeParse({ id: "predictable-id" }).success).toBe(false);
   });
 });
 

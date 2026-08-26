@@ -67,6 +67,35 @@ export const AreaAnalysisSchema = z.object({
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
+const SavedAreaProductCodeSchema = z.string().trim().min(1).max(20);
+const SavedAreaProductCodesSchema = z
+  .array(SavedAreaProductCodeSchema)
+  .min(1)
+  .max(5_000)
+  .refine((codes) => new Set(codes).size === codes.length, {
+    message: "A análise não pode conter produtos duplicados",
+  });
+
+export const SavedAreaAnalysisIdSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const CreateSavedAreaAnalysisSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  storeCode: z.string().trim().min(1).max(20),
+  productCodes: SavedAreaProductCodesSchema,
+});
+
+export const UpdateSavedAreaAnalysisSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string().trim().min(1).max(255).optional(),
+    productCodes: SavedAreaProductCodesSchema.optional(),
+  })
+  .refine((data) => data.name !== undefined || data.productCodes !== undefined, {
+    message: "Informe o nome ou os produtos para atualizar a análise",
+  });
+
 export const AreaProductFilterOptionsSchema = FilterSchema.pick({
   stores: true,
   deptos: true,
