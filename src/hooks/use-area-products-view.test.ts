@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createElement, type ReactNode } from "react";
+import { createElement, StrictMode, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import {
@@ -95,10 +95,11 @@ function areaResult(products: AreaProduct[] = []) {
   };
 }
 
-function makeWrapper() {
+function makeWrapper(strict = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: qc }, children);
+    const content = createElement(QueryClientProvider, { client: qc }, children);
+    return strict ? createElement(StrictMode, null, content) : content;
   };
 }
 
@@ -154,6 +155,91 @@ describe("useAreaProductsView", () => {
         sortBy: "val",
         sortDir: "desc",
       }),
+    });
+  });
+
+  it("loads a saved composition without requiring a department", async () => {
+    const getArea = vi.fn().mockResolvedValue(areaResult());
+    const { result } = renderHook(
+      () =>
+        useAreaProductsView(getArea, noSearchParams(), {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          storeCode: "1",
+          productCodes: ["P1", "P2"],
+        }),
+      { wrapper: makeWrapper(true) },
+    );
+
+    await waitFor(() => expect(getArea).toHaveBeenCalled());
+    expect(result.current.ready).toBe(true);
+    expect(result.current.fStores).toEqual(["1"]);
+    expect(result.current.fDeptos).toEqual([]);
+    expect(result.current.fProducts).toEqual(["P1", "P2"]);
+    expect(getArea).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        stores: ["1"],
+        deptos: [],
+        products: ["P1", "P2"],
+      }),
+    });
+  });
+
+  it("does not silently remove a saved product absent from the current universe", async () => {
+    const getArea = vi.fn().mockResolvedValue(areaResult());
+    mockProductOptions.mockResolvedValueOnce([{ prodCode: "P1", prodName: "Produto 1" }]);
+    const { result } = renderHook(
+      () =>
+        useAreaProductsView(getArea, noSearchParams(), {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          storeCode: "1",
+          productCodes: ["P1", "P999"],
+        }),
+      { wrapper: makeWrapper(true) },
+    );
+
+    await waitFor(() => expect(getArea).toHaveBeenCalled());
+    expect(result.current.fProducts).toEqual(["P1", "P999"]);
+    expect(getArea).toHaveBeenCalledWith({
+      data: expect.objectContaining({ products: ["P1", "P999"] }),
+    });
+  });
+
+  it("replaces a locally persisted composition with the current saved composition", async () => {
+    const analysisId = "550e8400-e29b-41d4-a716-446655440000";
+    localStorage.setItem(
+      `bench-gpa:filters:area:saved:${analysisId}`,
+      JSON.stringify({
+        dateFrom: "2026-07-18",
+        dateTo: "2026-07-20",
+        stores: ["2"],
+        deptos: ["MERC"],
+        secoes: ["SEC1"],
+        grupos: ["G1"],
+        subgrupos: ["SG1"],
+        products: ["OLD"],
+      }),
+    );
+    const getArea = vi.fn().mockResolvedValue(areaResult());
+    const { result } = renderHook(
+      () =>
+        useAreaProductsView(getArea, noSearchParams(), {
+          id: analysisId,
+          storeCode: "1",
+          productCodes: ["P1", "P2"],
+        }),
+      { wrapper: makeWrapper(true) },
+    );
+
+    await waitFor(() => expect(result.current.fProducts).toEqual(["P1", "P2"]));
+    expect(result.current.af).toEqual({
+      dateFrom: "2026-07-18",
+      dateTo: "2026-07-20",
+      stores: ["1"],
+      deptos: [],
+      secoes: [],
+      grupos: [],
+      subgrupos: [],
+      products: ["P1", "P2"],
     });
   });
 

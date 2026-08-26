@@ -154,10 +154,8 @@ function AuthedLayout() {
   const signOut = async () => {
     const { logout } = await import("@/lib/auth-api");
     await logout().catch(() => {});
-    // Invalidates the cached identity so the guard revalidates on the next access.
-    queryClient.removeQueries({ queryKey: ["me"] });
-    // Without this, a second login in the same tab (account switch) would
-    // inherit the previous identity on any client error until the next beforeLoad.
+    // No server-backed cache may survive an account switch in the same tab.
+    queryClient.clear();
     Sentry.setUser(null);
     router.navigate({ to: "/auth", search: { next: undefined }, replace: true });
   };
