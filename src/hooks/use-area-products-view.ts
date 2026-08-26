@@ -45,6 +45,12 @@ export interface AreaSearchParams {
   subgrupo?: string;
 }
 
+export interface SavedAreaComposition {
+  id: string;
+  storeCode: string;
+  productCodes: string[];
+}
+
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 function sanitizeAF(f: AreaFilters): AreaFilters {
   let dateFrom = isoDate.test(f.dateFrom) ? f.dateFrom : "";
@@ -53,6 +59,22 @@ function sanitizeAF(f: AreaFilters): AreaFilters {
   // it makes queries return no data and crashes the calendar picker.
   if (dateFrom && dateTo && dateFrom > dateTo) [dateFrom, dateTo] = [dateTo, dateFrom];
   return { ...f, dateFrom, dateTo };
+}
+
+function applySavedComposition(
+  filters: AreaFilters,
+  savedComposition?: SavedAreaComposition,
+): AreaFilters {
+  if (!savedComposition) return filters;
+  return {
+    ...filters,
+    stores: [savedComposition.storeCode],
+    deptos: [],
+    secoes: [],
+    grupos: [],
+    subgrupos: [],
+    products: [...savedComposition.productCodes],
+  };
 }
 
 /**
@@ -66,12 +88,12 @@ function sanitizeAF(f: AreaFilters): AreaFilters {
 export function useAreaProductsView(
   getArea: ReturnType<typeof useServerFn<typeof getAreaAnalysis>>,
   searchParams: AreaSearchParams,
+  savedComposition?: SavedAreaComposition,
 ) {
   const getHierarchy = useServerFn(getAreaFilterHierarchy);
   const getProductOptions = useServerFn(getAreaProductFilterOptions);
 
-  const [af, setAf] = usePersistentState<AreaFilters>(
-    "bench-gpa:filters:area:v2",
+  const initialFilters = applySavedComposition(
     {
       dateFrom: "",
       dateTo: "",
@@ -82,8 +104,24 @@ export function useAreaProductsView(
       subgrupos: [],
       products: [],
     },
-    sanitizeAF,
+    savedComposition,
   );
+  const [af, setAf] = usePersistentState<AreaFilters>(
+    savedComposition
+      ? `bench-gpa:filters:area:saved:${savedComposition.id}`
+      : "bench-gpa:filters:area:v2",
+    initialFilters,
+    (filters) => applySavedComposition(sanitizeAF(filters), savedComposition),
+  );
+  const savedCompositionKey = savedComposition
+    ? `${savedComposition.id}:${savedComposition.storeCode}:${savedComposition.productCodes.join("\0")}`
+    : "";
+  const appliedCompositionRef = useRef(savedCompositionKey);
+  useEffect(() => {
+    if (!savedComposition || appliedCompositionRef.current === savedCompositionKey) return;
+    appliedCompositionRef.current = savedCompositionKey;
+    setAf((prev) => applySavedComposition(prev, savedComposition));
+  }, [savedComposition, savedCompositionKey, setAf]);
   // Deliberately functional update: if two effects call patch() in the same
   // commit (e.g. hierarchy already cached makes the default-period effect
   // and the Dashboard click-through effect race for the first render), each
@@ -189,7 +227,11 @@ export function useAreaProductsView(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts?.availableDates]);
 
-  const ready = !!dateFrom && !!dateTo && fStores.length > 0 && fDeptos.length > 0;
+  const ready =
+    !!dateFrom &&
+    !!dateTo &&
+    fStores.length > 0 &&
+    (savedComposition ? fProducts.length > 0 : fDeptos.length > 0);
 
   const productOptionsQ = useQuery({
     queryKey: ["area-product-options", fStores, fDeptos, fSecoes, fGrupos, fSubgrupos],
@@ -216,19 +258,20 @@ export function useAreaProductsView(
     [productOptionsQ.data],
   );
   const productSelectionValid =
+    savedComposition !== undefined ||
     fProducts.length === 0 ||
     productOptionsQ.isError ||
     (productOptionsQ.isSuccess &&
       fProducts.every((code) => productOptions.some((option) => option.value === code)));
 
   useEffect(() => {
-    if (!productOptionsQ.isSuccess || !fProducts.length) return;
+    if (savedComposition || !productOptionsQ.isSuccess || !fProducts.length) return;
     const available = new Set(productOptions.map((option) => option.value));
     const validProducts = fProducts.filter((code) => available.has(code));
     if (validProducts.length !== fProducts.length) setProducts(validProducts);
     // Product selections are reconciled only after the complete option request succeeds.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productOptionsQ.isSuccess, productOptions, fProducts]);
+  }, [savedComposition, productOptionsQ.isSuccess, productOptions, fProducts]);
 
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<AreaSortKey>("val");

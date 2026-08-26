@@ -22,6 +22,7 @@ import { Route as AuthenticatedProductRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedUploadRouteImport } from './routes/_authenticated/upload'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminDocsRouteImport } from './routes/_authenticated/admin.docs'
+import { Route as AuthenticatedAreaAnalysisIdRouteImport } from './routes/_authenticated/area_.$analysisId'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -87,6 +88,12 @@ const AuthenticatedAdminDocsRoute = AuthenticatedAdminDocsRouteImport.update({
   path: '/docs',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAreaAnalysisIdRoute =
+  AuthenticatedAreaAnalysisIdRouteImport.update({
+    id: '/area_/$analysisId',
+    path: '/area/$analysisId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/product': typeof AuthenticatedProductRoute
   '/upload': typeof AuthenticatedUploadRoute
   '/admin/docs': typeof AuthenticatedAdminDocsRoute
+  '/area/$analysisId': typeof AuthenticatedAreaAnalysisIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -113,6 +121,7 @@ export interface FileRoutesByTo {
   '/upload': typeof AuthenticatedUploadRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/docs': typeof AuthenticatedAdminDocsRoute
+  '/area/$analysisId': typeof AuthenticatedAreaAnalysisIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -129,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated/upload': typeof AuthenticatedUploadRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/docs': typeof AuthenticatedAdminDocsRoute
+  '/_authenticated/area_/$analysisId': typeof AuthenticatedAreaAnalysisIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/product'
     | '/upload'
     | '/admin/docs'
+    | '/area/$analysisId'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/upload'
     | '/'
     | '/admin/docs'
+    | '/area/$analysisId'
     | '/admin'
   id:
     | '__root__'
@@ -173,6 +185,7 @@ export interface FileRouteTypes {
     | '/_authenticated/upload'
     | '/_authenticated/'
     | '/_authenticated/admin/docs'
+    | '/_authenticated/area_/$analysisId'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -276,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDocsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/area_/$analysisId': {
+      id: '/_authenticated/area_/$analysisId'
+      path: '/area/$analysisId'
+      fullPath: '/area/$analysisId'
+      preLoaderRoute: typeof AuthenticatedAreaAnalysisIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -300,6 +320,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductRoute: typeof AuthenticatedProductRoute
   AuthenticatedUploadRoute: typeof AuthenticatedUploadRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAreaAnalysisIdRoute: typeof AuthenticatedAreaAnalysisIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -310,6 +331,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductRoute: AuthenticatedProductRoute,
   AuthenticatedUploadRoute: AuthenticatedUploadRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAreaAnalysisIdRoute: AuthenticatedAreaAnalysisIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
