@@ -19,6 +19,7 @@ export function MultiSelect({
   searchable = false,
   single = false,
   disabled = false,
+  modal = false,
   ariaLabel,
 }: {
   label: string;
@@ -28,6 +29,7 @@ export function MultiSelect({
   searchable?: boolean;
   single?: boolean;
   disabled?: boolean;
+  modal?: boolean;
   ariaLabel?: string;
 }) {
   const [q, setQ] = useState("");
@@ -177,7 +179,7 @@ export function MultiSelect({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={modal}>
       <PopoverTrigger asChild>
         <Button
           ref={triggerRef}

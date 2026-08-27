@@ -33,15 +33,18 @@ vi.mock("@/components/multi-select", () => ({
     value,
     onChange,
     disabled,
+    modal,
   }: {
     ariaLabel: string;
     options: { value: string; label: string }[];
     value: string[];
     onChange: (value: string[]) => void;
     disabled?: boolean;
+    modal?: boolean;
   }) => (
     <select
       aria-label={ariaLabel}
+      data-modal={modal}
       value={value[0] ?? ""}
       onChange={(event) => onChange(event.target.value ? [event.target.value] : [])}
       disabled={disabled}
@@ -161,6 +164,10 @@ describe("SavedAreaAnalysisDialog", () => {
     fireEvent.change(screen.getByLabelText("Departamento"), {
       target: { value: "PERECIVEIS" },
     });
+
+    for (const label of ["Departamento", "Seção", "Grupo", "Subgrupo"]) {
+      expect(screen.getByLabelText(label)).toHaveAttribute("data-modal", "true");
+    }
 
     await vi.waitFor(() =>
       expect(mocks.productOptions).toHaveBeenCalledWith({

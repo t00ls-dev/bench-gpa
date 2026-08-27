@@ -233,6 +233,7 @@ export function SavedAreaAnalysisDialog({
                   value={deptos}
                   onChange={(value) => updateHierarchy("deptos", value)}
                   disabled={saving || !storeCode}
+                  modal
                 />
               </div>
             </div>
@@ -246,6 +247,7 @@ export function SavedAreaAnalysisDialog({
                   value={secoes}
                   onChange={(value) => updateHierarchy("secoes", value)}
                   disabled={saving || !storeCode}
+                  modal
                 />
               </div>
             </div>
@@ -259,6 +261,7 @@ export function SavedAreaAnalysisDialog({
                   value={grupos}
                   onChange={(value) => updateHierarchy("grupos", value)}
                   disabled={saving || !storeCode}
+                  modal
                 />
               </div>
             </div>
@@ -272,6 +275,7 @@ export function SavedAreaAnalysisDialog({
                   value={subgrupos}
                   onChange={(value) => updateHierarchy("subgrupos", value)}
                   disabled={saving || !storeCode}
+                  modal
                 />
               </div>
             </div>
