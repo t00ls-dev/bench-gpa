@@ -87,6 +87,15 @@ const analysis = {
   storeName: "Loja Teste",
   productCount: 1,
   productCodes: ["100"],
+  productHierarchy: [
+    {
+      productCode: "100",
+      depto: "PERECIVEIS",
+      secao: "PADARIA",
+      grupo: "PAES",
+      subgrupo: "FRANCES",
+    },
+  ],
   createdAt: "2026-08-26T12:00:00.000Z",
   updatedAt: "2026-08-26T13:00:00.000Z",
 };
@@ -181,5 +190,69 @@ describe("SavedAreaAnalysisDialog", () => {
       }),
     );
     expect(screen.getByText("1 produto(s) selecionado(s)")).toBeInTheDocument();
+  });
+
+  it("restores mixed hierarchy filters without adding products to the composition", async () => {
+    mocks.productOptions.mockResolvedValue([
+      { prodCode: "100", prodName: "Produto 100" },
+      { prodCode: "200", prodName: "Produto 200" },
+      { prodCode: "300", prodName: "Produto fora da área" },
+    ]);
+    const mixedAnalysis = {
+      ...analysis,
+      productCount: 2,
+      productCodes: ["100", "200"],
+      productHierarchy: [
+        {
+          productCode: "100",
+          depto: "PERECIVEIS",
+          secao: "PADARIA",
+          grupo: "PAES",
+          subgrupo: "FRANCES",
+        },
+        {
+          productCode: "200",
+          depto: "MERCEARIA",
+          secao: "BEBIDAS",
+          grupo: "REFRIGERANTES",
+          subgrupo: "COLA",
+        },
+      ],
+    };
+
+    renderWithClient(
+      <SavedAreaAnalysisDialog
+        open
+        analysis={mixedAnalysis}
+        stores={stores}
+        hierarchy={[
+          ...hierarchy,
+          {
+            store_code: "1516",
+            store_name: "Loja Teste",
+            depto: "MERCEARIA",
+            secao: "BEBIDAS",
+            grupo: "REFRIGERANTES",
+            subgrupo: "COLA",
+          },
+        ]}
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await vi.waitFor(() =>
+      expect(mocks.productOptions).toHaveBeenCalledWith({
+        data: {
+          stores: ["1516"],
+          deptos: ["MERCEARIA", "PERECIVEIS"],
+          secoes: ["BEBIDAS", "PADARIA"],
+          grupos: ["PAES", "REFRIGERANTES"],
+          subgrupos: ["COLA", "FRANCES"],
+        },
+      }),
+    );
+    expect(screen.getByText("2 produto(s) selecionado(s)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 });

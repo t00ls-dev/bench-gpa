@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useResetOnChange } from "@/hooks/use-reset-on-change";
+import { hasTextSelectionWithin } from "@/lib/dom-selection";
 
 export interface MSOption {
   value: string;
@@ -141,6 +142,7 @@ export function MultiSelect({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (hasTextSelectionWithin(e.currentTarget)) return;
             const allVals = options.map((x) => x.value);
             onChange(allSelected ? [] : allVals);
           }}
@@ -150,7 +152,7 @@ export function MultiSelect({
           )}
         >
           {renderCheckbox(allSelected)}
-          <span>Selecionar todos</span>
+          <span className="select-text">Selecionar todos</span>
         </button>
       );
     }
@@ -165,6 +167,7 @@ export function MultiSelect({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (hasTextSelectionWithin(e.currentTarget)) return;
           handleToggle(o.value);
         }}
         className={cn(
@@ -173,7 +176,7 @@ export function MultiSelect({
         )}
       >
         {renderCheckbox(checked, single)}
-        <span className="truncate text-left flex-1">{o.label}</span>
+        <span className="truncate text-left flex-1 select-text">{o.label}</span>
       </button>
     );
   };

@@ -32,6 +32,10 @@ import {
 } from "@/lib/saved-area-analyses.functions";
 import { CreateSavedAreaAnalysisSchema, UpdateSavedAreaAnalysisSchema } from "@/lib/schemas";
 import { QUERY_GC_REFERENCE, QUERY_STALE_REFERENCE } from "@/lib/query-config";
+import {
+  restoreSavedAreaHierarchyFilters,
+  type SavedAreaHierarchyFilters,
+} from "@/lib/saved-area-filter-restoration";
 
 export interface SavedAreaStoreOption {
   code: string;
@@ -73,10 +77,10 @@ export function SavedAreaAnalysisDialog({
   const [productCodes, setProductCodes] = useState(
     analysis?.productCodes ?? initialProductCodes ?? [],
   );
-  const [deptos, setDeptos] = useState<string[]>([]);
-  const [secoes, setSecoes] = useState<string[]>([]);
-  const [grupos, setGrupos] = useState<string[]>([]);
-  const [subgrupos, setSubgrupos] = useState<string[]>([]);
+  const [hierarchyFilters, setHierarchyFilters] = useState<SavedAreaHierarchyFilters>(() =>
+    restoreSavedAreaHierarchyFilters(analysis?.productHierarchy ?? []),
+  );
+  const { deptos, secoes, grupos, subgrupos } = hierarchyFilters;
   const [saving, setSaving] = useState(false);
   const { deptosOpts, secoesOpts, gruposOpts, subgruposOpts } = useMemo(
     () =>
@@ -111,10 +115,12 @@ export function SavedAreaAnalysisDialog({
     value: string[],
   ) => {
     const next = cascadePatch(level, value);
-    if (next.deptos) setDeptos(next.deptos);
-    if (next.secoes) setSecoes(next.secoes);
-    if (next.grupos) setGrupos(next.grupos);
-    if (next.subgrupos) setSubgrupos(next.subgrupos);
+    setHierarchyFilters((current) => ({
+      deptos: next.deptos ?? current.deptos,
+      secoes: next.secoes ?? current.secoes,
+      grupos: next.grupos ?? current.grupos,
+      subgrupos: next.subgrupos ?? current.subgrupos,
+    }));
   };
 
   const submit = async () => {
@@ -197,10 +203,7 @@ export function SavedAreaAnalysisDialog({
               value={storeCode || undefined}
               onValueChange={(code) => {
                 setStoreCode(code);
-                setDeptos([]);
-                setSecoes([]);
-                setGrupos([]);
-                setSubgrupos([]);
+                setHierarchyFilters({ deptos: [], secoes: [], grupos: [], subgrupos: [] });
                 setProductCodes([]);
               }}
               disabled={saving || analysis !== undefined}

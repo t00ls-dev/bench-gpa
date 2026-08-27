@@ -23,6 +23,15 @@ export interface SavedAreaAnalysisSummary {
 
 export interface SavedAreaAnalysis extends SavedAreaAnalysisSummary {
   productCodes: string[];
+  productHierarchy: SavedAreaProductHierarchy[];
+}
+
+export interface SavedAreaProductHierarchy {
+  productCode: string;
+  depto: string | null;
+  secao: string | null;
+  grupo: string | null;
+  subgrupo: string | null;
 }
 
 function parseSummary(value: unknown): SavedAreaAnalysisSummary {
@@ -137,12 +146,45 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
     const analysisRow = analysisRows[0];
     if (!analysisRow) throw new Error("Análise salva não encontrada.");
 
-    const productCodes = analysisRows
-      .map((row) => strOrNull(asRecord(row).prod_code))
-      .filter((productCode): productCode is string => productCode !== null);
+    const productCodes = analysisRows.flatMap((row) => {
+      const productCode = strOrNull(asRecord(row).prod_code);
+      return productCode ? [productCode] : [];
+    });
+    const hierarchyByProductCode = new Map<
+      string,
+      Omit<SavedAreaProductHierarchy, "productCode">
+    >();
+    if (productCodes.length > 0) {
+      const placeholders = productCodes.map(() => "?").join(", ");
+      const [hierarchyRows] = await db.query(
+        `SELECT prod_code, depto, secao, grupo, subgrupo
+         FROM product_universe
+         WHERE store_code = ? AND prod_code IN (${placeholders})`,
+        [str(asRecord(analysisRow).store_code), ...productCodes],
+      );
+      for (const row of asArray(hierarchyRows)) {
+        const record = asRecord(row);
+        hierarchyByProductCode.set(str(record.prod_code), {
+          depto: strOrNull(record.depto),
+          secao: strOrNull(record.secao),
+          grupo: strOrNull(record.grupo),
+          subgrupo: strOrNull(record.subgrupo),
+        });
+      }
+    }
+    const productHierarchy = productCodes.map((productCode): SavedAreaProductHierarchy => ({
+      productCode,
+      ...(hierarchyByProductCode.get(productCode) ?? {
+        depto: null,
+        secao: null,
+        grupo: null,
+        subgrupo: null,
+      }),
+    }));
     return {
       ...parseSummary({ ...asRecord(analysisRow), product_count: productCodes.length }),
       productCodes,
+      productHierarchy,
     };
   });
 

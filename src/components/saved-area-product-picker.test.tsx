@@ -71,4 +71,26 @@ describe("SavedAreaProductPicker", () => {
     );
     expect(onChange).toHaveBeenCalledWith(["300", "100", "200"]);
   });
+
+  it("allows selecting a product label without toggling the product", () => {
+    const onChange = vi.fn();
+    const getSelection = vi.spyOn(window, "getSelection").mockReturnValue({
+      isCollapsed: false,
+      containsNode: () => true,
+    } as unknown as Selection);
+
+    render(
+      <SavedAreaProductPicker
+        options={[{ value: "100", label: "PLU 100 · Arroz" }]}
+        value={[]}
+        onChange={onChange}
+        loading={false}
+      />,
+    );
+
+    expect(screen.getByText("PLU 100 · Arroz")).toHaveClass("select-text");
+    fireEvent.click(screen.getByRole("option"));
+    expect(onChange).not.toHaveBeenCalled();
+    getSelection.mockRestore();
+  });
 });

@@ -3,6 +3,7 @@ import { Check, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { hasTextSelectionWithin } from "@/lib/dom-selection";
 
 export interface SavedAreaProductOption {
   value: string;
@@ -116,7 +117,10 @@ export function SavedAreaProductPicker({
                 type="button"
                 role="option"
                 aria-selected={checked}
-                onClick={() => toggle(option.value)}
+                onClick={(event) => {
+                  if (hasTextSelectionWithin(event.currentTarget)) return;
+                  toggle(option.value);
+                }}
                 disabled={disabled}
                 className="flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-sm px-2 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
               >
@@ -130,7 +134,7 @@ export function SavedAreaProductPicker({
                 >
                   {checked ? <Check className="size-3" /> : null}
                 </span>
-                <span className="min-w-0 truncate">{option.label}</span>
+                <span className="min-w-0 truncate select-text">{option.label}</span>
               </button>
             );
           })

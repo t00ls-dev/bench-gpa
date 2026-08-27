@@ -94,6 +94,7 @@ import {
   deleteSavedAreaAnalysis,
   getSavedAreaAnalysis,
   listSavedAreaAnalyses,
+  type SavedAreaAnalysis,
   updateSavedAreaAnalysis,
 } from "./saved-area-analyses.functions";
 
@@ -172,17 +173,58 @@ describe("getSavedAreaAnalysis", () => {
         },
       ],
     ]);
+    mocks.poolQuery.mockResolvedValueOnce([
+      [
+        {
+          prod_code: "100",
+          depto: "PERECIVEIS",
+          secao: "PADARIA",
+          grupo: "PAES",
+          subgrupo: "FRANCES",
+        },
+        {
+          prod_code: "200",
+          depto: "MERCEARIA",
+          secao: "BEBIDAS",
+          grupo: "REFRIGERANTES",
+          subgrupo: "COLA",
+        },
+      ],
+    ]);
 
     const result = await (
-      getSavedAreaAnalysis as (input: { id: string }) => Promise<{ productCodes: string[] }>
+      getSavedAreaAnalysis as (input: { id: string }) => Promise<SavedAreaAnalysis>
     )({ id });
 
     expect(result.productCodes).toEqual(["100", "200"]);
-    expect(result).toMatchObject({ ownerUserId: "owner-2" });
-    expect(mocks.poolQuery).toHaveBeenNthCalledWith(1, expect.stringContaining("WHERE a.id = ?"), [
-      id,
+    expect(result.productHierarchy).toEqual([
+      {
+        productCode: "100",
+        depto: "PERECIVEIS",
+        secao: "PADARIA",
+        grupo: "PAES",
+        subgrupo: "FRANCES",
+      },
+      {
+        productCode: "200",
+        depto: "MERCEARIA",
+        secao: "BEBIDAS",
+        grupo: "REFRIGERANTES",
+        subgrupo: "COLA",
+      },
     ]);
-    expect(mocks.poolQuery).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ownerUserId: "owner-2" });
+    expect(mocks.poolQuery).toHaveBeenNthCalledWith(
+      1,
+      expect.not.stringContaining("product_universe"),
+      [id],
+    );
+    expect(mocks.poolQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("FROM product_universe"),
+      ["1516", "100", "200"],
+    );
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(2);
   });
 
   it("reports a missing analysis without disclosing metadata", async () => {

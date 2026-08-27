@@ -140,7 +140,7 @@ describe("SavedAreaAnalysesManager", () => {
         hierarchy={[]}
         stores={[]}
         currentProductCodes={["100"]}
-        currentAnalysis={{ ...summary, productCodes: ["100"] }}
+        currentAnalysis={{ ...summary, productCodes: ["100"], productHierarchy: [] }}
       />,
     );
 
