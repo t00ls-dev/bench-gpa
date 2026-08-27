@@ -88,9 +88,14 @@ describe("SavedAreaProductPicker", () => {
       />,
     );
 
-    expect(screen.getByText("PLU 100 · Arroz")).toHaveClass("select-text");
-    fireEvent.click(screen.getByRole("option"));
+    const option = screen.getByRole("option");
+    expect(option).toHaveClass("select-text");
+    expect(option.tagName).toBe("DIV");
+    fireEvent.click(option);
     expect(onChange).not.toHaveBeenCalled();
     getSelection.mockRestore();
+
+    fireEvent.keyDown(option, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledWith(["100"]);
   });
 });

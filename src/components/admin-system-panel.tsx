@@ -53,7 +53,7 @@ export function DataCountSection({
   });
 
   return (
-    <div className="kpi-card space-y-3">
+    <div className="kpi-card min-w-0 space-y-3 overflow-hidden">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           Contagem de registros nas tabelas do sistema.
@@ -71,7 +71,7 @@ export function DataCountSection({
         <ErrorRow msg={error instanceof Error ? error.message : "Erro ao diagnosticar"} />
       ) : (
         diag && (
-          <div className="overflow-x-auto">
+          <div className="max-w-full overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">
@@ -113,7 +113,7 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
   });
 
   return (
-    <div className="kpi-card space-y-3">
+    <div className="kpi-card min-w-0 space-y-3 overflow-hidden">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-muted-foreground">Tamanho total do banco, versão e tabelas.</p>
         <RefreshButton fetching={isFetching} onClick={() => refetch()} />
@@ -131,7 +131,7 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
         />
       ) : (
         data && (
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium flex items-center gap-1.5">
                 <HardDrive className="size-4 text-muted-foreground" />
@@ -140,14 +140,14 @@ export function DbHealthSection({ healthFn }: { healthFn: () => Promise<DbHealth
               <span className="font-mono text-xs text-muted-foreground">{data.db_size_pretty}</span>
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Activity className="size-3.5" /> {data.active_connections} conexões ativas
               </span>
               <span>MariaDB {data.version}</span>
             </div>
 
-            <div className="max-h-64 overflow-x-auto overflow-y-auto">
+            <div className="max-h-64 max-w-full overflow-x-auto overflow-y-auto">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-background">
                   <tr className="border-b text-left uppercase tracking-wider text-muted-foreground">

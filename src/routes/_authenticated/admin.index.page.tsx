@@ -76,8 +76,8 @@ export default function AdminPage() {
       {tab === "usuarios" && <AdminUserManagement data={data} isLoading={isLoading} />}
 
       {tab === "sistema" && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
+        <div className="grid min-w-0 gap-6 md:grid-cols-2">
+          <div className="min-w-0">
             <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
               <Database className="size-5 text-primary" /> Dados e Agregações
             </h2>
@@ -85,7 +85,7 @@ export default function AdminPage() {
               diagnoseFn={() => diag() as unknown as Promise<Record<string, unknown>>}
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="font-display text-lg font-bold flex items-center gap-2 mb-3">
               <HardDrive className="size-5 text-primary" /> Saúde do Banco
             </h2>

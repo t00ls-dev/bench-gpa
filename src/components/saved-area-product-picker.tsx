@@ -112,17 +112,23 @@ export function SavedAreaProductPicker({
           displayedOptions.visible.map((option) => {
             const checked = selected.has(option.value);
             return (
-              <button
+              <div
                 key={option.value}
-                type="button"
                 role="option"
                 aria-selected={checked}
+                aria-disabled={disabled}
+                tabIndex={disabled ? undefined : 0}
                 onClick={(event) => {
+                  if (disabled) return;
                   if (hasTextSelectionWithin(event.currentTarget)) return;
                   toggle(option.value);
                 }}
-                disabled={disabled}
-                className="flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-sm px-2 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                onKeyDown={(event) => {
+                  if (disabled || (event.key !== "Enter" && event.key !== " ")) return;
+                  event.preventDefault();
+                  toggle(option.value);
+                }}
+                className="flex w-full min-w-0 cursor-pointer select-text items-center gap-2 overflow-hidden rounded-sm px-2 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               >
                 <span
                   className={cn(
@@ -134,8 +140,8 @@ export function SavedAreaProductPicker({
                 >
                   {checked ? <Check className="size-3" /> : null}
                 </span>
-                <span className="min-w-0 truncate select-text">{option.label}</span>
-              </button>
+                <span className="min-w-0 truncate">{option.label}</span>
+              </div>
             );
           })
         )}

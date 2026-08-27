@@ -133,51 +133,62 @@ export function MultiSelect({
   const renderOption = (o: MSOption, idx: number) => {
     if (o.value === "__all__") {
       return (
-        <button
+        <div
           key="__all__"
-          type="button"
           role="option"
           aria-selected={allSelected}
           aria-label={allSelected ? "Desmarcar todos" : "Selecionar todos"}
+          tabIndex={0}
           onClick={(e) => {
-            e.preventDefault();
             e.stopPropagation();
             if (hasTextSelectionWithin(e.currentTarget)) return;
             const allVals = options.map((x) => x.value);
             onChange(allSelected ? [] : allVals);
           }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            e.stopPropagation();
+            const allVals = options.map((x) => x.value);
+            onChange(allSelected ? [] : allVals);
+          }}
           className={cn(
-            "flex w-full items-center gap-2 border-b px-3 py-2 text-sm font-medium",
+            "flex w-full cursor-pointer select-text items-center gap-2 border-b px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
             focusedIdx === idx ? "bg-muted" : "hover:bg-muted",
           )}
         >
           {renderCheckbox(allSelected)}
-          <span className="select-text">Selecionar todos</span>
-        </button>
+          <span>Selecionar todos</span>
+        </div>
       );
     }
 
     const checked = value.includes(o.value);
     return (
-      <button
+      <div
         key={o.value}
-        type="button"
         role="option"
         aria-selected={checked}
+        tabIndex={0}
         onClick={(e) => {
-          e.preventDefault();
           e.stopPropagation();
           if (hasTextSelectionWithin(e.currentTarget)) return;
           handleToggle(o.value);
         }}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          e.stopPropagation();
+          handleToggle(o.value);
+        }}
         className={cn(
-          "flex w-full items-center gap-2 px-3 py-2 text-sm",
+          "flex w-full cursor-pointer select-text items-center gap-2 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
           focusedIdx === idx ? "bg-muted" : "hover:bg-muted",
         )}
       >
         {renderCheckbox(checked, single)}
-        <span className="truncate text-left flex-1 select-text">{o.label}</span>
-      </button>
+        <span className="truncate text-left flex-1">{o.label}</span>
+      </div>
     );
   };
 
