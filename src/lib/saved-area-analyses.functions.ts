@@ -12,6 +12,7 @@ import {
 
 export interface SavedAreaAnalysisSummary {
   id: string;
+  ownerUserId: string;
   name: string;
   storeCode: string;
   storeName: string | null;
@@ -28,6 +29,7 @@ function parseSummary(value: unknown): SavedAreaAnalysisSummary {
   const row = asRecord(value);
   return {
     id: str(row.id),
+    ownerUserId: str(row.owner_user_id),
     name: str(row.name),
     storeCode: str(row.store_code),
     storeName: strOrNull(row.store_name),
@@ -92,6 +94,7 @@ export const listSavedAreaAnalyses = createServerFn({ method: "GET" })
     const [rows] = await db.query(
       `SELECT
          a.id,
+         a.owner_user_id,
          a.name,
          a.store_code,
          s.store_name,
@@ -112,10 +115,11 @@ export const listSavedAreaAnalyses = createServerFn({ method: "GET" })
 export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .validator((data: unknown) => SavedAreaAnalysisIdSchema.parse(data))
-  .handler(async ({ data, context }): Promise<SavedAreaAnalysis> => {
+  .handler(async ({ data }): Promise<SavedAreaAnalysis> => {
     const [rows] = await db.query(
       `SELECT
          a.id,
+         a.owner_user_id,
          a.name,
          a.store_code,
          s.store_name,
@@ -125,9 +129,9 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
        FROM saved_area_analyses a
        LEFT JOIN stores s ON s.store_code = a.store_code
        LEFT JOIN saved_area_analysis_products p ON p.analysis_id = a.id
-       WHERE a.id = ? AND a.owner_user_id = ?
+       WHERE a.id = ?
        ORDER BY p.prod_code`,
-      [data.id, context.userId],
+      [data.id],
     );
     const analysisRows = asArray(rows);
     const analysisRow = analysisRows[0];

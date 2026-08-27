@@ -67,11 +67,11 @@ export function SavedAreaQrCodeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle>QR Code da análise</DialogTitle>
           <DialogDescription>
-            O acesso a “{analysis.name}” continua exigindo login na conta autorizada.
+            O acesso a “{analysis.name}” continua exigindo uma conta autenticada.
           </DialogDescription>
         </DialogHeader>
 

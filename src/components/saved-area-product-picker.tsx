@@ -31,7 +31,7 @@ export function SavedAreaProductPicker({
     const knownCodes = new Set(options.map((option) => option.value));
     const unavailable = value
       .filter((code) => !knownCodes.has(code))
-      .map((code) => ({ value: code, label: `PLU ${code} · indisponível na loja` }));
+      .map((code) => ({ value: code, label: `PLU ${code} · fora dos filtros atuais` }));
     const allOptions = [...unavailable, ...options];
     const filtered = deferredSearch
       ? allOptions.filter(
@@ -47,10 +47,15 @@ export function SavedAreaProductPicker({
   const toggle = (code: string) => {
     onChange(selected.has(code) ? value.filter((item) => item !== code) : [...value, code]);
   };
+  const allFilteredSelected =
+    options.length > 0 && options.every((option) => selected.has(option.value));
+  const selectAllFiltered = () => {
+    onChange([...new Set([...value, ...options.map((option) => option.value)])]);
+  };
 
   return (
-    <div className="rounded-md border">
-      <div className="flex items-center gap-2 border-b p-2">
+    <div className="min-w-0 overflow-hidden rounded-md border">
+      <div className="flex min-w-0 items-center gap-2 border-b p-2">
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <Input
           aria-label="Buscar produtos para a análise"
@@ -58,7 +63,7 @@ export function SavedAreaProductPicker({
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           disabled={disabled}
-          className="h-8 border-0 px-0 shadow-none"
+          className="h-8 min-w-0 border-0 px-0 shadow-none"
         />
         {value.length > 0 ? (
           <Button
@@ -73,7 +78,7 @@ export function SavedAreaProductPicker({
           </Button>
         ) : null}
       </div>
-      <div className="flex items-center justify-between border-b px-3 py-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
         <span>{value.length} produto(s) selecionado(s)</span>
         {displayedOptions.total > RESULT_LIMIT ? (
           <span>
@@ -81,7 +86,19 @@ export function SavedAreaProductPicker({
           </span>
         ) : null}
       </div>
-      <div className="max-h-64 overflow-y-auto p-1" role="listbox" aria-label="Produtos">
+      <div className="border-b p-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-auto w-full whitespace-normal py-1.5"
+          onClick={selectAllFiltered}
+          disabled={disabled || loading || options.length === 0 || allFilteredSelected}
+        >
+          Selecionar todos os {options.length} produtos dos filtros atuais
+        </Button>
+      </div>
+      <div className="min-w-0 max-h-64 overflow-y-auto p-1" role="listbox" aria-label="Produtos">
         {loading ? (
           <p className="p-4 text-center text-sm text-muted-foreground">Carregando produtos…</p>
         ) : displayedOptions.visible.length === 0 ? (
@@ -101,7 +118,7 @@ export function SavedAreaProductPicker({
                 aria-selected={checked}
                 onClick={() => toggle(option.value)}
                 disabled={disabled}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                className="flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-sm px-2 py-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
               >
                 <span
                   className={cn(
@@ -113,7 +130,7 @@ export function SavedAreaProductPicker({
                 >
                   {checked ? <Check className="size-3" /> : null}
                 </span>
-                <span className="truncate">{option.label}</span>
+                <span className="min-w-0 truncate">{option.label}</span>
               </button>
             );
           })

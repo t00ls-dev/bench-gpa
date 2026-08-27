@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AreaTable } from "@/components/area-table";
 import { AreaKpiCards } from "@/components/area-kpi-cards";
 import { AreaFilters } from "@/components/area-filters";
+import { DateRangePicker } from "@/components/date-range-picker";
+import { FilterField } from "@/components/filter-field";
 import { SavedAreaAnalysesManager } from "@/components/saved-area-analyses-manager";
 import { Layers } from "lucide-react";
 import { Route } from "./area";
@@ -116,7 +118,8 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
           ) : null}
         </div>
         <SavedAreaAnalysesManager
-          ownerUserId={user.id}
+          currentUserId={user.id}
+          hierarchy={hierarchy}
           stores={view.stores.map((store) => ({ code: store.store_code, name: store.store_name }))}
           currentStoreCode={fStores.length === 1 ? fStores[0] : undefined}
           currentProductCodes={fProducts}
@@ -124,27 +127,43 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
         />
       </header>
 
-      <AreaFilters
-        hierarchy={hierarchy}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        fStores={fStores}
-        fDeptos={fDeptos}
-        fSecoes={fSecoes}
-        fGrupos={fGrupos}
-        fSubgrupos={fSubgrupos}
-        fProducts={fProducts}
-        productOptions={productOptions}
-        latestDate={opts?.latestDate ?? undefined}
-        availableDates={opts?.availableDates ?? []}
-        onRangeChange={setRange}
-        onStoresChange={setStores}
-        onDeptosChange={setDeptos}
-        onSecoesChange={setSecoes}
-        onGruposChange={setGrupos}
-        onSubgruposChange={setSubgrupos}
-        onProductsChange={setProducts}
-      />
+      {savedAnalysis ? (
+        <div className="kpi-card mb-4 min-w-0 overflow-hidden">
+          <FilterField label="Período" className="max-w-sm min-w-0">
+            <div className="mt-1">
+              <DateRangePicker
+                from={dateFrom}
+                to={dateTo}
+                reference={opts?.latestDate ?? undefined}
+                availableDates={opts?.availableDates ?? []}
+                onChange={setRange}
+              />
+            </div>
+          </FilterField>
+        </div>
+      ) : (
+        <AreaFilters
+          hierarchy={hierarchy}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          fStores={fStores}
+          fDeptos={fDeptos}
+          fSecoes={fSecoes}
+          fGrupos={fGrupos}
+          fSubgrupos={fSubgrupos}
+          fProducts={fProducts}
+          productOptions={productOptions}
+          latestDate={opts?.latestDate ?? undefined}
+          availableDates={opts?.availableDates ?? []}
+          onRangeChange={setRange}
+          onStoresChange={setStores}
+          onDeptosChange={setDeptos}
+          onSecoesChange={setSecoes}
+          onGruposChange={setGrupos}
+          onSubgruposChange={setSubgrupos}
+          onProductsChange={setProducts}
+        />
+      )}
 
       {!ready ? (
         <div className="kpi-card text-center text-muted-foreground">

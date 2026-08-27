@@ -26,6 +26,36 @@ vi.mock("@/lib/area.functions", () => ({
   getAreaProductFilterOptions: (...args: unknown[]) => mocks.productOptions(...args),
 }));
 
+vi.mock("@/components/multi-select", () => ({
+  MultiSelect: ({
+    ariaLabel,
+    options,
+    value,
+    onChange,
+    disabled,
+  }: {
+    ariaLabel: string;
+    options: { value: string; label: string }[];
+    value: string[];
+    onChange: (value: string[]) => void;
+    disabled?: boolean;
+  }) => (
+    <select
+      aria-label={ariaLabel}
+      value={value[0] ?? ""}
+      onChange={(event) => onChange(event.target.value ? [event.target.value] : [])}
+      disabled={disabled}
+    >
+      <option value="">Todos</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 vi.mock("sonner", () => ({
   toast: { success: mocks.toastSuccess, error: mocks.toastError },
 }));
@@ -36,8 +66,19 @@ function renderWithClient(ui: ReactElement) {
 }
 
 const stores = [{ code: "1516", name: "Loja Teste" }];
+const hierarchy = [
+  {
+    store_code: "1516",
+    store_name: "Loja Teste",
+    depto: "PERECIVEIS",
+    secao: "PADARIA",
+    grupo: "PAES",
+    subgrupo: "FRANCES",
+  },
+];
 const analysis = {
   id: "550e8400-e29b-41d4-a716-446655440000",
+  ownerUserId: "owner-1",
   name: "Área original",
   storeCode: "1516",
   storeName: "Loja Teste",
@@ -61,6 +102,7 @@ describe("SavedAreaAnalysisDialog", () => {
       <SavedAreaAnalysisDialog
         open
         stores={stores}
+        hierarchy={hierarchy}
         initialStoreCode="1516"
         initialProductCodes={["100"]}
         onOpenChange={vi.fn()}
@@ -86,6 +128,7 @@ describe("SavedAreaAnalysisDialog", () => {
         open
         analysis={analysis}
         stores={stores}
+        hierarchy={hierarchy}
         onOpenChange={vi.fn()}
         onSaved={vi.fn()}
       />,
@@ -100,5 +143,36 @@ describe("SavedAreaAnalysisDialog", () => {
         data: { id: analysis.id, name: "Área renomeada" },
       }),
     );
+  });
+
+  it("uses hierarchy filters only to refine the product options", async () => {
+    renderWithClient(
+      <SavedAreaAnalysisDialog
+        open
+        stores={stores}
+        hierarchy={hierarchy}
+        initialStoreCode="1516"
+        initialProductCodes={["100"]}
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Departamento"), {
+      target: { value: "PERECIVEIS" },
+    });
+
+    await vi.waitFor(() =>
+      expect(mocks.productOptions).toHaveBeenCalledWith({
+        data: {
+          stores: ["1516"],
+          deptos: ["PERECIVEIS"],
+          secoes: [],
+          grupos: [],
+          subgrupos: [],
+        },
+      }),
+    );
+    expect(screen.getByText("1 produto(s) selecionado(s)")).toBeInTheDocument();
   });
 });

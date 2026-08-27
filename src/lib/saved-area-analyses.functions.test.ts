@@ -118,6 +118,7 @@ describe("listSavedAreaAnalyses", () => {
       [
         {
           id,
+          owner_user_id: "owner-1",
           name: "Ponta de gôndola",
           store_code: "1516",
           store_name: "Loja 1516",
@@ -132,6 +133,7 @@ describe("listSavedAreaAnalyses", () => {
     expect(result).toEqual([
       {
         id,
+        ownerUserId: "owner-1",
         name: "Ponta de gôndola",
         storeCode: "1516",
         storeName: "Loja 1516",
@@ -152,6 +154,7 @@ describe("getSavedAreaAnalysis", () => {
       [
         {
           id,
+          owner_user_id: "owner-2",
           name: "Ponta de gôndola",
           store_code: "1516",
           store_name: "Loja 1516",
@@ -160,6 +163,7 @@ describe("getSavedAreaAnalysis", () => {
         },
         {
           id,
+          owner_user_id: "owner-2",
           name: "Ponta de gôndola",
           store_code: "1516",
           store_name: "Loja 1516",
@@ -174,15 +178,14 @@ describe("getSavedAreaAnalysis", () => {
     )({ id });
 
     expect(result.productCodes).toEqual(["100", "200"]);
-    expect(mocks.poolQuery).toHaveBeenNthCalledWith(
-      1,
-      expect.stringContaining("a.id = ? AND a.owner_user_id = ?"),
-      [id, "owner-1"],
-    );
+    expect(result).toMatchObject({ ownerUserId: "owner-2" });
+    expect(mocks.poolQuery).toHaveBeenNthCalledWith(1, expect.stringContaining("WHERE a.id = ?"), [
+      id,
+    ]);
     expect(mocks.poolQuery).toHaveBeenCalledTimes(1);
   });
 
-  it("does not disclose another owner's analysis", async () => {
+  it("reports a missing analysis without disclosing metadata", async () => {
     mocks.poolQuery.mockResolvedValueOnce([[]]);
 
     await expect(

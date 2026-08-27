@@ -52,6 +52,7 @@ function renderWithClient(ui: ReactElement) {
 
 const summary = {
   id: "550e8400-e29b-41d4-a716-446655440000",
+  ownerUserId: "owner-1",
   name: "Área salva",
   storeCode: "1516",
   storeName: "Loja Teste",
@@ -70,7 +71,12 @@ beforeEach(() => {
 describe("SavedAreaAnalysesManager", () => {
   it("loads private analyses when the sheet opens", async () => {
     const { queryClient } = renderWithClient(
-      <SavedAreaAnalysesManager ownerUserId="owner-1" stores={[]} currentProductCodes={[]} />,
+      <SavedAreaAnalysesManager
+        currentUserId="owner-1"
+        hierarchy={[]}
+        stores={[]}
+        currentProductCodes={[]}
+      />,
     );
 
     expect(mocks.list).not.toHaveBeenCalled();
@@ -85,7 +91,12 @@ describe("SavedAreaAnalysesManager", () => {
 
   it("hard-deletes an analysis after confirmation", async () => {
     renderWithClient(
-      <SavedAreaAnalysesManager ownerUserId="owner-1" stores={[]} currentProductCodes={[]} />,
+      <SavedAreaAnalysesManager
+        currentUserId="owner-1"
+        hierarchy={[]}
+        stores={[]}
+        currentProductCodes={[]}
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Análises salvas" }));
     await screen.findByText("Área salva");
@@ -102,7 +113,12 @@ describe("SavedAreaAnalysesManager", () => {
 
   it("opens the QR Code dialog for a saved analysis", async () => {
     renderWithClient(
-      <SavedAreaAnalysesManager ownerUserId="owner-1" stores={[]} currentProductCodes={[]} />,
+      <SavedAreaAnalysesManager
+        currentUserId="owner-1"
+        hierarchy={[]}
+        stores={[]}
+        currentProductCodes={[]}
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Análises salvas" }));
     await screen.findByText("Área salva");
@@ -115,5 +131,20 @@ describe("SavedAreaAnalysesManager", () => {
         open: true,
       }),
     );
+  });
+
+  it("shows editing disabled when the current analysis belongs to another user", () => {
+    renderWithClient(
+      <SavedAreaAnalysesManager
+        currentUserId="viewer-1"
+        hierarchy={[]}
+        stores={[]}
+        currentProductCodes={["100"]}
+        currentAnalysis={{ ...summary, productCodes: ["100"] }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Editar análise" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "QR Code" })).toBeEnabled();
   });
 });

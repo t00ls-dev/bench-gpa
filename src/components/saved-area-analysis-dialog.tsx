@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
@@ -22,7 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SavedAreaProductPicker } from "@/components/saved-area-product-picker";
+import { MultiSelect } from "@/components/multi-select";
 import { getAreaProductFilterOptions } from "@/lib/area.functions";
+import { cascadePatch, computeAreaCascadeOptions, type HierarchyItem } from "@/lib/filter-cascade";
 import {
   createSavedAreaAnalysis,
   updateSavedAreaAnalysis,
@@ -40,6 +42,7 @@ interface SavedAreaAnalysisDialogProps {
   open: boolean;
   analysis?: SavedAreaAnalysis;
   stores: SavedAreaStoreOption[];
+  hierarchy: HierarchyItem[];
   initialStoreCode?: string;
   initialProductCodes?: string[];
   onOpenChange: (open: boolean) => void;
@@ -56,6 +59,7 @@ export function SavedAreaAnalysisDialog({
   open,
   analysis,
   stores,
+  hierarchy,
   initialStoreCode,
   initialProductCodes,
   onOpenChange,
@@ -69,12 +73,26 @@ export function SavedAreaAnalysisDialog({
   const [productCodes, setProductCodes] = useState(
     analysis?.productCodes ?? initialProductCodes ?? [],
   );
+  const [deptos, setDeptos] = useState<string[]>([]);
+  const [secoes, setSecoes] = useState<string[]>([]);
+  const [grupos, setGrupos] = useState<string[]>([]);
+  const [subgrupos, setSubgrupos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const { deptosOpts, secoesOpts, gruposOpts, subgruposOpts } = useMemo(
+    () =>
+      computeAreaCascadeOptions(hierarchy, {
+        fStores: storeCode ? [storeCode] : [],
+        fDeptos: deptos,
+        fSecoes: secoes,
+        fGrupos: grupos,
+      }),
+    [hierarchy, storeCode, deptos, secoes, grupos],
+  );
   const productOptionsQuery = useQuery({
-    queryKey: ["area-product-options", [storeCode], [], [], [], []],
+    queryKey: ["area-product-options", [storeCode], deptos, secoes, grupos, subgrupos],
     queryFn: () =>
       getProductOptions({
-        data: { stores: [storeCode], deptos: [], secoes: [], grupos: [], subgrupos: [] },
+        data: { stores: [storeCode], deptos, secoes, grupos, subgrupos },
       }),
     enabled: open && storeCode.length > 0,
     staleTime: QUERY_STALE_REFERENCE,
@@ -87,6 +105,17 @@ export function SavedAreaAnalysisDialog({
   const changed = analysis
     ? name.trim() !== analysis.name || !sameProducts(productCodes, analysis.productCodes)
     : true;
+
+  const updateHierarchy = (
+    level: "deptos" | "secoes" | "grupos" | "subgrupos",
+    value: string[],
+  ) => {
+    const next = cascadePatch(level, value);
+    if (next.deptos) setDeptos(next.deptos);
+    if (next.secoes) setSecoes(next.secoes);
+    if (next.grupos) setGrupos(next.grupos);
+    if (next.subgrupos) setSubgrupos(next.subgrupos);
+  };
 
   const submit = async () => {
     if (saving) return;
@@ -140,16 +169,16 @@ export function SavedAreaAnalysisDialog({
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !saving && onOpenChange(nextOpen)}>
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+        className="max-h-[90vh] w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-2xl"
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="min-w-0">
           <DialogTitle>{analysis ? "Editar análise salva" : "Salvar análise de área"}</DialogTitle>
           <DialogDescription>
             A análise mantém uma composição de produtos para uma única loja.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div>
             <Label htmlFor="saved-area-name">Nome</Label>
             <Input
@@ -168,6 +197,10 @@ export function SavedAreaAnalysisDialog({
               value={storeCode || undefined}
               onValueChange={(code) => {
                 setStoreCode(code);
+                setDeptos([]);
+                setSecoes([]);
+                setGrupos([]);
+                setSubgrupos([]);
                 setProductCodes([]);
               }}
               disabled={saving || analysis !== undefined}
@@ -189,8 +222,66 @@ export function SavedAreaAnalysisDialog({
               </p>
             ) : null}
           </div>
-          <div>
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
+            <div>
+              <Label>Departamento</Label>
+              <div className="mt-1.5">
+                <MultiSelect
+                  label="Todos"
+                  ariaLabel="Departamento"
+                  options={deptosOpts.map((value) => ({ value, label: value }))}
+                  value={deptos}
+                  onChange={(value) => updateHierarchy("deptos", value)}
+                  disabled={saving || !storeCode}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Seção</Label>
+              <div className="mt-1.5">
+                <MultiSelect
+                  label="Todas"
+                  ariaLabel="Seção"
+                  options={secoesOpts.map((value) => ({ value, label: value }))}
+                  value={secoes}
+                  onChange={(value) => updateHierarchy("secoes", value)}
+                  disabled={saving || !storeCode}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Grupo</Label>
+              <div className="mt-1.5">
+                <MultiSelect
+                  label="Todos"
+                  ariaLabel="Grupo"
+                  options={gruposOpts.map((value) => ({ value, label: value }))}
+                  value={grupos}
+                  onChange={(value) => updateHierarchy("grupos", value)}
+                  disabled={saving || !storeCode}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Subgrupo</Label>
+              <div className="mt-1.5">
+                <MultiSelect
+                  label="Todos"
+                  ariaLabel="Subgrupo"
+                  options={subgruposOpts.map((value) => ({ value, label: value }))}
+                  value={subgrupos}
+                  onChange={(value) => updateHierarchy("subgrupos", value)}
+                  disabled={saving || !storeCode}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="min-w-0">
             <Label>Produtos</Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Os filtros acima apenas refinam a lista. Somente os produtos marcados fazem parte da
+              análise.
+            </p>
             <div className="mt-1.5">
               <SavedAreaProductPicker
                 options={productOptions}
@@ -202,7 +293,7 @@ export function SavedAreaAnalysisDialog({
             </div>
             {productOptionsQuery.isError ? (
               <div className="mt-2 flex items-center justify-between gap-2 text-sm text-destructive">
-                <span>Não foi possível carregar os produtos da loja.</span>
+                <span>Não foi possível carregar os produtos dos filtros atuais.</span>
                 <Button
                   type="button"
                   variant="ghost"

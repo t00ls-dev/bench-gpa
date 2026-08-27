@@ -48,4 +48,27 @@ describe("SavedAreaProductPicker", () => {
     expect(screen.getByRole("option")).toHaveTextContent("PLU 200 · Feijão");
     expect(screen.queryByText("PLU 100 · Arroz")).toBeNull();
   });
+
+  it("adds every product from the current filters only after an explicit action", () => {
+    const onChange = vi.fn();
+    render(
+      <SavedAreaProductPicker
+        options={[
+          { value: "100", label: "PLU 100 · Arroz" },
+          { value: "200", label: "PLU 200 · Feijão" },
+        ]}
+        value={["300"]}
+        onChange={onChange}
+        loading={false}
+      />,
+    );
+
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Selecionar todos os 2 produtos dos filtros atuais",
+      }),
+    );
+    expect(onChange).toHaveBeenCalledWith(["300", "100", "200"]);
+  });
 });

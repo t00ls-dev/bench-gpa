@@ -18,6 +18,8 @@ export function MultiSelect({
   onChange,
   searchable = false,
   single = false,
+  disabled = false,
+  ariaLabel,
 }: {
   label: string;
   options: MSOption[];
@@ -25,6 +27,8 @@ export function MultiSelect({
   onChange: (v: string[]) => void;
   searchable?: boolean;
   single?: boolean;
+  disabled?: boolean;
+  ariaLabel?: string;
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -179,9 +183,10 @@ export function MultiSelect({
           ref={triggerRef}
           type="button"
           variant="outline"
-          aria-label={label}
+          aria-label={ariaLabel ?? label}
           aria-haspopup="listbox"
           aria-expanded={open}
+          disabled={disabled}
           className="h-9 w-full max-w-full justify-between text-left font-normal"
           title={
             value.length
@@ -248,7 +253,7 @@ export function MultiSelect({
           ref={listRef}
           className="max-h-72 scrollbar-always outline-none"
           role="listbox"
-          aria-label={label}
+          aria-label={ariaLabel ?? label}
           tabIndex={-1}
           onKeyDown={handleKeyDown}
         >

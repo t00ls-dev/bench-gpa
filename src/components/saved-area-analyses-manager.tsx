@@ -35,6 +35,7 @@ import {
   type SavedAreaAnalysisSummary,
 } from "@/lib/saved-area-analyses.functions";
 import { QUERY_STALE_CORE } from "@/lib/query-config";
+import type { HierarchyItem } from "@/lib/filter-cascade";
 
 function formatUpdatedAt(value: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
@@ -43,13 +44,15 @@ function formatUpdatedAt(value: string): string {
 }
 
 export function SavedAreaAnalysesManager({
-  ownerUserId,
+  currentUserId,
+  hierarchy,
   stores,
   currentStoreCode,
   currentProductCodes,
   currentAnalysis,
 }: {
-  ownerUserId: string;
+  currentUserId: string;
+  hierarchy: HierarchyItem[];
   stores: SavedAreaStoreOption[];
   currentStoreCode?: string;
   currentProductCodes: string[];
@@ -71,7 +74,7 @@ export function SavedAreaAnalysesManager({
   > | null>(null);
   const [deleting, setDeleting] = useState(false);
   const analysesQuery = useQuery({
-    queryKey: ["saved-area-analyses", ownerUserId],
+    queryKey: ["saved-area-analyses", currentUserId],
     queryFn: () => listAnalyses({}),
     enabled: drawerOpen,
     staleTime: QUERY_STALE_CORE,
@@ -79,6 +82,7 @@ export function SavedAreaAnalysesManager({
 
   const openEdit = async (summary?: SavedAreaAnalysisSummary) => {
     if (!summary && currentAnalysis) {
+      if (currentAnalysis.ownerUserId !== currentUserId) return;
       setEditAnalysis(currentAnalysis);
       return;
     }
@@ -86,7 +90,7 @@ export function SavedAreaAnalysesManager({
     setLoadingAnalysisId(summary.id);
     try {
       const analysis = await queryClient.fetchQuery({
-        queryKey: ["saved-area-analysis", ownerUserId, summary.id],
+        queryKey: ["saved-area-analysis", currentUserId, summary.id],
         queryFn: () => getAnalysis({ data: { id: summary.id } }),
         staleTime: QUERY_STALE_CORE,
       });
@@ -100,8 +104,8 @@ export function SavedAreaAnalysesManager({
 
   const invalidateAnalysis = async (id: string) => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["saved-area-analyses", ownerUserId] }),
-      queryClient.invalidateQueries({ queryKey: ["saved-area-analysis", ownerUserId, id] }),
+      queryClient.invalidateQueries({ queryKey: ["saved-area-analyses", currentUserId] }),
+      queryClient.invalidateQueries({ queryKey: ["saved-area-analysis", currentUserId, id] }),
     ]);
   };
 
@@ -124,9 +128,9 @@ export function SavedAreaAnalysesManager({
     try {
       await deleteAnalysis({ data: { id: target.id } });
       queryClient.removeQueries({
-        queryKey: ["saved-area-analysis", ownerUserId, target.id],
+        queryKey: ["saved-area-analysis", currentUserId, target.id],
       });
-      await queryClient.invalidateQueries({ queryKey: ["saved-area-analyses", ownerUserId] });
+      await queryClient.invalidateQueries({ queryKey: ["saved-area-analyses", currentUserId] });
       toast.success("Análise excluída.");
       setDeleteTarget(null);
       if (currentAnalysis?.id === target.id) {
@@ -155,6 +159,12 @@ export function SavedAreaAnalysesManager({
         <Button
           variant="outline"
           onClick={() => (currentAnalysis ? openEdit() : setCreateOpen(true))}
+          disabled={currentAnalysis !== undefined && currentAnalysis.ownerUserId !== currentUserId}
+          title={
+            currentAnalysis && currentAnalysis.ownerUserId !== currentUserId
+              ? "Somente o criador pode editar esta análise."
+              : undefined
+          }
         >
           {currentAnalysis ? <Pencil className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
           {currentAnalysis ? "Editar análise" : "Salvar análise"}
@@ -174,7 +184,7 @@ export function SavedAreaAnalysesManager({
           className="flex flex-col p-0"
           style={{ width: "min(100vw, 28rem)", maxWidth: "none" }}
         >
-          <SheetHeader className="border-b p-6 pr-12">
+          <SheetHeader className="min-w-0 border-b p-6 pr-12">
             <SheetTitle>Análises salvas</SheetTitle>
             <SheetDescription>Composições privadas vinculadas à sua conta.</SheetDescription>
           </SheetHeader>
@@ -200,7 +210,10 @@ export function SavedAreaAnalysesManager({
             ) : analysesQuery.data?.length ? (
               <div className="space-y-3">
                 {analysesQuery.data.map((analysis) => (
-                  <article key={analysis.id} className="rounded-lg border bg-card p-4 shadow-sm">
+                  <article
+                    key={analysis.id}
+                    className="min-w-0 overflow-hidden rounded-lg border bg-card p-4 shadow-sm"
+                  >
                     <button
                       type="button"
                       className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -212,7 +225,9 @@ export function SavedAreaAnalysesManager({
                         });
                       }}
                     >
-                      <h3 className="font-medium">{analysis.name}</h3>
+                      <h3 className="truncate font-medium" title={analysis.name}>
+                        {analysis.name}
+                      </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Loja {analysis.storeCode}
                         {analysis.storeName ? ` - ${analysis.storeName}` : ""}
@@ -278,6 +293,7 @@ export function SavedAreaAnalysesManager({
           key={`create:${currentStoreCode ?? ""}:${currentProductCodes.join("\0")}`}
           open
           stores={stores}
+          hierarchy={hierarchy}
           initialStoreCode={currentStoreCode}
           initialProductCodes={currentProductCodes}
           onOpenChange={setCreateOpen}
@@ -291,6 +307,7 @@ export function SavedAreaAnalysesManager({
           open
           analysis={editAnalysis}
           stores={stores}
+          hierarchy={hierarchy}
           onOpenChange={(open) => !open && setEditAnalysis(null)}
           onSaved={handleUpdated}
         />

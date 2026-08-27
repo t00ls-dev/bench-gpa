@@ -33,7 +33,7 @@ export default function SavedAreaAnalysisPage() {
       <div className="kpi-card text-center">
         <p className="mb-1 font-medium">Não foi possível abrir esta análise salva.</p>
         <p className="mb-4 text-sm text-muted-foreground">
-          Ela pode ter sido excluída ou pertencer a outro usuário.
+          Ela pode ter sido excluída ou o endereço pode estar incorreto.
         </p>
         <div className="flex justify-center gap-2">
           <Button variant="outline" onClick={() => analysisQuery.refetch()}>
