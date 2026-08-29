@@ -83,6 +83,7 @@ const analysis = {
   id: "550e8400-e29b-41d4-a716-446655440000",
   ownerUserId: "owner-1",
   name: "Área original",
+  description: null,
   storeCode: "1516",
   storeName: "Loja Teste",
   productCount: 1,
@@ -127,7 +128,12 @@ describe("SavedAreaAnalysisDialog", () => {
 
     await vi.waitFor(() =>
       expect(mocks.create).toHaveBeenCalledWith({
-        data: { name: "Nova área", storeCode: "1516", productCodes: ["100"] },
+        data: {
+          name: "Nova área",
+          description: null,
+          storeCode: "1516",
+          productCodes: ["100"],
+        },
       }),
     );
     expect(onSaved).toHaveBeenCalledWith(analysis.id);
@@ -153,6 +159,30 @@ describe("SavedAreaAnalysisDialog", () => {
     await vi.waitFor(() =>
       expect(mocks.update).toHaveBeenCalledWith({
         data: { id: analysis.id, name: "Área renomeada" },
+      }),
+    );
+  });
+
+  it("saves the optional description", async () => {
+    renderWithClient(
+      <SavedAreaAnalysisDialog
+        open
+        analysis={analysis}
+        stores={stores}
+        hierarchy={hierarchy}
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Descrição (opcional)"), {
+      target: { value: "  Exposição próxima à entrada  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await vi.waitFor(() =>
+      expect(mocks.update).toHaveBeenCalledWith({
+        data: { id: analysis.id, description: "Exposição próxima à entrada" },
       }),
     );
   });

@@ -82,6 +82,7 @@ export const SavedAreaAnalysisIdSchema = z.object({
 
 export const CreateSavedAreaAnalysisSchema = z.object({
   name: z.string().trim().min(1).max(255),
+  description: z.string().trim().max(1000).nullable().optional(),
   storeCode: z.string().trim().min(1).max(20),
   productCodes: SavedAreaProductCodesSchema,
 });
@@ -90,11 +91,16 @@ export const UpdateSavedAreaAnalysisSchema = z
   .object({
     id: z.string().uuid(),
     name: z.string().trim().min(1).max(255).optional(),
+    description: z.string().trim().max(1000).nullable().optional(),
     productCodes: SavedAreaProductCodesSchema.optional(),
   })
-  .refine((data) => data.name !== undefined || data.productCodes !== undefined, {
-    message: "Informe o nome ou os produtos para atualizar a análise",
-  });
+  .refine(
+    (data) =>
+      data.name !== undefined || data.description !== undefined || data.productCodes !== undefined,
+    {
+      message: "Informe o nome, a descrição ou os produtos para atualizar a análise",
+    },
+  );
 
 export const AreaProductFilterOptionsSchema = FilterSchema.pick({
   stores: true,

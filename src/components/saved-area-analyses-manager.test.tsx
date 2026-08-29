@@ -133,18 +133,24 @@ describe("SavedAreaAnalysesManager", () => {
     );
   });
 
-  it("shows editing disabled when the current analysis belongs to another user", () => {
+  it("hides editing and QR actions while viewing a saved analysis", () => {
     renderWithClient(
       <SavedAreaAnalysesManager
         currentUserId="viewer-1"
         hierarchy={[]}
         stores={[]}
         currentProductCodes={["100"]}
-        currentAnalysis={{ ...summary, productCodes: ["100"], productHierarchy: [] }}
+        currentAnalysis={{
+          ...summary,
+          description: null,
+          productCodes: ["100"],
+          productHierarchy: [],
+        }}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Editar análise" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "QR Code" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Editar análise" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "QR Code" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Análises salvas" })).toBeEnabled();
   });
 });

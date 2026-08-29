@@ -69,11 +69,13 @@ describe("saved area analysis schemas", () => {
     expect(
       CreateSavedAreaAnalysisSchema.parse({
         name: "  Ponta de gôndola  ",
+        description: "  Exposição próxima à entrada  ",
         storeCode: " 1516 ",
         productCodes: ["100", "200"],
       }),
     ).toEqual({
       name: "Ponta de gôndola",
+      description: "Exposição próxima à entrada",
       storeCode: "1516",
       productCodes: ["100", "200"],
     });
@@ -102,6 +104,21 @@ describe("saved area analysis schemas", () => {
       name: "Novo nome",
     });
     expect(UpdateSavedAreaAnalysisSchema.safeParse({ id }).success).toBe(false);
+    expect(UpdateSavedAreaAnalysisSchema.parse({ id, description: null })).toEqual({
+      id,
+      description: null,
+    });
+  });
+
+  it("limits the optional description to 1000 characters", () => {
+    expect(
+      CreateSavedAreaAnalysisSchema.safeParse({
+        name: "Área",
+        description: "a".repeat(1001),
+        storeCode: "1516",
+        productCodes: ["100"],
+      }).success,
+    ).toBe(false);
   });
 
   it("requires UUID analysis identifiers", () => {

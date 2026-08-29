@@ -22,6 +22,7 @@ export interface SavedAreaAnalysisSummary {
 }
 
 export interface SavedAreaAnalysis extends SavedAreaAnalysisSummary {
+  description: string | null;
   productCodes: string[];
   productHierarchy: SavedAreaProductHierarchy[];
 }
@@ -130,6 +131,7 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
          a.id,
          a.owner_user_id,
          a.name,
+         a.description,
          a.store_code,
          s.store_name,
          a.created_at,
@@ -183,6 +185,7 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
     }));
     return {
       ...parseSummary({ ...asRecord(analysisRow), product_count: productCodes.length }),
+      description: strOrNull(asRecord(analysisRow).description),
       productCodes,
       productHierarchy,
     };
@@ -198,9 +201,9 @@ export const createSavedAreaAnalysis = createServerFn({ method: "POST" })
       await connection.beginTransaction();
       await requireProductsInStore(connection, data.storeCode, data.productCodes);
       await connection.query(
-        `INSERT INTO saved_area_analyses (id, owner_user_id, name, store_code)
-         VALUES (?, ?, ?, ?)`,
-        [id, context.userId, data.name, data.storeCode],
+        `INSERT INTO saved_area_analyses (id, owner_user_id, name, description, store_code)
+          VALUES (?, ?, ?, ?, ?)`,
+        [id, context.userId, data.name, data.description ?? null, data.storeCode],
       );
       await insertProducts(connection, id, data.productCodes);
       await connection.commit();
@@ -229,6 +232,12 @@ export const updateSavedAreaAnalysis = createServerFn({ method: "POST" })
         await connection.query(
           "UPDATE saved_area_analyses SET name = ? WHERE id = ? AND owner_user_id = ?",
           [data.name, data.id, context.userId],
+        );
+      }
+      if (data.description !== undefined) {
+        await connection.query(
+          "UPDATE saved_area_analyses SET description = ? WHERE id = ? AND owner_user_id = ?",
+          [data.description, data.id, context.userId],
         );
       }
       if (data.productCodes) {

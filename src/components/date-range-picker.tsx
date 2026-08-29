@@ -4,6 +4,7 @@ function truncate(s: string, max = 20) {
 
 import { useMemo, useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -60,6 +61,8 @@ function computePreset(key: PresetKey, refIso?: string): { from: string; to: str
 export function DateRangePicker({ from, to, onChange, reference, availableDates }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PresetKey>("custom");
+  const [draftRange, setDraftRange] = useState<DateRange>();
+  const [draftStarted, setDraftStarted] = useState(false);
 
   const availableSet = useMemo(() => new Set(availableDates ?? []), [availableDates]);
   const hasAvailable = availableSet.size > 0;
@@ -105,23 +108,33 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
   // from <= to and breaks otherwise, regardless of what upstream state sends.
   const selectedRange = useMemo(() => {
     const [orderedFrom, orderedTo] = from && to && from > to ? [to, from] : [from, to];
+    if (!orderedFrom) return undefined;
     return {
-      from: orderedFrom ? new Date(orderedFrom + "T00:00:00") : undefined,
+      from: new Date(orderedFrom + "T00:00:00"),
       to: orderedTo ? new Date(orderedTo + "T00:00:00") : undefined,
     };
   }, [from, to]);
 
-  const handleRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    if (!range || !range.from) {
+  const handleRangeSelect = (range: DateRange | undefined, selectedDate: Date) => {
+    setMode("custom");
+    if (!draftStarted) {
+      setDraftStarted(true);
+      setDraftRange({ from: selectedDate, to: undefined });
       return;
     }
-    const f = iso(range.from);
-    const t = range.to ? iso(range.to) : f;
-    const clamped = clampRange({ from: f, to: t });
-    if (clamped) {
-      setMode("custom");
-      onChange(clamped);
-    }
+    if (!range) return;
+    setDraftRange(range);
+  };
+
+  const applyDraftRange = () => {
+    if (!draftRange?.from) return;
+    const clamped = clampRange({
+      from: iso(draftRange.from),
+      to: iso(draftRange.to ?? draftRange.from),
+    });
+    if (!clamped) return;
+    onChange(clamped);
+    setOpen(false);
   };
 
   const defaultMonth = from
@@ -133,7 +146,16 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
         : new Date();
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setDraftRange(selectedRange);
+          setDraftStarted(false);
+        }
+        setOpen(nextOpen);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -143,7 +165,12 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
           <span className="truncate whitespace-nowrap min-w-0">{truncate(label)}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start" collisionPadding={24}>
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        collisionPadding={24}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <div className="grid grid-cols-2 gap-1 p-2" role="radiogroup" aria-label="Período">
           {PRESETS.map((p) => (
             <button
@@ -169,12 +196,13 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
           <div className="flex items-center justify-between gap-2 text-xs">
             <Label className="text-xs">Período selecionado</Label>
             <span className="text-muted-foreground whitespace-nowrap font-medium">
-              {from ? fmtBRShort(from) : "(sem)"} - {to ? fmtBRShort(to) : "(sem)"}
+              {draftRange?.from ? fmtBRShort(iso(draftRange.from)) : "(sem)"} -{" "}
+              {draftRange?.to ? fmtBRShort(iso(draftRange.to)) : "(sem)"}
             </span>
           </div>
           <Calendar
             mode="range"
-            selected={selectedRange}
+            selected={draftRange}
             onSelect={handleRangeSelect}
             defaultMonth={defaultMonth}
             disabled={isDisabled}
@@ -203,7 +231,7 @@ export function DateRangePicker({ from, to, onChange, reference, availableDates 
               Nenhuma data com dados disponíveis para os filtros atuais.
             </p>
           )}
-          <Button size="sm" className="w-full" onClick={() => setOpen(false)}>
+          <Button size="sm" className="w-full" onClick={applyDraftRange}>
             Aplicar
           </Button>
         </div>

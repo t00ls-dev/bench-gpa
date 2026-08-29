@@ -157,6 +157,7 @@ describe("getSavedAreaAnalysis", () => {
           id,
           owner_user_id: "owner-2",
           name: "Ponta de gôndola",
+          description: "Exposição próxima à entrada",
           store_code: "1516",
           store_name: "Loja 1516",
           prod_code: "100",
@@ -166,6 +167,7 @@ describe("getSavedAreaAnalysis", () => {
           id,
           owner_user_id: "owner-2",
           name: "Ponta de gôndola",
+          description: "Exposição próxima à entrada",
           store_code: "1516",
           store_name: "Loja 1516",
           prod_code: "200",
@@ -213,7 +215,10 @@ describe("getSavedAreaAnalysis", () => {
         subgrupo: "COLA",
       },
     ]);
-    expect(result).toMatchObject({ ownerUserId: "owner-2" });
+    expect(result).toMatchObject({
+      ownerUserId: "owner-2",
+      description: "Exposição próxima à entrada",
+    });
     expect(mocks.poolQuery).toHaveBeenNthCalledWith(
       1,
       expect.not.stringContaining("product_universe"),
@@ -247,10 +252,16 @@ describe("createSavedAreaAnalysis", () => {
     const result = await (
       createSavedAreaAnalysis as (input: {
         name: string;
+        description?: string;
         storeCode: string;
         productCodes: string[];
       }) => Promise<{ ok: true; id: string }>
-    )({ name: "Área 1", storeCode: "1516", productCodes: ["100", "200"] });
+    )({
+      name: "Área 1",
+      description: "Exposição sazonal",
+      storeCode: "1516",
+      productCodes: ["100", "200"],
+    });
 
     expect(result.ok).toBe(true);
     expect(result.id).toMatch(/^[0-9a-f-]{36}$/);
@@ -262,7 +273,7 @@ describe("createSavedAreaAnalysis", () => {
     expect(mocks.connection.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("INSERT INTO saved_area_analyses"),
-      [result.id, "owner-1", "Área 1", "1516"],
+      [result.id, "owner-1", "Área 1", "Exposição sazonal", "1516"],
     );
     expect(mocks.connection.query).toHaveBeenNthCalledWith(
       3,
@@ -312,6 +323,26 @@ describe("createSavedAreaAnalysis", () => {
 });
 
 describe("updateSavedAreaAnalysis", () => {
+  it("clears an optional description without changing the composition", async () => {
+    mocks.connection.query
+      .mockResolvedValueOnce([[{ store_code: "1516" }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    await (
+      updateSavedAreaAnalysis as (input: {
+        id: string;
+        description: string | null;
+      }) => Promise<unknown>
+    )({ id, description: null });
+
+    expect(mocks.connection.query).toHaveBeenNthCalledWith(
+      2,
+      "UPDATE saved_area_analyses SET description = ? WHERE id = ? AND owner_user_id = ?",
+      [null, id, "owner-1"],
+    );
+    expect(mocks.connection.commit).toHaveBeenCalledOnce();
+  });
+
   it("replaces the composition within the analysis store", async () => {
     mocks.connection.query
       .mockResolvedValueOnce([[{ store_code: "1516" }]])

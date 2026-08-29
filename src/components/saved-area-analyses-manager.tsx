@@ -156,22 +156,9 @@ export function SavedAreaAnalysesManager({
   return (
     <>
       <div className="flex shrink-0 flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onClick={() => (currentAnalysis ? openEdit() : setCreateOpen(true))}
-          disabled={currentAnalysis !== undefined && currentAnalysis.ownerUserId !== currentUserId}
-          title={
-            currentAnalysis && currentAnalysis.ownerUserId !== currentUserId
-              ? "Somente o criador pode editar esta análise."
-              : undefined
-          }
-        >
-          {currentAnalysis ? <Pencil className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
-          {currentAnalysis ? "Editar análise" : "Salvar análise"}
-        </Button>
-        {currentAnalysis ? (
-          <Button variant="outline" onClick={() => setQrCodeTarget(currentAnalysis)}>
-            <QrCode className="mr-2 size-4" /> QR Code
+        {!currentAnalysis ? (
+          <Button variant="outline" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 size-4" /> Salvar análise
           </Button>
         ) : null}
         <Button onClick={() => setDrawerOpen(true)}>

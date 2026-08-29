@@ -96,27 +96,31 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
 
   return (
     <div>
+      {savedAnalysis ? <title>{`${savedAnalysis.name} | Bench GPA`}</title> : null}
       <header className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <Layers className="size-7 text-primary shrink-0" /> Análise de Área
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Identifique produtos com e sem venda para apoio operacional.
-          </p>
-          {savedAnalysis ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                Análise salva
-              </span>
-              <span className="font-medium">{savedAnalysis.name}</span>
-              <span className="text-muted-foreground">
-                Loja {savedAnalysis.storeCode}
-                {savedAnalysis.storeName ? ` - ${savedAnalysis.storeName}` : ""}
-              </span>
-            </div>
-          ) : null}
-        </div>
+        {savedAnalysis ? (
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-bold sm:text-3xl">{savedAnalysis.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              Loja {savedAnalysis.storeCode}
+              {savedAnalysis.storeName ? ` - ${savedAnalysis.storeName}` : ""}
+            </p>
+            {savedAnalysis.description ? (
+              <p className="mt-2 max-w-3xl whitespace-pre-line text-sm text-muted-foreground">
+                {savedAnalysis.description}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            <h1 className="font-display flex items-center gap-2 text-2xl font-bold sm:text-3xl">
+              <Layers className="size-7 shrink-0 text-primary" /> Análise de Área
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Identifique produtos com e sem venda para apoio operacional.
+            </p>
+          </div>
+        )}
         <SavedAreaAnalysesManager
           currentUserId={user.id}
           hierarchy={hierarchy}

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -73,6 +74,7 @@ export function SavedAreaAnalysisDialog({
   const updateAnalysis = useServerFn(updateSavedAreaAnalysis);
   const getProductOptions = useServerFn(getAreaProductFilterOptions);
   const [name, setName] = useState(analysis?.name ?? "");
+  const [description, setDescription] = useState(analysis?.description ?? "");
   const [storeCode, setStoreCode] = useState(analysis?.storeCode ?? initialStoreCode ?? "");
   const [productCodes, setProductCodes] = useState(
     analysis?.productCodes ?? initialProductCodes ?? [],
@@ -107,7 +109,9 @@ export function SavedAreaAnalysisDialog({
     label: `PLU ${product.prodCode} · ${product.prodName}`,
   }));
   const changed = analysis
-    ? name.trim() !== analysis.name || !sameProducts(productCodes, analysis.productCodes)
+    ? name.trim() !== analysis.name ||
+      description.trim() !== (analysis.description ?? "") ||
+      !sameProducts(productCodes, analysis.productCodes)
     : true;
 
   const updateHierarchy = (
@@ -129,6 +133,9 @@ export function SavedAreaAnalysisDialog({
       const data = {
         id: analysis.id,
         ...(name.trim() !== analysis.name ? { name: name.trim() } : {}),
+        ...(description.trim() !== (analysis.description ?? "")
+          ? { description: description.trim() || null }
+          : {}),
         ...(!sameProducts(productCodes, analysis.productCodes) ? { productCodes } : {}),
       };
       const parsed = UpdateSavedAreaAnalysisSchema.safeParse(data);
@@ -152,6 +159,7 @@ export function SavedAreaAnalysisDialog({
 
     const parsed = CreateSavedAreaAnalysisSchema.safeParse({
       name,
+      description: description.trim() || null,
       storeCode,
       productCodes,
     });
@@ -195,6 +203,19 @@ export function SavedAreaAnalysisDialog({
               onChange={(event) => setName(event.target.value)}
               disabled={saving}
               placeholder="Ex.: Ponta de gôndola"
+            />
+          </div>
+          <div>
+            <Label htmlFor="saved-area-description">Descrição (opcional)</Label>
+            <Textarea
+              id="saved-area-description"
+              className="mt-1.5 resize-y"
+              value={description}
+              maxLength={1000}
+              rows={3}
+              onChange={(event) => setDescription(event.target.value)}
+              disabled={saving}
+              placeholder="Contexto ou observações sobre esta composição"
             />
           </div>
           <div>
