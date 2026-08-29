@@ -213,6 +213,56 @@ describe("getAuditLog", () => {
       [10, 20],
     );
   });
+
+  it("searches every audit field with escaped LIKE wildcards", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce([[ROW]] as never)
+      .mockResolvedValueOnce([[{ total: 1 }]] as never);
+
+    await (
+      getAuditLog as (d: {
+        search: string;
+        sortBy: "created_at";
+        sortDir: "desc";
+        limit: number;
+        offset: number;
+      }) => Promise<unknown>
+    )({ search: "ana%_=", sortBy: "created_at", sortDir: "desc", limit: 50, offset: 0 });
+
+    const searchValue = "%ana=%=_==%";
+    expect(db.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("a.actor_username LIKE ? ESCAPE '='"),
+      [...Array<string>(7).fill(searchValue), 50, 0],
+    );
+    expect(db.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("LEFT JOIN users"),
+      Array<string>(7).fill(searchValue),
+    );
+  });
+
+  it("maps sorting to a fixed SQL column with a deterministic ID tie-breaker", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce([[ROW]] as never)
+      .mockResolvedValueOnce([[{ total: 1 }]] as never);
+
+    await (
+      getAuditLog as (d: {
+        search: string;
+        sortBy: "action";
+        sortDir: "asc";
+        limit: number;
+        offset: number;
+      }) => Promise<unknown>
+    )({ search: "", sortBy: "action", sortDir: "asc", limit: 25, offset: 0 });
+
+    expect(db.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("ORDER BY a.action ASC, a.id DESC"),
+      [25, 0],
+    );
+  });
 });
 
 describe("getHeartbeats", () => {

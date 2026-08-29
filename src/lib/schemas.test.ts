@@ -15,6 +15,7 @@ import {
   SavedAreaAnalysisIdSchema,
   CreateSavedAreaAnalysisSchema,
   UpdateSavedAreaAnalysisSchema,
+  AuditLogQuerySchema,
 } from "./schemas";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
 
@@ -59,6 +60,25 @@ describe("AreaAnalysisSchema", () => {
 
   it("rejects missing dateFrom", () => {
     expect(() => AreaAnalysisSchema.parse({ dateTo: "2024-01-31" })).toThrow();
+  });
+});
+
+describe("AuditLogQuerySchema", () => {
+  it("parses defaults and trims search text", () => {
+    expect(AuditLogQuerySchema.parse({})).toEqual({
+      search: "",
+      sortBy: "created_at",
+      sortDir: "desc",
+      limit: 50,
+      offset: 0,
+    });
+    expect(AuditLogQuerySchema.parse({ search: "  admin  " }).search).toBe("admin");
+  });
+
+  it("only accepts page sizes exposed by the table", () => {
+    expect(AuditLogQuerySchema.safeParse({ limit: 250 }).success).toBe(true);
+    expect(AuditLogQuerySchema.safeParse({ limit: 10 }).success).toBe(false);
+    expect(AuditLogQuerySchema.safeParse({ limit: 251 }).success).toBe(false);
   });
 });
 

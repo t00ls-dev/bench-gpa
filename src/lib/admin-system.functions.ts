@@ -10,10 +10,10 @@ import {
   REFRESH_UNIVERSE_CRON_LABEL,
   REFRESH_UNIVERSE_MAX_HOURS_OVERDUE,
 } from "./retention";
-import { z } from "zod";
 import db from "./db";
 import { asArray, asRecord, num, dateTimeStr } from "./api-types";
 import { fmtBytes } from "./utils";
+import { AuditLogQuerySchema, type AuditLogQuery } from "./schemas";
 
 type TableName =
   "staging_sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
@@ -129,20 +129,37 @@ export interface AuditRow {
   ip: string | null;
 }
 
+const AUDIT_ORDER_COLUMNS: Record<AuditLogQuery["sortBy"], string> = {
+  created_at: "a.created_at",
+  action: "a.action",
+  actor_username: "a.actor_username",
+  ip: "a.ip",
+};
+
+function escapeLike(value: string) {
+  return value.replaceAll("=", "==").replaceAll("%", "=%").replaceAll("_", "=_");
+}
+
 export const getAuditLog = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
-  .inputValidator((data: unknown) =>
-    z
-      .object({
-        limit: z.number().int().min(1).max(100).optional(),
-        offset: z.number().int().min(0).optional(),
-      })
-      .parse(data ?? {}),
-  )
+  .inputValidator((data: unknown) => AuditLogQuerySchema.parse(data ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const limit = data.limit ?? 50;
-    const offset = data.offset ?? 0;
+    const { search = "", sortBy = "created_at", sortDir = "desc", limit = 50, offset = 0 } = data;
+    const searchValue = `%${escapeLike(search)}%`;
+    const whereSql = search
+      ? `WHERE (a.actor_username LIKE ? ESCAPE '='
+             OR a.action LIKE ? ESCAPE '='
+             OR a.target_type LIKE ? ESCAPE '='
+             OR a.target_id LIKE ? ESCAPE '='
+             OR u.username LIKE ? ESCAPE '='
+             OR a.detail LIKE ? ESCAPE '='
+             OR a.ip LIKE ? ESCAPE '=')`
+      : "";
+    const targetJoinSql = "LEFT JOIN users u ON a.target_type = 'user' AND a.target_id = u.id";
+    const searchParams = search ? Array<string>(7).fill(searchValue) : [];
+    const orderColumn = AUDIT_ORDER_COLUMNS[sortBy];
+    const orderDirection = sortDir === "asc" ? "ASC" : "DESC";
     const [[rows], [countRows]] = await Promise.all([
       db.query(
         // LEFT JOIN instead of relying on text stored in `detail`: resolves
@@ -152,11 +169,19 @@ export const getAuditLog = createServerFn({ method: "POST" })
         `SELECT a.id, a.created_at, a.actor_username, a.action, a.target_type, a.target_id,
                 u.username AS target_username, a.detail, a.ip
            FROM audit_log a
-           LEFT JOIN users u ON a.target_type = 'user' AND a.target_id = u.id
-           ORDER BY a.id DESC LIMIT ? OFFSET ?`,
-        [limit, offset],
+           ${targetJoinSql}
+           ${whereSql}
+           ORDER BY ${orderColumn} ${orderDirection}, a.id DESC
+           LIMIT ? OFFSET ?`,
+        [...searchParams, limit, offset],
       ),
-      db.query("SELECT COUNT(*) AS total FROM audit_log"),
+      db.query(
+        `SELECT COUNT(*) AS total
+           FROM audit_log a
+           ${search ? targetJoinSql : ""}
+           ${whereSql}`,
+        searchParams,
+      ),
     ]);
     const total = num(asRecord(asArray(countRows)[0]).total);
     const events: AuditRow[] = asArray(rows).map((r) => {

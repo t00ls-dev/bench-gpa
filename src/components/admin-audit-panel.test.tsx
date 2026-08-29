@@ -5,8 +5,8 @@
 // per row, without opening Radix's Popover (Portal + ResizeObserver don't
 // exist in this project's jsdom, see vitest.setup.ts).
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuditLogSection } from "./admin-audit-panel";
 import type { AuditRow } from "@/lib/admin-system.functions";
@@ -95,5 +95,104 @@ describe("AuditLogSection", () => {
 
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).toEqual(["Data", "Ação", "Usuário", "IP"]);
+  });
+
+  it("requests the default page and changes to the next one", async () => {
+    const auditFn = vi.fn().mockResolvedValue({
+      events: [row()],
+      total: 80,
+      limit: 50,
+      offset: 0,
+    });
+    renderWithClient(<AuditLogSection auditFn={auditFn} />);
+
+    await waitFor(() =>
+      expect(auditFn).toHaveBeenCalledWith({
+        search: "",
+        sortBy: "created_at",
+        sortDir: "desc",
+        limit: 50,
+        offset: 0,
+      }),
+    );
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
+    await waitFor(() =>
+      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 })),
+    );
+    expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
+  });
+
+  it("sorts columns on the server and resets to the first page", async () => {
+    const auditFn = vi.fn().mockResolvedValue({
+      events: [row()],
+      total: 80,
+      limit: 50,
+      offset: 0,
+    });
+    renderWithClient(<AuditLogSection auditFn={auditFn} />);
+    await screen.findByRole("table");
+
+    fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
+    await waitFor(() =>
+      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 })),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Ação" }));
+
+    await waitFor(() =>
+      expect(auditFn).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: "action", sortDir: "asc", offset: 0 }),
+      ),
+    );
+    expect(screen.getByRole("columnheader", { name: "Ação" })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+  });
+
+  it("changes the server page size through the shared selector", async () => {
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const auditFn = vi.fn().mockResolvedValue({
+      events: [row()],
+      total: 300,
+      limit: 50,
+      offset: 0,
+    });
+    renderWithClient(<AuditLogSection auditFn={auditFn} />);
+    await screen.findByRole("table");
+
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("option", { name: "100 / página" }));
+
+    await waitFor(() =>
+      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 100, offset: 0 })),
+    );
+  });
+
+  it("debounces server search and keeps the controls available when no event matches", async () => {
+    const auditFn = vi.fn().mockImplementation((query: { search: string }) =>
+      Promise.resolve({
+        events: query.search ? [] : [row()],
+        total: query.search ? 0 : 1,
+        limit: 50,
+        offset: 0,
+      }),
+    );
+    renderWithClient(<AuditLogSection auditFn={auditFn} />);
+    await screen.findByRole("table");
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Buscar na trilha de auditoria" }), {
+      target: { value: "admin" },
+    });
+
+    expect(auditFn).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Nenhum evento encontrado.")).toBeInTheDocument();
+    expect(auditFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "admin", offset: 0 }),
+    );
+    expect(screen.getByRole("button", { name: "Limpar busca" })).toBeInTheDocument();
   });
 });

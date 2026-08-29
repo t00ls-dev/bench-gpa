@@ -29,6 +29,24 @@ export type Filters = z.infer<typeof FilterSchema>;
  */
 export const PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const;
 
+const PageSizeSchema = z
+  .number()
+  .int()
+  .refine(
+    (value) => PAGE_SIZE_OPTIONS.some((option) => option === value),
+    "Tamanho de página inválido",
+  );
+
+export const AuditLogQuerySchema = z.object({
+  search: z.string().trim().max(255).optional().default(""),
+  sortBy: z.enum(["created_at", "action", "actor_username", "ip"]).optional().default("created_at"),
+  sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
+  limit: PageSizeSchema.optional().default(50),
+  offset: z.number().int().min(0).optional().default(0),
+});
+
+export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;
+
 /**
  * Page size used by the export (PDF), which needs the full listing.
  *
