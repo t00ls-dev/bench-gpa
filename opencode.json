@@ -19,13 +19,13 @@
       "color": "success"
     },
     "plan": {
-      "model": "opencode/nemotron-3-ultra-free",
+      "model": "openai/gpt-5.6-terra",
       "mode": "primary",
       "description": "Planning, analysis, and architectural decisions",
       "color": "primary"
     },
     "explore": {
-      "model": "opencode/nemotron-3.5-lightning-free",
+      "model": "openai/gpt-5.6-luna",
       "mode": "subagent",
       "description": "Code exploration, search, and discovery",
       "color": "info"
