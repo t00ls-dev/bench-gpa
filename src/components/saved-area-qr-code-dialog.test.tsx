@@ -1,15 +1,20 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { SavedAreaQrCodeDialog } from "./saved-area-qr-code-dialog";
 
 const mocks = vi.hoisted(() => ({
   generate: vi.fn(),
+  downloadPdf: vi.fn(),
 }));
 
 vi.mock("@/lib/saved-area-qr-code", () => ({
   generateSavedAreaQrCode: (...args: unknown[]) => mocks.generate(...args),
   getSavedAreaAnalysisUrl: (origin: string, id: string) => `${origin}/area/${id}`,
+}));
+
+vi.mock("@/lib/saved-area-qr-code-pdf", () => ({
+  downloadSavedAreaQrCodePdf: (...args: unknown[]) => mocks.downloadPdf(...args),
 }));
 
 describe("SavedAreaQrCodeDialog", () => {
@@ -21,7 +26,12 @@ describe("SavedAreaQrCodeDialog", () => {
 
     render(
       <SavedAreaQrCodeDialog
-        analysis={{ id: "analysis-id", name: "Área Centro" }}
+        analysis={{
+          id: "analysis-id",
+          name: "Área Centro",
+          storeCode: "1516",
+          storeName: "Loja Teste",
+        }}
         open
         onOpenChange={vi.fn()}
       />,
@@ -40,5 +50,15 @@ describe("SavedAreaQrCodeDialog", () => {
       "download",
       "area-centro-qr-code.png",
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "PDF para impressão" }));
+    await vi.waitFor(() => {
+      expect(mocks.downloadPdf).toHaveBeenCalledWith(url, {
+        id: "analysis-id",
+        name: "Área Centro",
+        storeCode: "1516",
+        storeName: "Loja Teste",
+      });
+    });
   });
 });

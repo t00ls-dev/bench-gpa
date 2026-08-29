@@ -2,7 +2,17 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderOpen, Loader2, Pencil, Plus, QrCode, Trash2 } from "lucide-react";
+import {
+  Clock,
+  FolderOpen,
+  Loader2,
+  Package,
+  Pencil,
+  Plus,
+  QrCode,
+  Store,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -70,7 +80,7 @@ export function SavedAreaAnalysesManager({
   const [deleteTarget, setDeleteTarget] = useState<SavedAreaAnalysisSummary | null>(null);
   const [qrCodeTarget, setQrCodeTarget] = useState<Pick<
     SavedAreaAnalysisSummary,
-    "id" | "name"
+    "id" | "name" | "storeCode" | "storeName"
   > | null>(null);
   const [deleting, setDeleting] = useState(false);
   const analysesQuery = useQuery({
@@ -215,14 +225,23 @@ export function SavedAreaAnalysesManager({
                       <h3 className="truncate font-medium" title={analysis.name}>
                         {analysis.name}
                       </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Loja {analysis.storeCode}
-                        {analysis.storeName ? ` - ${analysis.storeName}` : ""}
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Store className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">
+                          Loja {analysis.storeCode}
+                          {analysis.storeName ? ` - ${analysis.storeName}` : ""}
+                        </span>
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {analysis.productCount} produto(s) · Atualizada em{" "}
-                        {formatUpdatedAt(analysis.updatedAt)}
-                      </p>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Package className="size-3.5 shrink-0" aria-hidden="true" />
+                          {analysis.productCount} produto(s)
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+                          Atualizada em {formatUpdatedAt(analysis.updatedAt)}
+                        </span>
+                      </div>
                     </button>
                     <div className="mt-3 flex justify-end gap-1 border-t pt-3">
                       <Button

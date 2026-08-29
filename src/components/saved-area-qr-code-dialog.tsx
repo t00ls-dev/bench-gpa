@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Printer } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,18 +16,17 @@ import {
   getSavedAreaAnalysisUrl,
   type SavedAreaQrCode,
 } from "@/lib/saved-area-qr-code";
-
-type AnalysisReference = {
-  id: string;
-  name: string;
-};
+import {
+  downloadSavedAreaQrCodePdf,
+  type SavedAreaQrCodeLabel,
+} from "@/lib/saved-area-qr-code-pdf";
 
 export function SavedAreaQrCodeDialog({
   analysis,
   open,
   onOpenChange,
 }: {
-  analysis: AnalysisReference;
+  analysis: SavedAreaQrCodeLabel;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -36,6 +36,7 @@ export function SavedAreaQrCodeDialog({
     error?: string;
   } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const url =
     open && typeof window !== "undefined"
       ? getSavedAreaAnalysisUrl(window.location.origin, analysis.id)
@@ -65,9 +66,21 @@ export function SavedAreaQrCodeDialog({
 
   const filename = `${slugifyFilename(analysis.name) || analysis.id}-qr-code`;
 
+  const downloadPdf = async () => {
+    if (!qrCode || pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      await downloadSavedAreaQrCodePdf(url, analysis);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o PDF.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>QR Code da análise</DialogTitle>
           <DialogDescription>
@@ -107,6 +120,15 @@ export function SavedAreaQrCodeDialog({
         </p>
 
         <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!qrCode || pdfLoading}
+            onClick={downloadPdf}
+          >
+            {pdfLoading ? <Loader2 className="animate-spin" /> : <Printer />}
+            PDF para impressão
+          </Button>
           <Button asChild variant="outline" disabled={!qrCode}>
             <a href={qrCode?.svgDataUrl} download={`${filename}.svg`} aria-disabled={!qrCode}>
               <Download /> Baixar SVG

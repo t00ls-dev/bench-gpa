@@ -127,7 +127,12 @@ describe("SavedAreaAnalysesManager", () => {
 
     expect(mocks.qrDialog).toHaveBeenCalledWith(
       expect.objectContaining({
-        analysis: expect.objectContaining({ id: summary.id, name: summary.name }),
+        analysis: expect.objectContaining({
+          id: summary.id,
+          name: summary.name,
+          storeCode: summary.storeCode,
+          storeName: summary.storeName,
+        }),
         open: true,
       }),
     );
