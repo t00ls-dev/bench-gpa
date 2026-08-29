@@ -5,6 +5,7 @@ import {
   IMPORT_ROW_COUNT_MISMATCH_MESSAGE,
 } from "./import-config";
 import { mapImportError } from "./import-errors";
+import { isExpectedError } from "./sentry-error-metadata";
 
 describe("mapImportError", () => {
   it.each([
@@ -21,4 +22,9 @@ describe("mapImportError", () => {
     const error = new Error("connection lost");
     expect(mapImportError(error)).toBe(error);
   });
+});
+
+it("marks an occupied import lock as an expected business rejection", () => {
+  expect(isExpectedError(mapImportError(new Error("IMPORT_IN_PROGRESS")))).toBe(true);
+  expect(isExpectedError(mapImportError(new Error("IMPORT_ROW_COUNT_MISMATCH")))).toBe(false);
 });

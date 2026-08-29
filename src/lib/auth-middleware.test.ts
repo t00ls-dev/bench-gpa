@@ -2,6 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 process.env.JWT_SECRET = "test-secret";
 
+const sentryMocks = vi.hoisted(() => ({
+  captureException: vi.fn(),
+  setContext: vi.fn(),
+}));
+
+vi.mock("@sentry/tanstackstart-react", () => ({
+  Scope: class {
+    setClient() {}
+    setUser() {}
+    setContext(name: string, values: Record<string, unknown>) {
+      sentryMocks.setContext(name, values);
+    }
+    captureException(error: unknown) {
+      sentryMocks.captureException(error);
+    }
+  },
+}));
+vi.mock("./instrument-server", () => ({
+  sentryServerClient: { captureException: sentryMocks.captureException },
+}));
+
 vi.mock("@tanstack/react-start", () => ({
   createMiddleware: () => ({
     server: (fn: (opts: { next: (ctx: unknown) => unknown }) => unknown) => fn,
@@ -28,6 +49,7 @@ import db from "./db";
 import jwt from "jsonwebtoken";
 import { setCookie } from "@tanstack/react-start/server";
 import { SESSION_ABSOLUTE_CAP_SECONDS } from "./auth-config";
+import { attachSentryContext, markExpectedError } from "./sentry-error-metadata";
 
 // password_change_required: 0 by default: most tests here only want to
 // validate the rest of the flow (revocation, sliding, role from the
@@ -258,6 +280,41 @@ describe("requireAuth", () => {
         ),
       ).rejects.toBe(boom);
       expect(isSentryReported(boom)).toBe(true);
+      expect(sentryMocks.captureException).toHaveBeenCalledWith(boom);
+    });
+
+    it("does not report an expected business rejection", async () => {
+      const expected = markExpectedError(new Error("occupied"));
+      await expect(
+        (requireAuth as unknown as (opts: { next: () => never }) => Promise<unknown>)({
+          next: () => {
+            throw expected;
+          },
+        }),
+      ).rejects.toBe(expected);
+
+      expect(sentryMocks.captureException).not.toHaveBeenCalled();
+      expect(isSentryReported(expected)).toBe(true);
+    });
+
+    it("adds safe diagnostic context before reporting a real error", async () => {
+      const error = attachSentryContext(new Error("mismatch"), "import_integrity", {
+        expected_rows: 500,
+        staging_rows: 499,
+      });
+      await expect(
+        (requireAuth as unknown as (opts: { next: () => never }) => Promise<unknown>)({
+          next: () => {
+            throw error;
+          },
+        }),
+      ).rejects.toBe(error);
+
+      expect(sentryMocks.setContext).toHaveBeenCalledWith("import_integrity", {
+        expected_rows: 500,
+        staging_rows: 499,
+      });
+      expect(sentryMocks.captureException).toHaveBeenCalledWith(error);
     });
   });
 });

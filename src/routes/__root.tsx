@@ -13,6 +13,13 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { RouteProgress } from "@/components/route-progress";
+import {
+  claimChunkReload,
+  getBrowserSessionStorage,
+  handlePendingChunkReload,
+  isChunkLoadError,
+  isImportActive,
+} from "@/lib/chunk-reload";
 
 function NotFoundComponent() {
   return (
@@ -34,6 +41,17 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useState(() => {
+    if (
+      typeof window !== "undefined" &&
+      isChunkLoadError(error) &&
+      !isImportActive(getBrowserSessionStorage())
+    ) {
+      if (claimChunkReload(getBrowserSessionStorage(), __COMMIT_HASH__)) {
+        window.location.reload();
+        return;
+      }
+      if (handlePendingChunkReload(error)) return;
+    }
     // TanStack Router's route error boundary: intercepts before the error
     // reaches React's onCaughtError/onUncaughtError (hydrateRoot, in
     // client.tsx), so it needs its own report, this isn't redundant.

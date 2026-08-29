@@ -111,6 +111,7 @@ vi.mock("./auth-middleware", () => ({
 }));
 
 import { login, getMe, logout, setInitialPassword, changePassword } from "./auth-api";
+import { isExpectedError } from "./sentry-error-metadata";
 import {
   deleteCookie,
   getCookie,
@@ -484,7 +485,12 @@ describe("setInitialPassword", () => {
         newPassword: "Str0ng!Pass",
         confirmPassword: "Str0ng!Pass",
       } as never),
-    ).rejects.toThrow("Usuário ou matrícula inválidos");
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes("Usuário ou matrícula inválidos") &&
+        isExpectedError(error),
+    );
   });
 
   it("protected by IP rate limit, same as login", async () => {

@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { IMPORT_BUSY_MESSAGE, IMPORT_CANCEL_FAILED_MESSAGE } from "@/lib/import-config";
 import UploadPage from "./upload.page";
+import { isImportActive } from "@/lib/chunk-reload";
 
 const mocks = vi.hoisted(() => ({
   beginImport: vi.fn(),
@@ -134,6 +135,7 @@ async function startImport() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   mocks.beginImport.mockResolvedValue({ ok: true });
   mocks.cancelImport.mockResolvedValue({ ok: true });
   mocks.insertSalesChunk.mockResolvedValue({ inserted: 1 });
@@ -163,6 +165,7 @@ describe("UploadPage import cancellation", () => {
 
     await startImport();
     await waitFor(() => expect(mocks.insertSalesChunk).toHaveBeenCalledOnce());
+    expect(isImportActive(sessionStorage)).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Cancelar importação" }));
 
     await act(async () => {
@@ -179,6 +182,7 @@ describe("UploadPage import cancellation", () => {
     expect(mocks.insertSalesChunk).toHaveBeenCalledOnce();
     expect(mocks.finalizeImport).not.toHaveBeenCalled();
     expect(mocks.toastInfo).toHaveBeenCalledWith("Importação cancelada.");
+    expect(isImportActive(sessionStorage)).toBe(false);
   });
 
   it("reports a persistent cancellation failure without finalizing or retrying", async () => {

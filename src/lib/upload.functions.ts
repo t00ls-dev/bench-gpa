@@ -16,6 +16,7 @@ import {
 import { STAGING_COLS, toStagingRow } from "./staging-row";
 import { CACHE_TTL_SHORT } from "./cache";
 import { mapImportError } from "./import-errors";
+import { attachSentryContext } from "./sentry-error-metadata";
 
 async function releaseImportLock(batchId: string, userId: string): Promise<void> {
   await db.query("CALL release_import_lock(?, ?)", [batchId, userId]);
@@ -183,7 +184,27 @@ export const finalizeImport = createServerFn({ method: "POST" })
         context.userId,
       ]);
     } catch (error) {
-      throw mapImportError(error);
+      const mappedError = mapImportError(error);
+      const rawMessage = error instanceof Error ? error.message : String(error);
+      if (rawMessage.includes("IMPORT_ROW_COUNT_MISMATCH")) {
+        let stagingRows: number | null = null;
+        try {
+          const [rows] = await db.query(
+            "SELECT COUNT(*) AS total FROM staging_sales WHERE batch_id = ? AND sale_date = ?",
+            [data.batch_id, data.sale_date],
+          );
+          stagingRows = num(asRecord(asArray(rows)[0]).total);
+        } catch {
+          // Preserve the integrity error even if its diagnostic query fails.
+        }
+        attachSentryContext(mappedError, "import_integrity", {
+          batch_id: data.batch_id,
+          sale_date: data.sale_date,
+          expected_rows: data.row_count,
+          staging_rows: stagingRows,
+        });
+      }
+      throw mappedError;
     }
 
     return { ok: true };

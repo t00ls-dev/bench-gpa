@@ -3,10 +3,17 @@ import { isRedirect, isNotFound } from "@tanstack/react-router";
 import { StartClient } from "@tanstack/react-start/client";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
-import { claimChunkReload } from "@/lib/chunk-reload";
+import {
+  claimChunkReload,
+  clearImportActive,
+  consumeChunkReloadPending,
+  getBrowserSessionStorage,
+  isImportActive,
+  markChunkReloadPending,
+} from "@/lib/chunk-reload";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
-let recoveredChunkLoadError: unknown;
+const reloadStorage = getBrowserSessionStorage();
 
 // tunnel points to the same-origin route in src/server.ts (not directly to
 // Sentry's domain): keeps the CSP's connect-src at just 'self' and isn't
@@ -27,14 +34,15 @@ Sentry.init({
   ],
   beforeSend(event, hint) {
     const error = hint.originalException;
-    if (error === recoveredChunkLoadError) {
-      recoveredChunkLoadError = undefined;
-      return null;
-    }
+    if (consumeChunkReloadPending(error)) return null;
     if (isRedirect(error) || isNotFound(error)) return null;
     return event;
   },
 });
+
+// An import cannot survive a page lifetime. Clear state left by a discarded
+// tab before preload and version recovery can consult it.
+clearImportActive(reloadStorage);
 
 // Vite fires this event (cancelable, node_modules/vite/.../handlePreloadError)
 // before letting a failed dynamic import() blow up - a chunk removed by a
@@ -48,9 +56,9 @@ Sentry.init({
 // first failure that triggers recovery is suppressed in Sentry; a repeated
 // failure in the same release propagates normally and remains observable.
 window.addEventListener("vite:preloadError", (event) => {
-  if (window.location.pathname.startsWith("/upload")) return;
-  if (!claimChunkReload(sessionStorage, __COMMIT_HASH__)) return;
-  recoveredChunkLoadError = (event as Event & { payload?: unknown }).payload ?? event;
+  if (isImportActive(reloadStorage)) return;
+  if (!claimChunkReload(reloadStorage, __COMMIT_HASH__)) return;
+  markChunkReloadPending((event as Event & { payload?: unknown }).payload);
   window.location.reload();
 });
 

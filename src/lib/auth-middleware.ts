@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "./auth-config";
 import { resolveSession } from "./session";
 import { getClientIp } from "./rate-limit";
 import { sentryServerClient } from "./instrument-server";
+import { getSentryContext, isExpectedError } from "./sentry-error-metadata";
 
 export interface AuthContext {
   userId: string;
@@ -119,7 +120,11 @@ function buildRequireAuth(allowPasswordChangeRequired: boolean) {
     try {
       return await next({ context });
     } catch (err) {
-      scope.captureException(err);
+      if (!isExpectedError(err)) {
+        const sentryContext = getSentryContext(err);
+        if (sentryContext) scope.setContext(sentryContext.name, sentryContext.values);
+        scope.captureException(err);
+      }
       markSentryReported(err);
       throw err;
     }

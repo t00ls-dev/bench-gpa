@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getBuildInfo } from "@/lib/version.functions";
+import { getBrowserSessionStorage, isImportActive } from "@/lib/chunk-reload";
 
 const CHECK_INTERVAL_MS = 15 * 60_000;
 
@@ -12,8 +13,8 @@ const CHECK_INTERVAL_MS = 15 * 60_000;
  * has been fixed and shipped. Reloads automatically once detected, instead
  * of relying on the user to know to hard-refresh.
  *
- * Skipped on /upload: an in-progress import is a multi-step client-driven
- * process; an unexpected reload there would lose progress.
+ * Skipped only while an import is active: the multi-step client-driven
+ * process would lose progress on an unexpected reload.
  */
 export function useVersionCheck() {
   const fn = useServerFn(getBuildInfo);
@@ -23,7 +24,7 @@ export function useVersionCheck() {
     let cancelled = false;
 
     const check = async () => {
-      if (window.location.pathname.startsWith("/upload")) return;
+      if (isImportActive(getBrowserSessionStorage())) return;
       try {
         const info = await fn();
         if (!cancelled && info.commitHash !== __COMMIT_HASH__) {

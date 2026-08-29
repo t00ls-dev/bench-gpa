@@ -13,6 +13,7 @@ import { requireAuthAllowExpiredPassword } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
 import { rejectRateLimit } from "./rate-limit-response";
 import { AuthIdentifierSchema, AuthPasswordInputSchema, PasswordSchema } from "./schemas";
+import { markExpectedError } from "./sentry-error-metadata";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -282,7 +283,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
         targetType: "session",
         ip,
       });
-      throw new Error("Usuário ou matrícula inválidos.");
+      throw markExpectedError(new Error("Usuário ou matrícula inválidos."));
     }
 
     const hash = await bcrypt.hash(data.newPassword, BCRYPT_COST);

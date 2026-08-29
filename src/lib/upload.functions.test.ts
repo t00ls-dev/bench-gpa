@@ -83,6 +83,7 @@ import {
 import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import { cache } from "./cache";
+import { getSentryContext, isExpectedError } from "./sentry-error-metadata";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -130,7 +131,12 @@ describe("beginImport", () => {
 
     await expect(
       (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput),
-    ).rejects.toThrow("Outra importação está em andamento");
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes("Outra importação está em andamento") &&
+        isExpectedError(error),
+    );
     expect(db.query).toHaveBeenCalledTimes(1);
   });
 });
@@ -378,17 +384,37 @@ describe("finalizeImport", () => {
   });
 
   it("maps a row count mismatch to a user-facing integrity error", async () => {
-    vi.mocked(db.query).mockRejectedValueOnce(new Error("IMPORT_ROW_COUNT_MISMATCH") as never);
+    vi.mocked(db.query)
+      .mockRejectedValueOnce(new Error("IMPORT_ROW_COUNT_MISMATCH") as never)
+      .mockResolvedValueOnce([[{ total: 499 }]] as never);
 
-    await expect(
-      (
-        finalizeImport as (d: {
-          sale_date: string;
-          batch_id: string;
-          row_count: number;
-        }) => Promise<unknown>
-      )({ sale_date: "2026-07-20", batch_id: "b1", row_count: 500 }),
-    ).rejects.toThrow("Nenhum dado foi publicado");
+    const promise = (
+      finalizeImport as (d: {
+        sale_date: string;
+        batch_id: string;
+        row_count: number;
+      }) => Promise<unknown>
+    )({ sale_date: "2026-07-20", batch_id: "b1", row_count: 500 });
+
+    await expect(promise).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain("Nenhum dado foi publicado");
+      expect(getSentryContext(error)).toEqual({
+        name: "import_integrity",
+        values: {
+          batch_id: "b1",
+          sale_date: "2026-07-20",
+          expected_rows: 500,
+          staging_rows: 499,
+        },
+      });
+      return true;
+    });
+    expect(db.query).toHaveBeenNthCalledWith(
+      2,
+      "SELECT COUNT(*) AS total FROM staging_sales WHERE batch_id = ? AND sale_date = ?",
+      ["b1", "2026-07-20"],
+    );
   });
 });
 

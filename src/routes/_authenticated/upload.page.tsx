@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -10,6 +10,7 @@ import {
   getImportedDates,
 } from "@/lib/upload.functions";
 import { QUERY_STALE_CORE, QUERY_GC_REFERENCE } from "@/lib/query-config";
+import { clearImportActive, getBrowserSessionStorage, markImportActive } from "@/lib/chunk-reload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,6 +102,11 @@ export default function UploadPage() {
   const cancelRef = useRef(false);
   const startTimeRef = useRef(0);
   const processedTotalRef = useRef(0);
+
+  useEffect(() => {
+    // A fresh component cannot own an import from a previous page lifetime.
+    clearImportActive(getBrowserSessionStorage());
+  }, []);
 
   const handleFiles = (files: FileEntry[]) => {
     const valid: typeof pendingQueue = [];
@@ -265,6 +271,7 @@ export default function UploadPage() {
     const queue = [...pendingQueue];
     setPendingQueue([]);
     processingRef.current = true;
+    markImportActive(getBrowserSessionStorage());
     cancelRef.current = false;
     startTimeRef.current = Date.now();
     processedTotalRef.current = 0;
@@ -286,6 +293,7 @@ export default function UploadPage() {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(msg);
     } finally {
+      clearImportActive(getBrowserSessionStorage());
       processingRef.current = false;
       setProcessing(IDLE_STATE);
     }

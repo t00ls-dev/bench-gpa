@@ -4,6 +4,7 @@ import { sentryGlobalRequestMiddleware } from "@sentry/tanstackstart-react";
 import { renderErrorPage } from "./lib/error-page";
 import { sentryServerClient } from "./lib/instrument-server";
 import { isSentryReported } from "./lib/auth-middleware";
+import { isExpectedError } from "./lib/sentry-error-metadata";
 
 const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   try {
@@ -41,7 +42,7 @@ const sentryFunctionErrorMiddleware = createMiddleware({ type: "function" }).ser
       // to Sentry twice, here with no context at all. This only captures
       // what hasn't already gone through there (e.g. an error inside a
       // public server function, without requireAuth).
-      if (!isSentryReported(error)) {
+      if (!isSentryReported(error) && !isExpectedError(error)) {
         sentryServerClient?.captureException(error);
       }
       throw error;
