@@ -101,7 +101,7 @@ describe("AuditLogSection", () => {
     const auditFn = vi.fn().mockResolvedValue({
       events: [row()],
       total: 80,
-      limit: 50,
+      limit: 25,
       offset: 0,
     });
     renderWithClient(<AuditLogSection auditFn={auditFn} />);
@@ -111,23 +111,23 @@ describe("AuditLogSection", () => {
         search: "",
         sortBy: "created_at",
         sortDir: "desc",
-        limit: 50,
+        limit: 25,
         offset: 0,
       }),
     );
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
     await waitFor(() =>
-      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 })),
+      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 25 })),
     );
-    expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Página 2 de 4")).toBeInTheDocument();
   });
 
   it("sorts columns on the server and resets to the first page", async () => {
     const auditFn = vi.fn().mockResolvedValue({
       events: [row()],
       total: 80,
-      limit: 50,
+      limit: 25,
       offset: 0,
     });
     renderWithClient(<AuditLogSection auditFn={auditFn} />);
@@ -135,7 +135,7 @@ describe("AuditLogSection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
     await waitFor(() =>
-      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 })),
+      expect(auditFn).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 25 })),
     );
     fireEvent.click(screen.getByRole("button", { name: "Ação" }));
 
@@ -158,7 +158,7 @@ describe("AuditLogSection", () => {
     const auditFn = vi.fn().mockResolvedValue({
       events: [row()],
       total: 300,
-      limit: 50,
+      limit: 25,
       offset: 0,
     });
     renderWithClient(<AuditLogSection auditFn={auditFn} />);
@@ -177,7 +177,7 @@ describe("AuditLogSection", () => {
       Promise.resolve({
         events: query.search ? [] : [row()],
         total: query.search ? 0 : 1,
-        limit: 50,
+        limit: 25,
         offset: 0,
       }),
     );

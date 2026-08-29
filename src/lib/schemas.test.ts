@@ -16,6 +16,7 @@ import {
   CreateSavedAreaAnalysisSchema,
   UpdateSavedAreaAnalysisSchema,
   AuditLogQuerySchema,
+  ImportHistoryQuerySchema,
 } from "./schemas";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
 
@@ -52,7 +53,7 @@ describe("FilterSchema", () => {
 describe("AreaAnalysisSchema", () => {
   it("parses with defaults", () => {
     const result = AreaAnalysisSchema.parse({ dateFrom: "2024-01-01", dateTo: "2024-01-31" });
-    expect(result.pageSize).toBe(50);
+    expect(result.pageSize).toBe(25);
     expect(result.search).toBe("");
     expect(result.sortBy).toBe("val");
     expect(result.sortDir).toBe("desc");
@@ -69,7 +70,7 @@ describe("AuditLogQuerySchema", () => {
       search: "",
       sortBy: "created_at",
       sortDir: "desc",
-      limit: 50,
+      limit: 25,
       offset: 0,
     });
     expect(AuditLogQuerySchema.parse({ search: "  admin  " }).search).toBe("admin");
@@ -79,6 +80,27 @@ describe("AuditLogQuerySchema", () => {
     expect(AuditLogQuerySchema.safeParse({ limit: 250 }).success).toBe(true);
     expect(AuditLogQuerySchema.safeParse({ limit: 10 }).success).toBe(false);
     expect(AuditLogQuerySchema.safeParse({ limit: 251 }).success).toBe(false);
+  });
+});
+
+describe("ImportHistoryQuerySchema", () => {
+  it("parses the shared pagination defaults", () => {
+    expect(ImportHistoryQuerySchema.parse({})).toEqual({
+      search: "",
+      sortBy: "sale_date",
+      sortDir: "desc",
+      limit: 25,
+      offset: 0,
+    });
+  });
+
+  it("validates sorting and page size", () => {
+    expect(
+      ImportHistoryQuerySchema.safeParse({ sortBy: "row_count", sortDir: "asc", limit: 100 })
+        .success,
+    ).toBe(true);
+    expect(ImportHistoryQuerySchema.safeParse({ sortBy: "invalid" }).success).toBe(false);
+    expect(ImportHistoryQuerySchema.safeParse({ limit: 10 }).success).toBe(false);
   });
 });
 

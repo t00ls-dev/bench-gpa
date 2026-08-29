@@ -6,7 +6,7 @@ import {
   getAreaFilterHierarchy,
   getAreaProductFilterOptions,
 } from "@/lib/area.functions";
-import { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { QUERY_STALE_CORE, QUERY_STALE_REFERENCE, QUERY_GC_REFERENCE } from "@/lib/query-config";
 import { defaultDateWindow } from "@/lib/date-window";
@@ -276,7 +276,7 @@ export function useAreaProductsView(
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<AreaSortKey>("val");
   const [sortAsc, setSortAsc] = useState(false);
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(50);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const sortDir: "asc" | "desc" = sortAsc ? "asc" : "desc";
 

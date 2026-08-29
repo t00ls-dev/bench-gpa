@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   insertSalesChunk: vi.fn(),
   finalizeImport: vi.fn(),
   getImportedDates: vi.fn(),
+  getImportHistory: vi.fn(),
+  invalidateQueries: vi.fn(),
   refetch: vi.fn(),
   toastError: vi.fn(),
   toastInfo: vi.fn(),
@@ -21,6 +23,7 @@ vi.mock("@tanstack/react-start", () => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
   useQuery: () => ({
     data: [],
     error: null,
@@ -36,6 +39,7 @@ vi.mock("@/lib/upload.functions", () => ({
   insertSalesChunk: (...args: unknown[]) => mocks.insertSalesChunk(...args),
   finalizeImport: (...args: unknown[]) => mocks.finalizeImport(...args),
   getImportedDates: (...args: unknown[]) => mocks.getImportedDates(...args),
+  getImportHistory: (...args: unknown[]) => mocks.getImportHistory(...args),
 }));
 
 vi.mock("@/components/upload-dropzone", () => ({
@@ -135,10 +139,23 @@ beforeEach(() => {
   mocks.insertSalesChunk.mockResolvedValue({ inserted: 1 });
   mocks.finalizeImport.mockResolvedValue({ ok: true });
   mocks.getImportedDates.mockResolvedValue([]);
+  mocks.getImportHistory.mockResolvedValue({ records: [], total: 0, limit: 25, offset: 0 });
+  mocks.invalidateQueries.mockResolvedValue(undefined);
   mocks.refetch.mockResolvedValue(undefined);
 });
 
 describe("UploadPage import cancellation", () => {
+  it("refreshes complete dates and paginated history after an import", async () => {
+    render(<UploadPage />);
+
+    await startImport();
+
+    await waitFor(() => expect(mocks.finalizeImport).toHaveBeenCalledOnce());
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["import-history"] });
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Importação concluída!");
+  });
+
   it("releases the lease after an in-flight final chunk and does not finalize or retry", async () => {
     const chunk = deferred<{ inserted: number }>();
     mocks.insertSalesChunk.mockReturnValueOnce(chunk.promise);

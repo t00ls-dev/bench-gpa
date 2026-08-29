@@ -29,7 +29,7 @@ import {
 import { cn, fmtDT } from "@/lib/utils";
 import { QUERY_STALE_ADMIN, QUERY_STALE_LIVE } from "@/lib/query-config";
 import { buildAuditTooltip } from "@/lib/audit-tooltip";
-import { PAGE_SIZE_OPTIONS, type AuditLogQuery } from "@/lib/schemas";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, type AuditLogQuery } from "@/lib/schemas";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -291,7 +291,7 @@ export function AuditLogSection({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<AuditSortKey>("created_at");
   const [sortDir, setSortDir] = useState<AuditLogQuery["sortDir"]>("desc");
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(50);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const offset = (page - 1) * pageSize;
 

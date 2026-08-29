@@ -172,7 +172,7 @@ describe("getAuditLog", () => {
     ip: "203.0.113.5",
   };
 
-  it("uses the default limit/offset (50/0) when not provided", async () => {
+  it("uses the default limit/offset (25/0) when not provided", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce([[ROW]] as never)
       .mockResolvedValueOnce([[{ total: 1 }]] as never);
@@ -186,11 +186,11 @@ describe("getAuditLog", () => {
       }>
     )({});
 
-    expect(result.limit).toBe(50);
+    expect(result.limit).toBe(25);
     expect(result.offset).toBe(0);
     expect(result.total).toBe(1);
     expect(result.events).toEqual([ROW]);
-    expect(db.query).toHaveBeenNthCalledWith(1, expect.stringContaining("FROM audit_log"), [50, 0]);
+    expect(db.query).toHaveBeenNthCalledWith(1, expect.stringContaining("FROM audit_log"), [25, 0]);
   });
 
   it("respects a given limit/offset and treats null fields as null", async () => {

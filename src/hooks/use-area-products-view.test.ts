@@ -90,7 +90,7 @@ function areaResult(products: AreaProduct[] = []) {
     byDate: [],
     totalProducts: products.length,
     page: 1,
-    pageSize: 50,
+    pageSize: 25,
     totalPages: 1,
   };
 }
@@ -150,7 +150,7 @@ describe("useAreaProductsView", () => {
         subgrupos: [],
         products: [],
         page: 1,
-        pageSize: 50,
+        pageSize: 25,
         search: "",
         sortBy: "val",
         sortDir: "desc",

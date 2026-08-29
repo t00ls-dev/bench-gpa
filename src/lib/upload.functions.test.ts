@@ -76,6 +76,7 @@ import {
   beginImport,
   cancelImport,
   insertSalesChunk,
+  getImportHistory,
   getImportedDates,
   finalizeImport,
 } from "./upload.functions";
@@ -289,6 +290,67 @@ describe("getImportedDates", () => {
     await (getImportedDates as () => Promise<unknown>)();
     await (getImportedDates as () => Promise<unknown>)();
     expect(db.query).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getImportHistory", () => {
+  const ROW = {
+    sale_date: "2026-07-20",
+    row_count: 1234,
+    imported_at: "2026-07-20 10:00:00",
+  };
+
+  it("uses the default page size and maps the result", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce([[ROW]] as never)
+      .mockResolvedValueOnce([[{ total: 1 }]] as never);
+
+    const result = await (
+      getImportHistory as (data: object) => Promise<{
+        records: (typeof ROW)[];
+        total: number;
+        limit: number;
+        offset: number;
+      }>
+    )({});
+
+    expect(result).toEqual({ records: [ROW], total: 1, limit: 25, offset: 0 });
+    expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
+    expect(db.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("ORDER BY sale_date DESC, id DESC"),
+      [25, 0],
+    );
+  });
+
+  it("searches displayed and raw values with escaped wildcards", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce([[ROW]] as never)
+      .mockResolvedValueOnce([[{ total: 1 }]] as never);
+
+    await (
+      getImportHistory as (data: {
+        search: string;
+        sortBy: "imported_at";
+        sortDir: "asc";
+        limit: number;
+        offset: number;
+      }) => Promise<unknown>
+    )({ search: "20%_", sortBy: "imported_at", sortDir: "asc", limit: 50, offset: 50 });
+
+    const searchValue = "%20=%=_%";
+    expect(db.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("ORDER BY imported_at ASC, id DESC"),
+      [...Array<string>(7).fill(searchValue), 50, 50],
+    );
+    expect(db.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(
+        "DATE_FORMAT(CONVERT_TZ(imported_at, '+00:00', '-03:00'), '%d/%m/%y %H:%i')",
+      ),
+      Array<string>(7).fill(searchValue),
+    );
   });
 });
 

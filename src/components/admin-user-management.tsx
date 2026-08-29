@@ -36,7 +36,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { fmtBRShort, fmtInt } from "@/lib/utils";
-import { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import { CreateUserDialog } from "@/components/create-user-dialog";
 import { EditUserIdentifiersDialog } from "@/components/edit-user-identifiers-dialog";
 
@@ -71,7 +71,7 @@ export function AdminUserManagement({
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(25);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(DEFAULT_PAGE_SIZE);
   const [pending, setPending] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<
     { type: "role" | "active"; user: User; newValue: boolean } | { type: "password"; user: User }

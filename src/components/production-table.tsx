@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { fmtBRL, fmtInt } from "@/lib/utils";
-import { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import type { ProductionForecastProduct, ProductionSecaoForecast } from "@/lib/api-types";
 import { computeVisibleSecoes } from "@/lib/production-filter";
 
@@ -89,9 +89,7 @@ export function ProductionTable({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(
-    PAGE_SIZE_OPTIONS[0],
-  );
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>("prodName");
   const [sortAsc, setSortAsc] = useState(true);

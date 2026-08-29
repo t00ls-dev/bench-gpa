@@ -13,7 +13,7 @@ import {
 import db from "./db";
 import { asArray, asRecord, num, dateTimeStr } from "./api-types";
 import { fmtBytes } from "./utils";
-import { AuditLogQuerySchema, type AuditLogQuery } from "./schemas";
+import { AuditLogQuerySchema, DEFAULT_PAGE_SIZE, type AuditLogQuery } from "./schemas";
 
 type TableName =
   "staging_sales" | "sales_daily_agg" | "products" | "stores" | "filter_hierarchy" | "import_log";
@@ -145,7 +145,13 @@ export const getAuditLog = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AuditLogQuerySchema.parse(data ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { search = "", sortBy = "created_at", sortDir = "desc", limit = 50, offset = 0 } = data;
+    const {
+      search = "",
+      sortBy = "created_at",
+      sortDir = "desc",
+      limit = DEFAULT_PAGE_SIZE,
+      offset = 0,
+    } = data;
     const searchValue = `%${escapeLike(search)}%`;
     const whereSql = search
       ? `WHERE (a.actor_username LIKE ? ESCAPE '='

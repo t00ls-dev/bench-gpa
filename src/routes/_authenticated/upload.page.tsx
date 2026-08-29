@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   beginImport,
   cancelImport,
   insertSalesChunk,
   finalizeImport,
+  getImportHistory,
   getImportedDates,
 } from "@/lib/upload.functions";
 import { QUERY_STALE_CORE, QUERY_GC_REFERENCE } from "@/lib/query-config";
@@ -71,7 +72,9 @@ const IDLE_STATE: ProcessingState = {
 };
 
 export default function UploadPage() {
+  const queryClient = useQueryClient();
   const getImported = useServerFn(getImportedDates);
+  const getHistory = useServerFn(getImportHistory);
   const doBeginImport = useServerFn(beginImport);
   const doCancelImport = useServerFn(cancelImport);
   const doInsertChunk = useServerFn(insertSalesChunk);
@@ -275,7 +278,8 @@ export default function UploadPage() {
       if (cancelRef.current) {
         toast.info("Importação cancelada.");
       } else {
-        imported.refetch();
+        void imported.refetch();
+        void queryClient.invalidateQueries({ queryKey: ["import-history"] });
         toast.success("Importação concluída!");
       }
     } catch (err) {
@@ -344,20 +348,7 @@ export default function UploadPage() {
               }}
             />
           )}
-          {imported.isPending ? (
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : imported.isError ? (
-            <div className="kpi-card flex items-center gap-3 text-sm text-destructive">
-              <AlertCircle className="size-5 shrink-0" />
-              <span>Erro ao carregar histórico: {imported.error.message}</span>
-            </div>
-          ) : (
-            <ImportHistory dates={imported.data} />
-          )}
+          <ImportHistory historyFn={(query) => getHistory({ data: query })} />
         </div>
       )}
 

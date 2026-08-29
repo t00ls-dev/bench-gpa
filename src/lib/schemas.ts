@@ -22,12 +22,13 @@ export const FilterSchema = DateRangeSchema.extend({
 export type Filters = z.infer<typeof FilterSchema>;
 
 /**
- * Items-per-page options for the Area screen's pagination selector. The one
+ * Shared items-per-page options for paginated tables. The one
  * place this list exists: the selector's state (`useState<25 | 50 | 100 |
  * 250>`) and the dropdown options derive from it, instead of repeating the
  * four numbers.
  */
 export const PAGE_SIZE_OPTIONS = [25, 50, 100, 250] as const;
+export const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0];
 
 const PageSizeSchema = z
   .number()
@@ -41,11 +42,21 @@ export const AuditLogQuerySchema = z.object({
   search: z.string().trim().max(255).optional().default(""),
   sortBy: z.enum(["created_at", "action", "actor_username", "ip"]).optional().default("created_at"),
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
-  limit: PageSizeSchema.optional().default(50),
+  limit: PageSizeSchema.optional().default(DEFAULT_PAGE_SIZE),
   offset: z.number().int().min(0).optional().default(0),
 });
 
 export type AuditLogQuery = z.infer<typeof AuditLogQuerySchema>;
+
+export const ImportHistoryQuerySchema = z.object({
+  search: z.string().trim().max(255).optional().default(""),
+  sortBy: z.enum(["sale_date", "row_count", "imported_at"]).optional().default("sale_date"),
+  sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
+  limit: PageSizeSchema.optional().default(DEFAULT_PAGE_SIZE),
+  offset: z.number().int().min(0).optional().default(0),
+});
+
+export type ImportHistoryQuery = z.infer<typeof ImportHistoryQuerySchema>;
 
 /**
  * Page size used by the export (PDF), which needs the full listing.
@@ -79,7 +90,7 @@ export const AreaAnalysisSchema = z.object({
   subgrupos: z.array(z.string()).optional().default([]),
   products: z.array(z.string()).optional().default([]),
   page: z.number().int().positive().optional(),
-  pageSize: z.number().int().positive().max(MAX_PAGE_SIZE).optional().default(50),
+  pageSize: z.number().int().positive().max(MAX_PAGE_SIZE).optional().default(DEFAULT_PAGE_SIZE),
   search: z.string().max(255).optional().default(""),
   sortBy: z.enum(["val", "prod_code", "prod_name", "daysSince"]).optional().default("val"),
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
