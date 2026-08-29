@@ -3,7 +3,6 @@ import { openPdfBlob, slugifyFilename } from "@/lib/export-pdf";
 
 const LABEL_SIZE_MM = 65;
 const QR_SIZE_MM = 45;
-const CUT_MARK_LENGTH_MM = 3;
 const TEXT_MAX_WIDTH_MM = 57;
 
 type QrMatrix = {
@@ -36,20 +35,18 @@ function fitText(doc: jsPDF, text: string, maxWidth: number): string {
   return `${fitted.trimEnd()}...`;
 }
 
-function drawCutMarks(doc: jsPDF, x: number, y: number): void {
+function drawCutOutline(doc: jsPDF, x: number, y: number): void {
   const endX = x + LABEL_SIZE_MM;
   const endY = y + LABEL_SIZE_MM;
 
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.15);
-  doc.line(x - CUT_MARK_LENGTH_MM, y, x, y);
-  doc.line(x, y - CUT_MARK_LENGTH_MM, x, y);
-  doc.line(endX, y, endX + CUT_MARK_LENGTH_MM, y);
-  doc.line(endX, y - CUT_MARK_LENGTH_MM, endX, y);
-  doc.line(x - CUT_MARK_LENGTH_MM, endY, x, endY);
-  doc.line(x, endY, x, endY + CUT_MARK_LENGTH_MM);
-  doc.line(endX, endY, endX + CUT_MARK_LENGTH_MM, endY);
-  doc.line(endX, endY, endX, endY + CUT_MARK_LENGTH_MM);
+  doc.setLineDashPattern([0.5, 0.8], 0);
+  doc.line(x, y, endX, y);
+  doc.line(endX, y, endX, endY);
+  doc.line(endX, endY, x, endY);
+  doc.line(x, endY, x, y);
+  doc.setLineDashPattern([], 0);
 }
 
 export function renderSavedAreaQrCodeLabel(
@@ -65,11 +62,11 @@ export function renderSavedAreaQrCodeLabel(
   const qrX = centerX - QR_SIZE_MM / 2;
   const qrY = labelY + 10;
 
-  drawCutMarks(doc, labelX, labelY);
+  drawCutOutline(doc, labelX, labelY);
 
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
-  const name = fitText(doc, analysis.name, TEXT_MAX_WIDTH_MM);
+  const name = fitText(doc, analysis.name.toLocaleUpperCase("pt-BR"), TEXT_MAX_WIDTH_MM);
   doc.text(name, centerX, labelY + 6, { align: "center" });
 
   doc.setFillColor(255, 255, 255);
@@ -94,11 +91,10 @@ export function renderSavedAreaQrCodeLabel(
   }
 
   doc.setFont("helvetica", "normal");
-  const store = fitText(
-    doc,
-    analysis.storeName ? `${analysis.storeCode} - ${analysis.storeName}` : analysis.storeCode,
-    TEXT_MAX_WIDTH_MM,
-  );
+  const storeLabel = analysis.storeName
+    ? `${analysis.storeCode} - ${analysis.storeName}`
+    : analysis.storeCode;
+  const store = fitText(doc, storeLabel.toLocaleUpperCase("pt-BR"), TEXT_MAX_WIDTH_MM);
   doc.text(store, centerX, labelY + 62, { align: "center" });
 }
 

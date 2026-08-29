@@ -13,6 +13,7 @@ function createDocument() {
     },
     setDrawColor: vi.fn(),
     setLineWidth: vi.fn(),
+    setLineDashPattern: vi.fn(),
     line: vi.fn(),
     setFont: vi.fn(),
     setTextColor: vi.fn(),
@@ -26,7 +27,7 @@ function createDocument() {
 }
 
 describe("saved area QR Code print label", () => {
-  it("centers a 65 mm label on A4 with crop marks, title, store, and vector modules", () => {
+  it("centers a 65 mm label on A4 with a dotted cut outline and uppercase text", () => {
     const document = createDocument();
     const matrix = {
       size: 2,
@@ -40,11 +41,15 @@ describe("saved area QR Code print label", () => {
       storeName: "Loja Teste",
     });
 
-    expect(document.line).toHaveBeenCalledTimes(8);
-    expect(document.text).toHaveBeenNthCalledWith(1, "Ponta de gôndola", 105, 122, {
+    expect(document.setLineDashPattern).toHaveBeenNthCalledWith(1, [0.5, 0.8], 0);
+    expect(document.line).toHaveBeenCalledTimes(4);
+    expect(document.line).toHaveBeenNthCalledWith(1, 72.5, 116, 137.5, 116);
+    expect(document.line).toHaveBeenNthCalledWith(3, 137.5, 181, 72.5, 181);
+    expect(document.setLineDashPattern).toHaveBeenNthCalledWith(2, [], 0);
+    expect(document.text).toHaveBeenNthCalledWith(1, "PONTA DE GÔNDOLA", 105, 122, {
       align: "center",
     });
-    expect(document.text).toHaveBeenNthCalledWith(2, "1516 - Loja Teste", 105, 178, {
+    expect(document.text).toHaveBeenNthCalledWith(2, "1516 - LOJA TESTE", 105, 178, {
       align: "center",
     });
     expect(document.rect).toHaveBeenCalledWith(82.5, 126, 45, 45, "F");
