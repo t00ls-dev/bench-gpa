@@ -16,6 +16,8 @@ interface Params {
   sortDir: "asc" | "desc";
   daysSinceLabel: (iso: string | null) => string;
   pathParts: string[];
+  title?: string;
+  subtitle?: string | null;
 }
 
 /**
@@ -32,6 +34,8 @@ export function useAreaPdfExport({
   sortDir,
   daysSinceLabel,
   pathParts,
+  title = "Análise de Área",
+  subtitle,
 }: Params) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const pdfElapsed = useElapsedSeconds(pdfLoading);
@@ -78,18 +82,34 @@ export function useAreaPdfExport({
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.setTextColor(17, 17, 17);
-      doc.text("Análise de Área", mX, 12);
+      const titleLines = doc.splitTextToSize(title, 190) as string[];
+      doc.text(titleLines, mX, 12);
+
+      let metadataY = 18 + (titleLines.length - 1) * 5.5;
+      if (subtitle) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(55, 55, 55);
+        const subtitleLines = doc.splitTextToSize(subtitle, 190) as string[];
+        doc.text(subtitleLines, mX, metadataY);
+        metadataY += subtitleLines.length * 4 + 2;
+      }
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);
-      doc.text("Área: " + area, mX, 18);
-      doc.text("Período: " + fmtBRShort(dateFrom) + " - " + fmtBRShort(dateTo), mX, 22.5);
-      doc.text("Produtos listados: " + filtered.length, mX, 27);
+      doc.text("Área: " + area, mX, metadataY);
+      doc.text(
+        "Período: " + fmtBRShort(dateFrom) + " - " + fmtBRShort(dateTo),
+        mX,
+        metadataY + 4.5,
+      );
+      doc.text("Produtos listados: " + filtered.length, mX, metadataY + 9);
 
       // Experimental (UX backlog item 6): the same 5 numbers from
       // AreaKpiCards at the top of the screen, just printed in the PDF.
       autoTable(doc, {
-        startY: 31,
+        startY: metadataY + 13,
         margin: { left: mX, right: mX },
         head: [["VENDA TOTAL", "PLUS (ÁREA)", "PLUS C/ VENDA", "PLUS S/ VENDA", "VENDA MÉDIA/PLU"]],
         body: [

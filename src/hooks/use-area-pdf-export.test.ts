@@ -17,7 +17,7 @@ vi.mock("@/lib/export-pdf", async (importOriginal) => {
   return { ...actual, openPdfBlob };
 });
 
-type AutoTableCall = { head: unknown; body: unknown[][] };
+type AutoTableCall = { startY: number; head: unknown; body: unknown[][] };
 let autoTableCalls: AutoTableCall[] = [];
 
 vi.mock("jspdf-autotable", () => ({
@@ -33,6 +33,7 @@ const { MockJsPDF } = vi.hoisted(() => ({
     setFontSize = vi.fn();
     setTextColor = vi.fn();
     text = vi.fn();
+    splitTextToSize = vi.fn((text: string) => text.split("\n"));
     lastAutoTable = { finalY: 40 };
   },
 }));
@@ -183,6 +184,44 @@ describe("useAreaPdfExport", () => {
       expect.anything(),
       expect.stringMatching(new RegExp(`^${expectedPrefix}\\d{8}-\\d{6}\\.pdf$`)),
     );
+  });
+
+  it("uses the saved analysis name and description in the PDF header", async () => {
+    const { result } = renderHook(() =>
+      useAreaPdfExport(
+        makeParams({
+          title: "Ponta de gôndola",
+          subtitle: "Prioridade de abastecimento\nRevisar antes da abertura",
+        }),
+      ),
+    );
+
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+
+    const doc = openPdfBlob.mock.calls[0][0] as InstanceType<typeof MockJsPDF>;
+    expect(doc.text).toHaveBeenCalledWith(["Ponta de gôndola"], 10, 12);
+    expect(doc.text).toHaveBeenCalledWith(
+      ["Prioridade de abastecimento", "Revisar antes da abertura"],
+      10,
+      18,
+    );
+    expect(doc.text).toHaveBeenCalledWith("Área: Loja 1 - LEBLON › MERC", 10, 28);
+    expect(autoTableCalls[0].startY).toBe(41);
+  });
+
+  it("keeps the standard Area PDF header and spacing without customization", async () => {
+    const { result } = renderHook(() => useAreaPdfExport(makeParams()));
+
+    await act(async () => {
+      await result.current.openPdfInNewTab();
+    });
+
+    const doc = openPdfBlob.mock.calls[0][0] as InstanceType<typeof MockJsPDF>;
+    expect(doc.text).toHaveBeenCalledWith(["Análise de Área"], 10, 12);
+    expect(doc.text).toHaveBeenCalledWith("Área: Loja 1 - LEBLON › MERC", 10, 18);
+    expect(autoTableCalls[0].startY).toBe(31);
   });
 
   it("prints all KPI values from the same server response as the exported products", async () => {

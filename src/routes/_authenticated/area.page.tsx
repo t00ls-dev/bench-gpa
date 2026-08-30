@@ -92,6 +92,8 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
     sortDir,
     daysSinceLabel,
     pathParts,
+    title: savedAnalysis?.name,
+    subtitle: savedAnalysis?.description,
   });
 
   return (
