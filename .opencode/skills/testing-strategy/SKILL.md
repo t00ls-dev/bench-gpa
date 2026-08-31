@@ -43,8 +43,9 @@ lógica, validação manual para o que só se prova rodando de verdade.
 
 - `.github/workflows/ci.yml`: job `ci` roda lint, typecheck, test, build e
   `bun audit`. Job `schema-check` sobe MariaDB 11.4 real e valida
-  migrações (ver skill `database-review`). `deploy` só roda se os dois
-  passarem.
+  migrações (ver skill `database-review`). Pushes comuns não publicam. O job
+  `deploy` só roda para tag `v*` ou dispatch manual na `main`, e somente se os
+  dois gates passarem.
 - Nunca pular hooks ou gate da CI (`--no-verify` ou equivalente) para
   destravar um merge. Se a CI falha, o problema é real até provado o
   contrário.

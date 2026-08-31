@@ -49,6 +49,30 @@ bun run build
 bun run lint
 ```
 
+## Publicação
+
+Commits e pushes, inclusive na `main`, executam CI e schema-check, mas não
+publicam em produção. O deploy ocorre somente quando uma tag `v*` é enviada ao
+GitHub ou quando o workflow `CI/CD` é iniciado manualmente na branch `main`.
+
+Fluxo normal de release:
+
+```bash
+git switch main
+git pull --ff-only
+git tag -a v2026.08.31.1 -m "Release v2026.08.31.1"
+git push origin v2026.08.31.1
+```
+
+A tag precisa apontar para um commit presente na `main`. Depois do deploy, ela
+pode ser associada a uma GitHub Release para registrar notas da versão. Para um
+hotfix, integre a correção na `main` e crie uma nova tag pelo mesmo processo.
+
+O `workflow_dispatch` serve para publicação manual ou recuperação sem criar
+tag: em **Actions > CI/CD > Run workflow**, selecione `main`. Execuções manuais
+em outras branches são rejeitadas. Em ambos os caminhos, audit, lint,
+type-check, testes, build e schema-check precisam passar antes do deploy.
+
 ## Rotas
 
 | Rota              | Path               | Auth  | Descrição                                                              |
@@ -122,7 +146,7 @@ executado na VPS de produção.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo → Produto na Área; Seção → Grupo → Subgrupo → Produto na Previsão. Dependentes são limpos ao mudar o pai. Alterar somente a data da Previsão preserva os filtros selecionados.
 - **Hierarquia comercial**: `product_universe` é a fonte da classificação atual. Vendas históricas são atribuídas ao Departamento, Seção, Grupo e Subgrupo atuais do produto, não à classificação registrada no dia da venda.
 - **UX**: Bottom tab bar mobile, View Transitions API e exportação PDF (Área e Previsão de Venda).
-- **Deploy**: CI GitHub Actions (`.github/workflows/ci.yml`) → rsync do `.output` para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`) → nova release em `releases/<timestamp>-<sha-curto>/`, symlink `current` trocado atomicamente, reload PM2 (`fork`/1 instância, VPS tem 1 núcleo só, cluster mode foi tentado e revertido em 2026-08-06) com rollback automático. As cinco releases mais recentes são mantidas. Não há PaaS. Docs em `docs/`.
+- **Deploy**: tag `v*` ou dispatch manual na `main` inicia a publicação explícita pelo GitHub Actions (`.github/workflows/ci.yml`). O workflow envia `.output` por rsync para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), cria uma release em `releases/<timestamp>-<sha-curto>/`, troca o symlink `current` atomicamente e recarrega o PM2 (`fork`/1 instância, VPS tem 1 núcleo só). O health-check reverte automaticamente em caso de falha. As cinco releases mais recentes são mantidas. Pushes comuns não publicam nem armazenam artefatos. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
 
 ## Estrutura
