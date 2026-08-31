@@ -61,11 +61,11 @@ export default defineConfig({
       },
     }),
     react(),
-    // Without SENTRY_AUTH_TOKEN (dev, an external PR, an environment
-    // without the secrets), the plugin is left out entirely: source map
-    // upload is its only job here (the tunnel is already handled manually
-    // in src/server.ts and src/client.tsx), so there's no reason to run it
-    // without a token.
+    // Without SENTRY_AUTH_TOKEN (dev, routine CI, an external PR, or an
+    // environment without the secrets), the plugin is left out entirely:
+    // source map upload is its only job here (the tunnel is already handled
+    // manually in src/server.ts and src/client.tsx), so there's no reason to
+    // run it without a token.
     ...(process.env.SENTRY_AUTH_TOKEN
       ? [
           sentryTanstackStart({
