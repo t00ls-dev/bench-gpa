@@ -171,9 +171,11 @@ export function SavedAreaAnalysesManager({
             <Plus className="mr-2 size-4" /> Salvar análise
           </Button>
         ) : null}
-        <Button onClick={() => setDrawerOpen(true)}>
-          <FolderOpen className="mr-2 size-4" /> Análises salvas
-        </Button>
+        {!currentAnalysis ? (
+          <Button onClick={() => setDrawerOpen(true)}>
+            <FolderOpen className="mr-2 size-4" /> Análises salvas
+          </Button>
+        ) : null}
       </div>
 
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>

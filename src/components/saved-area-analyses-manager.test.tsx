@@ -138,7 +138,7 @@ describe("SavedAreaAnalysesManager", () => {
     );
   });
 
-  it("hides editing and QR actions while viewing a saved analysis", () => {
+  it("hides saved-analysis controls while viewing a saved analysis", () => {
     renderWithClient(
       <SavedAreaAnalysesManager
         currentUserId="viewer-1"
@@ -156,6 +156,6 @@ describe("SavedAreaAnalysesManager", () => {
 
     expect(screen.queryByRole("button", { name: "Editar análise" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "QR Code" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Análises salvas" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Análises salvas" })).not.toBeInTheDocument();
   });
 });
