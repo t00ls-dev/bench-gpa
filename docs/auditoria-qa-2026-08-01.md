@@ -93,7 +93,7 @@ compartilhada por Dashboard/Área/Produto).
 | `version.functions.ts` (`getBuildInfo`)                                                                      | Zero teste (trivial, mas 0%)                                                                                                                                      |
 | `admin-users.functions.ts` → `listUsers`                                                                     | Zero teste (as outras 4 exportações têm)                                                                                                                          |
 | `setUserActive`                                                                                              | Guard de auto-lockout testado só em `setUserRole`, não replicado aqui                                                                                             |
-| `use-elapsed-seconds.ts`, `use-mobile.tsx`, `use-reset-on-change.ts`, `use-theme.ts`, `use-version-check.ts` | Sem teste dedicado: alguns aparecem "100%" no relatório só por cobertura incidental (chamados de dentro de outro hook testado), não por caso de borda intencional |
+| `use-elapsed-seconds.ts`, `use-mobile.tsx`, `use-reset-on-change.ts`, `use-version-check.ts` | Sem teste dedicado: alguns aparecem "100%" no relatório só por cobertura incidental (chamados de dentro de outro hook testado), não por caso de borda intencional |
 | `use-persistent-state.ts`                                                                                    | Mesma situação: sem teste de quota de localStorage cheia, falha do `sanitize`, ou leitura cross-aba                                                               |
 
 ### A.3. Dead code / TODOs

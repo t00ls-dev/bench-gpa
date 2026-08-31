@@ -30,7 +30,6 @@ import { AppFooter } from "@/components/app-footer";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 import { MobileNav } from "@/components/mobile-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   SidebarProvider,
   Sidebar,
@@ -248,9 +247,6 @@ function AuthedLayout() {
                 <img src="/brand/gpa-logo-mini.webp" alt="GPA" className="h-9 w-auto" />
               </Link>
               <SidebarTrigger className="hidden md:flex" />
-              <div className="ml-auto flex items-center gap-3">
-                <ThemeToggle />
-              </div>
             </div>
           </header>
           <main

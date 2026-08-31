@@ -111,12 +111,17 @@ Os arquivos que viviam em `docs/improvements/` com o aviso
 "DOCUMENTO HISTÓRICO" (`estado-atual.md`, `discrepancias.md`,
 `arquitetura.md`) eram fotografias da **Era 1** (código ainda em Supabase,
 escrito por Lovable), datavam de antes da Era 3. Cada "problema" que
-descreviam (dark mode inativo, `assertAdmin` duplicado, ausência de rate
+descreviam (Dark Mode inativo, `assertAdmin` duplicado, ausência de rate
 limit, sessão em localStorage) foi endereçado durante ou depois da migração,
 e está registrado como resolvido em `docs/analise-completa.md`
 (seção "Resolvido"). Os três foram removidos no mesmo commit que criou
 este documento (`a4a19e8`, 30/07/2026): não havia mais valor de referência
 técnica neles além do que este documento já resume.
+
+O Dark Mode foi posteriormente implementado e testado, mas descartado em
+31/08/2026. Como o Bench GPA é um sistema interno com tema claro definido pela
+identidade visual, a alternância não se aplicava ao produto e sua infraestrutura
+foi removida por completo.
 
 `docs/improvements/melhorias-pendentes.md` também nasceu na Era 1, mas
 misturava itens já resolvidos com itens genuinamente ainda abertos: os

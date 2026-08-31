@@ -263,7 +263,7 @@ relatório". Os números certos são os da tabela acima.
 Esse arquivo listava ~28 pendências escritas ainda na Era 1 (ver
 `docs/historia-do-projeto.md`), misturando itens já resolvidos com itens
 genuinamente abertos. Conferido item a item contra o código em 30/07/2026: a
-maioria (dark mode, `assertAdmin` duplicado, cancelar upload, Web Worker de
+maioria (`assertAdmin` duplicado, cancelar upload, Web Worker de
 parse (via `xlsx-worker.ts`/`upload-dropzone.tsx`), confirmação em ações
 destrutivas do admin, loading inline no Switch, busca de usuário por
 nome/email, `MultiSelect` com teclado/ARIA, `AdminGate` com erro de rede,
@@ -271,6 +271,10 @@ nome/email, `MultiSelect` com teclado/ARIA, `AdminGate` com erro de rede,
 `setUserRole`/`setUserActive` via `invalidateAdminCache`, e revogação de
 sessão via `token_version` no reset de senha) **já estava resolvida**. O
 arquivo original nunca foi atualizado. O que sobrou genuinamente aberto:
+
+Dark Mode chegou a ser implementado e testado, mas foi removido em 31/08/2026.
+O Bench GPA é um sistema interno com identidade visual clara fixa, portanto a
+alternância de tema não se aplica ao produto e só acrescentava manutenção.
 
 **Feitos em 30/07/2026** (PRs #31-#36): sessão expirada preserva `?next=`;
 Produto ganhou comparação de subconjunto de lojas (`product_analysis` trocou

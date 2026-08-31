@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useEffectiveTheme } from "@/hooks/use-theme";
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 const TURNSTILE_BYPASS = import.meta.env.VITE_TURNSTILE_BYPASS === "true";
@@ -15,14 +14,11 @@ function getTurnstile(): TurnstileWidget | undefined {
 }
 
 /**
- * Cloudflare Turnstile widget: injects the script, mounts/remounts honoring
- * the effective theme (the API doesn't allow changing the theme of an
- * already-mounted widget), and exposes the current token. Extracted from
- * auth.page.tsx to be reused by first-access.page.tsx, which needs exactly
- * the same behavior.
+ * Cloudflare Turnstile widget: injects the script, mounts it in the app's
+ * fixed light theme, and exposes the current token. Extracted from
+ * auth.page.tsx to be reused by first-access.page.tsx.
  */
 export function useTurnstile() {
-  const effectiveTheme = useEffectiveTheme();
   const [token, setToken] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
@@ -56,7 +52,7 @@ export function useTurnstile() {
         }
         widgetIdRef.current = ts.render(ref.current, {
           sitekey: TURNSTILE_SITE_KEY,
-          theme: effectiveTheme,
+          theme: "light",
           callback: (t: string) => setToken(t),
           "expired-callback": () => setToken(""),
           "error-callback": () => setToken(""),
@@ -73,7 +69,7 @@ export function useTurnstile() {
         widgetIdRef.current = undefined;
       }
     };
-  }, [effectiveTheme]);
+  }, []);
 
   function reset(): void {
     setToken("");

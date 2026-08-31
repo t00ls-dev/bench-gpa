@@ -45,7 +45,6 @@ _Gerado em 2026-08-23T17:30:58.132Z, thresholds: lines 20%, statements 20%, func
 | `src/components/ranking-card.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/route-progress.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/target-date-picker.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
-| `src/components/theme-toggle.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/upload-dropzone.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/ui/calendar.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/ui/dialog.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok |
@@ -56,7 +55,6 @@ _Gerado em 2026-08-23T17:30:58.132Z, thresholds: lines 20%, statements 20%, func
 | `src/components/ui/sidebar.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/components/ui/tooltip.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/hooks/use-mobile.tsx` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok |
-| `src/hooks/use-theme.ts` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/hooks/use-turnstile.ts` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/hooks/use-version-check.ts` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 0.0% abaixo do threshold |
 | `src/lib/db.ts` | 0.0% abaixo do threshold | 0.0% abaixo do threshold | 100.0% ok | 0.0% abaixo do threshold |
