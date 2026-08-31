@@ -17,6 +17,7 @@ import {
   UpdateSavedAreaAnalysisSchema,
   AuditLogQuerySchema,
   ImportHistoryQuerySchema,
+  UpdateAdminUserSchema,
 } from "./schemas";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
 
@@ -101,6 +102,30 @@ describe("ImportHistoryQuerySchema", () => {
     ).toBe(true);
     expect(ImportHistoryQuerySchema.safeParse({ sortBy: "invalid" }).success).toBe(false);
     expect(ImportHistoryQuerySchema.safeParse({ limit: 10 }).success).toBe(false);
+  });
+});
+
+describe("UpdateAdminUserSchema", () => {
+  const base = {
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    name: "Ana Silva",
+    role: "user",
+    isActive: true,
+  };
+
+  it("accepts either identifier and normalizes blank fields", () => {
+    expect(
+      UpdateAdminUserSchema.parse({ ...base, username: " Ana.Silva ", employeeId: "" }),
+    ).toEqual({ ...base, username: "ana.silva", employeeId: undefined });
+    expect(
+      UpdateAdminUserSchema.safeParse({ ...base, username: "", employeeId: "0012" }).success,
+    ).toBe(true);
+  });
+
+  it("requires at least one login identifier", () => {
+    expect(UpdateAdminUserSchema.safeParse({ ...base, username: "", employeeId: "" }).success).toBe(
+      false,
+    );
   });
 });
 

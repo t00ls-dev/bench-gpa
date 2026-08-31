@@ -176,6 +176,9 @@ describe("login", () => {
     } as never);
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
+    expect(db.query).toHaveBeenCalledWith("UPDATE users SET last_login_at = NOW() WHERE id = ?", [
+      "u1",
+    ]);
     // tokenVersion goes in the payload so resetPassword/changePassword/logout
     // can invalidate this session later. Without "remember me", the session
     // is born "normal" (not persistent, expires after 1h of inactivity), see
@@ -435,7 +438,7 @@ describe("setInitialPassword", () => {
     );
     expect(bcrypt.hash).toHaveBeenCalledWith("Str0ng!Pass", 12);
     expect(db.query).toHaveBeenCalledWith(
-      "UPDATE users SET password = ?, password_changed_at = NOW() WHERE id = ?",
+      "UPDATE users SET password = ?, password_changed_at = NOW(), last_login_at = NOW() WHERE id = ?",
       ["$2b$12$newhash", "u1"],
     );
     expect(setCookie).toHaveBeenCalled();

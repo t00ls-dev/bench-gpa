@@ -14,7 +14,7 @@ export function buildAuditTooltip(
 ): string {
   // target_username comes from a JOIN on `users` by target_id (not from the
   // `detail` recorded at the time): resolves the target by the CURRENT
-  // username, even if it changed since the event (updateUserIdentifiers
+  // username, even if it changed since the event (updateAdminUser
   // allows editing), and even for events recorded before this JOIN existed,
   // without having to rewrite history.
   const effectiveDetail = ACTIONS_WITHOUT_EXTRA_DETAIL.has(action) ? null : detail;

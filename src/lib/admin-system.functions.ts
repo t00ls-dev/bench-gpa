@@ -171,7 +171,7 @@ export const getAuditLog = createServerFn({ method: "POST" })
         // LEFT JOIN instead of relying on text stored in `detail`: resolves
         // the target's username by target_id for any row, including ones
         // recorded before this feature existed. Always the CURRENT username
-        // (updateUserIdentifiers allows editing after the event was recorded).
+        // (updateAdminUser allows editing after the event was recorded).
         `SELECT a.id, a.created_at, a.actor_username, a.action, a.target_type, a.target_id,
                 u.username AS target_username, a.detail, a.ip
            FROM audit_log a

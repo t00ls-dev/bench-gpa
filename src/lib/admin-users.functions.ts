@@ -5,7 +5,13 @@ import { assertAdmin, invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import { z } from "zod";
 import db from "./db";
-import { UsernameSchema, EmployeeIdSchema, RoleEnum, UserIdSchema } from "./schemas";
+import {
+  UsernameSchema,
+  EmployeeIdSchema,
+  RoleEnum,
+  UserIdSchema,
+  UpdateAdminUserSchema,
+} from "./schemas";
 import { asArray, asRecord, dateTimeStr } from "./api-types";
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -13,7 +19,7 @@ export const listUsers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const [rows] = await db.query(
-      "SELECT id, username, employee_id, name, role, is_active, created_at, password IS NULL AS pending FROM users ORDER BY created_at DESC",
+      "SELECT id, username, employee_id, name, role, is_active, last_login_at, password IS NULL AS pending FROM users ORDER BY name ASC, id ASC",
     );
     return asArray(rows).map((r) => {
       const rec = asRecord(r);
@@ -29,7 +35,7 @@ export const listUsers = createServerFn({ method: "GET" })
         // auth-api.ts). Computed in the SELECT instead of duplicating the
         // same rule on the client.
         pending: Boolean(rec.pending),
-        created_at: dateTimeStr(rec.created_at),
+        lastLoginAt: rec.last_login_at == null ? null : dateTimeStr(rec.last_login_at),
       };
     });
   });
@@ -50,8 +56,8 @@ export const createUser = createServerFn({ method: "POST" })
       })
       // Only 1 of the two is required -- the other stays NULL, the same
       // "pending completion" state that already exists for users migrated
-      // from the old email model (see updateUserIdentifiers,
-      // edit-user-identifiers-dialog.tsx).
+      // from the old email model (see updateAdminUser and
+      // edit-user-dialog.tsx).
       .refine((d) => d.username !== undefined || d.employeeId !== undefined, {
         message: "Informe usuário ou matrícula.",
         path: ["username"],
@@ -77,49 +83,6 @@ export const createUser = createServerFn({ method: "POST" })
       detail: `papel: ${data.role}`,
     });
     return { ok: true, id };
-  });
-
-export const setUserRole = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit()])
-  .inputValidator((data: unknown) => z.object({ userId: UserIdSchema, role: RoleEnum }).parse(data))
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    if (context.userId === data.userId && data.role !== "admin") {
-      throw new Error("Você não pode remover seu próprio acesso de administrador.");
-    }
-    await db.query("UPDATE users SET role = ? WHERE id = ?", [data.role, data.userId]);
-    invalidateAdminCache(data.userId);
-    await recordAudit({
-      action: "user.role_change",
-      actorId: context.userId,
-      actorUsername: context.userUsername,
-      targetType: "user",
-      targetId: data.userId,
-      detail: `novo papel: ${data.role}`,
-    });
-    return { ok: true };
-  });
-
-export const setUserActive = createServerFn({ method: "POST" })
-  .middleware([requireAuth, requireRateLimit()])
-  .inputValidator((data: unknown) =>
-    z.object({ userId: UserIdSchema, isActive: z.boolean() }).parse(data),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    if (context.userId === data.userId && !data.isActive) {
-      throw new Error("Você não pode inativar sua própria conta.");
-    }
-    await db.query("UPDATE users SET is_active = ? WHERE id = ?", [data.isActive, data.userId]);
-    invalidateAdminCache(data.userId);
-    await recordAudit({
-      action: data.isActive ? "user.activate" : "user.deactivate",
-      actorId: context.userId,
-      actorUsername: context.userUsername,
-      targetType: "user",
-      targetId: data.userId,
-    });
-    return { ok: true };
   });
 
 export const resetPassword = createServerFn({ method: "POST" })
@@ -149,21 +112,29 @@ export const resetPassword = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const updateUserIdentifiers = createServerFn({ method: "POST" })
+export const updateAdminUser = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
-  .inputValidator((data: unknown) =>
-    z
-      .object({ userId: UserIdSchema, username: UsernameSchema, employeeId: EmployeeIdSchema })
-      .parse(data),
-  )
+  .inputValidator((data: unknown) => UpdateAdminUserSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    if (context.userId === data.userId && data.role !== "admin") {
+      throw new Error("Você não pode remover seu próprio acesso de administrador.");
+    }
+    if (context.userId === data.userId && !data.isActive) {
+      throw new Error("Você não pode inativar sua própria conta.");
+    }
     try {
-      await db.query("UPDATE users SET username = ?, employee_id = ? WHERE id = ?", [
-        data.username,
-        data.employeeId,
-        data.userId,
-      ]);
+      await db.query(
+        "UPDATE users SET username = ?, employee_id = ?, name = ?, role = ?, is_active = ? WHERE id = ?",
+        [
+          data.username ?? null,
+          data.employeeId ?? null,
+          data.name,
+          data.role,
+          data.isActive,
+          data.userId,
+        ],
+      );
     } catch (err) {
       // ER_DUP_ENTRY: username or employee_id already used by another account.
       if (err && typeof err === "object" && "code" in err && err.code === "ER_DUP_ENTRY") {
@@ -171,13 +142,14 @@ export const updateUserIdentifiers = createServerFn({ method: "POST" })
       }
       throw err;
     }
+    invalidateAdminCache(data.userId);
     await recordAudit({
-      action: "user.identifiers_update",
+      action: "user.update",
       actorId: context.userId,
       actorUsername: context.userUsername,
       targetType: "user",
       targetId: data.userId,
-      detail: `novo username: ${data.username}, nova matrícula: ${data.employeeId}`,
+      detail: `nome: ${data.name}, username: ${data.username ?? "(sem)"}, matrícula: ${data.employeeId ?? "(sem)"}, papel: ${data.role}, ativo: ${data.isActive ? "sim" : "não"}`,
     });
     return { ok: true };
   });

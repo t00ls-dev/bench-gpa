@@ -190,6 +190,22 @@ export const EmployeeIdSchema = z
   .max(30)
   .regex(/^\d+$/, "Matrícula deve conter só dígitos");
 
+const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
+
+export const UpdateAdminUserSchema = z
+  .object({
+    userId: UserIdSchema,
+    username: z.preprocess(emptyToUndefined, UsernameSchema.optional()),
+    employeeId: z.preprocess(emptyToUndefined, EmployeeIdSchema.optional()),
+    name: z.string().trim().min(1, "Nome obrigatório").max(120),
+    role: RoleEnum,
+    isActive: z.boolean(),
+  })
+  .refine((data) => data.username !== undefined || data.employeeId !== undefined, {
+    message: "Informe usuário ou matrícula.",
+    path: ["username"],
+  });
+
 const MAX_AUTH_IDENTIFIER_LENGTH = 60;
 const MAX_PASSWORD_LENGTH = 128;
 

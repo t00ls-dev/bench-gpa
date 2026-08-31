@@ -189,6 +189,7 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
     label: "Atualizou identificadores",
     className: "bg-primary/15 text-primary",
   },
+  "user.update": { label: "Atualizou usuário", className: "bg-primary/15 text-primary" },
   "data.purge": { label: "Purga de dados", className: "bg-warning/15 text-warning" },
 };
 

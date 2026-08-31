@@ -81,13 +81,7 @@ vi.mock("./admin-utils", () => ({
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("./audit", () => ({ recordAudit: vi.fn() }));
 
-import {
-  createUser,
-  resetPassword,
-  setUserRole,
-  setUserActive,
-  updateUserIdentifiers,
-} from "./admin-users.functions";
+import { createUser, listUsers, resetPassword, updateAdminUser } from "./admin-users.functions";
 import { invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import db from "./db";
@@ -142,6 +136,30 @@ describe("createUser", () => {
   });
 });
 
+describe("listUsers", () => {
+  it("orders the complete set by name and returns the last login", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [
+        {
+          id: "u1",
+          username: "ana",
+          employee_id: "1001",
+          name: "Ana",
+          role: "user",
+          is_active: 1,
+          last_login_at: new Date("2026-08-31T12:00:00Z"),
+          pending: 0,
+        },
+      ],
+    ] as never);
+
+    const result = await (listUsers as () => Promise<Array<{ lastLoginAt: string | null }>>)();
+
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ORDER BY name ASC, id ASC"));
+    expect(result[0]?.lastLoginAt).toBe("2026-08-31T12:00:00.000Z");
+  });
+});
+
 describe("resetPassword", () => {
   it("clears password and password_changed_at, increments token_version, without receiving a new password", async () => {
     const result = await (resetPassword as (d: { userId: string }) => Promise<{ ok: boolean }>)({
@@ -163,107 +181,85 @@ describe("resetPassword", () => {
   });
 });
 
-describe("updateUserIdentifiers", () => {
-  it("updates username and employee_id", async () => {
-    const result = await (
-      updateUserIdentifiers as (d: {
-        userId: string;
-        username: string;
-        employeeId: string;
-      }) => Promise<{ ok: boolean }>
-    )({ userId: "u1", username: "novo.nome", employeeId: "9999" });
+describe("updateAdminUser", () => {
+  type UpdateInput = {
+    userId: string;
+    username?: string;
+    employeeId?: string;
+    name: string;
+    role: string;
+    isActive: boolean;
+  };
+  const input: UpdateInput = {
+    userId: "u-target",
+    username: "novo.nome",
+    employeeId: "9999",
+    name: "Novo Nome",
+    role: "admin",
+    isActive: false,
+  };
+
+  it("updates all editable user fields in one operation", async () => {
+    const result = await (updateAdminUser as (d: typeof input) => Promise<{ ok: boolean }>)(input);
     expect(result.ok).toBe(true);
     expect(db.query).toHaveBeenCalledWith(
-      "UPDATE users SET username = ?, employee_id = ? WHERE id = ?",
-      ["novo.nome", "9999", "u1"],
+      "UPDATE users SET username = ?, employee_id = ?, name = ?, role = ?, is_active = ? WHERE id = ?",
+      ["novo.nome", "9999", "Novo Nome", "admin", false, "u-target"],
     );
-    expect(recordAudit).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "user.identifiers_update" }),
-    );
+    expect(invalidateAdminCache).toHaveBeenCalledWith("u-target");
+    expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "user.update" }));
+  });
+
+  it("stores a missing optional identifier as NULL", async () => {
+    await (updateAdminUser as (d: typeof input) => Promise<unknown>)({
+      ...input,
+      username: undefined,
+    });
+    expect(db.query).toHaveBeenCalledWith(expect.any(String), [
+      null,
+      "9999",
+      "Novo Nome",
+      "admin",
+      false,
+      "u-target",
+    ]);
   });
 
   it("translates a uniqueness conflict (ER_DUP_ENTRY) into a friendly message", async () => {
     const dupError = Object.assign(new Error("Duplicate entry"), { code: "ER_DUP_ENTRY" });
     vi.mocked(db.query).mockRejectedValueOnce(dupError);
     await expect(
-      (
-        updateUserIdentifiers as (d: {
-          userId: string;
-          username: string;
-          employeeId: string;
-        }) => Promise<unknown>
-      )({ userId: "u1", username: "ja.existe", employeeId: "1" }),
+      (updateAdminUser as (d: typeof input) => Promise<unknown>)({
+        ...input,
+        username: "ja.existe",
+        employeeId: "1",
+      }),
     ).rejects.toThrow("Username ou matrícula já usados por outra conta.");
-  });
-});
-
-describe("detail recorded in the audit log", () => {
-  it("setUserRole records the new role", async () => {
-    await (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
-      userId: "u-alvo",
-      role: "admin",
-    });
-    expect(recordAudit).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "user.role_change", detail: "novo papel: admin" }),
-    );
-  });
-
-  it("setUserActive(true) records user.activate with no detail", async () => {
-    await (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
-      userId: "u-alvo",
-      isActive: true,
-    });
-    const call = vi.mocked(recordAudit).mock.calls[0][0];
-    expect(call.action).toBe("user.activate");
-    expect(call.detail).toBeUndefined();
-  });
-
-  it("setUserActive(false) records user.deactivate with no detail", async () => {
-    await (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
-      userId: "u-alvo",
-      isActive: false,
-    });
-    const call = vi.mocked(recordAudit).mock.calls[0][0];
-    expect(call.action).toBe("user.deactivate");
-    expect(call.detail).toBeUndefined();
   });
 
   it("blocks self-deactivation before recording any audit entry", async () => {
     await expect(
-      (setUserActive as (d: { userId: string; isActive: boolean }) => Promise<unknown>)({
+      (updateAdminUser as (d: typeof input) => Promise<unknown>)({
+        ...input,
         userId: "admin-u1",
+        role: "admin",
         isActive: false,
       }),
     ).rejects.toThrow("não pode inativar sua própria conta");
+    expect(db.query).not.toHaveBeenCalled();
     expect(recordAudit).not.toHaveBeenCalled();
   });
-});
 
-describe("admin cache invalidation", () => {
-  it("setUserRole discards the target's cached verdict", async () => {
-    const result = await (
-      setUserRole as (d: { userId: string; role: string }) => Promise<{ ok: boolean }>
-    )({ userId: "u-alvo", role: "admin" });
-    expect(result.ok).toBe(true);
-    expect(invalidateAdminCache).toHaveBeenCalledWith("u-alvo");
-  });
-
-  it("setUserActive discards the target's cached verdict", async () => {
-    const result = await (
-      setUserActive as (d: { userId: string; isActive: boolean }) => Promise<{ ok: boolean }>
-    )({ userId: "u-alvo", isActive: false });
-    expect(result.ok).toBe(true);
-    expect(invalidateAdminCache).toHaveBeenCalledWith("u-alvo");
-  });
-
-  it("invalidates nothing when the action itself is refused", async () => {
-    // Self-demotion is blocked before the UPDATE; the cache must not be touched.
+  it("blocks self-demotion before updating or invalidating the cache", async () => {
     await expect(
-      (setUserRole as (d: { userId: string; role: string }) => Promise<unknown>)({
+      (updateAdminUser as (d: typeof input) => Promise<unknown>)({
+        ...input,
         userId: "admin-u1",
         role: "user",
+        isActive: true,
       }),
     ).rejects.toThrow("não pode remover seu próprio acesso");
+    expect(db.query).not.toHaveBeenCalled();
     expect(invalidateAdminCache).not.toHaveBeenCalled();
   });
 });
