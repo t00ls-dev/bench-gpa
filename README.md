@@ -51,27 +51,118 @@ bun run lint
 
 ## Publicação
 
-Commits e pushes, inclusive na `main`, executam CI e schema-check, mas não
-publicam em produção. O deploy ocorre somente quando uma tag `v*` é enviada ao
-GitHub ou quando o workflow `CI/CD` é iniciado manualmente na branch `main`.
+O desenvolvimento e a publicação são fluxos separados. Commits e pushes,
+inclusive na `main`, executam as validações, mas não alteram a produção.
 
-Fluxo normal de release:
+| Evento                        | Validações | Artefato e sourcemaps | Deploy |
+| ----------------------------- | ---------- | --------------------- | ------ |
+| Pull request                  | Sim        | Não                   | Não    |
+| Push ou merge na `main`       | Sim        | Não                   | Não    |
+| Push de tag `v*`              | Sim        | Sim                   | Sim    |
+| `workflow_dispatch` na `main` | Sim        | Sim                   | Sim    |
+
+### Antes de publicar
+
+Confirme que:
+
+- todas as alterações desejadas foram integradas na `main`;
+- o CI mais recente da `main` passou;
+- não há mudanças locais pendentes;
+- a versão escolhida ainda não existe como tag.
 
 ```bash
 git switch main
 git pull --ff-only
+git status --short
+git tag --list "v2026.08.31.1"
+```
+
+`git status --short` e `git tag --list` não devem produzir saída nesse exemplo.
+
+### Release por tag
+
+A tag `v*` é o caminho normal de publicação. Use uma tag anotada e única:
+
+```bash
 git tag -a v2026.08.31.1 -m "Release v2026.08.31.1"
 git push origin v2026.08.31.1
 ```
 
-A tag precisa apontar para um commit presente na `main`. Depois do deploy, ela
-pode ser associada a uma GitHub Release para registrar notas da versão. Para um
-hotfix, integre a correção na `main` e crie uma nova tag pelo mesmo processo.
+A versão pode seguir o formato `vAAAA.MM.DD.N`, incrementando `N` quando houver
+mais de uma publicação no mesmo dia. O workflow rejeita tags que não apontem
+para um commit presente no histórico da `main`.
 
-O `workflow_dispatch` serve para publicação manual ou recuperação sem criar
-tag: em **Actions > CI/CD > Run workflow**, selecione `main`. Execuções manuais
-em outras branches são rejeitadas. Em ambos os caminhos, audit, lint,
-type-check, testes, build e schema-check precisam passar antes do deploy.
+Depois do deploy, a tag pode receber uma GitHub Release com as notas da versão:
+
+```bash
+gh release create v2026.08.31.1 --verify-tag --generate-notes
+```
+
+A GitHub Release é opcional. O gatilho de produção é o push da tag.
+
+### Acompanhar o deploy
+
+Pela interface, abra **Actions > CI/CD**. Pela linha de comando:
+
+```bash
+gh run list --workflow "CI/CD" --limit 5
+gh run watch <run-id> --exit-status
+```
+
+Uma publicação executa nesta ordem:
+
+1. Audit de dependências, lint, type-check, testes e build.
+2. Schema-check em uma instância MariaDB descartável.
+3. Upload do artefato e dos sourcemaps para o Sentry.
+4. Envio da aplicação e migrations para a VPS.
+5. Aplicação das migrations antes da troca da versão ativa.
+6. Criação de uma release versionada e troca atômica do symlink `current`.
+7. Reload do PM2 e health-check HTTP.
+
+Se uma validação, upload ou migration falhar antes da troca do symlink, a
+versão em produção permanece ativa. Se o health-check falhar após a troca, o
+workflow restaura automaticamente a release anterior. As cinco releases mais
+recentes permanecem na VPS.
+
+Após o sucesso, abra `https://gpa.t00ls.dev` e confira no rodapé se o hash do
+commit corresponde ao commit marcado pela tag.
+
+### Deploy manual
+
+O dispatch manual publica o commit atual da `main` sem criar tag. Use somente
+para recuperação ou quando houver motivo explícito para não registrar uma nova
+versão:
+
+```bash
+gh workflow run ci.yml --ref main
+gh run list --workflow "CI/CD" --limit 1
+```
+
+Na interface, use **Actions > CI/CD > Run workflow** e selecione `main`.
+Execuções manuais em outras branches são rejeitadas.
+
+### Hotfix
+
+Hotfix não usa um pipeline diferente:
+
+1. Faça a correção em uma branch curta.
+2. Abra a pull request e aguarde CI e schema-check.
+3. Integre a correção na `main`.
+4. Confirme o CI da `main`.
+5. Crie e envie uma nova tag `v*`.
+
+### Falhas operacionais
+
+Se o upload falhar por falta de quota de artefatos, produção não é alterada.
+Depois que o GitHub recalcular a quota, execute novamente o run que falhou:
+
+```bash
+gh run rerun <run-id>
+```
+
+Não mova, sobrescreva ou reutilize uma tag publicada. Não crie tag a partir de
+uma branch de trabalho. Push de tag e dispatch manual representam intenção
+explícita de publicar em produção.
 
 ## Rotas
 
