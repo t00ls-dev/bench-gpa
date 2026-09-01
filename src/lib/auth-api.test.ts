@@ -263,8 +263,11 @@ describe("login", () => {
 
   it("account without a password (first access pending): never calls bcrypt.compare, specific message", async () => {
     vi.mocked(db.query).mockResolvedValue([dbRow({ password: null })] as never);
-    await expect(login({ identifier: "test", password: "qualquer" } as never)).rejects.toThrow(
-      "primeiro acesso",
+    await expect(login({ identifier: "test", password: "qualquer" } as never)).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes("primeiro acesso") &&
+        isExpectedError(error),
     );
     expect(bcrypt.compare).not.toHaveBeenCalled();
   });

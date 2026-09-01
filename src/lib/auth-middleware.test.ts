@@ -47,6 +47,7 @@ vi.mock("cookie", () => ({
 import { requireAuth, requireAuthAllowExpiredPassword, isSentryReported } from "./auth-middleware";
 import db from "./db";
 import jwt from "jsonwebtoken";
+import { parseCookie } from "cookie";
 import { setCookie } from "@tanstack/react-start/server";
 import { SESSION_ABSOLUTE_CAP_SECONDS } from "./auth-config";
 import { attachSentryContext, markExpectedError } from "./sentry-error-metadata";
@@ -261,6 +262,18 @@ describe("requireAuth", () => {
   // escapes here, since it sits outside requireAuth in the middleware
   // chain: without the mark, the same error becomes two events in Sentry.
   describe("marking an error as already reported to Sentry", () => {
+    it("does not report a missing session cookie", async () => {
+      vi.mocked(parseCookie).mockReturnValueOnce({});
+
+      await expect(call()).rejects.toSatisfy(
+        (err: unknown) =>
+          err instanceof Error &&
+          err.message === "Unauthorized: no session cookie" &&
+          isSentryReported(err),
+      );
+      expect(sentryMocks.captureException).not.toHaveBeenCalled();
+    });
+
     it("marks the invalid-session error (expired JWT)", async () => {
       vi.mocked(jwt.verify).mockImplementation(() => {
         throw new Error("jwt expired");

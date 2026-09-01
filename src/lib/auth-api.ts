@@ -129,8 +129,10 @@ export const login = createServerFn({ method: "POST" })
     }
     if (user.password === null) {
       await auditFail("primeiro acesso pendente", user.id, user.username);
-      throw new Error(
-        'Esta conta ainda não concluiu o primeiro acesso. Use a opção "Primeiro acesso" abaixo.',
+      throw markExpectedError(
+        new Error(
+          'Esta conta ainda não concluiu o primeiro acesso. Use a opção "Primeiro acesso" abaixo.',
+        ),
       );
     }
     const valid = await bcrypt.compare(data.password, user.password);

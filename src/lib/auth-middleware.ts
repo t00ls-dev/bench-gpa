@@ -59,11 +59,11 @@ async function resolveAuthContext(
     // the handler as "Unauthorized: invalid token", losing the original
     // error (even going to .cause, it's the kind of bug that confuses
     // debugging).
-    sentryServerClient?.captureException(err);
     if (err instanceof Error && err.message.startsWith("Unauthorized")) {
       markSentryReported(err);
       throw err;
     }
+    sentryServerClient?.captureException(err);
     const wrapped = new Error("Unauthorized: invalid token", { cause: err });
     markSentryReported(wrapped);
     throw wrapped;
