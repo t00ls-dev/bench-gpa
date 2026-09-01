@@ -160,6 +160,18 @@ Depois de modificar, validar:
   (dev server, MariaDB, login real) quando a mudança não for coberta por
   lint/typecheck/test
 
+### Metadados gerados da documentação
+
+- `src/generated/doc-meta.json` é gerado por
+  `scripts/generate-doc-meta.ts` no `prebuild`. Não editar manualmente.
+- Cada timestamp representa o último commit que mudou o blob do Markdown.
+  Mudança apenas de modo ou rename sem alteração de conteúdo não deve avançar
+  a data, embora adição, remoção e mudança de caminho ainda atualizem as chaves.
+- A geração compara o resultado antes de escrever. Builds sem mudança efetiva
+  em `docs/**/*.md` devem manter o working tree intacto.
+- O histórico Git completo é necessário para seguir renomes e encontrar a
+  última mudança de conteúdo. Preserve `fetch-depth: 0` no CI.
+
 Para mudanças arriscadas (schema de DB, auth, infra), prefira branch e PR
 em vez de commit direto em `main`.
 

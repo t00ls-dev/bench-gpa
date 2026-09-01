@@ -17,9 +17,9 @@ jobs:
       group: ci-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      # fetch-depth: 0 -> full git history. The prebuild (gendocmeta) uses
-      # `git log -1 --format=%ct` per doc for the docs' "timeago"; with a
-      # shallow checkout (depth 1) every doc would inherit HEAD's timestamp.
+      # fetch-depth: 0 -> full git history. The prebuild (gendocmeta) follows
+      # renames and compares Git blob IDs to find each doc's last content
+      # change; a shallow checkout cannot provide that history reliably.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0

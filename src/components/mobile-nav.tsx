@@ -16,6 +16,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { UserIdentifiers } from "@/components/user-identifiers";
 import { useNavPendingPath, isNavPendingTo } from "@/hooks/use-nav-pending";
 
 const TABS = [
@@ -34,11 +35,12 @@ const ADMIN_ITEMS = [
 interface Props {
   isAdmin: boolean;
   name: string;
+  username: string | null;
   employeeId: string | null;
   onSignOut: () => void;
 }
 
-export function MobileNav({ isAdmin, name, employeeId, onSignOut }: Props) {
+export function MobileNav({ isAdmin, name, username, employeeId, onSignOut }: Props) {
   const loc = useLocation();
   const pendingPath = useNavPendingPath();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -89,11 +91,11 @@ export function MobileNav({ isAdmin, name, employeeId, onSignOut }: Props) {
               {name[0].toUpperCase()}
             </div>
             <span className="mt-2 text-sm font-medium truncate max-w-[80%]">{name}</span>
-            {employeeId && (
-              <span className="text-xs text-muted-foreground truncate max-w-[80%]">
-                {employeeId}
-              </span>
-            )}
+            <UserIdentifiers
+              username={username}
+              employeeId={employeeId}
+              className="mt-0.5 max-w-[80%] justify-center text-center text-xs leading-tight text-muted-foreground"
+            />
           </div>
           <div className="space-y-1 px-2 pb-4">
             {isAdmin && (

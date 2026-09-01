@@ -30,6 +30,7 @@ import { AppFooter } from "@/components/app-footer";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 import { MobileNav } from "@/components/mobile-nav";
+import { UserIdentifiers } from "@/components/user-identifiers";
 import {
   SidebarProvider,
   Sidebar,
@@ -206,13 +207,13 @@ function AuthedLayout() {
           </SidebarContent>
           <SidebarFooter>
             <div className="flex items-center gap-1 px-3 py-2">
-              <div className="flex-1 truncate">
+              <div className="min-w-0 flex-1">
                 <div className="truncate text-xs text-sidebar-foreground/80">{user.name}</div>
-                {user.employeeId && (
-                  <div className="truncate text-[10px] text-sidebar-foreground/50">
-                    {user.employeeId}
-                  </div>
-                )}
+                <UserIdentifiers
+                  username={user.username}
+                  employeeId={user.employeeId}
+                  className="mt-0.5 text-[10px] leading-tight text-sidebar-foreground/50"
+                />
               </div>
               <Button
                 variant="ghost"
@@ -262,6 +263,7 @@ function AuthedLayout() {
         <MobileNav
           isAdmin={isAdmin}
           name={user.name}
+          username={user.username}
           employeeId={user.employeeId}
           onSignOut={signOut}
         />

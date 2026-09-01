@@ -10,12 +10,11 @@ import { fmtBRShort } from "@/lib/utils";
 import { Route } from "./admin.docs";
 
 /**
- * Absolute date, not relative: "last updated" via git (`lastModified`)
- * counts any byte changed, not relevant content changed (a single
- * title-line edit is already enough to turn it into "now"). `date`,
- * extracted from the doc's own text, is preferred since it doesn't suffer
- * from that problem; `lastModified` formatted as a date is just the
- * fallback for the few docs with no date of their own in the content.
+ * Absolute date, not relative. `date`, extracted from the doc's own text, is
+ * preferred because it is explicitly authored. `lastModified` is the
+ * fallback for docs without a date and comes from the latest commit that
+ * changed the Markdown blob; mode-only changes and content-preserving renames
+ * are ignored by scripts/generate-doc-meta.ts.
  *
  * fmtBRShort (not date-fns) on purpose: reuses the same fixed-timezone
  * formatting as the rest of the app, instead of another library with the

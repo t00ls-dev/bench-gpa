@@ -43,6 +43,14 @@ bun run dev
 bun run build
 ```
 
+O `prebuild` executa `scripts/generate-doc-meta.ts`. Ele percorre `docs/**/*.md`
+e atualiza `src/generated/doc-meta.json` somente quando os caminhos ou os
+timestamps de alteração real do conteúdo Git mudam. Alterações apenas de modo
+ou renomes sem mudança do conteúdo não avançam o timestamp. O arquivo é
+importado no bundle e fornece a data exibida em `/admin/docs` apenas quando o
+próprio Markdown não contém uma data. A geração depende do histórico Git
+completo e não deve ser substituída por horário do filesystem.
+
 ## Lint
 
 ```bash
