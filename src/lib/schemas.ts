@@ -5,6 +5,7 @@ import {
   IMPORT_MAX_ROWS,
   IMPORT_MAX_STORES,
 } from "./import-config";
+import { USER_ROLES } from "./roles";
 
 const DateRangeSchema = z.object({
   dateFrom: z.string().optional().nullable(),
@@ -165,7 +166,7 @@ export const ProductionForecastSchema = z.object({
 
 export const UserIdSchema = z.string().uuid();
 
-export const RoleEnum = z.enum(["admin", "user"]);
+export const RoleEnum = z.enum(USER_ROLES);
 
 // Username and employee_id can never match the same value: login resolves
 // `WHERE username = ? OR employee_id = ?` into a single identifier, and

@@ -1,6 +1,7 @@
 import { asArray, asRecord } from "./api-types";
 import db from "./db";
 import { CACHE_TTL_LONG } from "./cache";
+import { ADMIN_ROLE } from "./roles";
 
 const adminCache = new Map<string, { result: boolean; expiresAt: number }>();
 
@@ -25,15 +26,6 @@ function setCachedAdmin(userId: string, result: boolean): void {
  * kept the privilege for up to 5 minutes, and (the one that showed up more
  * in daily use) promoting someone to admin had no effect during that
  * window, because the `false` was cached too.
- *
- * The cache is per process. PM2 runs `instances: 2` in cluster mode (see
- * docs/medicao-performance.md, 2026-08-04), so invalidating in one worker
- * does NOT clear the other's cache: a stale verdict can still serve from
- * the second worker for up to 5 minutes after a role/is_active change.
- * Known, accepted gap for now (see the cluster-mode rate-limit dilution
- * entry in the same doc for the reasoning); revisit with a shared
- * invalidation mechanism (Redis, DB-backed flag) if this TTL window turns
- * out to matter in practice.
  */
 export function invalidateAdminCache(userId: string): void {
   adminCache.delete(userId);
@@ -44,7 +36,7 @@ export async function assertAdmin(ctx: { userId: string }) {
   if (cached === true) return;
   if (cached === false) throw new Error("Apenas administradores podem realizar esta ação.");
 
-  const [rows] = await db.query("CALL has_role(?, ?)", [ctx.userId, "admin"]);
+  const [rows] = await db.query("CALL has_role(?, ?)", [ctx.userId, ADMIN_ROLE]);
   const data = asRecord(asArray(asArray(rows)[0])[0]).has_role ?? false;
   setCachedAdmin(ctx.userId, !!data);
   if (!data) throw new Error("Apenas administradores podem realizar esta ação.");

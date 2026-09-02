@@ -1,38 +1,20 @@
 "use client";
 
+import { lazy, Suspense } from "react";
 import { Route } from "./howto";
-import { Menu, Package, Layers, Upload, Gauge, HelpCircle, ClipboardList } from "lucide-react";
+import { Menu, Package, Layers, Gauge, HelpCircle, ClipboardList } from "lucide-react";
+import { HowToSection } from "@/components/howto-section";
+import { hasAdminRole } from "@/lib/roles";
 
-function Section({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: typeof HelpCircle;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="kpi-card mb-6">
-      <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold">
-        <Icon className="size-5 text-primary" />
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-const cacheRows = [
-  { key: "dashboard_metrics", ttl: "1min" },
-  { key: "area_filter_hierarchy", ttl: "5min" },
-  { key: "imported_dates", ttl: "1min" },
-  { key: "has_role", ttl: "5min / usuário" },
-];
+const AdminHowToContent = lazy(() =>
+  import("@/components/admin-howto-content").then((module) => ({
+    default: module.AdminHowToContent,
+  })),
+);
 
 export default function HowToPage() {
   const { user } = Route.useRouteContext();
-  const isAdmin = user.role === "admin";
+  const isAdmin = hasAdminRole(user.role);
 
   return (
     <div>
@@ -45,20 +27,23 @@ export default function HowToPage() {
         </p>
       </header>
 
-      <Section title="Navegação" icon={Menu}>
+      <HowToSection title="Navegação" icon={Menu}>
         <p className="mb-3 text-sm text-muted-foreground">
           No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas. Em
           mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto, Área
-          e Previsão) e o botão <strong>"Mais"</strong> para abrir Como usar, sair e acessar funções
-          administrativas.
+          e Previsão) e o botão <strong>"Mais"</strong> para abrir Como usar e sair.
         </p>
-      </Section>
+        {isAdmin && (
+          <p className="text-sm text-muted-foreground">
+            As páginas administrativas ficam na sidebar do desktop e no menu Mais do mobile.
+          </p>
+        )}
+      </HowToSection>
 
-      <Section title="Dashboard" icon={Gauge}>
+      <HowToSection title="Dashboard" icon={Gauge}>
         <p className="mb-3 text-sm text-muted-foreground">
-          O Dashboard exibe KPIs consolidados do período selecionado: faturamento total, produtos
-          com e sem venda, evolução diária, vendas por loja/departamento e rankings dos itens de
-          maior faturamento.
+          O Dashboard exibe a venda total do período, a evolução diária, as lojas com maior venda e
+          rankings de departamentos, seções, grupos, subgrupos e produtos.
         </p>
         <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
           <li>
@@ -68,10 +53,13 @@ export default function HowToPage() {
             Use os <strong>filtros</strong> para selecionar lojas, departamentos, seções, grupos e
             subgrupos.
           </li>
+          <li>
+            Clique em um item dos rankings para abrir a análise correspondente em Área ou Produto.
+          </li>
         </ul>
-      </Section>
+      </HowToSection>
 
-      <Section title="Produto" icon={Package}>
+      <HowToSection title="Produto" icon={Package}>
         <p className="mb-3 text-sm text-muted-foreground">
           Busque um produto por código ou nome e veja a análise detalhada: evolução de vendas,
           distribuição por loja, performance em dias anteriores e comparação com mesmo dia da
@@ -81,26 +69,31 @@ export default function HowToPage() {
           <li>Digite pelo menos 3 caracteres para buscar.</li>
           <li>Clique em um resultado para ver a análise completa.</li>
           <li>Selecione uma ou mais lojas. A seleção permanece salva para o próximo acesso.</li>
-          <li>Exporte o relatório em PDF.</li>
+          <li>Os cinco produtos abertos mais recentemente ficam disponíveis abaixo da busca.</li>
         </ul>
-      </Section>
+      </HowToSection>
 
-      <Section title="Área" icon={Layers}>
+      <HowToSection title="Área" icon={Layers}>
         <p className="mb-3 text-sm text-muted-foreground">
           A página Área exibe a análise de todos os produtos no período selecionado, com tabela
           paginada e filtros hierárquicos (loja → departamento → seção → grupo → subgrupo →
           produto).
         </p>
         <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-          <li>Filtre por qualquer nível da hierarquia.</li>
+          <li>Selecione ao menos uma loja, um departamento e um período para iniciar.</li>
           <li>Use o filtro Produto ou a busca textual para localizar produtos específicos.</li>
           <li>Ordene por qualquer coluna clicando no cabeçalho.</li>
           <li>Clique em um produto para abrir sua análise detalhada.</li>
           <li>Exporte a tabela em PDF.</li>
+          <li>Salve uma composição de produtos para uma loja e volte a ela por Análises salvas.</li>
+          <li>
+            Análises salvas ficam vinculadas à sua conta. O QR Code cria um atalho permanente, mas o
+            acesso continua exigindo autenticação.
+          </li>
         </ul>
-      </Section>
+      </HowToSection>
 
-      <Section title="Previsão de Venda" icon={ClipboardList}>
+      <HowToSection title="Previsão de Venda" icon={ClipboardList}>
         <p className="mb-3 text-sm text-muted-foreground">
           A Previsão estima a venda de produtos de Perecíveis para uma loja e uma data com base nas
           últimas ocorrências do mesmo dia da semana.
@@ -112,46 +105,13 @@ export default function HowToPage() {
           <li>Alterar um nível da hierarquia limpa somente os níveis dependentes.</li>
           <li>Exporte a previsão em PDF.</li>
         </ul>
-      </Section>
+      </HowToSection>
 
-      {isAdmin && (
-        <Section title="Importar Dados" icon={Upload}>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Faça upload de arquivos .xlsx para importar dados de vendas. O sistema processa o
-            arquivo e popula as tabelas de análise automaticamente.
-          </p>
-          <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-            <li>Apenas administradores podem importar dados.</li>
-            <li>O progresso da importação é exibido em tempo real.</li>
-            <li>
-              Vendas de produtos já cadastrados aparecem nos relatórios assim que a importação
-              termina. Produtos ou categorias genuinamente novos só aparecem na Área e nos filtros
-              no dia seguinte, depois do refresh diário às 03h30.
-            </li>
-          </ul>
-        </Section>
-      )}
-
-      {isAdmin && (
-        <Section title="Cache" icon={HelpCircle}>
-          <p className="mb-3 text-sm text-muted-foreground">
-            O sistema usa cache temporário para evitar consultas repetidas ao banco de dados:
-          </p>
-          <div className="divide-y divide-border/50">
-            {cacheRows.map((c) => (
-              <div
-                key={c.key}
-                className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-3 first:pt-0 last:pb-0"
-              >
-                <code className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  {c.key}
-                </code>
-                <span className="text-sm text-muted-foreground">TTL: {c.ttl}</span>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
+      {isAdmin ? (
+        <Suspense fallback={null}>
+          <AdminHowToContent />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

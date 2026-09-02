@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ShieldOff, WifiOff } from "lucide-react";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
+import { hasAdminRole } from "@/lib/roles";
 
 export function AdminGate({
   children,
@@ -29,7 +30,7 @@ export function AdminGate({
       ? "loading"
       : isError
         ? "error"
-        : user?.role === "admin"
+        : hasAdminRole(user?.role)
           ? "allow"
           : "deny";
 

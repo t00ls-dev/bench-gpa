@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, UserPlus } from "lucide-react";
+import { ADMIN_ROLE, USER_ROLE, type UserRole } from "@/lib/roles";
 
 export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
   const create = useServerFn(createUser);
@@ -28,7 +29,7 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
   const [username, setUsername] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const [role, setRole] = useState<UserRole>(USER_ROLE);
   const [creating, setCreating] = useState(false);
 
   const submit = async () => {
@@ -45,7 +46,7 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
       setUsername("");
       setEmployeeId("");
       setName("");
-      setRole("user");
+      setRole(USER_ROLE);
       onCreated();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Erro ao criar");
@@ -101,13 +102,13 @@ export function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
           </div>
           <div>
             <Label htmlFor="create-role">Papel</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as "admin" | "user")}>
+            <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
               <SelectTrigger className="mt-1.5">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Usuário</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value={USER_ROLE}>Usuário</SelectItem>
+                <SelectItem value={ADMIN_ROLE}>Administrador</SelectItem>
               </SelectContent>
             </Select>
           </div>

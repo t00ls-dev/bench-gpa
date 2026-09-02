@@ -13,6 +13,7 @@ import {
   UpdateAdminUserSchema,
 } from "./schemas";
 import { asArray, asRecord, dateTimeStr } from "./api-types";
+import { hasAdminRole } from "./roles";
 
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit()])
@@ -117,7 +118,7 @@ export const updateAdminUser = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => UpdateAdminUserSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    if (context.userId === data.userId && data.role !== "admin") {
+    if (context.userId === data.userId && !hasAdminRole(data.role)) {
       throw new Error("Você não pode remover seu próprio acesso de administrador.");
     }
     if (context.userId === data.userId && !data.isActive) {

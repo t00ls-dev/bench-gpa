@@ -31,6 +31,7 @@ import { useVersionCheck } from "@/hooks/use-version-check";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserIdentifiers } from "@/components/user-identifiers";
+import { hasAdminRole } from "@/lib/roles";
 import {
   SidebarProvider,
   Sidebar,
@@ -162,7 +163,7 @@ function AuthedLayout() {
 
   useVersionCheck();
 
-  const isAdmin = user.role === "admin";
+  const isAdmin = hasAdminRole(user.role);
 
   const commonNav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },

@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ADMIN_ROLE, hasAdminRole, USER_ROLE, type UserRole } from "@/lib/roles";
 
 interface Target {
   id: string;
@@ -55,7 +56,7 @@ function EditUserForm({
   const [username, setUsername] = useState(target.username ?? "");
   const [employeeId, setEmployeeId] = useState(target.employeeId ?? "");
   const [name, setName] = useState(target.name);
-  const [role, setRole] = useState<"admin" | "user">(target.role === "admin" ? "admin" : "user");
+  const [role, setRole] = useState<UserRole>(hasAdminRole(target.role) ? target.role : USER_ROLE);
   const [isActive, setIsActive] = useState(target.is_active);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -142,13 +143,13 @@ function EditUserForm({
           </div>
           <div>
             <Label htmlFor="edit-role">Papel</Label>
-            <Select value={role} onValueChange={(value) => setRole(value as "admin" | "user")}>
+            <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
               <SelectTrigger id="edit-role" className="mt-1.5 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Usuário</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value={USER_ROLE}>Usuário</SelectItem>
+                <SelectItem value={ADMIN_ROLE}>Administrador</SelectItem>
               </SelectContent>
             </Select>
           </div>
