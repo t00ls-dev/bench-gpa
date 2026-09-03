@@ -13,6 +13,8 @@ import {
   FinalizeImportSchema,
   CancelImportSchema,
   SavedAreaAnalysisIdSchema,
+  SavedAreaAnalysisIdsSchema,
+  TransferSavedAreaAnalysisSchema,
   CreateSavedAreaAnalysisSchema,
   UpdateSavedAreaAnalysisSchema,
   AuditLogQuerySchema,
@@ -191,6 +193,21 @@ describe("saved area analysis schemas", () => {
   it("requires UUID analysis identifiers", () => {
     expect(SavedAreaAnalysisIdSchema.parse({ id })).toEqual({ id });
     expect(SavedAreaAnalysisIdSchema.safeParse({ id: "predictable-id" }).success).toBe(false);
+  });
+
+  it("limits recent analysis lookups and validates transfers", () => {
+    const targetUserId = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    expect(SavedAreaAnalysisIdsSchema.parse({ ids: [id] })).toEqual({ ids: [id] });
+    expect(
+      SavedAreaAnalysisIdsSchema.safeParse({ ids: Array.from({ length: 11 }, () => id) }).success,
+    ).toBe(false);
+    expect(TransferSavedAreaAnalysisSchema.parse({ analysisId: id, targetUserId })).toEqual({
+      analysisId: id,
+      targetUserId,
+    });
+    expect(
+      TransferSavedAreaAnalysisSchema.safeParse({ analysisId: id, targetUserId: "user-1" }).success,
+    ).toBe(false);
   });
 });
 

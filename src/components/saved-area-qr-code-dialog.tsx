@@ -84,7 +84,8 @@ export function SavedAreaQrCodeDialog({
         <DialogHeader>
           <DialogTitle>QR Code da análise</DialogTitle>
           <DialogDescription>
-            O acesso a “{analysis.name}” continua exigindo uma conta autenticada.
+            Qualquer usuário autenticado que receber este QR Code poderá visualizar
+            {` “${analysis.name}”.`}
           </DialogDescription>
         </DialogHeader>
 

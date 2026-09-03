@@ -34,6 +34,10 @@ export function AdminHowToContent() {
             Em Auditoria, acompanhe a execução das rotinas agendadas e as ações sensíveis
             registradas pelo sistema.
           </li>
+          <li>
+            Ao abrir uma análise salva, use Transferir para atribuir sua propriedade a outro usuário
+            ativo que já tenha concluído o primeiro acesso.
+          </li>
         </ul>
       </HowToSection>
 

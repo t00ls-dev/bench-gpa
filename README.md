@@ -4,21 +4,21 @@ Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA
 
 ## Stack
 
-| Camada             | Tecnologia                                                                   |
-| ------------------ | ---------------------------------------------------------------------------- |
-| Runtime            | Bun                                                                          |
-| Framework          | TanStack Start (React 19, SSR)                                               |
-| Roteamento         | TanStack Router v1 (file-based)                                              |
-| Data Fetching      | TanStack React Query v5 + Server Functions                                   |
-| UI                 | shadcn/ui (New York) + Radix UI + Tailwind CSS v4                            |
-| Charts             | Recharts                                                                     |
-| Planilhas          | SheetJS (xlsx)                                                               |
-| PDF                | jsPDF + jspdf-autotable                                                      |
-| Virtualização      | @tanstack/react-virtual                                                      |
-| Drawer (mobile)    | vaul                                                                         |
-| Auth/DB            | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                                |
-| CAPTCHA            | Cloudflare Turnstile (non-interactive, fail-closed)                          |
-| Segurança          | CSP nonce, HSTS, rate limiting em janela fixa (7 tiers por IP + 1 por conta) |
+| Camada          | Tecnologia                                                                   |
+| --------------- | ---------------------------------------------------------------------------- |
+| Runtime         | Bun                                                                          |
+| Framework       | TanStack Start (React 19, SSR)                                               |
+| Roteamento      | TanStack Router v1 (file-based)                                              |
+| Data Fetching   | TanStack React Query v5 + Server Functions                                   |
+| UI              | shadcn/ui (New York) + Radix UI + Tailwind CSS v4                            |
+| Charts          | Recharts                                                                     |
+| Planilhas       | SheetJS (xlsx)                                                               |
+| PDF             | jsPDF + jspdf-autotable                                                      |
+| Virtualização   | @tanstack/react-virtual                                                      |
+| Drawer (mobile) | vaul                                                                         |
+| Auth/DB         | MariaDB + JWT próprio (bcrypt + jsonwebtoken)                                |
+| CAPTCHA         | Cloudflare Turnstile (non-interactive, fail-closed)                          |
+| Segurança       | CSP nonce, HSTS, rate limiting em janela fixa (7 tiers por IP + 1 por conta) |
 
 ## Pré-requisitos
 
@@ -245,6 +245,7 @@ executado na VPS de produção.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo → Produto na Área; Seção → Grupo → Subgrupo → Produto na Previsão. Dependentes são limpos ao mudar o pai. Alterar somente a data da Previsão preserva os filtros selecionados.
 - **Hierarquia comercial**: `product_universe` é a fonte da classificação atual. Vendas históricas são atribuídas ao Departamento, Seção, Grupo e Subgrupo atuais do produto, não à classificação registrada no dia da venda.
 - **UX**: Bottom tab bar mobile, View Transitions API e exportação PDF (Área e Previsão de Venda).
+- **Áreas salvas**: composição persistente com um proprietário, leitura compartilhável entre usuários autenticados por URL/QR Code, transferência de propriedade somente por admin e histórico local por usuário com até 10 visitas por 30 dias.
 - **Deploy**: tag `v*` ou dispatch manual na `main` inicia a publicação explícita pelo GitHub Actions (`.github/workflows/ci.yml`). O workflow envia `.output` por rsync para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), cria uma release em `releases/<timestamp>-<sha-curto>/`, troca o symlink `current` atomicamente e recarrega o PM2 (`fork`/1 instância, VPS tem 1 núcleo só). O health-check reverte automaticamente em caso de falha. As cinco releases mais recentes são mantidas. Pushes comuns não publicam nem armazenam artefatos. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
 

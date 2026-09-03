@@ -82,6 +82,8 @@ const hierarchy = [
 const analysis = {
   id: "550e8400-e29b-41d4-a716-446655440000",
   ownerUserId: "owner-1",
+  ownerName: "Responsável",
+  ownerUsername: "responsavel",
   name: "Área original",
   description: null,
   storeCode: "1516",

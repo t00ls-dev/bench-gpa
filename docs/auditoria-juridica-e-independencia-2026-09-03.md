@@ -134,9 +134,18 @@ A regra de negócio confirmada pelo responsável pelo projeto é:
   análise;
 - usuários sem sessão não conseguem abrir a página;
 - somente o proprietário pode editar ou excluir;
+- somente administradores podem transferir a propriedade para outra conta ativa
+  que já tenha concluído o primeiro acesso;
+- a transferência preserva UUID, URL, QR Code, loja, descrição e composição, e o
+  proprietário anterior perde as permissões de edição e exclusão;
 - o link funciona como localizador compartilhável no grupo autenticado, não como
   mecanismo autônomo de autenticação;
 - o UUID não amplia o acesso de uma pessoa que não possua conta válida.
+
+As dez áreas abertas mais recentemente ficam registradas por até 30 dias no
+navegador e separadas pelo identificador do usuário. O histórico armazena somente
+o UUID e a data da visita, pode ser limpo manualmente e não duplica a análise. Os
+dados atuais da área continuam sendo obtidos do servidor.
 
 Essa regra precisa ser mantida coerente no backend, na interface, em `/howto` e
 nos documentos destinados aos usuários.
@@ -232,7 +241,8 @@ esperado deve continuar limitado às colunas necessárias.
 | Logs de aplicação e proxy        | Prazo não comprovado                                                              |
 | Telemetria externa               | Prazo não comprovado                                                              |
 | Backup                           | Prazo e propagação de exclusão não comprovados                                    |
-| Armazenamento local do navegador | Sem expiração controlada pela aplicação                                           |
+| Histórico local de áreas         | Até 10 itens por usuário, com expiração após 30 dias                              |
+| Demais dados locais do navegador | Sem expiração controlada pela aplicação                                           |
 
 Não é adequado afirmar que todos os dados são apagados após 180 dias. Esse prazo
 se refere aos dados analíticos de vendas e registros associados definidos na
@@ -293,7 +303,9 @@ Análises salvas adotam regras distintas por operação:
 - criação associa a análise ao usuário autenticado;
 - listagem mostra somente as análises criadas pelo próprio usuário;
 - leitura por URL ou QR Code é permitida a qualquer usuário autenticado;
-- edição e exclusão validam o proprietário.
+- edição e exclusão validam o proprietário;
+- transferência exige administrador, valida a conta destinatária e registra o
+  ator, o proprietário anterior e o novo proprietário na auditoria.
 
 Esse modelo é consistente com a decisão atual, desde que seja comunicado aos
 usuários e preservado por testes.
@@ -803,6 +815,12 @@ não concedem acesso a pessoa que não possua credencial válida.
 O usuário deve compartilhar links e QR Codes somente quando necessário e apenas
 com pessoas autorizadas a utilizar o Bench GPA e as informações correspondentes.
 
+Administradores podem transferir a propriedade de uma análise para outra conta
+ativa que já tenha concluído o primeiro acesso. A transferência mantém a mesma
+análise, URL, QR Code e composição. O proprietário anterior deixa de poder editar
+ou excluir, sem perder a possibilidade geral de visualização concedida aos
+usuários autenticados.
+
 #### 8. Uso adequado e confidencialidade
 
 O usuário compromete-se a:
@@ -939,6 +957,11 @@ produtos selecionados. A conta proprietária controla edição e exclusão.
 Outros usuários autenticados poderão visualizar uma análise quando receberem seu
 link ou QR Code. O compartilhamento não elimina a necessidade de autenticação.
 
+O navegador mantém, por até 30 dias, uma lista local com no máximo dez áreas
+recentemente visitadas para cada usuário. A lista contém somente o identificador
+da área e a data da visita, não é sincronizada entre dispositivos, pode ser
+removida pelo usuário e não concede acesso adicional à análise.
+
 #### 5. Provedores e compartilhamento
 
 O Bench GPA pode utilizar provedores de infraestrutura, proteção contra abuso,
@@ -1033,7 +1056,7 @@ A segregação atual de conteúdo está adequada: usuários comuns recebem instr
 analíticas e administradores recebem conteúdo adicional por carregamento
 condicional.
 
-Devem ser ajustados estes pontos:
+O conteúdo de `/howto` deve refletir estes pontos:
 
 1. substituir “Análises salvas ficam vinculadas à sua conta” por:
 
@@ -1046,6 +1069,8 @@ Devem ser ajustados estes pontos:
 4. orientar compartilhamento somente com usuários autorizados;
 5. manter importação, usuários, auditoria, diagnóstico e documentação interna
    fora do conteúdo entregue a usuários comuns.
+6. informar somente a administradores que eles podem transferir propriedade para
+   outra conta elegível.
 
 ## 18. Alterações recomendadas na documentação técnica
 

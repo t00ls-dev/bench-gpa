@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSavedAreaAnalysis } from "@/lib/saved-area-analyses.functions";
+import { getBrowserLocalStorage, recordRecentSavedAreaVisit } from "@/lib/recent-saved-areas";
 import { AreaPageContent } from "./area.page";
 import { Route } from "./area_.$analysisId";
 import { Route as AuthenticatedRoute } from "./route";
@@ -17,6 +19,12 @@ export default function SavedAreaAnalysisPage() {
     queryFn: () => getSavedAnalysis({ data: { id: analysisId } }),
     retry: false,
   });
+
+  useEffect(() => {
+    if (!analysisQuery.data) return;
+    const storage = getBrowserLocalStorage();
+    if (storage) recordRecentSavedAreaVisit(storage, user.id, analysisQuery.data.id);
+  }, [analysisQuery.data, user.id]);
 
   if (analysisQuery.isPending) {
     return (

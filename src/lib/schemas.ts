@@ -97,6 +97,8 @@ export const AreaAnalysisSchema = z.object({
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
+export const UserIdSchema = z.string().uuid();
+
 const SavedAreaProductCodeSchema = z.string().trim().min(1).max(20);
 const SavedAreaProductCodesSchema = z
   .array(SavedAreaProductCodeSchema)
@@ -108,6 +110,15 @@ const SavedAreaProductCodesSchema = z
 
 export const SavedAreaAnalysisIdSchema = z.object({
   id: z.string().uuid(),
+});
+
+export const SavedAreaAnalysisIdsSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(10),
+});
+
+export const TransferSavedAreaAnalysisSchema = z.object({
+  analysisId: z.string().uuid(),
+  targetUserId: UserIdSchema,
 });
 
 export const CreateSavedAreaAnalysisSchema = z.object({
@@ -163,8 +174,6 @@ export const ProductionForecastSchema = z.object({
   secao: z.string().optional(),
   grupos: z.array(z.string()).optional().default([]),
 });
-
-export const UserIdSchema = z.string().uuid();
 
 export const RoleEnum = z.enum(USER_ROLES);
 

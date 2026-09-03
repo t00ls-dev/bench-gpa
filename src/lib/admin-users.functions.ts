@@ -15,9 +15,20 @@ import {
 import { asArray, asRecord, dateTimeStr } from "./api-types";
 import { hasAdminRole } from "./roles";
 
+export interface AdminUserSummary {
+  id: string;
+  username: string | null;
+  employeeId: string | null;
+  name: string;
+  role: string;
+  is_active: boolean;
+  pending: boolean;
+  lastLoginAt: string | null;
+}
+
 export const listUsers = createServerFn({ method: "GET" })
   .middleware([requireAuth, requireRateLimit()])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<AdminUserSummary[]> => {
     await assertAdmin(context);
     const [rows] = await db.query(
       "SELECT id, username, employee_id, name, role, is_active, last_login_at, password IS NULL AS pending FROM users ORDER BY name ASC, id ASC",

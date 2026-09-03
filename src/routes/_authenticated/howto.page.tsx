@@ -87,8 +87,12 @@ export default function HowToPage() {
           <li>Exporte a tabela em PDF.</li>
           <li>Salve uma composição de produtos para uma loja e volte a ela por Análises salvas.</li>
           <li>
-            Análises salvas ficam vinculadas à sua conta. O QR Code cria um atalho permanente, mas o
-            acesso continua exigindo autenticação.
+            Em Criadas por mim, você gerencia suas análises. Qualquer usuário autenticado que receba
+            o link ou QR Code pode visualizá-las, mas somente o proprietário pode editar ou excluir.
+          </li>
+          <li>
+            Áreas abertas neste dispositivo aparecem em Recentemente visitadas por até 30 dias, com
+            limite de 10 itens. O histórico fica separado por usuário e pode ser limpo.
           </li>
         </ul>
       </HowToSection>

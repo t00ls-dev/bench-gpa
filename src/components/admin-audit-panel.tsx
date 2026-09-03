@@ -190,6 +190,10 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
     className: "bg-primary/15 text-primary",
   },
   "user.update": { label: "Atualizou usuário", className: "bg-primary/15 text-primary" },
+  "saved_area.transfer": {
+    label: "Transferiu área",
+    className: "bg-primary/15 text-primary",
+  },
   "data.purge": { label: "Purga de dados", className: "bg-warning/15 text-warning" },
 };
 

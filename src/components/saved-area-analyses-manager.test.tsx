@@ -7,12 +7,14 @@ import { SavedAreaAnalysesManager } from "./saved-area-analyses-manager";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
+  listRecent: vi.fn(),
   get: vi.fn(),
   remove: vi.fn(),
   navigate: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   qrDialog: vi.fn(),
+  transferDialog: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -25,8 +27,16 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/lib/saved-area-analyses.functions", () => ({
   listSavedAreaAnalyses: (...args: unknown[]) => mocks.list(...args),
+  listRecentSavedAreaAnalyses: (...args: unknown[]) => mocks.listRecent(...args),
   getSavedAreaAnalysis: (...args: unknown[]) => mocks.get(...args),
   deleteSavedAreaAnalysis: (...args: unknown[]) => mocks.remove(...args),
+}));
+
+vi.mock("@/components/admin-saved-area-transfer-dialog", () => ({
+  AdminSavedAreaTransferDialog: (props: { analysis: { id: string; name: string } }) => {
+    mocks.transferDialog(props);
+    return <div>Diálogo de transferência</div>;
+  },
 }));
 
 vi.mock("@/components/saved-area-analysis-dialog", () => ({
@@ -63,16 +73,19 @@ const summary = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   mocks.list.mockResolvedValue([summary]);
+  mocks.listRecent.mockResolvedValue([]);
   mocks.remove.mockResolvedValue({ ok: true });
   mocks.navigate.mockResolvedValue(undefined);
 });
 
 describe("SavedAreaAnalysesManager", () => {
-  it("loads private analyses when the sheet opens", async () => {
+  it("loads analyses created by the user when the sheet opens", async () => {
     const { queryClient } = renderWithClient(
       <SavedAreaAnalysesManager
         currentUserId="owner-1"
+        currentUserRole="user"
         hierarchy={[]}
         stores={[]}
         currentProductCodes={[]}
@@ -93,6 +106,7 @@ describe("SavedAreaAnalysesManager", () => {
     renderWithClient(
       <SavedAreaAnalysesManager
         currentUserId="owner-1"
+        currentUserRole="user"
         hierarchy={[]}
         stores={[]}
         currentProductCodes={[]}
@@ -115,6 +129,7 @@ describe("SavedAreaAnalysesManager", () => {
     renderWithClient(
       <SavedAreaAnalysesManager
         currentUserId="owner-1"
+        currentUserRole="user"
         hierarchy={[]}
         stores={[]}
         currentProductCodes={[]}
@@ -138,15 +153,18 @@ describe("SavedAreaAnalysesManager", () => {
     );
   });
 
-  it("hides saved-analysis controls while viewing a saved analysis", () => {
+  it("keeps the saved-area drawer available without owner controls on a shared analysis", () => {
     renderWithClient(
       <SavedAreaAnalysesManager
         currentUserId="viewer-1"
+        currentUserRole="user"
         hierarchy={[]}
         stores={[]}
         currentProductCodes={["100"]}
         currentAnalysis={{
           ...summary,
+          ownerName: "Responsável",
+          ownerUsername: "responsavel",
           description: null,
           productCodes: ["100"],
           productHierarchy: [],
@@ -156,6 +174,65 @@ describe("SavedAreaAnalysesManager", () => {
 
     expect(screen.queryByRole("button", { name: "Editar análise" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "QR Code" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Análises salvas" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Análises salvas" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Transferir" })).not.toBeInTheDocument();
+  });
+
+  it("shows the administrative transfer action for an opened analysis", async () => {
+    renderWithClient(
+      <SavedAreaAnalysesManager
+        currentUserId="admin-1"
+        currentUserRole="admin"
+        hierarchy={[]}
+        stores={[]}
+        currentProductCodes={["100"]}
+        currentAnalysis={{
+          ...summary,
+          ownerName: "Responsável",
+          ownerUsername: "responsavel",
+          description: null,
+          productCodes: ["100"],
+          productHierarchy: [],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Transferir" }));
+
+    expect(await screen.findByText("Diálogo de transferência")).toBeInTheDocument();
+    expect(mocks.transferDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ analysis: expect.objectContaining({ id: summary.id }) }),
+    );
+  });
+
+  it("lists and manually removes a recent analysis stored for the current user", async () => {
+    const recentSummary = {
+      ...summary,
+      id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      name: "Área visitada",
+    };
+    window.localStorage.setItem(
+      "bench-gpa:saved-areas:recent:owner-1",
+      JSON.stringify([{ analysisId: recentSummary.id, visitedAt: new Date().toISOString() }]),
+    );
+    mocks.listRecent.mockResolvedValue([recentSummary]);
+    renderWithClient(
+      <SavedAreaAnalysesManager
+        currentUserId="owner-1"
+        currentUserRole="user"
+        hierarchy={[]}
+        stores={[]}
+        currentProductCodes={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Análises salvas" }));
+
+    expect(await screen.findByText("Área visitada")).toBeInTheDocument();
+    expect(mocks.listRecent).toHaveBeenCalledWith({ data: { ids: [recentSummary.id] } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remover Área visitada das áreas recentes" }),
+    );
+    expect(window.localStorage.getItem("bench-gpa:saved-areas:recent:owner-1")).toBeNull();
   });
 });

@@ -2,11 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import type { PoolConnection } from "mysql2/promise";
 import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
+import { assertAdmin } from "./admin-utils";
+import { recordAudit } from "./audit";
 import db from "./db";
 import { asArray, asRecord, dateTimeStr, num, str, strOrNull } from "./api-types";
 import {
   CreateSavedAreaAnalysisSchema,
   SavedAreaAnalysisIdSchema,
+  SavedAreaAnalysisIdsSchema,
+  TransferSavedAreaAnalysisSchema,
   UpdateSavedAreaAnalysisSchema,
 } from "./schemas";
 
@@ -22,6 +26,8 @@ export interface SavedAreaAnalysisSummary {
 }
 
 export interface SavedAreaAnalysis extends SavedAreaAnalysisSummary {
+  ownerName: string | null;
+  ownerUsername: string | null;
   description: string | null;
   productCodes: string[];
   productHierarchy: SavedAreaProductHierarchy[];
@@ -122,6 +128,35 @@ export const listSavedAreaAnalyses = createServerFn({ method: "GET" })
     return asArray(rows).map(parseSummary);
   });
 
+export const listRecentSavedAreaAnalyses = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .validator((data: unknown) => SavedAreaAnalysisIdsSchema.parse(data))
+  .handler(async ({ data }): Promise<SavedAreaAnalysisSummary[]> => {
+    const placeholders = data.ids.map(() => "?").join(", ");
+    const [rows] = await db.query(
+      `SELECT
+         a.id,
+         a.owner_user_id,
+         a.name,
+         a.store_code,
+         s.store_name,
+         a.created_at,
+         a.updated_at,
+         (SELECT COUNT(*)
+          FROM saved_area_analysis_products p
+         WHERE p.analysis_id = a.id) AS product_count
+       FROM saved_area_analyses a
+       LEFT JOIN stores s ON s.store_code = a.store_code
+       WHERE a.id IN (${placeholders})`,
+      data.ids,
+    );
+    const byId = new Map(asArray(rows).map((row) => [str(asRecord(row).id), parseSummary(row)]));
+    return data.ids.flatMap((id) => {
+      const analysis = byId.get(id);
+      return analysis ? [analysis] : [];
+    });
+  });
+
 export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .validator((data: unknown) => SavedAreaAnalysisIdSchema.parse(data))
@@ -130,6 +165,8 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
       `SELECT
          a.id,
          a.owner_user_id,
+         owner.name AS owner_name,
+         owner.username AS owner_username,
          a.name,
          a.description,
          a.store_code,
@@ -138,6 +175,7 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
          a.updated_at,
          p.prod_code
        FROM saved_area_analyses a
+       LEFT JOIN users owner ON owner.id = a.owner_user_id
        LEFT JOIN stores s ON s.store_code = a.store_code
        LEFT JOIN saved_area_analysis_products p ON p.analysis_id = a.id
        WHERE a.id = ?
@@ -185,6 +223,8 @@ export const getSavedAreaAnalysis = createServerFn({ method: "POST" })
     }));
     return {
       ...parseSummary({ ...asRecord(analysisRow), product_count: productCodes.length }),
+      ownerName: strOrNull(asRecord(analysisRow).owner_name),
+      ownerUsername: strOrNull(asRecord(analysisRow).owner_username),
       description: strOrNull(asRecord(analysisRow).description),
       productCodes,
       productHierarchy,
@@ -284,4 +324,77 @@ export const deleteSavedAreaAnalysis = createServerFn({ method: "POST" })
     } finally {
       connection.release();
     }
+  });
+
+export const transferSavedAreaAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .validator((data: unknown) => TransferSavedAreaAnalysisSchema.parse(data))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    await assertAdmin(context);
+    const connection = await db.getConnection();
+    const auditDetail = await (async () => {
+      try {
+        await connection.beginTransaction();
+        const [analysisRows] = await connection.query(
+          `SELECT a.owner_user_id, u.username AS owner_username
+           FROM saved_area_analyses a
+           LEFT JOIN users u ON u.id = a.owner_user_id
+           WHERE a.id = ?
+           FOR UPDATE`,
+          [data.analysisId],
+        );
+        const analysis = asArray(analysisRows)[0];
+        if (!analysis) throw new Error("Análise salva não encontrada.");
+        const analysisRecord = asRecord(analysis);
+        const previousOwnerUserId = str(analysisRecord.owner_user_id);
+        const previousOwnerUsername = strOrNull(analysisRecord.owner_username);
+
+        if (previousOwnerUserId === data.targetUserId) {
+          throw new Error("O usuário selecionado já é o proprietário desta análise.");
+        }
+
+        const [targetRows] = await connection.query(
+          `SELECT id, username
+           FROM users
+           WHERE id = ? AND is_active = TRUE AND password IS NOT NULL
+           FOR UPDATE`,
+          [data.targetUserId],
+        );
+        const target = asArray(targetRows)[0];
+        if (!target) {
+          throw new Error("Selecione um usuário ativo que já tenha concluído o primeiro acesso.");
+        }
+        const targetUsername = strOrNull(asRecord(target).username);
+
+        const [updateResult] = await connection.query(
+          `UPDATE saved_area_analyses
+           SET owner_user_id = ?
+           WHERE id = ? AND owner_user_id = ?`,
+          [data.targetUserId, data.analysisId, previousOwnerUserId],
+        );
+        if (num(asRecord(updateResult).affectedRows) !== 1) {
+          throw new Error(
+            "A propriedade da análise foi alterada por outra operação. Tente novamente.",
+          );
+        }
+
+        await connection.commit();
+        return `proprietário anterior: ${previousOwnerUsername ?? previousOwnerUserId}; novo proprietário: ${targetUsername ?? data.targetUserId}`;
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    })();
+
+    await recordAudit({
+      action: "saved_area.transfer",
+      actorId: context.userId,
+      actorUsername: context.userUsername,
+      targetType: "saved_area_analysis",
+      targetId: data.analysisId,
+      detail: auditDetail,
+    });
+    return { ok: true };
   });

@@ -125,6 +125,7 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
         )}
         <SavedAreaAnalysesManager
           currentUserId={user.id}
+          currentUserRole={user.role}
           hierarchy={hierarchy}
           stores={view.stores.map((store) => ({ code: store.store_code, name: store.store_name }))}
           currentStoreCode={fStores.length === 1 ? fStores[0] : undefined}

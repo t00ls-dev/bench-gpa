@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Clock,
+  History,
   FolderOpen,
   Loader2,
   Package,
@@ -12,6 +13,8 @@ import {
   QrCode,
   Store,
   Trash2,
+  UserRoundCog,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -40,12 +43,27 @@ import { SavedAreaQrCodeDialog } from "@/components/saved-area-qr-code-dialog";
 import {
   deleteSavedAreaAnalysis,
   getSavedAreaAnalysis,
+  listRecentSavedAreaAnalyses,
   listSavedAreaAnalyses,
   type SavedAreaAnalysis,
   type SavedAreaAnalysisSummary,
 } from "@/lib/saved-area-analyses.functions";
 import { QUERY_STALE_CORE } from "@/lib/query-config";
 import type { HierarchyItem } from "@/lib/filter-cascade";
+import { hasAdminRole } from "@/lib/roles";
+import {
+  clearRecentSavedAreas,
+  getBrowserLocalStorage,
+  readRecentSavedAreas,
+  removeRecentSavedArea,
+  type RecentSavedAreaVisit,
+} from "@/lib/recent-saved-areas";
+
+const AdminSavedAreaTransferDialog = lazy(() =>
+  import("@/components/admin-saved-area-transfer-dialog").then((module) => ({
+    default: module.AdminSavedAreaTransferDialog,
+  })),
+);
 
 function formatUpdatedAt(value: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
@@ -55,6 +73,7 @@ function formatUpdatedAt(value: string): string {
 
 export function SavedAreaAnalysesManager({
   currentUserId,
+  currentUserRole,
   hierarchy,
   stores,
   currentStoreCode,
@@ -62,6 +81,7 @@ export function SavedAreaAnalysesManager({
   currentAnalysis,
 }: {
   currentUserId: string;
+  currentUserRole: string;
   hierarchy: HierarchyItem[];
   stores: SavedAreaStoreOption[];
   currentStoreCode?: string;
@@ -69,6 +89,7 @@ export function SavedAreaAnalysesManager({
   currentAnalysis?: SavedAreaAnalysis;
 }) {
   const listAnalyses = useServerFn(listSavedAreaAnalyses);
+  const listRecentAnalyses = useServerFn(listRecentSavedAreaAnalyses);
   const getAnalysis = useServerFn(getSavedAreaAnalysis);
   const deleteAnalysis = useServerFn(deleteSavedAreaAnalysis);
   const queryClient = useQueryClient();
@@ -83,12 +104,54 @@ export function SavedAreaAnalysesManager({
     "id" | "name" | "storeCode" | "storeName"
   > | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [recentVisits, setRecentVisits] = useState<RecentSavedAreaVisit[]>([]);
+  const recentIds = recentVisits.map((visit) => visit.analysisId);
+  const isAdmin = hasAdminRole(currentUserRole);
   const analysesQuery = useQuery({
     queryKey: ["saved-area-analyses", currentUserId],
     queryFn: () => listAnalyses({}),
     enabled: drawerOpen,
     staleTime: QUERY_STALE_CORE,
   });
+  const recentAnalysesQuery = useQuery({
+    queryKey: ["recent-saved-area-analyses", currentUserId, recentIds],
+    queryFn: async () => {
+      const analyses = await listRecentAnalyses({ data: { ids: recentIds } });
+      const availableIds = new Set(analyses.map((analysis) => analysis.id));
+      const storage = getBrowserLocalStorage();
+      if (storage) {
+        for (const analysisId of recentIds) {
+          if (!availableIds.has(analysisId)) {
+            removeRecentSavedArea(storage, currentUserId, analysisId);
+          }
+        }
+      }
+      return analyses;
+    },
+    enabled: drawerOpen && recentIds.length > 0,
+    staleTime: QUERY_STALE_CORE,
+  });
+
+  const changeDrawerOpen = (open: boolean) => {
+    setDrawerOpen(open);
+    if (!open) return;
+    const storage = getBrowserLocalStorage();
+    setRecentVisits(storage ? readRecentSavedAreas(storage, currentUserId) : []);
+  };
+
+  const removeRecent = (analysisId: string) => {
+    const storage = getBrowserLocalStorage();
+    if (!storage) return;
+    setRecentVisits(removeRecentSavedArea(storage, currentUserId, analysisId));
+  };
+
+  const clearRecent = () => {
+    const storage = getBrowserLocalStorage();
+    if (!storage) return;
+    clearRecentSavedAreas(storage, currentUserId);
+    setRecentVisits([]);
+  };
 
   const openEdit = async (summary?: SavedAreaAnalysisSummary) => {
     if (!summary && currentAnalysis) {
@@ -137,6 +200,7 @@ export function SavedAreaAnalysesManager({
     setDeleting(true);
     try {
       await deleteAnalysis({ data: { id: target.id } });
+      removeRecent(target.id);
       queryClient.removeQueries({
         queryKey: ["saved-area-analysis", currentUserId, target.id],
       });
@@ -171,21 +235,26 @@ export function SavedAreaAnalysesManager({
             <Plus className="mr-2 size-4" /> Salvar análise
           </Button>
         ) : null}
-        {!currentAnalysis ? (
-          <Button onClick={() => setDrawerOpen(true)}>
-            <FolderOpen className="mr-2 size-4" /> Análises salvas
+        <Button onClick={() => changeDrawerOpen(true)}>
+          <FolderOpen className="mr-2 size-4" /> Análises salvas
+        </Button>
+        {currentAnalysis && isAdmin ? (
+          <Button variant="outline" onClick={() => setTransferOpen(true)}>
+            <UserRoundCog className="mr-2 size-4" /> Transferir
           </Button>
         ) : null}
       </div>
 
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+      <Sheet open={drawerOpen} onOpenChange={changeDrawerOpen}>
         <SheetContent
           className="flex flex-col p-0"
           style={{ width: "min(100vw, 28rem)", maxWidth: "none" }}
         >
           <SheetHeader className="min-w-0 border-b p-6 pr-12">
             <SheetTitle>Análises salvas</SheetTitle>
-            <SheetDescription>Composições privadas vinculadas à sua conta.</SheetDescription>
+            <SheetDescription>
+              Acesse áreas recentes ou gerencie as composições criadas por você.
+            </SheetDescription>
           </SheetHeader>
           <div className="border-b p-4">
             <Button className="w-full" onClick={() => setCreateOpen(true)}>
@@ -193,6 +262,92 @@ export function SavedAreaAnalysesManager({
             </Button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <section className="mb-6" aria-labelledby="recent-saved-areas-heading">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3
+                  id="recent-saved-areas-heading"
+                  className="flex items-center gap-2 text-sm font-semibold"
+                >
+                  <History className="size-4 text-muted-foreground" /> Recentemente visitadas
+                </h3>
+                {recentVisits.length > 0 ? (
+                  <Button variant="ghost" size="sm" onClick={clearRecent}>
+                    Limpar
+                  </Button>
+                ) : null}
+              </div>
+              {recentVisits.length === 0 ? (
+                <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                  As áreas abertas neste dispositivo aparecerão aqui por até 30 dias.
+                </p>
+              ) : recentAnalysesQuery.isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Carregando áreas recentes…
+                </div>
+              ) : recentAnalysesQuery.isError ? (
+                <div className="rounded-lg border border-destructive/40 p-3">
+                  <p className="text-sm text-destructive">Não foi possível carregar as recentes.</p>
+                  <Button
+                    className="mt-2"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => recentAnalysesQuery.refetch()}
+                  >
+                    Tentar novamente
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recentAnalysesQuery.data?.map((analysis) => {
+                    const visit = recentVisits.find((item) => item.analysisId === analysis.id);
+                    return (
+                      <article
+                        key={analysis.id}
+                        className="flex min-w-0 items-start gap-2 rounded-lg border bg-card p-3"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={async () => {
+                            changeDrawerOpen(false);
+                            await navigate({
+                              to: "/area/$analysisId",
+                              params: { analysisId: analysis.id },
+                            });
+                          }}
+                        >
+                          <span className="block truncate text-sm font-medium">
+                            {analysis.name}
+                          </span>
+                          <span className="mt-1 block truncate text-xs text-muted-foreground">
+                            Loja {analysis.storeCode}
+                            {analysis.storeName ? ` - ${analysis.storeName}` : ""}
+                          </span>
+                          {visit ? (
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              Visitada em {formatUpdatedAt(visit.visitedAt)}
+                            </span>
+                          ) : null}
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 shrink-0"
+                          onClick={() => removeRecent(analysis.id)}
+                          aria-label={`Remover ${analysis.name} das áreas recentes`}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <FolderOpen className="size-4 text-muted-foreground" /> Criadas por mim
+            </h3>
             {analysesQuery.isLoading ? (
               <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> Carregando análises…
@@ -327,6 +482,21 @@ export function SavedAreaAnalysesManager({
           open
           onOpenChange={(open) => !open && setQrCodeTarget(null)}
         />
+      ) : null}
+
+      {currentAnalysis && transferOpen ? (
+        <Suspense fallback={null}>
+          <AdminSavedAreaTransferDialog
+            analysis={currentAnalysis}
+            open
+            onOpenChange={setTransferOpen}
+            onTransferred={() =>
+              queryClient.invalidateQueries({
+                queryKey: ["saved-area-analysis", currentUserId, currentAnalysis.id],
+              })
+            }
+          />
+        </Suspense>
       ) : null}
 
       <AlertDialog

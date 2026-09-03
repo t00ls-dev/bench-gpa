@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => {
     connection,
     poolQuery: vi.fn(),
     getConnection: vi.fn(async () => connection),
+    assertAdmin: vi.fn(),
+    recordAudit: vi.fn(),
   };
 });
 
@@ -89,13 +91,23 @@ vi.mock("./db", () => ({
   },
 }));
 
+vi.mock("./admin-utils", () => ({
+  assertAdmin: mocks.assertAdmin,
+}));
+
+vi.mock("./audit", () => ({
+  recordAudit: mocks.recordAudit,
+}));
+
 import {
   createSavedAreaAnalysis,
   deleteSavedAreaAnalysis,
   getSavedAreaAnalysis,
+  listRecentSavedAreaAnalyses,
   listSavedAreaAnalyses,
   type SavedAreaAnalysis,
   updateSavedAreaAnalysis,
+  transferSavedAreaAnalysis,
 } from "./saved-area-analyses.functions";
 
 const id = "550e8400-e29b-41d4-a716-446655440000";
@@ -111,6 +123,8 @@ beforeEach(() => {
   mocks.connection.query.mockResolvedValue([[]]);
   mocks.connection.commit.mockResolvedValue(undefined);
   mocks.connection.rollback.mockResolvedValue(undefined);
+  mocks.assertAdmin.mockResolvedValue(undefined);
+  mocks.recordAudit.mockResolvedValue(undefined);
 });
 
 describe("listSavedAreaAnalyses", () => {
@@ -156,6 +170,8 @@ describe("getSavedAreaAnalysis", () => {
         {
           id,
           owner_user_id: "owner-2",
+          owner_name: "Responsável",
+          owner_username: "responsavel",
           name: "Ponta de gôndola",
           description: "Exposição próxima à entrada",
           store_code: "1516",
@@ -166,6 +182,8 @@ describe("getSavedAreaAnalysis", () => {
         {
           id,
           owner_user_id: "owner-2",
+          owner_name: "Responsável",
+          owner_username: "responsavel",
           name: "Ponta de gôndola",
           description: "Exposição próxima à entrada",
           store_code: "1516",
@@ -217,6 +235,8 @@ describe("getSavedAreaAnalysis", () => {
     ]);
     expect(result).toMatchObject({
       ownerUserId: "owner-2",
+      ownerName: "Responsável",
+      ownerUsername: "responsavel",
       description: "Exposição próxima à entrada",
     });
     expect(mocks.poolQuery).toHaveBeenNthCalledWith(
@@ -239,6 +259,47 @@ describe("getSavedAreaAnalysis", () => {
       (getSavedAreaAnalysis as (input: { id: string }) => Promise<unknown>)({ id }),
     ).rejects.toThrow("Análise salva não encontrada.");
     expect(mocks.poolQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("listRecentSavedAreaAnalyses", () => {
+  it("returns current summaries in the requested recent order", async () => {
+    const secondId = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    mocks.poolQuery.mockResolvedValueOnce([
+      [
+        {
+          id,
+          owner_user_id: "owner-1",
+          name: "Primeira",
+          store_code: "1516",
+          store_name: "Loja 1516",
+          product_count: 2,
+          ...timestamps,
+        },
+        {
+          id: secondId,
+          owner_user_id: "owner-2",
+          name: "Segunda",
+          store_code: "2000",
+          store_name: "Loja 2000",
+          product_count: 3,
+          ...timestamps,
+        },
+      ],
+    ]);
+
+    const result = await (
+      listRecentSavedAreaAnalyses as (input: {
+        ids: string[];
+      }) => Promise<{ id: string; ownerUserId: string }[]>
+    )({ ids: [secondId, id] });
+
+    expect(result.map((analysis) => analysis.id)).toEqual([secondId, id]);
+    expect(result[0]?.ownerUserId).toBe("owner-2");
+    expect(mocks.poolQuery).toHaveBeenCalledWith(expect.stringContaining("a.id IN (?, ?)"), [
+      secondId,
+      id,
+    ]);
   });
 });
 
@@ -447,6 +508,108 @@ describe("deleteSavedAreaAnalysis", () => {
     await expect(
       (deleteSavedAreaAnalysis as (input: { id: string }) => Promise<unknown>)({ id }),
     ).rejects.toThrow("delete analysis failed");
+    expect(mocks.connection.rollback).toHaveBeenCalledOnce();
+    expect(mocks.connection.commit).not.toHaveBeenCalled();
+  });
+});
+
+describe("transferSavedAreaAnalysis", () => {
+  const targetUserId = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+
+  it("transfers only ownership and records the administrative action", async () => {
+    mocks.connection.query
+      .mockResolvedValueOnce([[{ owner_user_id: "owner-1", owner_username: "owner" }]])
+      .mockResolvedValueOnce([[{ id: targetUserId, username: "recipient" }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+
+    await (
+      transferSavedAreaAnalysis as (input: {
+        analysisId: string;
+        targetUserId: string;
+      }) => Promise<unknown>
+    )({ analysisId: id, targetUserId });
+
+    expect(mocks.assertAdmin).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "owner-1", userUsername: "owner" }),
+    );
+    expect(mocks.connection.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining("SET owner_user_id = ?"),
+      [targetUserId, id, "owner-1"],
+    );
+    expect(mocks.connection.commit).toHaveBeenCalledOnce();
+    expect(mocks.recordAudit).toHaveBeenCalledWith({
+      action: "saved_area.transfer",
+      actorId: "owner-1",
+      actorUsername: "owner",
+      targetType: "saved_area_analysis",
+      targetId: id,
+      detail: "proprietário anterior: owner; novo proprietário: recipient",
+    });
+  });
+
+  it("rejects an inactive, pending or missing recipient", async () => {
+    mocks.connection.query
+      .mockResolvedValueOnce([[{ owner_user_id: "owner-1", owner_username: "owner" }]])
+      .mockResolvedValueOnce([[]]);
+
+    await expect(
+      (
+        transferSavedAreaAnalysis as (input: {
+          analysisId: string;
+          targetUserId: string;
+        }) => Promise<unknown>
+      )({ analysisId: id, targetUserId }),
+    ).rejects.toThrow("usuário ativo que já tenha concluído o primeiro acesso");
+    expect(mocks.connection.rollback).toHaveBeenCalledOnce();
+    expect(mocks.recordAudit).not.toHaveBeenCalled();
+  });
+
+  it("rejects the current owner as recipient", async () => {
+    mocks.connection.query.mockResolvedValueOnce([
+      [{ owner_user_id: targetUserId, owner_username: "recipient" }],
+    ]);
+
+    await expect(
+      (
+        transferSavedAreaAnalysis as (input: {
+          analysisId: string;
+          targetUserId: string;
+        }) => Promise<unknown>
+      )({ analysisId: id, targetUserId }),
+    ).rejects.toThrow("já é o proprietário");
+    expect(mocks.connection.query).toHaveBeenCalledOnce();
+    expect(mocks.connection.rollback).toHaveBeenCalledOnce();
+  });
+
+  it("stops before opening a transaction when admin authorization fails", async () => {
+    mocks.assertAdmin.mockRejectedValueOnce(new Error("Acesso negado"));
+
+    await expect(
+      (
+        transferSavedAreaAnalysis as (input: {
+          analysisId: string;
+          targetUserId: string;
+        }) => Promise<unknown>
+      )({ analysisId: id, targetUserId }),
+    ).rejects.toThrow("Acesso negado");
+    expect(mocks.getConnection).not.toHaveBeenCalled();
+  });
+
+  it("rolls back if ownership changes concurrently", async () => {
+    mocks.connection.query
+      .mockResolvedValueOnce([[{ owner_user_id: "owner-1", owner_username: "owner" }]])
+      .mockResolvedValueOnce([[{ id: targetUserId, username: "recipient" }]])
+      .mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    await expect(
+      (
+        transferSavedAreaAnalysis as (input: {
+          analysisId: string;
+          targetUserId: string;
+        }) => Promise<unknown>
+      )({ analysisId: id, targetUserId }),
+    ).rejects.toThrow("alterada por outra operação");
     expect(mocks.connection.rollback).toHaveBeenCalledOnce();
     expect(mocks.connection.commit).not.toHaveBeenCalled();
   });
