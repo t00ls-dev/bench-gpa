@@ -264,6 +264,44 @@ jobs:
               echo "WARNING: staging .cronsrc.new missing (previous rsync must have failed), skipping"
             fi
 
+      # Hestia runs the cron jobs and PM2 as admin, while the deploy connects
+      # as debian. Restore both sides explicitly so an operational ownership
+      # change cannot leave successful cron triggers unable to read .env or
+      # append to their logs.
+      - name: Restore runtime permissions
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 30s
+          command_timeout: 3m
+          script: |
+            set -euo pipefail
+            APPDIR=/home/admin/web/gpa.t00ls.dev/public_html
+
+            sudo chown admin:www-data \
+              "$APPDIR" "$APPDIR/.env" "$APPDIR/ecosystem.config.cjs" \
+              "$APPDIR/package.json" "$APPDIR/bun.lock" \
+              "$APPDIR/tsconfig.json" "$APPDIR/bunfig.toml"
+            sudo chown -R admin:www-data \
+              "$APPDIR/src" "$APPDIR/scripts" "$APPDIR/node_modules" "$APPDIR/logs"
+            sudo chmod 640 "$APPDIR/.env"
+            sudo find "$APPDIR/logs" -type d -exec chmod 775 {} +
+            sudo find "$APPDIR/logs" -type f -exec chmod 664 {} +
+
+            sudo setfacl -m u:debian:rwx "$APPDIR"
+            sudo setfacl -Rm u:debian:rwX "$APPDIR/logs"
+            sudo setfacl -m d:u:debian:rwx "$APPDIR/logs"
+
+            sudo -u admin test -r "$APPDIR"
+            sudo -u admin test -x "$APPDIR"
+            sudo -u admin test -r "$APPDIR/.env"
+            sudo -u admin test -r "$APPDIR/package.json"
+            sudo -u admin test -w "$APPDIR/logs/purge.log"
+            sudo -u admin test -w "$APPDIR/logs/refresh-universe.log"
+
       # Migrations BEFORE the swap: the baseline is idempotent and
       # backward-compatible (re-syncs procedures without breaking the old
       # code still running). If it fails, the job stops here -- no new code
