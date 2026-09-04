@@ -157,9 +157,8 @@ export function AreaTable({
               </button>
             )}
           </div>
-          {/* Seletor de página e botão de PDF agrupados, pra sempre quebrarem
-              juntos: sem isso o PDF ficava sozinho numa linha própria no
-              celular, com bastante espaço vazio ao lado. */}
+          {/* Keep the page selector and PDF button together so the PDF button
+              does not wrap onto an otherwise empty row on mobile. */}
           <div className="flex items-center gap-2">
             <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
               <SelectTrigger className="h-9 flex-1 sm:w-[110px]">
@@ -309,10 +308,6 @@ export function AreaTable({
           </Button>
         </div>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Linhas em amarelo indicam produtos sem venda no período. Clique em uma linha para abrir a
-        Análise de Produto.
-      </p>
     </div>
   );
 }
