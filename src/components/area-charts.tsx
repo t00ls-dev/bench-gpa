@@ -8,6 +8,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  type DotItemDotProps,
 } from "recharts";
 import type { DateVal } from "@/lib/api-types";
 import {
@@ -22,6 +23,25 @@ function yAxisValue(value: number): string {
   return `${Math.round(value / 1_000)}k`;
 }
 
+type ExtremeDotProps = Pick<DotItemDotProps, "cx" | "cy" | "index"> & {
+  maxIndex: number;
+  minIndex: number;
+};
+
+function ExtremeDot({ cx, cy, index, maxIndex, minIndex }: ExtremeDotProps) {
+  if (cx == null || cy == null || (index !== maxIndex && index !== minIndex)) return null;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={index === maxIndex ? "var(--success)" : "var(--destructive)"}
+      stroke="var(--card)"
+      strokeWidth={2}
+    />
+  );
+}
+
 export interface AreaChartsProps {
   byDate: DateVal[];
   availableDates: string[];
@@ -34,14 +54,9 @@ export function AreaCharts({ byDate, availableDates, dateFrom, dateTo }: AreaCha
   const weekdayAverages = calculateAreaWeekdayAverages(dailySeries);
   const comparableWeekdays = weekdayAverages.filter((item) => item.count >= 2);
   const hasWeekdayComparison = comparableWeekdays.length >= 2;
-  const peak = dailySeries.reduce<DateVal | null>(
-    (highest, item) => (!highest || item.val > highest.val ? item : highest),
-    null,
-  );
-  const lowest = dailySeries.reduce<DateVal | null>(
-    (smallest, item) => (!smallest || item.val < smallest.val ? item : smallest),
-    null,
-  );
+  const dailyValues = dailySeries.map((item) => item.val);
+  const maxIndex = dailyValues.indexOf(Math.max(...dailyValues));
+  const minIndex = dailyValues.indexOf(Math.min(...dailyValues));
 
   return (
     <section className={cn("mb-4 grid gap-4", hasWeekdayComparison && "lg:grid-cols-2")}>
@@ -83,7 +98,15 @@ export function AreaCharts({ byDate, availableDates, dateFrom, dateTo }: AreaCha
                     name="Venda"
                     stroke="var(--chart-1)"
                     strokeWidth={2.5}
-                    dot={dailySeries.length <= 14}
+                    dot={({ cx, cy, index }) => (
+                      <ExtremeDot
+                        cx={cx}
+                        cy={cy}
+                        index={index}
+                        maxIndex={maxIndex}
+                        minIndex={minIndex}
+                      />
+                    )}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
@@ -91,12 +114,6 @@ export function AreaCharts({ byDate, availableDates, dateFrom, dateTo }: AreaCha
             </div>
           )}
         </div>
-        {peak && lowest ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Pico em {fmtBRShort(peak.date)}: {fmtBRL(peak.val)}. Menor venda em{" "}
-            {fmtBRShort(lowest.date)}: {fmtBRL(lowest.val)}.
-          </p>
-        ) : null}
         {dailySeries.length > 0 ? (
           <table className="sr-only">
             <caption>Vendas diárias da área</caption>

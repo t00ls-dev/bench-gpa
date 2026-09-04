@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildAreaChartScopeKey,
@@ -12,10 +12,19 @@ import { AreaCharts } from "./area-charts";
 
 vi.mock("recharts", () => {
   const Container = ({ children }: PropsWithChildren) => <div>{children}</div>;
+  const Line = ({
+    dot,
+  }: {
+    dot?: (props: { cx: number; cy: number; index: number }) => ReactNode;
+  }) => (
+    <svg data-testid="area-daily-line">
+      {Array.from({ length: 14 }, (_, index) => dot?.({ cx: index, cy: index, index }))}
+    </svg>
+  );
   return {
     ResponsiveContainer: Container,
     LineChart: Container,
-    Line: () => null,
+    Line,
     BarChart: Container,
     Bar: () => null,
     CartesianGrid: () => null,
@@ -97,9 +106,9 @@ describe("area chart calculations", () => {
 });
 
 describe("AreaCharts", () => {
-  it("shows evolution and the weekday comparison for a comparable period", () => {
+  it("shows evolution, weekday comparison and only the maximum and minimum dots", () => {
     const byDate = fourteenDates.map((date, index) => ({ date, val: (index + 1) * 100 }));
-    render(
+    const { container } = render(
       <AreaCharts
         byDate={byDate}
         availableDates={fourteenDates}
@@ -110,7 +119,10 @@ describe("AreaCharts", () => {
 
     expect(screen.getByRole("heading", { name: "Evolução das vendas" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Média por dia da semana" })).toBeInTheDocument();
-    expect(screen.getByText(/Pico em 15\/08\/26/)).toBeInTheDocument();
+    expect(screen.queryByText(/Pico em/)).not.toBeInTheDocument();
+    expect(container.querySelectorAll("circle")).toHaveLength(2);
+    expect(container.querySelector('circle[fill="var(--success)"]')).toBeInTheDocument();
+    expect(container.querySelector('circle[fill="var(--destructive)"]')).toBeInTheDocument();
   });
 
   it("does not show a weekday comparison based on one occurrence", () => {
