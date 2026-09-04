@@ -49,9 +49,8 @@ jobs:
       # path. This is what would have caught the seroval regression
       # (GHSA-mv8w-475r-vwqw) automatically, instead of needing a manual audit.
       - name: Dependency audit (bun audit)
-        run: |
-          bun audit || true
-          bun audit --audit-level=critical
+        timeout-minutes: 5
+        run: bun audit --audit-level=critical
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
