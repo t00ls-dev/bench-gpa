@@ -85,6 +85,11 @@ export default function HowToPage() {
           <li>Ordene por qualquer coluna clicando no cabeçalho.</li>
           <li>Clique em um produto para abrir sua análise detalhada.</li>
           <li>Exporte a tabela em PDF.</li>
+          <li>
+            Os gráficos refletem o período e a composição atuais, inclusive nas Análises salvas. A
+            média por dia da semana aparece quando ao menos dois dias da semana têm duas ou mais
+            ocorrências comparáveis.
+          </li>
           <li>Salve uma composição de produtos para uma loja e volte a ela por Análises salvas.</li>
           <li>
             Em Criadas por mim, você gerencia suas análises. Qualquer usuário autenticado que receba

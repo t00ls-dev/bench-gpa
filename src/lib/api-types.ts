@@ -64,6 +64,7 @@ export interface AreaProduct {
   lastSaleDate: string | null;
 }
 export interface AreaAnalysisResult {
+  chartScopeKey: string;
   total: number;
   plusTotal: number;
   plusWithSale: number;

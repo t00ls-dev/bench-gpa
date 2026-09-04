@@ -81,6 +81,7 @@ function product(overrides: Partial<AreaProduct>): AreaProduct {
 
 function areaResult(products: AreaProduct[] = []) {
   return {
+    chartScopeKey: "",
     total: 1000,
     plusTotal: 10,
     plusWithSale: 8,

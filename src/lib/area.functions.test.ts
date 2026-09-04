@@ -106,8 +106,10 @@ const FILTERS: AreaInput = {
 };
 
 type AreaFn = (d: AreaInput) => Promise<{
+  chartScopeKey: string;
   total: number;
   products: unknown[];
+  byDate: Array<{ date: string; val: number }>;
   totalPages?: number;
 }>;
 const call = (d: Partial<AreaInput>) =>
@@ -125,6 +127,17 @@ describe("getAreaAnalysis", () => {
   it("maps the proc's four result sets", async () => {
     const r = await call({});
     expect(r.total).toBe(1000);
+    expect(JSON.parse(r.chartScopeKey)).toEqual([
+      "2026-07-14",
+      "2026-07-20",
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ]);
+    expect(r.byDate).toEqual([{ date: "2026-07-20", val: 1000 }]);
     expect(r.products).toHaveLength(1);
     expect(r.products[0]).toMatchObject({ prod_code: "1", val: 1000, lastSaleDate: "2026-07-20" });
   });

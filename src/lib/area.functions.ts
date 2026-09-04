@@ -16,6 +16,7 @@ import {
 import { AreaAnalysisSchema, AreaProductFilterOptionsSchema } from "./schemas";
 import { CACHE_TTL_LONG, CACHE_TTL_SHORT } from "./cache";
 import { buildCacheKey } from "./cache-key";
+import { buildAreaChartScopeKey } from "./area-chart-data";
 
 /**
  * Above this page size the response doesn't get cached: this is the PDF
@@ -29,6 +30,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => AreaAnalysisSchema.parse(d))
   .handler(async ({ data }): Promise<AreaAnalysisResult> => {
+    const chartScopeKey = buildAreaChartScopeKey(data);
     // "days without a sale" isn't a column: it's sorted by last_sale_date
     // INVERTED, more days idle = older sale. The translation has to happen
     // on the server because the listing is paginated: sortBy 'daysSince'
@@ -61,6 +63,7 @@ export const getAreaAnalysis = createServerFn({ method: "POST" })
       const kpi = asRecord(asArray(kpiRows)[0]);
       const totalProducts = num(asRecord(asArray(totalCountRows)[0]).total_products);
       return {
+        chartScopeKey,
         total: num(kpi.total),
         plusTotal: num(kpi.plus_total),
         plusWithSale: num(kpi.plus_with_sale),

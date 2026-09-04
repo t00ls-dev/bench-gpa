@@ -114,9 +114,10 @@ verificam novamente a condição de administrador.
 O Dashboard apresenta venda total, evolução diária, ranking de lojas e rankings
 por níveis da hierarquia comercial. A página Produto apresenta histórico,
 comparação entre lojas e médias por data ou dia da semana. A página Área permite
-compor filtros hierárquicos, produtos, loja e período, salvar uma análise e
-exportar o resultado. A página Previsão calcula referências a partir de
-ocorrências anteriores do mesmo dia da semana.
+compor filtros hierárquicos, produtos, loja e período, exibir evolução diária e
+média por dia da semana, salvar uma análise e exportar o resultado. A página
+Previsão calcula referências a partir de ocorrências anteriores do mesmo dia da
+semana.
 
 Os cálculos, filtros, previsões, agregações e formas de apresentação são próprios
 do Bench GPA. Não devem ser descritos como cálculos ou manifestações oficiais da

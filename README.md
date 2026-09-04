@@ -181,7 +181,7 @@ explícita de publicar em produção.
 | Trocar senha      | `/change-password` | Sim   | Troca voluntária ou forçada (senha expirada há 30+ dias)               |
 | Dashboard         | `/`                | Sim   | KPIs, evolução diária, top lojas e rankings                            |
 | Produto           | `/product`         | Sim   | Análise de produto por período, dia da semana e lojas persistidas      |
-| Área              | `/area`            | Sim   | Drill-down até Produto, tabela virtualizada e PDF export               |
+| Área              | `/area`            | Sim   | Drill-down, evolução diária, média semanal, tabela e PDF export        |
 | Previsão de Venda | `/forecast`        | Sim   | Venda esperada por produto de Perecíveis numa loja/dia, com PDF export |
 | Upload            | `/upload`          | Admin | Upload de planilhas XLSX                                               |
 | Admin             | `/admin`           | Admin | Gestão de usuários                                                     |
@@ -245,7 +245,7 @@ executado na VPS de produção.
 - **Filtros cascata**: Loja → Departamento → Seção → Grupo → Subgrupo → Produto na Área; Seção → Grupo → Subgrupo → Produto na Previsão. Dependentes são limpos ao mudar o pai. Alterar somente a data da Previsão preserva os filtros selecionados.
 - **Hierarquia comercial**: `product_universe` é a fonte da classificação atual. Vendas históricas são atribuídas ao Departamento, Seção, Grupo e Subgrupo atuais do produto, não à classificação registrada no dia da venda.
 - **UX**: Bottom tab bar mobile, View Transitions API e exportação PDF (Área e Previsão de Venda).
-- **Áreas salvas**: composição persistente com um proprietário, leitura compartilhável entre usuários autenticados por URL/QR Code, transferência de propriedade somente por admin e histórico local por usuário com até 10 visitas por 30 dias.
+- **Áreas salvas**: composição persistente com um proprietário, leitura compartilhável entre usuários autenticados por URL/QR Code, mesmos gráficos da Área, transferência de propriedade somente por admin e histórico local por usuário com até 10 visitas por 30 dias.
 - **Deploy**: tag `v*` ou dispatch manual na `main` inicia a publicação explícita pelo GitHub Actions (`.github/workflows/ci.yml`). O workflow envia `.output` por rsync para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), cria uma release em `releases/<timestamp>-<sha-curto>/`, troca o symlink `current` atomicamente e recarrega o PM2 (`fork`/1 instância, VPS tem 1 núcleo só). O health-check reverte automaticamente em caso de falha. As cinco releases mais recentes são mantidas. Pushes comuns não publicam nem armazenam artefatos. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
 

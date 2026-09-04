@@ -9,6 +9,8 @@ import { DateRangePicker } from "@/components/date-range-picker";
 import { FilterField } from "@/components/filter-field";
 import { SavedAreaAnalysesManager } from "@/components/saved-area-analyses-manager";
 import { Layers } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { Route } from "./area";
 import { Route as AuthenticatedRoute } from "./route";
 import { useAreaProductsView } from "@/hooks/use-area-products-view";
@@ -16,6 +18,59 @@ import { useAreaPdfExport } from "@/hooks/use-area-pdf-export";
 import type { PAGE_SIZE_OPTIONS } from "@/lib/schemas";
 import type { AreaSearchParams } from "@/hooks/use-area-products-view";
 import type { SavedAreaAnalysis } from "@/lib/saved-area-analyses.functions";
+import type { AreaChartsProps } from "@/components/area-charts";
+import { buildAreaChartScopeKey, isAreaChartScopeUpdating } from "@/lib/area-chart-data";
+
+function createLazyAreaCharts() {
+  return lazy(() =>
+    import("@/components/area-charts").then((module) => ({ default: module.AreaCharts })),
+  );
+}
+
+const InitialAreaCharts = createLazyAreaCharts();
+
+function AreaChartsSkeleton() {
+  return (
+    <section className="mb-4 grid gap-4 lg:grid-cols-2" aria-label="Carregando gráficos">
+      <div className="kpi-card">
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+      <div className="kpi-card">
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    </section>
+  );
+}
+
+function RetryableAreaCharts(props: AreaChartsProps) {
+  const [lazyState, setLazyState] = useState(() => ({
+    attempt: 0,
+    Component: InitialAreaCharts,
+  }));
+  const retry = () =>
+    setLazyState((current) => ({
+      attempt: current.attempt + 1,
+      Component: createLazyAreaCharts(),
+    }));
+
+  return (
+    <Suspense fallback={<AreaChartsSkeleton />}>
+      <ErrorBoundary
+        key={lazyState.attempt}
+        fallback={
+          <div className="kpi-card mb-4 flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-sm text-muted-foreground">Não foi possível carregar os gráficos.</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={retry}>
+              Tentar novamente
+            </Button>
+          </div>
+        }
+      >
+        <lazyState.Component {...props} />
+      </ErrorBoundary>
+    </Suspense>
+  );
+}
 
 interface AreaPageContentProps {
   searchParams: AreaSearchParams;
@@ -95,6 +150,8 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
     title: savedAnalysis?.name,
     subtitle: savedAnalysis?.description,
   });
+  const chartScopeKey = buildAreaChartScopeKey(af);
+  const chartsUpdating = isAreaChartScopeUpdating(isFetching, data?.chartScopeKey, chartScopeKey);
 
   return (
     <div>
@@ -199,6 +256,7 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
               </div>
             ))}
           </section>
+          <AreaChartsSkeleton />
           <div className="kpi-card min-w-0">
             <div className="mb-3 flex items-center gap-2">
               <Skeleton className="h-5 w-44" />
@@ -224,6 +282,17 @@ export function AreaPageContent({ searchParams, savedAnalysis }: AreaPageContent
             noSale={noSale}
             avgPerPlu={data?.avgPerPlu ?? 0}
           />
+          {chartsUpdating ? (
+            <AreaChartsSkeleton />
+          ) : (
+            <RetryableAreaCharts
+              key={chartScopeKey}
+              byDate={data?.byDate ?? []}
+              availableDates={opts?.availableDates ?? []}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+            />
+          )}
           <AreaTable
             products={products}
             totalRows={totalRows}

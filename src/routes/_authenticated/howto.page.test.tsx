@@ -23,6 +23,8 @@ describe("HowToPage", () => {
     expect(screen.getByRole("heading", { name: "Área" })).toBeInTheDocument();
     expect(screen.getByText(/qualquer usuário autenticado que receba o link/i)).toBeInTheDocument();
     expect(screen.getByText(/recentemente visitadas por até 30 dias/i)).toBeInTheDocument();
+    expect(screen.getByText(/inclusive nas Análises salvas/i)).toBeInTheDocument();
+    expect(screen.getByText(/duas ou mais ocorrências comparáveis/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Importar Dados" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Administração" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Documentação" })).not.toBeInTheDocument();

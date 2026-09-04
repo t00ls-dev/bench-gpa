@@ -132,7 +132,8 @@ esta reorganização) antes do arquivo ser removido.
 diferente dos outros três: é uma lista de _ideias de feature_ (dashboard
 por loja, sazonalidade, previsão, gap de sortimento, relatórios agendados),
 não um diagnóstico de código: o próprio arquivo já dizia "independente da
-migração", e continua válido como backlog. Foi desmarcado como histórico.
+migração", e continua válido como backlog com o estado de cada ideia atualizado.
+Foi desmarcado como histórico.
 
 Um quinto arquivo da mesma pasta, `performance.md`, foi apagado (não
 marcado) em 26/07/2026: media coisa errada e priorizava otimizações que a

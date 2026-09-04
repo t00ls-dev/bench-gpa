@@ -1,8 +1,9 @@
 # Novas Análises Possíveis
 
 > Backlog de ideias de feature, não diagnóstico de código, por isso não foi
-> invalidado pela migração Supabase → MariaDB (verificado 30/07/2026: nenhuma
-> das 5 ideias abaixo foi implementada desde que este documento foi escrito).
+> invalidado pela migração Supabase → MariaDB. Verificado em 04/09/2026: a
+> sazonalidade semanal foi parcialmente implementada na Área; os estados abaixo
+> distinguem o que já existe do que continua pendente.
 > Escrito com base nos RPCs/stored procedures existentes no banco sem UI e nos
 > dados disponíveis; os nomes de RPC mudaram (era Supabase → MariaDB), mas a
 > ideia de cada análise continua de pé. Ver `docs/continuar.md` para o que está
@@ -26,9 +27,13 @@ Dados disponíveis: 18 lojas com vendas diárias.
 
 ## 2. Sazonalidade / Dia da Semana
 
-O RPC `product_analysis` já calcula dia da semana. Generalizar:
+Implementado na Área: evolução diária e média por dia da semana para o período e
+a composição selecionados, incluindo Análises salvas. A comparação exige ao
+menos duas ocorrências em pelo menos dois dias da semana.
 
-- Vendas por dia da semana (segunda a domingo)
+Ainda pendente:
+
+- Outras visualizações de vendas por dia da semana
 - Dias úteis vs finais de semana
 - Calendário de calor (dia × loja ou dia × departamento)
 - Esforço: **baixo** | Impacto: **alto**
@@ -68,10 +73,10 @@ O RPC `product_analysis` já calcula dia da semana. Generalizar:
 
 ## Resumo
 
-| Prioridade | Análise                | Esforço | Impacto | Observação                           |
-| ---------- | ---------------------- | ------- | ------- | ------------------------------------ |
-| **Alta**   | Performance por Loja   | Médio   | Alto    | Dados disponíveis                    |
-| **Média**  | Sazonalidade           | Baixo   | Alto    | Lógica já existe em product_analysis |
-| **Média**  | Previsão/Tendências    | Médio   | Médio   | Média móvel simples                  |
-| **Média**  | Sortimento/Gap         | Médio   | Alto    | Expande area_analysis                |
-| **Baixa**  | Relatórios Programados | Alto    | Médio   | Requer infra de email                |
+| Prioridade | Análise                | Esforço | Impacto | Observação                               |
+| ---------- | ---------------------- | ------- | ------- | ---------------------------------------- |
+| **Alta**   | Performance por Loja   | Médio   | Alto    | Dados disponíveis                        |
+| **Média**  | Sazonalidade           | Baixo   | Alto    | Parcial na Área; demais visões pendentes |
+| **Média**  | Previsão/Tendências    | Médio   | Médio   | Média móvel simples                      |
+| **Média**  | Sortimento/Gap         | Médio   | Alto    | Expande area_analysis                    |
+| **Baixa**  | Relatórios Programados | Alto    | Médio   | Requer infra de email                    |
