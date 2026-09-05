@@ -50,7 +50,39 @@ jobs:
       # (GHSA-mv8w-475r-vwqw) automatically, instead of needing a manual audit.
       - name: Dependency audit (bun audit)
         timeout-minutes: 2
-        run: timeout 90s bun audit --json --audit-level=critical
+        run: |
+          audit_report="$(mktemp)"
+          trap 'rm -f "$audit_report"' EXIT
+
+          set +e
+          timeout 90s bun audit --json > "$audit_report"
+          audit_status=$?
+          set -e
+
+          if [ "$audit_status" -eq 124 ]; then
+            echo "::error::bun audit timed out after 90 seconds"
+            exit 1
+          fi
+          if [ "$audit_status" -ne 0 ] && [ "$audit_status" -ne 1 ]; then
+            echo "::error::bun audit failed with exit code $audit_status"
+            exit "$audit_status"
+          fi
+
+          AUDIT_REPORT="$audit_report" bun -e '
+            const report = await Bun.file(process.env.AUDIT_REPORT).json();
+            const advisories = Object.values(report);
+            const valid = report && typeof report === "object" && !Array.isArray(report) &&
+              advisories.every((items) => Array.isArray(items) && items.every((item) =>
+                item && typeof item === "object" && typeof item.severity === "string"));
+            if (!valid) throw new Error("bun audit returned an invalid advisory report");
+
+            console.log(JSON.stringify(report, null, 2));
+            const criticalCount = advisories.flat().filter((item) => item.severity === "critical").length;
+            if (criticalCount > 0) {
+              console.error(`::error::bun audit found ${criticalCount} critical vulnerabilities`);
+              process.exit(1);
+            }
+          '
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
