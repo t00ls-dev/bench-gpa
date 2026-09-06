@@ -5,7 +5,7 @@ import { ProductSearch } from "./product-search";
 
 const suggestion = { prod_code: "1008160", prod_name: "LEITE UHT INTEGRAL" };
 
-function renderSearch(storeCount: number, onSelect = vi.fn()) {
+function renderSearch(onSelect = vi.fn()) {
   render(
     <ProductSearch
       query="leite int"
@@ -13,7 +13,6 @@ function renderSearch(storeCount: number, onSelect = vi.fn()) {
       selected={null}
       suggestions={[suggestion]}
       searchFetching={false}
-      storeCount={storeCount}
       onQueryChange={vi.fn()}
       onSelect={onSelect}
       onClear={vi.fn()}
@@ -23,16 +22,16 @@ function renderSearch(storeCount: number, onSelect = vi.fn()) {
 }
 
 describe("ProductSearch", () => {
-  it("explains that multiple selected stores use any-store matching", () => {
-    renderSearch(2);
+  it("keeps the original name-or-code search prompt", () => {
+    renderSearch();
 
     expect(
-      screen.getByText("Resultados com venda registrada em qualquer uma das lojas selecionadas."),
+      screen.getByPlaceholderText("Digite ao menos 3 caracteres (nome ou código)…"),
     ).toBeInTheDocument();
   });
 
   it("shows and selects a result matched by partial terms", () => {
-    const onSelect = renderSearch(1);
+    const onSelect = renderSearch();
 
     fireEvent.click(screen.getByRole("button", { name: /1008160.*LEITE UHT INTEGRAL/i }));
     expect(onSelect).toHaveBeenCalledWith(suggestion);

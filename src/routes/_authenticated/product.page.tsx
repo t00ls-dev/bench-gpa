@@ -194,7 +194,6 @@ function ProductPage() {
         suggestions={suggestions}
         searchFetching={searchFetching}
         recent={recentProducts}
-        storeCount={storeCodes.length}
         onQueryChange={(v) => {
           setQuery(v);
           setSelected(null);
