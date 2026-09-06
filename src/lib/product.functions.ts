@@ -13,16 +13,47 @@ import {
   parseCodeNameVal,
   parseDateVal,
 } from "./api-types";
-import { SingleQuerySchema, SingleProdCodeSchema } from "./schemas";
+import { ProductSearchSchema, SingleProdCodeSchema } from "./schemas";
+
+function escapeLike(value: string) {
+  return value.replaceAll("=", "==").replaceAll("%", "=%").replaceAll("_", "=_");
+}
 
 export const searchProducts = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
-  .inputValidator((d: unknown) => SingleQuerySchema.parse(d))
+  .inputValidator((d: unknown) => ProductSearchSchema.parse(d))
   .handler(async ({ data }) => {
-    const q = `%${data.q.trim()}%`;
+    const query = data.q.replace(/\s+/g, " ");
+    const terms = query.split(" ");
+    const storePredicate = data.storeCodes.length
+      ? `u.store_code IN (${data.storeCodes.map(() => "?").join(", ")}) AND `
+      : "";
+    const namePredicates = terms.map(() => "u.prod_name LIKE ? ESCAPE '='").join(" AND ");
+    const containsQuery = `%${escapeLike(query)}%`;
+    const nameParams = terms.map((term) => `%${escapeLike(term)}%`);
     const [rows] = await db.query(
-      "SELECT DISTINCT prod_code, prod_name FROM products WHERE prod_name LIKE ? OR prod_code LIKE ? LIMIT 20",
-      [q, q],
+      `SELECT u.prod_code, MAX(u.prod_name) AS prod_name
+       FROM product_universe u
+       WHERE ${storePredicate}(u.prod_code LIKE ? ESCAPE '=' OR (${namePredicates}))
+       GROUP BY u.prod_code
+       ORDER BY CASE
+         WHEN u.prod_code = ? THEN 0
+         WHEN u.prod_code LIKE ? ESCAPE '=' THEN 1
+         WHEN MAX(u.prod_name) LIKE ? ESCAPE '=' THEN 2
+         ELSE 3
+       END,
+       MAX(u.last_sale_date) DESC,
+       prod_name,
+       u.prod_code
+       LIMIT 20`,
+      [
+        ...data.storeCodes,
+        containsQuery,
+        ...nameParams,
+        query,
+        `${escapeLike(query)}%`,
+        `${escapeLike(terms[0])}%`,
+      ],
     );
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
   });

@@ -1364,7 +1364,9 @@ BEGIN
   --
   -- Discovered on 2026-07-25, while manually purging dates before 05/27:
   -- products had to be deleted and filter_hierarchy regenerated outside
-  -- this proc, precisely because it did neither.
+  -- this proc, precisely because it did neither. Product search now uses
+  -- product_universe for its per-store scope; products still supports direct
+  -- PLU links through getProductByCode.
   DELETE FROM products WHERE sale_date < @cutoff;
   SET v_deleted = v_deleted + ROW_COUNT();
 

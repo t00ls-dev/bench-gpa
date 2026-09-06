@@ -15,6 +15,7 @@ export function ProductSearch({
   suggestions,
   searchFetching,
   recent,
+  storeCount,
   product,
   onQueryChange,
   onSelect,
@@ -26,6 +27,7 @@ export function ProductSearch({
   suggestions: Suggestion[] | undefined;
   searchFetching: boolean;
   recent?: Suggestion[];
+  storeCount: number;
   product?:
     | { depto: string | null; secao: string | null; grupo: string | null; subgrupo: string | null }
     | null
@@ -41,7 +43,7 @@ export function ProductSearch({
         <Input
           aria-label="Buscar produto"
           className="min-w-[180px] flex-1 border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder="Digite ao menos 3 caracteres (nome ou código)…"
+          placeholder="Ex.: leite int ou PLU (mín. 3 caracteres)…"
           value={query}
           onChange={(e) => {
             onQueryChange(e.target.value);
@@ -64,6 +66,15 @@ export function ProductSearch({
           </Button>
         )}
       </div>
+      {!selected && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {storeCount === 0
+            ? "Resultados com venda registrada na rede."
+            : storeCount === 1
+              ? "Resultados com venda registrada na loja selecionada."
+              : "Resultados com venda registrada em qualquer uma das lojas selecionadas."}
+        </p>
+      )}
       {selected && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-primary">
@@ -96,7 +107,7 @@ export function ProductSearch({
         </div>
       )}
       {!selected &&
-        debounced.length >= 3 &&
+        debounced.trim().length >= 3 &&
         (searchFetching || (suggestions && suggestions.length > 0)) && (
           <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
             {searchFetching && (

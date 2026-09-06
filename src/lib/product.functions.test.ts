@@ -51,27 +51,55 @@ beforeEach(() => {
 });
 
 describe("searchProducts", () => {
-  it("searches with LIKE on both sides (code and name), wrapped in %", async () => {
+  const callSearch = searchProducts as (d: { q: string; storeCodes: string[] }) => Promise<unknown>;
+
+  it("matches every name term even when other words appear between them", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
-      [{ prod_code: "1008160", prod_name: "ARROZ TIO JOAO" }],
+      [{ prod_code: "1008160", prod_name: "LEITE UHT INTEGRAL" }],
     ] as never);
 
-    const result = await (searchProducts as (d: { q: string }) => Promise<unknown>)({
-      q: "arroz",
-    });
+    const result = await callSearch({ q: "leite   int", storeCodes: [] });
 
-    expect(result).toEqual([{ prod_code: "1008160", prod_name: "ARROZ TIO JOAO" }]);
-    expect(db.query).toHaveBeenCalledWith(expect.stringContaining("LIKE ? OR prod_code LIKE ?"), [
-      "%arroz%",
-      "%arroz%",
+    expect(result).toEqual([{ prod_code: "1008160", prod_name: "LEITE UHT INTEGRAL" }]);
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining("u.prod_name LIKE ? ESCAPE '=' AND u.prod_name LIKE ? ESCAPE '='"),
+      ["%leite int%", "%leite%", "%int%", "leite int", "leite int%", "leite%"],
+    );
+  });
+
+  it("accepts a sale in any selected store and ranks exact product codes first", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [{ prod_code: "1008160", prod_name: "LEITE UHT INTEGRAL" }],
+    ] as never);
+
+    await callSearch({ q: "1008160", storeCodes: ["1516", "1520"] });
+
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /FROM product_universe u[\s\S]*u\.store_code IN \(\?, \?\)[\s\S]*WHEN u\.prod_code = \? THEN 0/,
+      ),
+      ["1516", "1520", "%1008160%", "%1008160%", "1008160", "1008160%", "1008160%"],
+    );
+  });
+
+  it("escapes LIKE wildcards in product names and codes", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
+
+    await callSearch({ q: "50% _", storeCodes: [] });
+
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ESCAPE '='"), [
+      "%50=% =_%",
+      "%50=%%",
+      "%=_%",
+      "50% _",
+      "50=% =_%",
+      "50=%%",
     ]);
   });
 
   it("returns an empty array when the database returns no rows", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([undefined] as never);
-    const result = await (searchProducts as (d: { q: string }) => Promise<unknown>)({
-      q: "xyz",
-    });
+    const result = await callSearch({ q: "xyz", storeCodes: [] });
     expect(result).toEqual([]);
   });
 });

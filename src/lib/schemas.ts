@@ -274,7 +274,15 @@ export const CancelImportSchema = z.object({
 
 export const SingleSlugSchema = z.object({ slug: z.string().min(1) });
 
-export const SingleQuerySchema = z.object({ q: z.string().min(3) });
+export const ProductSearchSchema = z.object({
+  q: z
+    .string()
+    .trim()
+    .min(3)
+    .max(255)
+    .refine((value) => value.split(/\s+/).length <= 10, "Use no máximo 10 termos na busca"),
+  storeCodes: z.array(z.string().trim().min(1).max(20)).max(100).optional().default([]),
+});
 
 export const SingleProdCodeSchema = z.object({ prodCode: z.string().min(1) });
 

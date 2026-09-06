@@ -93,9 +93,9 @@ function ProductPage() {
   });
 
   const { data: suggestions, isFetching: searchFetching } = useQuery({
-    queryKey: ["product-search", debounced],
-    queryFn: () => search({ data: { q: debounced } }),
-    enabled: debounced.length >= 3 && !selected,
+    queryKey: ["product-search", debounced, storeCodes],
+    queryFn: () => search({ data: { q: debounced, storeCodes } }),
+    enabled: debounced.trim().length >= 3 && !selected,
   });
 
   const { data: analysisData, isFetching: analysisLoading } = useQuery({
@@ -194,6 +194,7 @@ function ProductPage() {
         suggestions={suggestions}
         searchFetching={searchFetching}
         recent={recentProducts}
+        storeCount={storeCodes.length}
         onQueryChange={(v) => {
           setQuery(v);
           setSelected(null);

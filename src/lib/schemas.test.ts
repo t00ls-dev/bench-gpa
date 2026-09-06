@@ -19,6 +19,7 @@ import {
   UpdateSavedAreaAnalysisSchema,
   AuditLogQuerySchema,
   ImportHistoryQuerySchema,
+  ProductSearchSchema,
   UpdateAdminUserSchema,
 } from "./schemas";
 import { IMPORT_CHUNK_SIZE, IMPORT_MAX_ROWS, IMPORT_MAX_STORES } from "./import-config";
@@ -104,6 +105,24 @@ describe("ImportHistoryQuerySchema", () => {
     ).toBe(true);
     expect(ImportHistoryQuerySchema.safeParse({ sortBy: "invalid" }).success).toBe(false);
     expect(ImportHistoryQuerySchema.safeParse({ limit: 10 }).success).toBe(false);
+  });
+});
+
+describe("ProductSearchSchema", () => {
+  it("trims the query and defaults to all stores", () => {
+    expect(ProductSearchSchema.parse({ q: "  leite int  " })).toEqual({
+      q: "leite int",
+      storeCodes: [],
+    });
+  });
+
+  it("accepts multiple stores and rejects excessive search terms", () => {
+    expect(
+      ProductSearchSchema.parse({ q: "leite integral", storeCodes: ["1516", "1520"] }),
+    ).toEqual({ q: "leite integral", storeCodes: ["1516", "1520"] });
+    expect(
+      ProductSearchSchema.safeParse({ q: "a b c d e f g h i j k", storeCodes: [] }).success,
+    ).toBe(false);
   });
 });
 
