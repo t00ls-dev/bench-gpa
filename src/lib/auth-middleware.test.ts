@@ -65,6 +65,7 @@ const dbRow = (overrides: Record<string, unknown> = {}) => [
       token_version: 0,
       username: "test",
       employee_id: null,
+      last_activity_at: new Date(),
       password_change_required: 0,
       ...overrides,
     },
@@ -165,6 +166,32 @@ describe("requireAuth", () => {
   it("uses the role from the database, not the one frozen in the token", async () => {
     vi.mocked(db.query).mockResolvedValue(dbRow({ role: "user" }) as never);
     await expect(call()).resolves.toMatchObject({ context: { userRole: "user" } });
+  });
+
+  describe("last activity", () => {
+    it("updates activity after five minutes without changing users.updated_at", async () => {
+      vi.mocked(db.query)
+        .mockResolvedValueOnce(
+          dbRow({ last_activity_at: new Date(Date.now() - 6 * 60 * 1000) }) as never,
+        )
+        .mockResolvedValueOnce([{ affectedRows: 1 }] as never);
+
+      await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
+
+      expect(db.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringMatching(
+          /SET last_activity_at = NOW\(\), updated_at = updated_at[\s\S]*INTERVAL 5 MINUTE/,
+        ),
+        ["u1"],
+      );
+    });
+
+    it("does not write activity again inside the five-minute interval", async () => {
+      await expect(call()).resolves.toMatchObject({ context: { userId: "u1" } });
+
+      expect(db.query).toHaveBeenCalledTimes(1);
+    });
   });
 
   // Password state (first access pending or expired 30+ days ago):

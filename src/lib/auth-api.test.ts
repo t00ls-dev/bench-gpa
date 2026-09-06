@@ -137,6 +137,7 @@ const dbRow = (overrides: Record<string, unknown> = {}) => [
     role: "admin",
     is_active: true,
     token_version: 0,
+    last_activity_at: new Date(),
     password_change_required: 0,
     ...overrides,
   },
@@ -176,9 +177,10 @@ describe("login", () => {
     } as never);
     expect(result).toEqual({ ok: true });
     expect(bcrypt.compare).toHaveBeenCalledWith("correct", "$2b$12$hash");
-    expect(db.query).toHaveBeenCalledWith("UPDATE users SET last_login_at = NOW() WHERE id = ?", [
-      "u1",
-    ]);
+    expect(db.query).toHaveBeenCalledWith(
+      "UPDATE users SET last_login_at = NOW(), last_activity_at = NOW() WHERE id = ?",
+      ["u1"],
+    );
     // tokenVersion goes in the payload so resetPassword/changePassword/logout
     // can invalidate this session later. Without "remember me", the session
     // is born "normal" (not persistent, expires after 1h of inactivity), see
@@ -360,6 +362,21 @@ describe("getMe", () => {
     expect(setCookie).not.toHaveBeenCalled();
   });
 
+  it("records navigation as activity when the previous activity is stale", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce([
+        dbRow({ last_activity_at: new Date(Date.now() - 6 * 60 * 1000) }),
+      ] as never)
+      .mockResolvedValueOnce([{ affectedRows: 1 }] as never);
+
+    await expect(getMe()).resolves.toMatchObject({ id: "u1" });
+    expect(db.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("SET last_activity_at = NOW(), updated_at = updated_at"),
+      ["u1"],
+    );
+  });
+
   it("returns null when there is no session cookie", async () => {
     vi.mocked(getCookie).mockReturnValue(undefined);
     const user = await getMe();
@@ -441,7 +458,7 @@ describe("setInitialPassword", () => {
     );
     expect(bcrypt.hash).toHaveBeenCalledWith("Str0ng!Pass", 12);
     expect(db.query).toHaveBeenCalledWith(
-      "UPDATE users SET password = ?, password_changed_at = NOW(), last_login_at = NOW() WHERE id = ?",
+      "UPDATE users SET password = ?, password_changed_at = NOW(), last_login_at = NOW(), last_activity_at = NOW() WHERE id = ?",
       ["$2b$12$newhash", "u1"],
     );
     expect(setCookie).toHaveBeenCalled();

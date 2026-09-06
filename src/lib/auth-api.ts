@@ -140,7 +140,10 @@ export const login = createServerFn({ method: "POST" })
       await auditFail("senha incorreta", user.id, user.username);
       throw new Error("Usuário/matrícula ou senha inválidos.");
     }
-    await db.query("UPDATE users SET last_login_at = NOW() WHERE id = ?", [user.id]);
+    await db.query(
+      "UPDATE users SET last_login_at = NOW(), last_activity_at = NOW() WHERE id = ?",
+      [user.id],
+    );
     authAccountLimiter.reset(accountRateKey);
     issueSession(
       { id: user.id, role: user.role, tokenVersion: user.token_version },
@@ -291,7 +294,7 @@ export const setInitialPassword = createServerFn({ method: "POST" })
 
     const hash = await bcrypt.hash(data.newPassword, BCRYPT_COST);
     await db.query(
-      "UPDATE users SET password = ?, password_changed_at = NOW(), last_login_at = NOW() WHERE id = ?",
+      "UPDATE users SET password = ?, password_changed_at = NOW(), last_login_at = NOW(), last_activity_at = NOW() WHERE id = ?",
       [hash, user.id],
     );
     authAccountLimiter.reset(accountRateKey);

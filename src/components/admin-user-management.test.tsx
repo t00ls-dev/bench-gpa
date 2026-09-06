@@ -20,7 +20,7 @@ interface TestUser {
   role: string;
   is_active: boolean;
   pending: boolean;
-  lastLoginAt: string | null;
+  lastActivityAt: string | null;
 }
 
 vi.mock("@tanstack/react-start", () => ({
@@ -52,7 +52,7 @@ function user(overrides: Partial<TestUser> = {}): TestUser {
     role: "user",
     is_active: true,
     pending: false,
-    lastLoginAt: "2026-08-31T12:30:00Z",
+    lastActivityAt: "2026-08-31T12:30:00Z",
     ...overrides,
   };
 }
@@ -86,7 +86,7 @@ describe("AdminUserManagement", () => {
         username: "bruno",
         employeeId: "1002",
         name: "Bruno Costa",
-        lastLoginAt: null,
+        lastActivityAt: null,
       }),
     ];
     renderWithClient(<AdminUserManagement data={data} isLoading={false} />);

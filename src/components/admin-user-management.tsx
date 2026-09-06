@@ -26,7 +26,7 @@ interface User {
   is_active: boolean;
   /** Account still without a password (first-access pending or reset by an admin). */
   pending: boolean;
-  lastLoginAt: string | null;
+  lastActivityAt: string | null;
 }
 
 export function AdminUserManagement({
@@ -136,7 +136,7 @@ export function AdminUserManagement({
                     {u.username ?? <span className="text-muted-foreground">-</span>}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {u.lastLoginAt ? fmtDT(u.lastLoginAt) : "-"}
+                    {u.lastActivityAt ? fmtDT(u.lastActivityAt) : "-"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end">

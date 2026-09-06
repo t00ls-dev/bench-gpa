@@ -24,7 +24,16 @@ interface AuthUserRow {
   token_version: number;
   username: string | null;
   employee_id: string | null;
+  last_activity_at: Date | string | null;
   password_change_required: number | boolean;
+}
+
+const ACTIVITY_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
+
+function shouldUpdateActivity(lastActivityAt: Date | string | null): boolean {
+  if (lastActivityAt === null) return true;
+  const timestamp = new Date(lastActivityAt).getTime();
+  return !Number.isFinite(timestamp) || Date.now() - timestamp >= ACTIVITY_UPDATE_INTERVAL_MS;
 }
 
 export interface ResolvedSession {
@@ -122,7 +131,7 @@ export async function resolveSession(
   // account whose password_changed_at was never filled in would be exempt
   // from ever expiring.
   const [rowsRaw] = await db.query(
-    `SELECT id, name, role, is_active, token_version, username, employee_id,
+    `SELECT id, name, role, is_active, token_version, username, employee_id, last_activity_at,
             (password IS NULL
              OR password_changed_at IS NULL
              OR password_changed_at < NOW() - INTERVAL 30 DAY) AS password_change_required
@@ -159,6 +168,16 @@ export async function resolveSession(
       );
       writeSessionCookie(refreshed, false);
     }
+  }
+
+  if (shouldUpdateActivity(dbUser.last_activity_at)) {
+    await db.query(
+      `UPDATE users
+       SET last_activity_at = NOW(), updated_at = updated_at
+       WHERE id = ?
+         AND (last_activity_at IS NULL OR last_activity_at < NOW() - INTERVAL 5 MINUTE)`,
+      [dbUser.id],
+    );
   }
 
   return {

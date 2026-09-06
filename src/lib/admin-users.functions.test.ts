@@ -137,7 +137,7 @@ describe("createUser", () => {
 });
 
 describe("listUsers", () => {
-  it("orders the complete set by name and returns the last login", async () => {
+  it("orders the complete set by name and returns the last activity", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
       [
         {
@@ -147,16 +147,16 @@ describe("listUsers", () => {
           name: "Ana",
           role: "user",
           is_active: 1,
-          last_login_at: new Date("2026-08-31T12:00:00Z"),
+          last_activity_at: new Date("2026-08-31T12:00:00Z"),
           pending: 0,
         },
       ],
     ] as never);
 
-    const result = await (listUsers as () => Promise<Array<{ lastLoginAt: string | null }>>)();
+    const result = await (listUsers as () => Promise<Array<{ lastActivityAt: string | null }>>)();
 
     expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ORDER BY name ASC, id ASC"));
-    expect(result[0]?.lastLoginAt).toBe("2026-08-31T12:00:00.000Z");
+    expect(result[0]?.lastActivityAt).toBe("2026-08-31T12:00:00.000Z");
   });
 });
 

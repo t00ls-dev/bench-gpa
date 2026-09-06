@@ -89,7 +89,7 @@ beforeEach(() => {
       role: "user",
       is_active: true,
       pending: false,
-      lastLoginAt: null,
+      lastActivityAt: null,
     },
     {
       id: "recipient-1",
@@ -99,7 +99,7 @@ beforeEach(() => {
       role: "user",
       is_active: true,
       pending: false,
-      lastLoginAt: null,
+      lastActivityAt: null,
     },
     {
       id: "pending-1",
@@ -109,7 +109,7 @@ beforeEach(() => {
       role: "user",
       is_active: true,
       pending: true,
-      lastLoginAt: null,
+      lastActivityAt: null,
     },
   ]);
 });

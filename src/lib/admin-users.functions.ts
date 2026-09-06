@@ -23,7 +23,7 @@ export interface AdminUserSummary {
   role: string;
   is_active: boolean;
   pending: boolean;
-  lastLoginAt: string | null;
+  lastActivityAt: string | null;
 }
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -31,7 +31,7 @@ export const listUsers = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<AdminUserSummary[]> => {
     await assertAdmin(context);
     const [rows] = await db.query(
-      "SELECT id, username, employee_id, name, role, is_active, last_login_at, password IS NULL AS pending FROM users ORDER BY name ASC, id ASC",
+      "SELECT id, username, employee_id, name, role, is_active, last_activity_at, password IS NULL AS pending FROM users ORDER BY name ASC, id ASC",
     );
     return asArray(rows).map((r) => {
       const rec = asRecord(r);
@@ -47,7 +47,7 @@ export const listUsers = createServerFn({ method: "GET" })
         // auth-api.ts). Computed in the SELECT instead of duplicating the
         // same rule on the client.
         pending: Boolean(rec.pending),
-        lastLoginAt: rec.last_login_at == null ? null : dateTimeStr(rec.last_login_at),
+        lastActivityAt: rec.last_activity_at == null ? null : dateTimeStr(rec.last_activity_at),
       };
     });
   });

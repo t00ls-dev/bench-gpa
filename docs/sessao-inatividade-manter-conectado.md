@@ -61,3 +61,14 @@ payload. `resolveSession` trata a ausência de `persistent` como modo
 normal, e a ausência de `loginAt` como se o login fosse agora. Isso dá um
 teto de 24h a partir do primeiro uso pós-deploy, em vez de expirar todo
 mundo de uma vez.
+
+## 5. Último acesso exibido na administração
+
+`last_login_at` registra somente autenticações concluídas. O uso posterior da
+sessão fica em `last_activity_at`, atualizado por `resolveSession` em chamadas
+autenticadas, incluindo `getMe` e downloads que validam a sessão diretamente.
+
+Para evitar uma escrita a cada consulta, a leitura de sessão só tenta atualizar
+o campo quando o valor conhecido tem pelo menos cinco minutos. O próprio
+`UPDATE` repete essa condição no MariaDB para cobrir requisições concorrentes.
+A coluna "Último acesso" da gestão de usuários exibe `last_activity_at`.
