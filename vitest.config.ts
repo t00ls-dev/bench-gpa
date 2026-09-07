@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { COVERAGE_THRESHOLDS } from "./scripts/coverage-thresholds";
+import { COVERAGE_THRESHOLDS } from "./scripts/coverage-thresholds.ts";
 
 export default defineConfig({
   // Same globals vite.config.ts injects via define in the real app:
