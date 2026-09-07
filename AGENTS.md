@@ -185,9 +185,9 @@ em vez de commit direto em `main`.
 - CI/CD (`.github/workflows/ci.yml`) usa os jobs separados `ci` (lint,
   typecheck, test e build) e `schema-check` como gates do deploy
 - Pushes e merges na `main` executam validações, mas não publicam em produção.
-  Deploy é uma ação explícita: push de tag `v*` ou `workflow_dispatch` na
-  `main`. Agentes não devem criar ou enviar tags de release nem disparar o
-  workflow manual sem pedido explícito do usuário
+  Deploy é uma ação explícita, disponível somente por `workflow_dispatch` na
+  `main`. Agentes não devem disparar o workflow manual sem pedido explícito do
+  usuário. Tags não iniciam deploy
 - Artefatos de build e sourcemaps do Sentry só são enviados em uma execução de
   deploy explícita. Builds comuns de CI são descartados ao final do job
 - PM2 roda em `fork`/1 instância (não `cluster`): a VPS tem 1 núcleo físico

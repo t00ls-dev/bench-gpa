@@ -66,7 +66,6 @@ inclusive na `main`, executam as validações, mas não alteram a produção.
 | ----------------------------- | ---------- | --------------------- | ------ |
 | Pull request                  | Sim        | Não                   | Não    |
 | Push ou merge na `main`       | Sim        | Não                   | Não    |
-| Push de tag `v*`              | Sim        | Sim                   | Sim    |
 | `workflow_dispatch` na `main` | Sim        | Sim                   | Sim    |
 
 ### Antes de publicar
@@ -75,38 +74,27 @@ Confirme que:
 
 - todas as alterações desejadas foram integradas na `main`;
 - o CI mais recente da `main` passou;
-- não há mudanças locais pendentes;
-- a versão escolhida ainda não existe como tag.
+- não há mudanças locais pendentes.
 
 ```bash
 git switch main
 git pull --ff-only
 git status --short
-git tag --list "v2026.08.31.1"
 ```
 
-`git status --short` e `git tag --list` não devem produzir saída nesse exemplo.
+`git status --short` não deve produzir saída nesse exemplo.
 
-### Release por tag
+### Iniciar o deploy
 
-A tag `v*` é o caminho normal de publicação. Use uma tag anotada e única:
+Pela interface, abra **Actions > CI/CD > Run workflow** e selecione `main`.
+Pela linha de comando:
 
 ```bash
-git tag -a v2026.08.31.1 -m "Release v2026.08.31.1"
-git push origin v2026.08.31.1
+gh workflow run ci.yml --ref main
 ```
 
-A versão pode seguir o formato `vAAAA.MM.DD.N`, incrementando `N` quando houver
-mais de uma publicação no mesmo dia. O workflow rejeita tags que não apontem
-para um commit presente no histórico da `main`.
-
-Depois do deploy, a tag pode receber uma GitHub Release com as notas da versão:
-
-```bash
-gh release create v2026.08.31.1 --verify-tag --generate-notes
-```
-
-A GitHub Release é opcional. O gatilho de produção é o push da tag.
+Execuções manuais em outras branches são rejeitadas. Tags e GitHub Releases
+podem ser usadas para registrar versões, mas não iniciam o workflow nem o deploy.
 
 ### Acompanhar o deploy
 
@@ -133,21 +121,7 @@ workflow restaura automaticamente a release anterior. As cinco releases mais
 recentes permanecem na VPS.
 
 Após o sucesso, abra `https://gpa.t00ls.dev` e confira no rodapé se o hash do
-commit corresponde ao commit marcado pela tag.
-
-### Deploy manual
-
-O dispatch manual publica o commit atual da `main` sem criar tag. Use somente
-para recuperação ou quando houver motivo explícito para não registrar uma nova
-versão:
-
-```bash
-gh workflow run ci.yml --ref main
-gh run list --workflow "CI/CD" --limit 1
-```
-
-Na interface, use **Actions > CI/CD > Run workflow** e selecione `main`.
-Execuções manuais em outras branches são rejeitadas.
+commit corresponde ao commit publicado.
 
 ### Hotfix
 
@@ -157,7 +131,7 @@ Hotfix não usa um pipeline diferente:
 2. Abra a pull request e aguarde CI e schema-check.
 3. Integre a correção na `main`.
 4. Confirme o CI da `main`.
-5. Crie e envie uma nova tag `v*`.
+5. Inicie manualmente o workflow `CI/CD` na `main`.
 
 ### Falhas operacionais
 
@@ -168,9 +142,8 @@ Depois que o GitHub recalcular a quota, execute novamente o run que falhou:
 gh run rerun <run-id>
 ```
 
-Não mova, sobrescreva ou reutilize uma tag publicada. Não crie tag a partir de
-uma branch de trabalho. Push de tag e dispatch manual representam intenção
-explícita de publicar em produção.
+Tags podem registrar versões, mas não publicam em produção. Somente o dispatch
+manual do workflow `CI/CD` na `main` representa intenção de publicar.
 
 ## Rotas
 
@@ -246,7 +219,7 @@ executado na VPS de produção.
 - **Hierarquia comercial**: `product_universe` é a fonte da classificação atual. Vendas históricas são atribuídas ao Departamento, Seção, Grupo e Subgrupo atuais do produto, não à classificação registrada no dia da venda.
 - **UX**: Bottom tab bar mobile, View Transitions API e exportação PDF (Área e Previsão de Venda).
 - **Áreas salvas**: composição persistente com um proprietário, leitura compartilhável entre usuários autenticados por URL/QR Code, mesmos gráficos da Área, transferência de propriedade somente por admin e histórico local por usuário com até 10 visitas por 30 dias.
-- **Deploy**: tag `v*` ou dispatch manual na `main` inicia a publicação explícita pelo GitHub Actions (`.github/workflows/ci.yml`). O workflow envia `.output` por rsync para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), cria uma release em `releases/<timestamp>-<sha-curto>/`, troca o symlink `current` atomicamente e recarrega o PM2 (`fork`/1 instância, VPS tem 1 núcleo só). O health-check reverte automaticamente em caso de falha. As cinco releases mais recentes são mantidas. Pushes comuns não publicam nem armazenam artefatos. Não há PaaS. Docs em `docs/`.
+- **Deploy**: somente um `workflow_dispatch` manual na `main` inicia a publicação pelo GitHub Actions (`.github/workflows/ci.yml`). O workflow envia `.output` por rsync para a VPS Hestia (`sv1.t00ls.dev`, `gpa.t00ls.dev`), cria uma release em `releases/<timestamp>-<sha-curto>/`, troca o symlink `current` atomicamente e recarrega o PM2 (`fork`/1 instância, VPS tem 1 núcleo só). O health-check reverte automaticamente em caso de falha. As cinco releases mais recentes são mantidas. Pushes comuns e tags não publicam nem armazenam artefatos. Não há PaaS. Docs em `docs/`.
   - A integração legada com o **Vercel** foi removida em 2026-07-23 (projeto desconectado e os environments `Production`/`Preview` do GitHub apagados): a aba **Deployments** do GitHub não é mais usada.
 
 ## Estrutura
