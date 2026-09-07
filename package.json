@@ -51,7 +51,7 @@
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
-    "lucide-react": "^1.40.0",
+    "lucide-react": "^1.41.0",
     "mysql2": "^3.24.3",
     "react": "^19.2.8",
     "react-day-picker": "^10.0.1",
