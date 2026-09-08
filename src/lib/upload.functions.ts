@@ -30,12 +30,13 @@ export const beginImport = createServerFn({ method: "POST" })
     if (data.total_rows === 0) throw new Error("Nenhuma linha de venda para importar.");
 
     try {
-      await db.query("CALL acquire_import_lock(?, ?, ?, ?, ?)", [
+      await db.query("CALL acquire_import_lock_checked(?, ?, ?, ?, ?, ?)", [
         data.batch_id,
         data.sale_date,
         context.userId,
         JSON.stringify(data.stores),
         JSON.stringify(data.products),
+        data.replace_existing,
       ]);
     } catch (error) {
       throw mapImportError(error);
@@ -175,6 +176,7 @@ export const finalizeImport = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => FinalizeImportSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    const { cache } = await import("./cache");
 
     try {
       await db.query("CALL finalize_import(?, ?, ?, ?)", [
@@ -205,6 +207,8 @@ export const finalizeImport = createServerFn({ method: "POST" })
         });
       }
       throw mappedError;
+    } finally {
+      cache.delete("imported_dates");
     }
 
     return { ok: true };

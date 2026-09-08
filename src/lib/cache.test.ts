@@ -23,6 +23,29 @@ describe("SimpleCache", () => {
     expect(cache.get("nonexistent")).toBeUndefined();
   });
 
+  it("deletes an entry", () => {
+    cache.set("key", 42);
+    cache.delete("key");
+    expect(cache.get("key")).toBeUndefined();
+  });
+
+  it("does not restore an invalidated entry when an older load finishes", async () => {
+    let resolve!: (value: string) => void;
+    const load = cache.wrap(
+      "key",
+      () =>
+        new Promise<string>((resolvePromise) => {
+          resolve = resolvePromise;
+        }),
+    );
+
+    cache.delete("key");
+    resolve("stale");
+
+    await expect(load).resolves.toBe("stale");
+    expect(cache.get("key")).toBeUndefined();
+  });
+
   it("expires entry after TTL", () => {
     cache.set("key", "value", 5_000);
     vi.advanceTimersByTime(5_001);

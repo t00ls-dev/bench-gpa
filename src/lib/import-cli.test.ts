@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { IMPORT_CHUNK_SIZE } from "./import-config";
-import { parseImportChunkSize } from "./import-cli";
+import { parseImportChunkSize, parseImportReplace } from "./import-cli";
 
 describe("parseImportChunkSize", () => {
   it("uses the shared chunk size when the option is absent", () => {
@@ -23,5 +23,12 @@ describe("parseImportChunkSize", () => {
     expect(() => parseImportChunkSize(args)).toThrow(
       `--chunk-size must be an integer between 1 and ${IMPORT_CHUNK_SIZE}.`,
     );
+  });
+});
+
+describe("parseImportReplace", () => {
+  it("requires the explicit --replace flag", () => {
+    expect(parseImportReplace(["sales.xlsx"])).toBe(false);
+    expect(parseImportReplace(["sales.xlsx", "--replace"])).toBe(true);
   });
 });

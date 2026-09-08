@@ -339,6 +339,18 @@ const saleRow = {
 };
 
 describe("import input schemas", () => {
+  it("defaults replacement consent to false", () => {
+    expect(
+      BeginImportSchema.parse({
+        sale_date: "2026-08-18",
+        batch_id: "batch",
+        total_rows: 1,
+        stores: [],
+        products: [],
+      }).replace_existing,
+    ).toBe(false);
+  });
+
   it("rejects an empty batch id in every import stage", () => {
     expect(
       BeginImportSchema.safeParse({

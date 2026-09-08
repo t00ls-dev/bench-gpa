@@ -16,3 +16,7 @@ export function parseImportChunkSize(args: string[]): number {
 
   return chunkSize;
 }
+
+export function parseImportReplace(args: string[]): boolean {
+  return args.includes("--replace");
+}

@@ -5,7 +5,7 @@ import { parseAnyWorkbook } from "../src/lib/xlsx-parser";
 import { STAGING_COLS, toStagingRow } from "../src/lib/staging-row";
 import db from "../src/lib/db";
 import { IMPORT_CHUNK_SIZE } from "../src/lib/import-config";
-import { parseImportChunkSize } from "../src/lib/import-cli";
+import { parseImportChunkSize, parseImportReplace } from "../src/lib/import-cli";
 import { mapImportError } from "../src/lib/import-errors";
 
 function parseArgs() {
@@ -17,6 +17,7 @@ Usage: bun run scripts/import.ts <file.xlsx> [options]
 Options:
   --user-id UUID     ID of the user performing the import
   --chunk-size N     Rows per batch, 1-${IMPORT_CHUNK_SIZE} (default ${IMPORT_CHUNK_SIZE})
+  --replace          Replace the date if it has already been imported
   --help             Show this message
 `);
     process.exit(0);
@@ -25,8 +26,9 @@ Options:
   const filePath = args.find((a) => !a.startsWith("--"))!;
   const userId = extractArg(args, "--user-id");
   const chunkSize = parseImportChunkSize(args);
+  const replaceExisting = parseImportReplace(args);
 
-  return { filePath, userId, chunkSize };
+  return { filePath, userId, chunkSize, replaceExisting };
 }
 
 function extractArg(args: string[], flag: string): string | undefined {
@@ -36,7 +38,7 @@ function extractArg(args: string[], flag: string): string | undefined {
 }
 
 async function main() {
-  const { filePath, userId, chunkSize } = parseArgs();
+  const { filePath, userId, chunkSize, replaceExisting } = parseArgs();
 
   console.log(`Reading ${filePath}...`);
   const buffer = readFileSync(filePath).buffer;
@@ -60,12 +62,13 @@ async function main() {
   try {
     // ---- beginImport ----
     console.log(`\nStarting import (batch ${batchId})...`);
-    await db.query("CALL acquire_import_lock(?, ?, ?, ?, ?)", [
+    await db.query("CALL acquire_import_lock_checked(?, ?, ?, ?, ?, ?)", [
       batchId,
       parsed.sale_date,
       userId ?? null,
       JSON.stringify(parsed.stores),
       JSON.stringify(parsed.products),
+      replaceExisting,
     ]);
     lockAcquired = true;
     console.log("   OK: exclusive import lock acquired");

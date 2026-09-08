@@ -254,6 +254,7 @@ export const BeginImportSchema = z.object({
   total_rows: z.number().int().nonnegative().max(IMPORT_MAX_ROWS),
   stores: z.array(ImportStoreSchema).max(IMPORT_MAX_STORES),
   products: z.array(ImportProductSchema).max(IMPORT_MAX_PRODUCTS),
+  replace_existing: z.boolean().default(false),
 });
 
 export const InsertSalesChunkSchema = z.object({

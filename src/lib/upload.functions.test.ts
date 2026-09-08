@@ -103,19 +103,25 @@ describe("beginImport", () => {
     total_rows: 100,
     stores: [{ store_code: "1516", store_name: "Loja Centro" }],
     products: [{ prod_code: "1", prod_name: "Produto 1" }],
+    replace_existing: false,
   };
 
   it("acquires the global lock and returns ok", async () => {
     const result = await (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput);
     expect(result).toEqual({ ok: true, batch_id: "b1" });
     expect(assertAdmin).toHaveBeenCalledWith(expect.anything());
-    expect(db.query).toHaveBeenNthCalledWith(1, "CALL acquire_import_lock(?, ?, ?, ?, ?)", [
-      "b1",
-      "2026-07-20",
-      "admin-u1",
-      JSON.stringify(baseInput.stores),
-      JSON.stringify(baseInput.products),
-    ]);
+    expect(db.query).toHaveBeenNthCalledWith(
+      1,
+      "CALL acquire_import_lock_checked(?, ?, ?, ?, ?, ?)",
+      [
+        "b1",
+        "2026-07-20",
+        "admin-u1",
+        JSON.stringify(baseInput.stores),
+        JSON.stringify(baseInput.products),
+        false,
+      ],
+    );
     expect(db.query).toHaveBeenCalledTimes(1);
   });
 
@@ -138,6 +144,30 @@ describe("beginImport", () => {
         isExpectedError(error),
     );
     expect(db.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes explicit replacement consent", async () => {
+    await (beginImport as (d: typeof baseInput) => Promise<unknown>)({
+      ...baseInput,
+      replace_existing: true,
+    });
+    expect(db.query).toHaveBeenCalledWith(
+      "CALL acquire_import_lock_checked(?, ?, ?, ?, ?, ?)",
+      expect.arrayContaining(["b1", "2026-07-20", "admin-u1", true]),
+    );
+  });
+
+  it("maps an existing-date rejection to a user-facing error", async () => {
+    vi.mocked(db.query).mockRejectedValueOnce(new Error("IMPORT_DATE_EXISTS") as never);
+
+    await expect(
+      (beginImport as (d: typeof baseInput) => Promise<unknown>)(baseInput),
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.includes("A data já foi importada") &&
+        isExpectedError(error),
+    );
   });
 });
 
@@ -365,6 +395,7 @@ describe("finalizeImport", () => {
   // it with the measured staging count inside the same transaction that
   // replaces aggregates.
   it("calls finalize_import with batch_id/sale_date/row_count/userId and returns ok", async () => {
+    cache.set("imported_dates", [{ sale_date: "2026-07-19" }]);
     const result = await (
       finalizeImport as (d: {
         sale_date: string;
@@ -381,9 +412,11 @@ describe("finalizeImport", () => {
       500,
       "admin-u1",
     ]);
+    expect(cache.get("imported_dates")).toBeUndefined();
   });
 
   it("maps a row count mismatch to a user-facing integrity error", async () => {
+    cache.set("imported_dates", [{ sale_date: "2026-07-19" }]);
     vi.mocked(db.query)
       .mockRejectedValueOnce(new Error("IMPORT_ROW_COUNT_MISMATCH") as never)
       .mockResolvedValueOnce([[{ total: 499 }]] as never);
@@ -410,6 +443,7 @@ describe("finalizeImport", () => {
       });
       return true;
     });
+    expect(cache.get("imported_dates")).toBeUndefined();
     expect(db.query).toHaveBeenNthCalledWith(
       2,
       "SELECT COUNT(*) AS total FROM staging_sales WHERE batch_id = ? AND sale_date = ?",
