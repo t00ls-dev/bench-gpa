@@ -15,6 +15,7 @@ import {
   SavedAreaAnalysisIdSchema,
   SavedAreaAnalysisIdsSchema,
   TransferSavedAreaAnalysisSchema,
+  SearchSavedAreaRecipientsSchema,
   CreateSavedAreaAnalysisSchema,
   UpdateSavedAreaAnalysisSchema,
   AuditLogQuerySchema,
@@ -226,6 +227,19 @@ describe("saved area analysis schemas", () => {
     });
     expect(
       TransferSavedAreaAnalysisSchema.safeParse({ analysisId: id, targetUserId: "user-1" }).success,
+    ).toBe(false);
+  });
+
+  it("requires enough context to search saved area recipients", () => {
+    expect(SearchSavedAreaRecipientsSchema.parse({ analysisId: id, q: "  maria  " })).toEqual({
+      analysisId: id,
+      q: "maria",
+    });
+    expect(SearchSavedAreaRecipientsSchema.safeParse({ analysisId: id, q: "ma" }).success).toBe(
+      false,
+    );
+    expect(
+      SearchSavedAreaRecipientsSchema.safeParse({ analysisId: id, q: "a".repeat(121) }).success,
     ).toBe(false);
   });
 });

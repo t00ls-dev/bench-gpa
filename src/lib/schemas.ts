@@ -121,6 +121,11 @@ export const TransferSavedAreaAnalysisSchema = z.object({
   targetUserId: UserIdSchema,
 });
 
+export const SearchSavedAreaRecipientsSchema = z.object({
+  analysisId: z.string().uuid(),
+  q: z.string().trim().min(3).max(120),
+});
+
 export const CreateSavedAreaAnalysisSchema = z.object({
   name: z.string().trim().min(1).max(255),
   description: z.string().trim().max(1000).nullable().optional(),
