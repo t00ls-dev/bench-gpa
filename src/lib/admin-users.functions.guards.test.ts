@@ -28,6 +28,7 @@ vi.mock("@tanstack/react-start", () => {
         chain.middlewares = mw;
         return {
           inputValidator: () => ({ handler: (fn: Handler) => run(fn) }),
+          validator: () => ({ handler: (fn: Handler) => run(fn) }),
           handler: (fn: Handler) => run(fn),
         };
       },
@@ -51,7 +52,7 @@ vi.mock("./rate-limit.middleware", () => ({
 // admin-utils is NOT mocked: it's exactly what this suite actually proves.
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
-import { listUsers } from "./admin-users.functions";
+import { listUsers, searchSavedAreaRecipients } from "./admin-users.functions";
 import db from "./db";
 
 beforeEach(() => {
@@ -67,5 +68,20 @@ describe("listUsers: real admin guard (assertAdmin not mocked)", () => {
     // leak everyone's username/employee_id/role) never fired.
     expect(db.query).toHaveBeenCalledTimes(1);
     expect(db.query).toHaveBeenCalledWith("CALL has_role(?, ?)", ["user-nao-admin", "admin"]);
+  });
+});
+
+describe("searchSavedAreaRecipients: real admin guard (assertAdmin not mocked)", () => {
+  it("rejects a non-admin user without searching recipient data", async () => {
+    await expect(
+      (searchSavedAreaRecipients as (data: { analysisId: string; q: string }) => Promise<unknown>)({
+        analysisId: "550e8400-e29b-41d4-a716-446655440000",
+        q: "ana",
+      }),
+    ).rejects.toThrow("Apenas administradores");
+    expect(db.query).not.toHaveBeenCalledWith(
+      expect.stringContaining("FROM users u"),
+      expect.anything(),
+    );
   });
 });

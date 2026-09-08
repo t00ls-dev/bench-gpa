@@ -9,6 +9,7 @@ import {
   UsernameSchema,
   EmployeeIdSchema,
   RoleEnum,
+  SearchSavedAreaRecipientsSchema,
   UserIdSchema,
   UpdateAdminUserSchema,
 } from "./schemas";
@@ -24,6 +25,17 @@ export interface AdminUserSummary {
   is_active: boolean;
   pending: boolean;
   lastActivityAt: string | null;
+}
+
+export interface SavedAreaRecipient {
+  id: string;
+  username: string | null;
+  employeeId: string | null;
+  name: string;
+}
+
+function escapeLike(value: string) {
+  return value.replaceAll("=", "==").replaceAll("%", "=%").replaceAll("_", "=_");
 }
 
 export const listUsers = createServerFn({ method: "GET" })
@@ -48,6 +60,54 @@ export const listUsers = createServerFn({ method: "GET" })
         // same rule on the client.
         pending: Boolean(rec.pending),
         lastActivityAt: rec.last_activity_at == null ? null : dateTimeStr(rec.last_activity_at),
+      };
+    });
+  });
+
+export const searchSavedAreaRecipients = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .validator((data: unknown) => SearchSavedAreaRecipientsSchema.parse(data))
+  .handler(async ({ data, context }): Promise<SavedAreaRecipient[]> => {
+    await assertAdmin(context);
+    const query = data.q.replace(/\s+/g, " ");
+    const containsQuery = `%${escapeLike(query)}%`;
+    const prefixQuery = `${escapeLike(query)}%`;
+    const [rows] = await db.query(
+      `SELECT u.id, u.username, u.employee_id, u.name
+       FROM users u
+       INNER JOIN saved_area_analyses a ON a.id = ?
+       WHERE u.is_active = TRUE
+         AND u.password IS NOT NULL
+         AND u.id <> a.owner_user_id
+         AND (u.name LIKE ? ESCAPE '=' OR u.employee_id LIKE ? ESCAPE '=' OR u.username LIKE ? ESCAPE '=')
+       ORDER BY CASE
+         WHEN u.employee_id = ? OR u.username = ? THEN 0
+         WHEN u.employee_id LIKE ? ESCAPE '=' OR u.username LIKE ? ESCAPE '=' THEN 1
+         WHEN u.name LIKE ? ESCAPE '=' THEN 2
+         ELSE 3
+       END,
+       u.name ASC,
+       u.id ASC
+       LIMIT 20`,
+      [
+        data.analysisId,
+        containsQuery,
+        containsQuery,
+        containsQuery,
+        query,
+        query,
+        prefixQuery,
+        prefixQuery,
+        prefixQuery,
+      ],
+    );
+    return asArray(rows).map((row) => {
+      const record = asRecord(row);
+      return {
+        id: String(record.id ?? ""),
+        username: record.username == null ? null : String(record.username),
+        employeeId: record.employee_id == null ? null : String(record.employee_id),
+        name: String(record.name ?? ""),
       };
     });
   });

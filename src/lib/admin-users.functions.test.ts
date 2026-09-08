@@ -31,6 +31,17 @@ vi.mock("@tanstack/react-start", () => {
             return fn({ data: input, context: ctx });
           },
         }),
+        validator: () => ({
+          handler: (fn: Handler) => async (input: unknown) => {
+            let ctx = {};
+            for (const m of chain.middlewares) {
+              const r = (await m({ next: (c: unknown) => c, context: ctx, data: input })) as
+                { context?: unknown } | undefined;
+              if (r?.context) ctx = r.context;
+            }
+            return fn({ data: input, context: ctx });
+          },
+        }),
         handler: (fn: Handler) => async (input: unknown) => {
           let ctx = {};
           for (const m of chain.middlewares) {
@@ -81,8 +92,14 @@ vi.mock("./admin-utils", () => ({
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 vi.mock("./audit", () => ({ recordAudit: vi.fn() }));
 
-import { createUser, listUsers, resetPassword, updateAdminUser } from "./admin-users.functions";
-import { invalidateAdminCache } from "./admin-utils";
+import {
+  createUser,
+  listUsers,
+  resetPassword,
+  searchSavedAreaRecipients,
+  updateAdminUser,
+} from "./admin-users.functions";
+import { assertAdmin, invalidateAdminCache } from "./admin-utils";
 import { recordAudit } from "./audit";
 import db from "./db";
 
@@ -157,6 +174,81 @@ describe("listUsers", () => {
 
     expect(db.query).toHaveBeenCalledWith(expect.stringContaining("ORDER BY name ASC, id ASC"));
     expect(result[0]?.lastActivityAt).toBe("2026-08-31T12:00:00.000Z");
+  });
+});
+
+describe("searchSavedAreaRecipients", () => {
+  it("searches by name, employee id or username and returns only limited recipient fields", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [
+        {
+          id: "recipient-1",
+          username: "maria.silva",
+          employee_id: "001234",
+          name: "Maria Silva",
+        },
+      ],
+    ] as never);
+
+    const result = await (
+      searchSavedAreaRecipients as (data: { analysisId: string; q: string }) => Promise<unknown>
+    )({
+      analysisId: "550e8400-e29b-41d4-a716-446655440000",
+      q: "Maria",
+    });
+
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "u.name LIKE ? ESCAPE '=' OR u.employee_id LIKE ? ESCAPE '=' OR u.username LIKE ? ESCAPE '='",
+      ),
+      [
+        "550e8400-e29b-41d4-a716-446655440000",
+        "%Maria%",
+        "%Maria%",
+        "%Maria%",
+        "Maria",
+        "Maria",
+        "Maria%",
+        "Maria%",
+        "Maria%",
+      ],
+    );
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining("u.password IS NOT NULL"),
+      expect.any(Array),
+    );
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining("u.id <> a.owner_user_id"),
+      expect.any(Array),
+    );
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining("LIMIT 20"), expect.any(Array));
+    expect(assertAdmin).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "admin-u1", userUsername: "admin" }),
+    );
+    expect(result).toEqual([
+      {
+        id: "recipient-1",
+        username: "maria.silva",
+        employeeId: "001234",
+        name: "Maria Silva",
+      },
+    ]);
+  });
+
+  it("escapes LIKE wildcards from recipient searches", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
+
+    await (
+      searchSavedAreaRecipients as (data: { analysisId: string; q: string }) => Promise<unknown>
+    )({
+      analysisId: "550e8400-e29b-41d4-a716-446655440000",
+      q: "a%_=",
+    });
+
+    expect(db.query).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.arrayContaining(["%a=%=_==%", "a=%=_==%"]),
+    );
   });
 });
 
