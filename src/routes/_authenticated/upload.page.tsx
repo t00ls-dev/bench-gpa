@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useBlocker } from "@tanstack/react-router";
 import {
   beginImport,
   cancelImport,
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Upload, CalendarCheck, CalendarRange, AlertCircle } from "lucide-react";
+import { Upload, CalendarCheck, CalendarRange, AlertCircle, Loader2 } from "lucide-react";
 import { ImportCalendar } from "@/components/import-calendar";
 import { UploadDropzone } from "@/components/upload-dropzone";
 import { ImportProgress } from "@/components/import-progress";
@@ -56,6 +57,12 @@ interface ProcessingState {
   eta: number;
   processed: number;
   currentDate: string;
+}
+
+interface ActiveImportRun {
+  completion: Promise<void>;
+  releaseFailed: boolean;
+  resolve: () => void;
 }
 
 // Extra attempts beyond the original (3 total), restarting the file from
@@ -103,6 +110,14 @@ export default function UploadPage() {
   const cancelRef = useRef(false);
   const startTimeRef = useRef(0);
   const processedTotalRef = useRef(0);
+  const activeImportRunRef = useRef<ActiveImportRun | null>(null);
+  const activeBatchIdRef = useRef<string | null>(null);
+  const [cancellingForNavigation, setCancellingForNavigation] = useState(false);
+  const navigationBlocker = useBlocker({
+    shouldBlockFn: () => processingRef.current || activeBatchIdRef.current !== null,
+    enableBeforeUnload: () => processingRef.current || activeBatchIdRef.current !== null,
+    withResolver: true,
+  });
 
   useEffect(() => {
     // A fresh component cannot own an import from a previous page lifetime.
@@ -138,6 +153,19 @@ export default function UploadPage() {
       setPendingQueue(valid);
       setEntries((prev) => [...newEntries, ...prev]);
     }
+  };
+
+  const releaseBatch = async (batchId: string): Promise<void> => {
+    try {
+      await doCancelImport({ data: { batch_id: batchId } });
+    } catch {
+      if (activeImportRunRef.current) activeImportRunRef.current.releaseFailed = true;
+      throw new Error(IMPORT_CANCEL_FAILED_MESSAGE);
+    }
+  };
+
+  const clearActiveBatch = (batchId: string) => {
+    if (activeBatchIdRef.current === batchId) activeBatchIdRef.current = null;
   };
 
   const processOne = async (
@@ -189,7 +217,6 @@ export default function UploadPage() {
       let activeBatchId: string | null = null;
       try {
         const batchId = crypto.randomUUID();
-        activeBatchId = batchId;
         await doBeginImport({
           data: {
             sale_date: date,
@@ -200,15 +227,14 @@ export default function UploadPage() {
             replace_existing: replaceExisting,
           },
         });
+        activeBatchId = batchId;
+        activeBatchIdRef.current = batchId;
 
         const totalChunks = Math.ceil(parsed.sales.length / IMPORT_CHUNK_SIZE);
         for (let i = 0; i < totalChunks; i++) {
           if (cancelRef.current) {
-            try {
-              await doCancelImport({ data: { batch_id: batchId } });
-            } catch {
-              throw new Error(IMPORT_CANCEL_FAILED_MESSAGE);
-            }
+            await releaseBatch(batchId);
+            clearActiveBatch(batchId);
             activeBatchId = null;
             update({ status: "error", errorMsg: "Cancelado" });
             return;
@@ -216,11 +242,8 @@ export default function UploadPage() {
           const chunk = parsed.sales.slice(i * IMPORT_CHUNK_SIZE, (i + 1) * IMPORT_CHUNK_SIZE);
           await doInsertChunk({ data: { sale_date: date, batch_id: batchId, rows: chunk } });
           if (cancelRef.current) {
-            try {
-              await doCancelImport({ data: { batch_id: batchId } });
-            } catch {
-              throw new Error(IMPORT_CANCEL_FAILED_MESSAGE);
-            }
+            await releaseBatch(batchId);
+            clearActiveBatch(batchId);
             activeBatchId = null;
             update({ status: "error", errorMsg: "Cancelado" });
             return;
@@ -242,6 +265,7 @@ export default function UploadPage() {
         await doFinalizeImport({
           data: { sale_date: date, batch_id: batchId, row_count: parsed.sales.length },
         });
+        clearActiveBatch(batchId);
         activeBatchId = null;
 
         update({ status: "done", totalLines: parsed.sales.length });
@@ -250,10 +274,11 @@ export default function UploadPage() {
         lastError = err;
         if (activeBatchId) {
           try {
-            await doCancelImport({ data: { batch_id: activeBatchId } });
+            await releaseBatch(activeBatchId);
+            clearActiveBatch(activeBatchId);
             activeBatchId = null;
-          } catch {
-            lastError = new Error(IMPORT_CANCEL_FAILED_MESSAGE);
+          } catch (releaseError) {
+            lastError = releaseError;
             break;
           }
         }
@@ -282,6 +307,15 @@ export default function UploadPage() {
       item,
       replaceExisting: importedDates.has(item.date),
     }));
+    let resolveCompletion!: () => void;
+    const activeRun: ActiveImportRun = {
+      completion: new Promise<void>((resolve) => {
+        resolveCompletion = resolve;
+      }),
+      releaseFailed: false,
+      resolve: () => resolveCompletion(),
+    };
+    activeImportRunRef.current = activeRun;
     setPendingQueue([]);
     processingRef.current = true;
     markImportActive(getBrowserSessionStorage());
@@ -306,10 +340,47 @@ export default function UploadPage() {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(msg);
     } finally {
-      clearImportActive(getBrowserSessionStorage());
+      if (activeBatchIdRef.current === null) clearImportActive(getBrowserSessionStorage());
       processingRef.current = false;
       setProcessing(IDLE_STATE);
+      activeRun.resolve();
+      if (activeImportRunRef.current === activeRun) activeImportRunRef.current = null;
     }
+  };
+
+  const cancelImportAndNavigate = async () => {
+    if (navigationBlocker.status !== "blocked" || cancellingForNavigation) return;
+    const activeRun = activeImportRunRef.current;
+    if (!activeRun) {
+      const batchId = activeBatchIdRef.current;
+      if (!batchId) {
+        navigationBlocker.proceed();
+        return;
+      }
+      setCancellingForNavigation(true);
+      try {
+        await releaseBatch(batchId);
+        clearActiveBatch(batchId);
+        clearImportActive(getBrowserSessionStorage());
+        navigationBlocker.proceed();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : IMPORT_CANCEL_FAILED_MESSAGE);
+        setCancellingForNavigation(false);
+        navigationBlocker.reset();
+      }
+      return;
+    }
+
+    setCancellingForNavigation(true);
+    cancelRef.current = true;
+    await activeRun.completion;
+
+    if (activeRun.releaseFailed) {
+      setCancellingForNavigation(false);
+      navigationBlocker.reset();
+      return;
+    }
+    navigationBlocker.proceed();
   };
 
   const [tab, setTab] = useState<"upload" | "calendario">("upload");
@@ -476,6 +547,39 @@ export default function UploadPage() {
                 {hasExistingData ? "Substituir dados" : "Importar"}
               </AlertDialogAction>
             )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={navigationBlocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && !cancellingForNavigation && navigationBlocker.status === "blocked") {
+            navigationBlocker.reset();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar importação e sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A importação ainda está em andamento. Para sair desta página, o envio atual será
+              cancelado e os dados temporários serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancellingForNavigation}>Permanecer</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancellingForNavigation}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                void cancelImportAndNavigate();
+              }}
+            >
+              {cancellingForNavigation && <Loader2 className="animate-spin" />}
+              {cancellingForNavigation ? "Cancelando..." : "Cancelar importação e sair"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

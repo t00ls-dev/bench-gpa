@@ -28,10 +28,12 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppFooter } from "@/components/app-footer";
 import { useVersionCheck } from "@/hooks/use-version-check";
+import { getBrowserSessionStorage, isImportActive } from "@/lib/chunk-reload";
 import { QUERY_STALE_IDENTITY } from "@/lib/query-config";
 import { MobileNav } from "@/components/mobile-nav";
 import { UserIdentifiers } from "@/components/user-identifiers";
 import { hasAdminRole } from "@/lib/roles";
+import { toast } from "sonner";
 import {
   SidebarProvider,
   Sidebar,
@@ -153,6 +155,10 @@ function AuthedLayout() {
   }, [user.id, user.username, user.name]);
 
   const signOut = async () => {
+    if (isImportActive(getBrowserSessionStorage())) {
+      toast.error("Cancele a importação em andamento antes de sair da conta.");
+      return;
+    }
     const { logout } = await import("@/lib/auth-api");
     await logout().catch(() => {});
     // No server-backed cache may survive an account switch in the same tab.
