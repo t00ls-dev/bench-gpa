@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getAreaAnalysis,
@@ -279,6 +279,17 @@ export function useAreaProductsView(
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const sortDir: "asc" | "desc" = sortAsc ? "asc" : "desc";
+  const analysisScopeKey = JSON.stringify([
+    dateFrom,
+    dateTo,
+    fStores,
+    fDeptos,
+    fSecoes,
+    fGrupos,
+    fSubgrupos,
+    fProducts,
+    search,
+  ]);
 
   useResetOnChange(
     [
@@ -299,22 +310,7 @@ export function useAreaProductsView(
   );
 
   const { data, isFetching, isLoading, isError, error, refetch } = useQuery({
-    queryKey: [
-      "area-analysis",
-      dateFrom,
-      dateTo,
-      fStores,
-      fDeptos,
-      fSecoes,
-      fGrupos,
-      fSubgrupos,
-      fProducts,
-      page,
-      pageSize,
-      search,
-      sortKey,
-      sortDir,
-    ],
+    queryKey: ["area-analysis", analysisScopeKey, page, pageSize, sortKey, sortDir],
     queryFn: () =>
       getArea({
         data: {
@@ -334,7 +330,8 @@ export function useAreaProductsView(
         },
       }),
     enabled: ready && productSelectionValid,
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[1] === analysisScopeKey ? previousData : undefined,
     staleTime: QUERY_STALE_CORE,
     retry: 1,
   });
