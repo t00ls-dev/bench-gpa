@@ -489,7 +489,7 @@ describe("useAreaProductsView", () => {
     expect(result.current.totalPages).toBe(1);
   });
 
-  it("keeps the table mounted while a search request is pending", async () => {
+  it("clears the previous result while a search request is pending", async () => {
     let resolveSearch: ((value: ReturnType<typeof areaResult>) => void) | undefined;
     const pendingSearch = new Promise<ReturnType<typeof areaResult>>((resolve) => {
       resolveSearch = resolve;
@@ -511,10 +511,58 @@ describe("useAreaProductsView", () => {
     act(() => result.current.setSearch("a"));
     await waitFor(() => expect(result.current.isFetching).toBe(true));
     expect(result.current.search).toBe("a");
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.products).toHaveLength(1);
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.products).toHaveLength(0);
 
     resolveSearch?.(areaResult([]));
+    await waitFor(() => expect(result.current.isFetching).toBe(false));
+  });
+
+  it("keeps the previous result while pagination and sorting requests are pending", async () => {
+    let resolvePage: ((value: ReturnType<typeof areaResult>) => void) | undefined;
+    let resolveSort: ((value: ReturnType<typeof areaResult>) => void) | undefined;
+    const pendingPage = new Promise<ReturnType<typeof areaResult>>((resolve) => {
+      resolvePage = resolve;
+    });
+    const pendingSort = new Promise<ReturnType<typeof areaResult>>((resolve) => {
+      resolveSort = resolve;
+    });
+    const firstResult = { ...areaResult([product({ prod_code: "P1" })]), totalPages: 2 };
+    const secondResult = {
+      ...areaResult([product({ prod_code: "P2" })]),
+      page: 2,
+      totalPages: 2,
+    };
+    const getArea = vi
+      .fn()
+      .mockResolvedValueOnce(firstResult)
+      .mockReturnValueOnce(pendingPage)
+      .mockReturnValueOnce(pendingSort);
+    const { result } = renderHook(() => useAreaProductsView(getArea, noSearchParams()), {
+      wrapper: makeWrapper(),
+    });
+
+    act(() => {
+      result.current.setStores(["1"]);
+      result.current.setDeptos(["MERC"]);
+    });
+    await waitFor(() => expect(result.current.products[0]?.prod_code).toBe("P1"));
+
+    act(() => result.current.setPage(2));
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.products[0]?.prod_code).toBe("P1");
+
+    resolvePage?.(secondResult);
+    await waitFor(() => expect(result.current.products[0]?.prod_code).toBe("P2"));
+
+    act(() => result.current.toggleSort("prod_name"));
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.products[0]?.prod_code).toBe("P2");
+
+    resolveSort?.(secondResult);
     await waitFor(() => expect(result.current.isFetching).toBe(false));
   });
 });
