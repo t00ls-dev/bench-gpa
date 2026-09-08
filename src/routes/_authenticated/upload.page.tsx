@@ -29,12 +29,13 @@ import { UploadDropzone } from "@/components/upload-dropzone";
 import { ImportProgress } from "@/components/import-progress";
 import { ImportHistory } from "@/components/import-history";
 import { DataCoverage } from "@/components/admin-data-coverage";
-import { fmtInt } from "@/lib/utils";
+import { cn, fmtInt } from "@/lib/utils";
 import type { ParsedSalesFile } from "@/lib/xlsx-parser";
 import {
   IMPORT_BUSY_MESSAGE,
   IMPORT_CANCEL_FAILED_MESSAGE,
   IMPORT_CHUNK_SIZE,
+  IMPORT_DATE_EXISTS_MESSAGE,
   IMPORT_MAX_ROWS,
 } from "@/lib/import-config";
 import { useWakeLock } from "@/hooks/use-wake-lock";
@@ -139,7 +140,10 @@ export default function UploadPage() {
     }
   };
 
-  const processOne = async (item: (typeof pendingQueue)[number]): Promise<void> => {
+  const processOne = async (
+    item: (typeof pendingQueue)[number],
+    replaceExisting: boolean,
+  ): Promise<void> => {
     const { date, parsed } = item;
 
     const update = (patch: Partial<FileEntry>) =>
@@ -164,12 +168,10 @@ export default function UploadPage() {
     // chunk-sequence column): resending just the chunk that failed risks
     // duplicating rows in staging_sales if the INSERT had already been
     // written on the server and only the response got lost on the network.
-    // finalize_import aggregates via GROUP BY/SUM straight from staging (it
-    // doesn't validate row counts), so a duplicate silently turns into an
-    // inflated sale, not a visible error. Restarting the file is safe
-    // because beginImport starts with
-    // DELETE FROM staging_sales WHERE sale_date = ?: every attempt starts
-    // from a clean staging for that date, with no risk of duplication.
+    // finalize_import aggregates via GROUP BY/SUM straight from staging, so a
+    // resent chunk would inflate sales even though the final row-count guard
+    // catches the mismatch. Restarting the file is safe because beginImport
+    // clears stale staging after acquiring the exclusive lease.
     let lastError: unknown;
     for (let attempt = 0; attempt <= MAX_FILE_RETRIES; attempt++) {
       if (cancelRef.current) {
@@ -195,6 +197,7 @@ export default function UploadPage() {
             total_rows: parsed.sales.length,
             stores: parsed.stores,
             products: parsed.products,
+            replace_existing: replaceExisting,
           },
         });
 
@@ -258,7 +261,13 @@ export default function UploadPage() {
           update({ status: "error", errorMsg: "Cancelado" });
           return;
         }
-        if (err instanceof Error && err.message.includes(IMPORT_BUSY_MESSAGE)) break;
+        if (
+          err instanceof Error &&
+          (err.message.includes(IMPORT_BUSY_MESSAGE) ||
+            err.message.includes(IMPORT_DATE_EXISTS_MESSAGE))
+        ) {
+          break;
+        }
       }
     }
     const msg = lastError instanceof Error ? lastError.message : "Erro desconhecido";
@@ -268,7 +277,11 @@ export default function UploadPage() {
 
   const confirmImport = async () => {
     if (pendingQueue.length === 0 || processingRef.current) return;
-    const queue = [...pendingQueue];
+    const importedDates = new Set((imported.data ?? []).map((record) => record.sale_date));
+    const queue = pendingQueue.map((item) => ({
+      item,
+      replaceExisting: importedDates.has(item.date),
+    }));
     setPendingQueue([]);
     processingRef.current = true;
     markImportActive(getBrowserSessionStorage());
@@ -278,8 +291,8 @@ export default function UploadPage() {
     setProcessing((p) => ({ ...p, busy: true, progressPct: 0, speed: 0, eta: 0, processed: 0 }));
 
     try {
-      for (const item of queue) {
-        await processOne(item);
+      for (const queued of queue) {
+        await processOne(queued.item, queued.replaceExisting);
         if (cancelRef.current) break;
       }
       if (cancelRef.current) {
@@ -301,9 +314,22 @@ export default function UploadPage() {
 
   const [tab, setTab] = useState<"upload" | "calendario">("upload");
   const totalPendingLines = pendingQueue.reduce((acc, p) => acc + p.parsed.sales.length, 0);
-  const hasExistingData = pendingQueue.some((p) =>
-    imported.data?.some((d) => d.sale_date === p.date),
+  const importedDates = new Set((imported.data ?? []).map((record) => record.sale_date));
+  const hasExistingData = pendingQueue.some((p) => importedDates.has(p.date));
+  const dateCounts = pendingQueue.reduce<Map<string, number>>(
+    (counts, item) => counts.set(item.date, (counts.get(item.date) ?? 0) + 1),
+    new Map(),
   );
+  const duplicateDates = new Set(
+    [...dateCounts].filter(([, count]) => count > 1).map(([date]) => date),
+  );
+  const hasDuplicateDates = duplicateDates.size > 0;
+  const discardPendingEntries = () => {
+    const files = new Set(pendingQueue.map((item) => item.file));
+    setEntries((current) =>
+      current.filter((entry) => entry.status !== "pending" || !files.has(entry.file)),
+    );
+  };
 
   return (
     <div>
@@ -386,48 +412,70 @@ export default function UploadPage() {
       <AlertDialog
         open={pendingQueue.length > 0}
         onOpenChange={(o) => {
-          if (!o) setPendingQueue([]);
+          if (!o) {
+            if (!processingRef.current) discardPendingEntries();
+            setPendingQueue([]);
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar importação</AlertDialogTitle>
+            <AlertDialogTitle>
+              {hasDuplicateDates ? "Datas duplicadas no lote" : "Confirmar importação"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingQueue.length === 1 ? (
-                hasExistingData ? (
-                  <>
-                    Substituir dados de <strong>{pendingQueue[0].date}</strong> com{" "}
-                    {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?
-                  </>
-                ) : (
-                  <>
-                    Importar <strong>{pendingQueue[0].date}</strong> com{" "}
-                    {fmtInt(pendingQueue[0].parsed.sales.length)} linhas?
-                  </>
-                )
-              ) : (
-                <>
-                  Deseja importar <strong>{pendingQueue.length} arquivos</strong> totalizando{" "}
-                  {fmtInt(totalPendingLines)} linhas?
-                </>
-              )}
+              {hasDuplicateDates
+                ? "Escolha apenas um arquivo para cada data antes de continuar."
+                : hasExistingData
+                  ? "As datas marcadas como substituição terão seus dados anteriores integralmente trocados."
+                  : `Importar ${pendingQueue.length} arquivo(s), totalizando ${fmtInt(totalPendingLines)} linhas?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {pendingQueue.length > 1 && (
-            <ul className="px-6 text-sm space-y-1 max-h-40 overflow-y-auto">
-              {pendingQueue.map((p, i) => (
-                <li key={i} className="flex justify-between text-muted-foreground">
-                  <span>{p.date}</span>
-                  <span>{fmtInt(p.parsed.sales.length)} linhas</span>
+          <ul className="max-h-56 space-y-2 overflow-y-auto text-sm">
+            {pendingQueue.map((item, index) => {
+              const duplicate = duplicateDates.has(item.date);
+              const replacement = importedDates.has(item.date);
+              return (
+                <li
+                  key={`${item.date}:${item.file.name}:${index}`}
+                  className="flex items-start justify-between gap-4 rounded-md border p-3"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{item.file.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.date} · {fmtInt(item.parsed.sales.length)} linhas
+                    </span>
+                  </span>
+                  <span
+                    className={
+                      duplicate || replacement
+                        ? "shrink-0 text-xs font-medium text-destructive"
+                        : "shrink-0 text-xs font-medium text-success"
+                    }
+                  >
+                    {duplicate
+                      ? "Data duplicada"
+                      : replacement
+                        ? "Substituição"
+                        : "Nova importação"}
+                  </span>
                 </li>
-              ))}
-            </ul>
-          )}
+              );
+            })}
+          </ul>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImport}>
-              {hasExistingData ? "Substituir" : "Importar"}
-            </AlertDialogAction>
+            <AlertDialogCancel>{hasDuplicateDates ? "Fechar" : "Cancelar"}</AlertDialogCancel>
+            {!hasDuplicateDates && (
+              <AlertDialogAction
+                className={cn(
+                  hasExistingData &&
+                    "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                )}
+                onClick={confirmImport}
+              >
+                {hasExistingData ? "Substituir dados" : "Importar"}
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

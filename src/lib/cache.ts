@@ -47,6 +47,11 @@ export class SimpleCache {
     this.store.set(key, { value, expiresAt: Date.now() + (ttlMs ?? this.defaultTtlMs) });
   }
 
+  delete(key: string): void {
+    this.store.delete(key);
+    this.pending.delete(key);
+  }
+
   async wrap<T>(key: string, fn: () => Promise<T>, ttlMs?: number): Promise<T> {
     const cached = this.get<T>(key);
     if (cached !== undefined) return cached;
@@ -56,10 +61,14 @@ export class SimpleCache {
 
     const promise = fn()
       .then((result) => {
-        this.set(key, result, ttlMs);
+        // Invalidating an in-flight load removes its ownership of this key,
+        // so its stale result must not repopulate the cache when it resolves.
+        if (this.pending.get(key) === promise) this.set(key, result, ttlMs);
         return result;
       })
-      .finally(() => this.pending.delete(key));
+      .finally(() => {
+        if (this.pending.get(key) === promise) this.pending.delete(key);
+      });
 
     this.pending.set(key, promise);
     return promise;

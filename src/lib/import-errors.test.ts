@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   IMPORT_BUSY_MESSAGE,
+  IMPORT_DATE_EXISTS_MESSAGE,
   IMPORT_LEASE_LOST_MESSAGE,
   IMPORT_ROW_COUNT_MISMATCH_MESSAGE,
 } from "./import-config";
@@ -10,6 +11,7 @@ import { isExpectedError } from "./sentry-error-metadata";
 describe("mapImportError", () => {
   it.each([
     ["IMPORT_IN_PROGRESS", IMPORT_BUSY_MESSAGE],
+    ["IMPORT_DATE_EXISTS", IMPORT_DATE_EXISTS_MESSAGE],
     ["IMPORT_LEASE_LOST", IMPORT_LEASE_LOST_MESSAGE],
     ["IMPORT_ROW_COUNT_MISMATCH", IMPORT_ROW_COUNT_MISMATCH_MESSAGE],
   ])("maps %s", (databaseMessage, userMessage) => {
@@ -26,5 +28,6 @@ describe("mapImportError", () => {
 
 it("marks an occupied import lock as an expected business rejection", () => {
   expect(isExpectedError(mapImportError(new Error("IMPORT_IN_PROGRESS")))).toBe(true);
+  expect(isExpectedError(mapImportError(new Error("IMPORT_DATE_EXISTS")))).toBe(true);
   expect(isExpectedError(mapImportError(new Error("IMPORT_ROW_COUNT_MISMATCH")))).toBe(false);
 });

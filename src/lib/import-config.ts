@@ -41,6 +41,8 @@ export const IMPORT_MAX_PRODUCTS = 50_000;
 
 export const IMPORT_BUSY_MESSAGE =
   "Outra importação está em andamento. Aguarde a conclusão para tentar novamente.";
+export const IMPORT_DATE_EXISTS_MESSAGE =
+  "A data já foi importada. Revise a seleção e confirme explicitamente a substituição.";
 export const IMPORT_LEASE_LOST_MESSAGE =
   "A importação expirou ou perdeu o bloqueio exclusivo. Tente novamente.";
 export const IMPORT_ROW_COUNT_MISMATCH_MESSAGE =

@@ -12,6 +12,7 @@ DROP PROCEDURE IF EXISTS product_search;
 DROP PROCEDURE IF EXISTS get_product_by_code;
 DROP PROCEDURE IF EXISTS product_analysis;
 DROP PROCEDURE IF EXISTS upsert_products_bulk;
+DROP PROCEDURE IF EXISTS acquire_import_lock_checked;
 DROP PROCEDURE IF EXISTS acquire_import_lock;
 DROP PROCEDURE IF EXISTS renew_import_lock;
 DROP PROCEDURE IF EXISTS release_import_lock;
@@ -1175,6 +1176,40 @@ BEGIN
     WHERE lock_name = 'sales_import';
   END IF;
   COMMIT;
+END//
+
+-- Refuses an existing date unless replacement was explicitly confirmed.
+-- The original procedure remains available while an old app release may
+-- still be serving during deployment; all current callers use this guard.
+CREATE PROCEDURE acquire_import_lock_checked(
+  p_batch_id VARCHAR(36),
+  p_sale_date DATE,
+  p_user_id VARCHAR(36),
+  p_stores JSON,
+  p_products JSON,
+  p_replace_existing BOOLEAN
+)
+BEGIN
+  DECLARE v_acquired BOOLEAN DEFAULT FALSE;
+  DECLARE v_date_exists BOOLEAN DEFAULT FALSE;
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    IF v_acquired THEN
+      CALL release_import_lock(p_batch_id, p_user_id);
+    END IF;
+    RESIGNAL;
+  END;
+
+  CALL acquire_import_lock(p_batch_id, p_sale_date, p_user_id, p_stores, p_products);
+  SET v_acquired = TRUE;
+
+  SELECT EXISTS(
+    SELECT 1 FROM import_log WHERE sale_date = p_sale_date
+  ) INTO v_date_exists;
+
+  IF v_date_exists AND NOT COALESCE(p_replace_existing, FALSE) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'IMPORT_DATE_EXISTS';
+  END IF;
 END//
 
 -- 13/20: finalize_import

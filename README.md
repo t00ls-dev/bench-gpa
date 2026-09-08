@@ -180,8 +180,12 @@ e rode:
 
 ```bash
 bun run cli:import data/2026-07-13.xlsx   # um arquivo específico
+bun run cli:import data/2026-07-13.xlsx --replace  # substitui uma data já importada
 bun run cli:watch                          # varre o inbox inteiro
 ```
+
+O `cli:import` recusa datas existentes por padrão. A substituição exige
+`--replace`; pela aplicação, exige confirmação explícita na lista de arquivos.
 
 `cli:watch` percorre `data/` e subpastas, identifica a data pelo nome ou pelo
 conteúdo, importa o que ainda não está na `import_log` e está dentro do horizonte
