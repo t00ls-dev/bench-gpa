@@ -23,10 +23,30 @@ const mocks = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   importedData: [] as Array<{ sale_date: string; row_count: number; imported_at: string }>,
   selectedEntries: [] as Array<Record<string, unknown>>,
+  blockerStatus: "idle" as "idle" | "blocked",
+  blockerProceed: vi.fn(),
+  blockerReset: vi.fn(),
+  blockerOptions: null as null | {
+    enableBeforeUnload: () => boolean;
+    shouldBlockFn: () => boolean;
+  },
 }));
 
 vi.mock("@tanstack/react-start", () => ({
   useServerFn: (fn: unknown) => fn,
+}));
+
+vi.mock("@tanstack/react-router", () => ({
+  useBlocker: (options: { enableBeforeUnload: () => boolean; shouldBlockFn: () => boolean }) => {
+    mocks.blockerOptions = options;
+    return mocks.blockerStatus === "blocked"
+      ? {
+          status: "blocked",
+          proceed: mocks.blockerProceed,
+          reset: mocks.blockerReset,
+        }
+      : { status: "idle" };
+  },
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -149,6 +169,8 @@ beforeEach(() => {
   mocks.refetch.mockResolvedValue(undefined);
   mocks.importedData = [];
   mocks.selectedEntries = [uploadEntry("vendas.xlsx", "2026-08-19")];
+  mocks.blockerStatus = "idle";
+  mocks.blockerOptions = null;
 });
 
 describe("UploadPage import confirmation", () => {
@@ -214,6 +236,112 @@ describe("UploadPage import confirmation", () => {
 });
 
 describe("UploadPage import cancellation", () => {
+  it("enables unload protection only while an import is active", async () => {
+    const chunk = deferred<{ inserted: number }>();
+    mocks.insertSalesChunk.mockReturnValueOnce(chunk.promise);
+    render(<UploadPage />);
+
+    expect(mocks.blockerOptions?.enableBeforeUnload()).toBe(false);
+    await startImport();
+    await waitFor(() => expect(mocks.insertSalesChunk).toHaveBeenCalledOnce());
+    expect(mocks.blockerOptions?.shouldBlockFn()).toBe(true);
+    expect(mocks.blockerOptions?.enableBeforeUnload()).toBe(true);
+
+    await act(async () => {
+      chunk.resolve({ inserted: 1 });
+      await chunk.promise;
+    });
+    await waitFor(() => expect(mocks.finalizeImport).toHaveBeenCalledOnce());
+    expect(mocks.blockerOptions?.shouldBlockFn()).toBe(false);
+    expect(mocks.blockerOptions?.enableBeforeUnload()).toBe(false);
+  });
+
+  it("lets the operator remain on the page without cancelling", async () => {
+    const chunk = deferred<{ inserted: number }>();
+    mocks.insertSalesChunk.mockReturnValueOnce(chunk.promise);
+    const { rerender } = render(<UploadPage />);
+
+    await startImport();
+    await waitFor(() => expect(mocks.insertSalesChunk).toHaveBeenCalledOnce());
+    mocks.blockerStatus = "blocked";
+    rerender(<UploadPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Cancelar importação e sair?" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Permanecer" }));
+    expect(mocks.blockerReset).toHaveBeenCalledOnce();
+    expect(mocks.cancelImport).not.toHaveBeenCalled();
+    expect(mocks.blockerProceed).not.toHaveBeenCalled();
+
+    mocks.blockerStatus = "idle";
+    rerender(<UploadPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar importação" }));
+    await act(async () => {
+      chunk.resolve({ inserted: 1 });
+      await chunk.promise;
+    });
+  });
+
+  it("releases the lease before proceeding with blocked navigation", async () => {
+    const chunk = deferred<{ inserted: number }>();
+    mocks.insertSalesChunk.mockReturnValueOnce(chunk.promise);
+    const { rerender } = render(<UploadPage />);
+
+    await startImport();
+    await waitFor(() => expect(mocks.insertSalesChunk).toHaveBeenCalledOnce());
+    mocks.blockerStatus = "blocked";
+    rerender(<UploadPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar importação e sair" }));
+
+    expect(mocks.blockerProceed).not.toHaveBeenCalled();
+    await act(async () => {
+      chunk.resolve({ inserted: 1 });
+      await chunk.promise;
+    });
+
+    await waitFor(() => expect(mocks.blockerProceed).toHaveBeenCalledOnce());
+    expect(mocks.cancelImport).toHaveBeenCalledOnce();
+    expect(mocks.cancelImport.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.blockerProceed.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("stays on the upload page when lease release cannot be confirmed", async () => {
+    const chunk = deferred<{ inserted: number }>();
+    mocks.insertSalesChunk.mockReturnValueOnce(chunk.promise);
+    mocks.cancelImport.mockRejectedValue(new Error("database unavailable"));
+    const { rerender } = render(<UploadPage />);
+
+    await startImport();
+    await waitFor(() => expect(mocks.insertSalesChunk).toHaveBeenCalledOnce());
+    mocks.blockerStatus = "blocked";
+    rerender(<UploadPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar importação e sair" }));
+
+    await act(async () => {
+      chunk.resolve({ inserted: 1 });
+      await chunk.promise;
+    });
+
+    await waitFor(() => expect(mocks.blockerReset).toHaveBeenCalledOnce());
+    expect(mocks.blockerProceed).not.toHaveBeenCalled();
+    expect(mocks.toastError).toHaveBeenCalledWith(IMPORT_CANCEL_FAILED_MESSAGE);
+    expect(isImportActive(sessionStorage)).toBe(true);
+    expect(mocks.blockerOptions?.shouldBlockFn()).toBe(true);
+
+    mocks.cancelImport.mockResolvedValue({ ok: true });
+    mocks.blockerStatus = "idle";
+    rerender(<UploadPage />);
+    mocks.blockerStatus = "blocked";
+    rerender(<UploadPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar importação e sair" }));
+
+    await waitFor(() => expect(mocks.blockerProceed).toHaveBeenCalledOnce());
+    expect(isImportActive(sessionStorage)).toBe(false);
+    expect(mocks.blockerOptions?.shouldBlockFn()).toBe(false);
+  });
+
   it("refreshes complete dates and paginated history after an import", async () => {
     render(<UploadPage />);
 
@@ -273,6 +401,7 @@ describe("UploadPage import cancellation", () => {
     expect(mocks.insertSalesChunk).toHaveBeenCalledOnce();
     expect(mocks.finalizeImport).not.toHaveBeenCalled();
     expect(mocks.toastError).toHaveBeenCalledWith(IMPORT_CANCEL_FAILED_MESSAGE);
+    expect(isImportActive(sessionStorage)).toBe(true);
   });
 
   it("shows an occupied lease immediately without sending chunks or retrying", async () => {
