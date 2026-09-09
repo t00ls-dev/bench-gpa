@@ -118,7 +118,8 @@ Remova comentários que:
 NÃO faça sem perguntar:
 
 - Modificar variáveis de ambiente ou secrets
-- Deletar branches remotas
+- Deletar branches remotas, exceto a branch de trabalho após a própria PR ser
+  mesclada
 - Alterar configuração de deploy/infra (workflow do GitHub Actions, VPS
   Hestia, DNS, nginx, PM2, etc.)
 - Modificar dados de produção (DB, storage)
@@ -160,6 +161,19 @@ Depois de modificar, validar:
   (dev server, MariaDB, login real) quando a mudança não for coberta por
   lint/typecheck/test
 
+### Fluxo Git para alterações de código
+
+1. Criar uma branch dedicada antes de modificar código. Não fazer commit direto
+   na `main`.
+2. Implementar e executar lint, type-check, testes e build antes do commit.
+3. Criar commits pequenos e atômicos, publicar a branch e abrir uma PR.
+4. Aguardar os jobs `ci` e `schema-check` concluírem com sucesso.
+5. Fazer merge somente após confirmação explícita do usuário, mesmo com todos
+   os gates verdes.
+6. Após o merge, sincronizar a `main` local e remover a branch de trabalho local
+   e remota.
+7. Não disparar deploy sem solicitação explícita do usuário.
+
 ### Metadados gerados da documentação
 
 - `src/generated/doc-meta.json` é gerado por
@@ -171,9 +185,6 @@ Depois de modificar, validar:
   em `docs/**/*.md` devem manter o working tree intacto.
 - O histórico Git completo é necessário para seguir renomes e encontrar a
   última mudança de conteúdo. Preserve `fetch-depth: 0` no CI.
-
-Para mudanças arriscadas (schema de DB, auth, infra), prefira branch e PR
-em vez de commit direto em `main`.
 
 ---
 
