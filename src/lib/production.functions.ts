@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAuth } from "./auth-middleware";
 import { requireRateLimit } from "./rate-limit.middleware";
+import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import {
   ProductionForecastResult,
@@ -23,7 +24,8 @@ export const PRODUCTION_LOOKBACK_OCCURRENCES = 8;
 export const getProductionForecast = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => ProductionForecastSchema.parse(d))
-  .handler(async ({ data }): Promise<ProductionForecastResult> => {
+  .handler(async ({ data, context }): Promise<ProductionForecastResult> => {
+    await assertAdmin(context);
     const query = async (): Promise<ProductionForecastResult> => {
       const [rs] = await db.query("CALL production_forecast(?, ?, ?, ?, ?)", [
         data.storeCode,
@@ -97,7 +99,8 @@ export const getProductionForecast = createServerFn({ method: "POST" })
 export const getProductionFilterOptions = createServerFn({ method: "POST" })
   .middleware([requireAuth, requireRateLimit()])
   .inputValidator((d: unknown) => SingleStoreCodeSchema.parse(d))
-  .handler(async ({ data }): Promise<ProductionFilterOption[]> => {
+  .handler(async ({ data, context }): Promise<ProductionFilterOption[]> => {
+    await assertAdmin(context);
     const { cache } = await import("./cache");
     return cache.wrap(
       `production-filter-options:${data.storeCode}`,

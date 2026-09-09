@@ -109,7 +109,9 @@ export function AuthenticatedLayout() {
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/product", label: "Produto", icon: Package },
     { to: "/area", label: "Área", icon: Layers },
-    { to: "/forecast", label: "Previsão de Venda", icon: ClipboardList },
+    ...(isAdmin
+      ? [{ to: "/forecast", label: "Previsão de Venda", icon: ClipboardList } as const]
+      : []),
     { to: "/howto", label: "Como usar", icon: HelpCircle },
   ] as const;
   const adminNav = [
