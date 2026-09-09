@@ -1,33 +1,7 @@
-const { readFileSync } = require("node:fs");
 const { resolve } = require("node:path");
 
-function loadEnv() {
-  const envFile = resolve(__dirname, ".env");
-  try {
-    const content = readFileSync(envFile, "utf-8");
-    const env = {};
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const sep = trimmed.indexOf("=");
-      if (sep === -1) continue;
-      const key = trimmed.slice(0, sep).trim();
-      let val = trimmed.slice(sep + 1).trim();
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      if (key) env[key] = val;
-    }
-    return env;
-  } catch {
-    return {};
-  }
-}
-
-const env = loadEnv();
+process.loadEnvFile(resolve(__dirname, ".env"));
+const env = process.env;
 
 module.exports = {
   apps: [
@@ -75,14 +49,14 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: env.PORT ?? "3000",
-        DB_HOST: env.DB_HOST ?? "localhost",
-        DB_PORT: env.DB_PORT ?? "3306",
-        DB_NAME: env.DB_NAME ?? "admin_gpa",
-        DB_USER: env.DB_USER ?? "admin_gpa",
+        DB_HOST: env.DB_HOST ?? "",
+        DB_PORT: env.DB_PORT ?? "",
+        DB_NAME: env.DB_NAME ?? "",
+        DB_USER: env.DB_USER ?? "",
         DB_PASS: env.DB_PASS ?? "",
         JWT_SECRET: env.JWT_SECRET ?? "",
         TURNSTILE_SECRET_KEY: env.TURNSTILE_SECRET_KEY ?? "",
-        TURNSTILE_BYPASS: env.TURNSTILE_BYPASS ?? "false",
+        TURNSTILE_BYPASS: env.TURNSTILE_BYPASS ?? "",
         SENTRY_DSN: env.SENTRY_DSN ?? "",
       },
       max_memory_restart: "512M",
