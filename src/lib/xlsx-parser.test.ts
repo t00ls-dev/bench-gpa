@@ -2,9 +2,34 @@ import { describe, it, expect } from "vitest";
 import * as XLSX from "xlsx";
 import { parseAnyWorkbook, parseCellNumber } from "./xlsx-parser";
 
+function salesFilters(date: string, additionalFilter?: string): string {
+  const [, month, year] = date.split("/");
+  return [
+    "Filtros aplicados:",
+    "Formato é PAO DE ACUCAR",
+    "REGIONAL é PA RIO DE JANEIRO",
+    `ANO é ${year}`,
+    `MES é ${Number(month)}`,
+    `DTA_VENDA é ${date}`,
+    additionalFilter,
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
+}
+
+function withRealFilters(rows: unknown[][]): unknown[][] {
+  return rows.map((row) =>
+    row.map((cell) => {
+      if (typeof cell !== "string") return cell;
+      const match = cell.match(/^DTA_VENDA é (\d{2}\/\d{2}\/\d{4})$/);
+      return match ? salesFilters(match[1]) : cell;
+    }),
+  );
+}
+
 function makeWorkbook(rows: unknown[][]): ArrayBuffer {
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const ws = XLSX.utils.aoa_to_sheet(withRealFilters(rows));
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   return XLSX.write(wb, { type: "array", bookType: "xlsx" });
 }
@@ -13,7 +38,7 @@ function makeWorkbook(rows: unknown[][]): ArrayBuffer {
 // (upload-dropzone.tsx: accept=".xlsx,.xls"), but nothing tested this format.
 function makeWorkbookXls(rows: unknown[][]): ArrayBuffer {
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const ws = XLSX.utils.aoa_to_sheet(withRealFilters(rows));
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   return XLSX.write(wb, { type: "array", bookType: "xls" });
 }
@@ -34,9 +59,62 @@ describe("xlsx-parser", () => {
     expect(result.sales[1].val_vda).toBe(200.3);
   });
 
-  it("throws when date marker is missing", () => {
+  it("throws when the filters footer is missing", () => {
     const buf = makeWorkbook([["no date here"]]);
-    expect(() => parseAnyWorkbook(buf)).toThrow("DTA_VENDA");
+    expect(() => parseAnyWorkbook(buf)).toThrow("Filtros aplicados");
+  });
+
+  it.each([
+    "NOM_DEPTO não é PERECIVEIS",
+    "NOM_SUBGRUPO é ABACATE A GRANEL",
+    "Loja é 1413-POMPEU LOUREIRO",
+    "NOM_SECAO não é CARNES E AVES",
+    "NOM_GRUPO não é ACESSORIO DE LIMPEZA PARA COZINHA",
+  ])("rejects the additional report filter: %s", (additionalFilter) => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      [salesFilters("07/09/2026", additionalFilter)],
+      [null, null, null, null, "12345-PROD X", 100.5],
+    ]);
+
+    expect(() => parseAnyWorkbook(buf)).toThrow("sem filtros adicionais");
+  });
+
+  it("reports a truncated export before other footer errors", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      ["Filtros aplicados:\nFormato é PAO DE ACUCAR"],
+      ["Exported data exceeded the allowed volume. Some data may have been omitted."],
+    ]);
+
+    expect(() => parseAnyWorkbook(buf)).toThrow("exportação excedeu o volume permitido");
+  });
+
+  it("rejects more than one filters footer", () => {
+    const filters = salesFilters("07/09/2026");
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      [filters],
+      [filters],
+    ]);
+
+    expect(() => parseAnyWorkbook(buf)).toThrow("mais de um rodapé");
+  });
+
+  it("rejects a filter period that does not match the sale date", () => {
+    const filters = salesFilters("07/09/2026").replace("MES é 9", "MES é 8");
+    const buf = makeWorkbook([[null, null, null, null, null, "001 - CENTRO"], [filters]]);
+
+    expect(() => parseAnyWorkbook(buf)).toThrow("não correspondem à DTA_VENDA");
+  });
+
+  it("rejects an invalid sale date", () => {
+    const buf = makeWorkbook([
+      [null, null, null, null, null, "001 - CENTRO"],
+      [salesFilters("31/02/2026")],
+    ]);
+
+    expect(() => parseAnyWorkbook(buf)).toThrow("DTA_VENDA inválida");
   });
 
   it("throws an error (doesn't hang, doesn't return garbage) for a corrupted/non-xlsx file", () => {
@@ -270,16 +348,20 @@ describe("xlsx-parser", () => {
 
   it("reads only the first sheet when the file has multiple tabs", () => {
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.aoa_to_sheet([
-      [null, null, null, null, null, "001 - CENTRO"],
-      ["DTA_VENDA é 01/01/2024"],
-      [null, null, null, null, "111-PROD DA ABA 1", 10],
-    ]);
-    const ws2 = XLSX.utils.aoa_to_sheet([
-      [null, null, null, null, null, "002 - NORTE"],
-      ["DTA_VENDA é 02/01/2024"],
-      [null, null, null, null, "222-PROD DA ABA 2", 20],
-    ]);
+    const ws1 = XLSX.utils.aoa_to_sheet(
+      withRealFilters([
+        [null, null, null, null, null, "001 - CENTRO"],
+        ["DTA_VENDA é 01/01/2024"],
+        [null, null, null, null, "111-PROD DA ABA 1", 10],
+      ]),
+    );
+    const ws2 = XLSX.utils.aoa_to_sheet(
+      withRealFilters([
+        [null, null, null, null, null, "002 - NORTE"],
+        ["DTA_VENDA é 02/01/2024"],
+        [null, null, null, null, "222-PROD DA ABA 2", 20],
+      ]),
+    );
     XLSX.utils.book_append_sheet(wb, ws1, "Aba1");
     XLSX.utils.book_append_sheet(wb, ws2, "Aba2");
     const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });

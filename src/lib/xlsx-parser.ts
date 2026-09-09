@@ -21,18 +21,61 @@ export interface ParsedSalesFile {
   products: Array<{ prod_code: string; prod_name: string }>;
 }
 
-const DATE_RX = /DTA_VENDA\s+é\s+(\d{2})\/(\d{2})\/(\d{4})/i;
+const TRUNCATED_EXPORT_MESSAGE =
+  "Exported data exceeded the allowed volume. Some data may have been omitted.";
+const FILTERS_PREFIX = "Filtros aplicados:";
+const SALES_FILTERS_RX =
+  /^Filtros aplicados:\nFormato é PAO DE ACUCAR\nREGIONAL é PA RIO DE JANEIRO\nANO é (\d{4})\nMES é ([1-9]|1[0-2])\nDTA_VENDA é (\d{2})\/(\d{2})\/(\d{4})$/;
 
-function findSalesDate(rows: unknown[][]): string | null {
+function validateSalesFilters(rows: unknown[][]): string {
   for (const row of rows) {
     for (const cell of row) {
-      if (typeof cell === "string") {
-        const m = cell.match(DATE_RX);
-        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+      if (typeof cell === "string" && cell.includes(TRUNCATED_EXPORT_MESSAGE)) {
+        throw new Error(
+          "O arquivo está incompleto: a exportação excedeu o volume permitido e pode ter omitido dados.",
+        );
       }
     }
   }
-  return null;
+
+  const filterFooters: string[] = [];
+  for (const row of rows) {
+    for (const cell of row) {
+      if (typeof cell === "string" && cell.startsWith(FILTERS_PREFIX)) {
+        filterFooters.push(cell.replace(/\r\n/g, "\n").trim());
+      }
+    }
+  }
+
+  if (filterFooters.length === 0) {
+    throw new Error("Rodapé 'Filtros aplicados:' não encontrado no arquivo de vendas.");
+  }
+  if (filterFooters.length > 1) {
+    throw new Error("O arquivo contém mais de um rodapé de filtros.");
+  }
+
+  const match = filterFooters[0].match(SALES_FILTERS_RX);
+  if (!match) {
+    throw new Error(
+      "Os filtros aplicados não correspondem ao relatório esperado. Exporte sem filtros adicionais.",
+    );
+  }
+
+  const [, filterYear, filterMonth, day, month, year] = match;
+  if (filterYear !== year || Number(filterMonth) !== Number(month)) {
+    throw new Error("ANO e MES dos filtros não correspondem à DTA_VENDA.");
+  }
+
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() + 1 !== Number(month) ||
+    date.getUTCDate() !== Number(day)
+  ) {
+    throw new Error("DTA_VENDA inválida no rodapé de filtros.");
+  }
+
+  return `${year}-${month}-${day}`;
 }
 
 function splitCodeName(s: unknown): { code: string; name: string } | null {
@@ -95,9 +138,7 @@ export function parseAnyWorkbook(buffer: ArrayBuffer): ParsedSalesFile {
 }
 
 function parseSalesRows(rows: unknown[][]): ParsedSalesFile {
-  const dateIso = findSalesDate(rows);
-  if (!dateIso)
-    throw new Error("Marcador 'DTA_VENDA é DD/MM/AAAA' não encontrado no arquivo de vendas.");
+  const dateIso = validateSalesFilters(rows);
 
   const headerLojas = rows[0];
   const stores: Array<{ idx: number; code: string; name: string }> = [];
