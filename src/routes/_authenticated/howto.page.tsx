@@ -30,8 +30,9 @@ export default function HowToPage() {
       <HowToSection title="Navegação" icon={Menu}>
         <p className="mb-3 text-sm text-muted-foreground">
           No desktop, use a <strong>sidebar à esquerda</strong> para navegar entre as páginas. Em
-          mobile, use a <strong>barra inferior</strong> para acesso rápido (Dashboard, Produto, Área
-          e Previsão) e o botão <strong>"Mais"</strong> para abrir Como usar e sair.
+          mobile, use a <strong>barra inferior</strong> para acesso rápido a Dashboard, Produto e
+          Área{isAdmin ? " e Previsão" : ""}, e o botão <strong>"Mais"</strong> para abrir Como usar
+          e sair.
         </p>
         {isAdmin && (
           <p className="text-sm text-muted-foreground">
@@ -102,19 +103,21 @@ export default function HowToPage() {
         </ul>
       </HowToSection>
 
-      <HowToSection title="Previsão de Venda" icon={ClipboardList}>
-        <p className="mb-3 text-sm text-muted-foreground">
-          A Previsão estima a venda de produtos de Perecíveis para uma loja e uma data com base nas
-          últimas ocorrências do mesmo dia da semana.
-        </p>
-        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-          <li>Selecione Loja, Data da previsão e Seção para carregar os resultados.</li>
-          <li>Refine por Grupo, Subgrupo e Produto.</li>
-          <li>Alterar a data mantém os filtros selecionados.</li>
-          <li>Alterar um nível da hierarquia limpa somente os níveis dependentes.</li>
-          <li>Exporte a previsão em PDF.</li>
-        </ul>
-      </HowToSection>
+      {isAdmin ? (
+        <HowToSection title="Previsão de Venda" icon={ClipboardList}>
+          <p className="mb-3 text-sm text-muted-foreground">
+            A Previsão estima a venda de produtos de Perecíveis para uma loja e uma data com base
+            nas últimas ocorrências do mesmo dia da semana.
+          </p>
+          <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+            <li>Selecione Loja, Data da previsão e Seção para carregar os resultados.</li>
+            <li>Refine por Grupo, Subgrupo e Produto.</li>
+            <li>Alterar a data mantém os filtros selecionados.</li>
+            <li>Alterar um nível da hierarquia limpa somente os níveis dependentes.</li>
+            <li>Exporte a previsão em PDF.</li>
+          </ul>
+        </HowToSection>
+      ) : null}
 
       {isAdmin ? (
         <Suspense fallback={null}>

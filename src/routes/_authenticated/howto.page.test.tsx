@@ -21,6 +21,7 @@ describe("HowToPage", () => {
 
     expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Área" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Previsão de Venda" })).not.toBeInTheDocument();
     expect(screen.getByText(/qualquer usuário autenticado que receba o link/i)).toBeInTheDocument();
     expect(screen.getByText(/recentemente visitadas por até 30 dias/i)).toBeInTheDocument();
     expect(screen.getByText(/inclusive nas Análises salvas/i)).toBeInTheDocument();
@@ -37,6 +38,7 @@ describe("HowToPage", () => {
     render(<HowToPage />);
 
     expect(screen.getByText(/as páginas administrativas ficam na sidebar/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Previsão de Venda" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Importar Dados" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Administração" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Documentação" })).toBeInTheDocument();

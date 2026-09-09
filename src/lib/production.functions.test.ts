@@ -41,9 +41,11 @@ vi.mock("./rate-limit.middleware", () => ({
         next({}),
   ),
 }));
+vi.mock("./admin-utils", () => ({ assertAdmin: vi.fn() }));
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
 import { getProductionForecast, getProductionFilterOptions } from "./production.functions";
+import { assertAdmin } from "./admin-utils";
 import db from "./db";
 import { cache } from "./cache";
 
@@ -116,10 +118,18 @@ beforeEach(() => {
   vi.clearAllMocks();
   cache.destroy();
   (cache as unknown as { store: Map<string, unknown> }).store.clear();
+  vi.mocked(assertAdmin).mockResolvedValue(undefined);
   vi.mocked(db.query).mockResolvedValue(PROC_RESULT_MIXED as never);
 });
 
 describe("getProductionForecast", () => {
+  it("rejects non-admin users before querying the database", async () => {
+    vi.mocked(assertAdmin).mockRejectedValueOnce(new Error("Apenas administradores"));
+
+    await expect(call()).rejects.toThrow("Apenas administradores");
+    expect(db.query).not.toHaveBeenCalled();
+  });
+
   it("maps every product individually (no confidence floor), tagged with grupo/subgrupo, and reconciles the seção total", async () => {
     const r = await call();
     expect(r.secoes).toHaveLength(2);
@@ -214,6 +224,13 @@ describe("getProductionFilterOptions", () => {
     (getProductionFilterOptions as unknown as (d: { storeCode: string }) => Promise<unknown>)({
       storeCode,
     });
+
+  it("rejects non-admin users before querying the database", async () => {
+    vi.mocked(assertAdmin).mockRejectedValueOnce(new Error("Apenas administradores"));
+
+    await expect(callOptions()).rejects.toThrow("Apenas administradores");
+    expect(db.query).not.toHaveBeenCalled();
+  });
 
   it("maps distinct secao/grupo/subgrupo rows from product_universe", async () => {
     vi.mocked(db.query).mockResolvedValue([

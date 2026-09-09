@@ -23,8 +23,9 @@ const TABS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/product", label: "Produto", icon: Package },
   { to: "/area", label: "Área", icon: Layers },
-  { to: "/forecast", label: "Previsão", icon: ClipboardList },
 ] as const;
+
+const FORECAST_TAB = { to: "/forecast", label: "Previsão", icon: ClipboardList } as const;
 
 const ADMIN_ITEMS = [
   { to: "/upload", label: "Importar", icon: Upload },
@@ -55,7 +56,7 @@ export function MobileNav({ isAdmin, name, username, employeeId, onSignOut }: Pr
     <>
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 backdrop-blur-lg md:hidden">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-around px-2">
-          {TABS.map((tab) => (
+          {[...TABS, ...(isAdmin ? [FORECAST_TAB] : [])].map((tab) => (
             <Link
               key={tab.to}
               to={tab.to}
