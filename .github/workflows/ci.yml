@@ -128,7 +128,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install mariadb client
-        run: sudo apt-get update && sudo apt-get install -y mariadb-client
+        # The runner's Google Chrome source is unrelated to this job. Its stale
+        # package index previously blocked deploys before the schema was checked.
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y mariadb-client
       - name: Apply schema from scratch and prove idempotency (runs 2x)
         run: |
           cat > /tmp/schema-check.env <<EOF
