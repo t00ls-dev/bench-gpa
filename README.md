@@ -153,7 +153,7 @@ manual do workflow `CI/CD` na `main` representa intenção de publicar.
 | Primeiro acesso   | `/first-access`    | Não   | Define a senha inicial (usuário ou matrícula), auto-login              |
 | Trocar senha      | `/change-password` | Sim   | Troca voluntária ou forçada (senha expirada há 30+ dias)               |
 | Dashboard         | `/`                | Sim   | KPIs, evolução diária, top lojas e rankings                            |
-| Produto           | `/product`         | Sim   | Análise de produto por período, dia da semana e lojas persistidas      |
+| Produto           | `/product`         | Sim   | Análise de produto por período, dia da semana e filtros persistidos    |
 | Área              | `/area`            | Sim   | Drill-down, evolução diária, média semanal, tabela e PDF export        |
 | Previsão de Venda | `/forecast`        | Sim   | Venda esperada por produto de Perecíveis numa loja/dia, com PDF export |
 | Upload            | `/upload`          | Admin | Upload de planilhas XLSX                                               |
