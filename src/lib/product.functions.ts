@@ -13,7 +13,11 @@ import {
   parseCodeNameVal,
   parseDateVal,
 } from "./api-types";
-import { ProductSearchSchema, SingleProdCodeSchema } from "./schemas";
+import {
+  ProductDepartmentOptionsSchema,
+  ProductSearchSchema,
+  SingleProdCodeSchema,
+} from "./schemas";
 
 function escapeLike(value: string) {
   return value.replaceAll("=", "==").replaceAll("%", "=%").replaceAll("_", "=_");
@@ -28,13 +32,14 @@ export const searchProducts = createServerFn({ method: "POST" })
     const storePredicate = data.storeCodes.length
       ? `u.store_code IN (${data.storeCodes.map(() => "?").join(", ")}) AND `
       : "";
+    const departmentPredicate = data.department ? "u.depto = ? AND " : "";
     const namePredicates = terms.map(() => "u.prod_name LIKE ? ESCAPE '='").join(" AND ");
     const containsQuery = `%${escapeLike(query)}%`;
     const nameParams = terms.map((term) => `%${escapeLike(term)}%`);
     const [rows] = await db.query(
       `SELECT u.prod_code, MAX(u.prod_name) AS prod_name
        FROM product_universe u
-       WHERE ${storePredicate}(u.prod_code LIKE ? ESCAPE '=' OR (${namePredicates}))
+       WHERE ${storePredicate}${departmentPredicate}(u.prod_code LIKE ? ESCAPE '=' OR (${namePredicates}))
        GROUP BY u.prod_code
        ORDER BY CASE
          WHEN u.prod_code = ? THEN 0
@@ -48,6 +53,7 @@ export const searchProducts = createServerFn({ method: "POST" })
        LIMIT 20`,
       [
         ...data.storeCodes,
+        ...(data.department ? [data.department] : []),
         containsQuery,
         ...nameParams,
         query,
@@ -56,6 +62,23 @@ export const searchProducts = createServerFn({ method: "POST" })
       ],
     );
     return (rows ?? []) as { prod_code: string; prod_name: string }[];
+  });
+
+export const getProductDepartments = createServerFn({ method: "POST" })
+  .middleware([requireAuth, requireRateLimit()])
+  .inputValidator((d: unknown) => ProductDepartmentOptionsSchema.parse(d ?? {}))
+  .handler(async ({ data }): Promise<string[]> => {
+    const storePredicate = data.storeCodes.length
+      ? `AND store_code IN (${data.storeCodes.map(() => "?").join(", ")})`
+      : "";
+    const [rows] = await db.query(
+      `SELECT DISTINCT depto
+       FROM product_universe
+       WHERE depto IS NOT NULL AND depto <> '' ${storePredicate}
+       ORDER BY depto`,
+      data.storeCodes,
+    );
+    return asArray(rows).map((row) => str(asRecord(row).depto));
   });
 
 export const getProductByCode = createServerFn({ method: "POST" })

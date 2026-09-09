@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { searchProducts, getProductAnalysis, getProductByCode } from "@/lib/product.functions";
+import {
+  searchProducts,
+  getProductAnalysis,
+  getProductByCode,
+  getProductDepartments,
+} from "@/lib/product.functions";
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useProductStoreCodes } from "@/hooks/use-product-store-codes";
 import { useResetOnChange } from "@/hooks/use-reset-on-change";
-import { Label } from "@/components/ui/label";
-import { MultiSelect } from "@/components/multi-select";
+import { ProductFilters } from "@/components/product-filters";
 import { ProductSearch } from "@/components/product-search";
 import { ProductKPIs } from "@/components/product-kpis";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,6 +57,7 @@ function ProductPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
+  const [department, setDepartment] = useState<string | null>(null);
   const [storeCodes, setStoreCodes] = useProductStoreCodes(store, !!plu);
   const [recentProducts, setRecentProducts] = usePersistentState<RecentProduct[]>(
     "bench-gpa:produto:recentes",
@@ -85,6 +90,7 @@ function ProductPage() {
   const search = useServerFn(searchProducts);
   const analysis = useServerFn(getProductAnalysis);
   const getStoresFn = useServerFn(getStores);
+  const getDepartmentsFn = useServerFn(getProductDepartments);
 
   const { data: stores = [] } = useQuery({
     queryKey: ["stores-all"],
@@ -92,9 +98,15 @@ function ProductPage() {
     staleTime: QUERY_STALE_REFERENCE,
   });
 
+  const { data: departments } = useQuery({
+    queryKey: ["product-departments", storeCodes],
+    queryFn: () => getDepartmentsFn({ data: { storeCodes } }),
+    staleTime: QUERY_STALE_REFERENCE,
+  });
+
   const { data: suggestions, isFetching: searchFetching } = useQuery({
-    queryKey: ["product-search", debounced, storeCodes],
-    queryFn: () => search({ data: { q: debounced, storeCodes } }),
+    queryKey: ["product-search", debounced, storeCodes, department],
+    queryFn: () => search({ data: { q: debounced, storeCodes, department } }),
     enabled: debounced.trim().length >= 3 && !selected,
   });
 
@@ -158,6 +170,10 @@ function ProductPage() {
       [s, ...prev.filter((p) => p.prod_code !== s.prod_code)].slice(0, MAX_RECENT_PRODUCTS),
     );
   };
+  const handleDepartmentChange = (value: string | null) => {
+    setDepartment(value);
+    handleClear();
+  };
 
   return (
     <div>
@@ -172,20 +188,14 @@ function ProductPage() {
         </div>
       </header>
 
-      <div className="kpi-card mb-4 min-w-0 overflow-hidden grid gap-3 md:grid-cols-2 [&>*]:min-w-0">
-        <div>
-          <Label className="text-xs">Loja</Label>
-          <MultiSelect
-            label="Todas as lojas"
-            options={stores.map((s) => ({
-              value: s.store_code,
-              label: `${s.store_code} - ${s.store_name}`,
-            }))}
-            value={storeCodes}
-            onChange={setStoreCodes}
-          />
-        </div>
-      </div>
+      <ProductFilters
+        stores={stores}
+        departments={departments ?? []}
+        storeCodes={storeCodes}
+        department={department}
+        onStoreCodesChange={setStoreCodes}
+        onDepartmentChange={handleDepartmentChange}
+      />
 
       <ProductSearch
         query={query}
@@ -193,7 +203,7 @@ function ProductPage() {
         selected={selected}
         suggestions={suggestions}
         searchFetching={searchFetching}
-        recent={recentProducts}
+        recent={department ? [] : recentProducts}
         onQueryChange={(v) => {
           setQuery(v);
           setSelected(null);

@@ -20,6 +20,7 @@ import {
   UpdateSavedAreaAnalysisSchema,
   AuditLogQuerySchema,
   ImportHistoryQuerySchema,
+  ProductDepartmentOptionsSchema,
   ProductSearchSchema,
   UpdateAdminUserSchema,
 } from "./schemas";
@@ -119,11 +120,26 @@ describe("ProductSearchSchema", () => {
 
   it("accepts multiple stores and rejects excessive search terms", () => {
     expect(
-      ProductSearchSchema.parse({ q: "leite integral", storeCodes: ["1516", "1520"] }),
-    ).toEqual({ q: "leite integral", storeCodes: ["1516", "1520"] });
+      ProductSearchSchema.parse({
+        q: "leite integral",
+        storeCodes: ["1516", "1520"],
+        department: "  MERCEARIA  ",
+      }),
+    ).toEqual({
+      q: "leite integral",
+      storeCodes: ["1516", "1520"],
+      department: "MERCEARIA",
+    });
     expect(
       ProductSearchSchema.safeParse({ q: "a b c d e f g h i j k", storeCodes: [] }).success,
     ).toBe(false);
+  });
+});
+
+describe("ProductDepartmentOptionsSchema", () => {
+  it("defaults to all stores and validates store codes", () => {
+    expect(ProductDepartmentOptionsSchema.parse({})).toEqual({ storeCodes: [] });
+    expect(ProductDepartmentOptionsSchema.safeParse({ storeCodes: [""] }).success).toBe(false);
   });
 });
 
