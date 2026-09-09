@@ -43,7 +43,12 @@ vi.mock("./rate-limit.middleware", () => ({
 }));
 vi.mock("./db", () => ({ default: { query: vi.fn() } }));
 
-import { searchProducts, getProductByCode, getProductAnalysis } from "./product.functions";
+import {
+  searchProducts,
+  getProductDepartments,
+  getProductByCode,
+  getProductAnalysis,
+} from "./product.functions";
 import db from "./db";
 
 beforeEach(() => {
@@ -51,7 +56,11 @@ beforeEach(() => {
 });
 
 describe("searchProducts", () => {
-  const callSearch = searchProducts as (d: { q: string; storeCodes: string[] }) => Promise<unknown>;
+  const callSearch = searchProducts as (d: {
+    q: string;
+    storeCodes: string[];
+    department?: string | null;
+  }) => Promise<unknown>;
 
   it("matches every name term even when other words appear between them", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([
@@ -82,6 +91,21 @@ describe("searchProducts", () => {
     );
   });
 
+  it("combines the selected stores and department when searching", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [{ prod_code: "1008160", prod_name: "LEITE UHT INTEGRAL" }],
+    ] as never);
+
+    await callSearch({ q: "leite", storeCodes: ["1516", "1520"], department: "MERCEARIA" });
+
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /u\.store_code IN \(\?, \?\) AND u\.depto = \? AND \(u\.prod_code LIKE/,
+      ),
+      ["1516", "1520", "MERCEARIA", "%leite%", "%leite%", "leite", "leite%", "leite%"],
+    );
+  });
+
   it("escapes LIKE wildcards in product names and codes", async () => {
     vi.mocked(db.query).mockResolvedValueOnce([[]] as never);
 
@@ -101,6 +125,35 @@ describe("searchProducts", () => {
     vi.mocked(db.query).mockResolvedValueOnce([undefined] as never);
     const result = await callSearch({ q: "xyz", storeCodes: [] });
     expect(result).toEqual([]);
+  });
+});
+
+describe("getProductDepartments", () => {
+  const callDepartments = getProductDepartments as (d: {
+    storeCodes: string[];
+  }) => Promise<unknown>;
+
+  it("lists all departments when no store is selected", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([
+      [{ depto: "BAZAR" }, { depto: "MERCEARIA" }],
+    ] as never);
+
+    const result = await callDepartments({ storeCodes: [] });
+
+    expect(result).toEqual(["BAZAR", "MERCEARIA"]);
+    expect(db.query).toHaveBeenCalledWith(expect.not.stringContaining("store_code IN"), []);
+  });
+
+  it("limits departments to the selected stores", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce([[{ depto: "PERECIVEIS" }]] as never);
+
+    const result = await callDepartments({ storeCodes: ["1516", "1520"] });
+
+    expect(result).toEqual(["PERECIVEIS"]);
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining("store_code IN (?, ?)"), [
+      "1516",
+      "1520",
+    ]);
   });
 });
 

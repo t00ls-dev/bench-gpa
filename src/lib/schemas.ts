@@ -288,6 +288,11 @@ export const ProductSearchSchema = z.object({
     .max(255)
     .refine((value) => value.split(/\s+/).length <= 10, "Use no máximo 10 termos na busca"),
   storeCodes: z.array(z.string().trim().min(1).max(20)).max(100).optional().default([]),
+  department: z.string().trim().min(1).max(100).nullable().optional(),
+});
+
+export const ProductDepartmentOptionsSchema = z.object({
+  storeCodes: z.array(z.string().trim().min(1).max(20)).max(100).optional().default([]),
 });
 
 export const SingleProdCodeSchema = z.object({ prodCode: z.string().min(1) });
