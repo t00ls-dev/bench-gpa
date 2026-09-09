@@ -119,6 +119,8 @@ export function ProductionTable({
     () => products.slice((page - 1) * pageSize, page * pageSize),
     [page, pageSize, products],
   );
+  // TanStack Virtual exposes methods that the React Compiler cannot memoize safely.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: pagedProducts.length,
     getScrollElement: () => scrollRef.current,
