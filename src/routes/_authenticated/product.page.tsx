@@ -10,6 +10,7 @@ import {
 import { getStores } from "@/lib/dashboard.functions";
 import { QUERY_STALE_REFERENCE, QUERY_STALE_CORE } from "@/lib/query-config";
 import { usePersistentState } from "@/hooks/use-persistent-state";
+import { useProductDepartment } from "@/hooks/use-product-department";
 import { useProductStoreCodes } from "@/hooks/use-product-store-codes";
 import { useResetOnChange } from "@/hooks/use-reset-on-change";
 import { ProductFilters } from "@/components/product-filters";
@@ -57,7 +58,6 @@ function ProductPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ prod_code: string; prod_name: string } | null>(null);
   const [debounced, setDebounced] = useState("");
-  const [department, setDepartment] = useState<string | null>(null);
   const [storeCodes, setStoreCodes] = useProductStoreCodes(store, !!plu);
   const [recentProducts, setRecentProducts] = usePersistentState<RecentProduct[]>(
     "bench-gpa:produto:recentes",
@@ -104,12 +104,6 @@ function ProductPage() {
     staleTime: QUERY_STALE_REFERENCE,
   });
 
-  const { data: suggestions, isFetching: searchFetching } = useQuery({
-    queryKey: ["product-search", debounced, storeCodes, department],
-    queryFn: () => search({ data: { q: debounced, storeCodes, department } }),
-    enabled: debounced.trim().length >= 3 && !selected,
-  });
-
   const { data: analysisData, isFetching: analysisLoading } = useQuery({
     queryKey: ["product-analysis", selected?.prod_code, storeCodes],
     queryFn: () =>
@@ -122,6 +116,18 @@ function ProductPage() {
       }),
     enabled: !!selected,
     staleTime: QUERY_STALE_CORE,
+  });
+
+  const [department, setDepartment] = useProductDepartment({
+    productCode: selected?.prod_code,
+    resolvedDepartment: analysisData?.product?.depto,
+    isResolved: !!selected && !analysisLoading && analysisData !== undefined,
+  });
+
+  const { data: suggestions, isFetching: searchFetching } = useQuery({
+    queryKey: ["product-search", debounced, storeCodes, department],
+    queryFn: () => search({ data: { q: debounced, storeCodes, department } }),
+    enabled: debounced.trim().length >= 3 && !selected,
   });
 
   // byStore (the proc's result set 3) always brings back ALL stores:

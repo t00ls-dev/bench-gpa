@@ -69,7 +69,11 @@ export default function HowToPage() {
         <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
           <li>Digite pelo menos 3 caracteres para buscar.</li>
           <li>Clique em um resultado para ver a análise completa.</li>
-          <li>Selecione uma ou mais lojas. A seleção permanece salva para o próximo acesso.</li>
+          <li>
+            Selecione uma ou mais lojas e, se necessário, um departamento. Os filtros permanecem
+            salvos para o próximo acesso.
+          </li>
+          <li>Ao abrir um produto, o departamento é preenchido conforme a classificação do PLU.</li>
           <li>Os cinco produtos abertos mais recentemente ficam disponíveis abaixo da busca.</li>
         </ul>
       </HowToSection>
