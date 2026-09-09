@@ -124,6 +124,8 @@ export function AreaTable({
     [navigate, storeCode],
   );
 
+  // TanStack Virtual exposes methods that the React Compiler cannot memoize safely.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: products.length,
     getScrollElement: () => scrollRef.current,
