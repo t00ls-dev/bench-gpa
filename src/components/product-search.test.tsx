@@ -36,4 +36,25 @@ describe("ProductSearch", () => {
     fireEvent.click(screen.getByRole("button", { name: /1008160.*LEITE UHT INTEGRAL/i }));
     expect(onSelect).toHaveBeenCalledWith(suggestion);
   });
+
+  it("shows and selects a recent product when the search is empty", () => {
+    const onSelect = vi.fn();
+    render(
+      <ProductSearch
+        query=""
+        debounced=""
+        selected={null}
+        suggestions={undefined}
+        searchFetching={false}
+        recent={[suggestion]}
+        onQueryChange={vi.fn()}
+        onSelect={onSelect}
+        onClear={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Recentes:")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /1008160.*LEITE UHT INTEGRAL/i }));
+    expect(onSelect).toHaveBeenCalledWith(suggestion);
+  });
 });

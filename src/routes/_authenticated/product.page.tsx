@@ -209,7 +209,7 @@ function ProductPage() {
         selected={selected}
         suggestions={suggestions}
         searchFetching={searchFetching}
-        recent={department ? [] : recentProducts}
+        recent={recentProducts}
         onQueryChange={(v) => {
           setQuery(v);
           setSelected(null);
