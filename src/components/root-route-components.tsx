@@ -37,8 +37,9 @@ export function RootNotFound() {
   );
 }
 
-export function RootError({ error, reset }: { error: Error; reset: () => void }) {
+export function RootError({ error, reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
+  const message = error instanceof Error ? error.message : "Ocorreu um erro inesperado.";
   useState(() => {
     if (
       typeof window !== "undefined" &&
@@ -61,7 +62,7 @@ export function RootError({ error, reset }: { error: Error; reset: () => void })
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
         <button
           onClick={() => {
             router.invalidate();
