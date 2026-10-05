@@ -42,8 +42,21 @@ confirmou que não há caminho do domínio, banco ou projeto GPA.
 A rotação automática do Hestia havia falhado silenciosamente no B2 por
 incompatibilidade com a sintaxe atual do CLI `b2`. Existiam 22 backups remotos
 antigos, de 14/09 a 05/10/2026, além da cópia nova. Todas as versões antigas
-foram excluídas permanentemente. O armazenamento local e o B2 agora possuem
-somente `admin.2026-10-05_15-11-45.tar`, sem os dados operacionais do GPA.
+foram excluídas permanentemente. Após essa primeira rotação manual, o
+armazenamento local e o B2 ficaram somente com
+`admin.2026-10-05_15-11-45.tar`, sem os dados operacionais do GPA.
+
+Uma varredura posterior encontrou e removeu um diretório PM2 antigo da conta
+`debian`, links quebrados em snapshots administrativos e nove notificações do
+GPA que já estavam na lixeira do e-mail administrativo. O backup foi gerado
+novamente depois dessa limpeza. O armazenamento local e o B2 agora possuem
+somente `admin.2026-10-05_15-27-53.tar`; nenhum caminho dentro do arquivo
+corresponde ao domínio, banco ou projeto GPA.
+
+Permanecem apenas menções textuais em históricos de shell, histórico do Hestia
+e logs compartilhados de sistema, autenticação, cron e Roundcube. Esses
+registros não executam código, não contêm os dados de vendas e foram preservados
+como trilha de auditoria dos serviços compartilhados.
 
 ## Ações administrativas pendentes
 
