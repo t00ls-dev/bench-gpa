@@ -13,6 +13,8 @@ novas versões.
   sem criação de dump ou outro backup.
 - O domínio `gpa.t00ls.dev` foi removido do Hestia. O diretório da aplicação,
   incluindo releases, `.env` e logs, foi excluído junto com o domínio.
+- O registro DNS de `gpa.t00ls.dev` deixou de existir. Resolvedores públicos
+  respondem `NXDOMAIN`, portanto o site não possui endereço acessível.
 - A chave SSH usada pelo GitHub Actions foi removida do `authorized_keys` da
   conta de deploy na VPS.
 - Dependabot, GitHub Actions e o workflow de deploy foram desabilitados. Suas
@@ -40,9 +42,8 @@ repositório:
   os arquivos da aplicação não existem mais, mas o dump de startup anterior não
   foi substituído porque `pm2 save` recusa uma lista vazia sem `--force`. Antes
   disso, um reboot pode causar tentativas falhas de iniciar o caminho removido.
-- No Cloudflare, excluir o registro DNS de `gpa.t00ls.dev` e o widget Turnstile
-  dedicado ao projeto. O domínio Hestia já não existe e o endereço público
-  retorna erro de origem, mas os dois recursos continuam cadastrados na conta.
+- No Cloudflare, excluir o widget Turnstile dedicado ao projeto. O registro DNS
+  de `gpa.t00ls.dev` já não existe.
 - No Sentry, excluir o projeto do Bench GPA e revogar o token de autenticação
   usado pelo build. A API recusou a exclusão porque o token disponível não tem
   permissão administrativa. A aplicação fora do ar não envia novos eventos.
