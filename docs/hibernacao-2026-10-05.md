@@ -7,7 +7,8 @@ novas versões.
 
 ## Estado concluído
 
-- O processo `bench-gpa` foi removido do PM2 e está fora de execução.
+- O processo `bench-gpa`, o serviço `pm2-admin`, o módulo `pm2-logrotate`, os
+  dumps de startup e o pacote global do PM2 foram removidos.
 - As crons Hestia de purga e atualização da hierarquia foram excluídas.
 - O banco MariaDB `admin_gpa`, com seus usuários e dados de vendas, foi excluído
   sem criação de dump ou outro backup.
@@ -15,45 +16,46 @@ novas versões.
   incluindo releases, `.env` e logs, foi excluído junto com o domínio.
 - O registro DNS de `gpa.t00ls.dev` deixou de existir. Resolvedores públicos
   respondem `NXDOMAIN`, portanto o site não possui endereço acessível.
-- A chave SSH usada pelo GitHub Actions foi removida do `authorized_keys` da
-  conta de deploy na VPS.
+- A chave dedicada `github-actions@bench-gpa`, seu par privado armazenado na
+  VPS e o alias SSH correspondente foram removidos. A chave administrativa
+  pessoal foi preservada no `authorized_keys` da conta `debian`.
 - Dependabot, GitHub Actions e o workflow de deploy foram desabilitados. Suas
   configurações também foram removidas da versão corrente do repositório.
 - A integração MCP do Sentry foi removida da configuração do OpenCode.
+- O widget Turnstile e o projeto Sentry foram excluídos nos respectivos
+  provedores. O token Sentry dedicado também foi revogado.
+- Configurações e logs residuais do nginx, Apache, logrotate, Hestia e MariaDB
+  foram removidos. O buffer pool do MariaDB voltou de 512 MB para o padrão de
+  128 MB; `t00ls.dev` e `cepeg.t00ls.dev` permaneceram acessíveis após o
+  reinício.
 - Nenhuma branch, tag, release ou parte do histórico Git foi excluída.
 - A VPS, o Hestia, o nginx, o MariaDB e o Backblaze foram preservados porque
   também atendem `t00ls.dev` e `cepeg.t00ls.dev`.
 
 ## Backup compartilhado
 
-O único backup existente no Hestia é um arquivo compartilhado do usuário
-`admin`. Ele contém `t00ls.dev`, `cepeg.t00ls.dev`, `admin_cepeg` e, até a
-rotação seguinte, uma cópia do antigo Bench GPA. Excluir esse arquivo destruiria
-o backup dos outros projetos. Nenhum backup adicional do GPA foi criado. Como a
-retenção do Hestia é de uma cópia, a próxima rotação substitui esse arquivo por
-outro que já não inclui o domínio nem o banco removidos.
+Um novo backup compartilhado do usuário `admin` foi gerado depois da remoção do
+GPA. Ele contém somente `sv1.t00ls.dev`, `t00ls.dev`, `cepeg.t00ls.dev`, o
+domínio de e-mail `t00ls.dev` e o banco `admin_cepeg`. A inspeção do arquivo
+confirmou que não há caminho do domínio, banco ou projeto GPA.
+
+A rotação automática do Hestia havia falhado silenciosamente no B2 por
+incompatibilidade com a sintaxe atual do CLI `b2`. Existiam 22 backups remotos
+antigos, de 14/09 a 05/10/2026, além da cópia nova. Todas as versões antigas
+foram excluídas permanentemente. O armazenamento local e o B2 agora possuem
+somente `admin.2026-10-05_15-11-45.tar`, sem os dados operacionais do GPA.
 
 ## Ações administrativas pendentes
 
-Estas ações não puderam ser concluídas com as credenciais disponíveis no
-repositório:
-
-- No PM2 da conta `admin`, executar `pm2 save --force`. O processo está parado e
-  os arquivos da aplicação não existem mais, mas o dump de startup anterior não
-  foi substituído porque `pm2 save` recusa uma lista vazia sem `--force`. Antes
-  disso, um reboot pode causar tentativas falhas de iniciar o caminho removido.
-- No Cloudflare, excluir o widget Turnstile dedicado ao projeto. O registro DNS
-  de `gpa.t00ls.dev` já não existe.
-- No Sentry, excluir o projeto do Bench GPA e revogar o token de autenticação
-  usado pelo build. A API recusou a exclusão porque o token disponível não tem
-  permissão administrativa. A aplicação fora do ar não envia novos eventos.
 - Depois que esta documentação estiver integrada na `main`, arquivar o
   repositório no GitHub para torná-lo somente leitura.
+- A integração de backup do Hestia com o CLI `b2` precisa ser corrigida para os
+  projetos compartilhados. A falha não mantém nenhum dado do GPA, mas pode
+  voltar a acumular backups futuros de `t00ls.dev` e `cepeg.t00ls.dev`.
 
 ## Credenciais sem finalidade
 
 Os secrets do GitHub relacionados a deploy, Sentry e chaves públicas de build
 foram removidos. As credenciais que existiam apenas no `.env` de produção foram
-eliminadas com o diretório do domínio. A chave SSH de deploy foi revogada na
-VPS. O token Sentry deve ser revogado também no próprio Sentry, pois apagar sua
-cópia do GitHub não invalida o token no provedor.
+eliminadas com o diretório do domínio. A chave SSH dedicada ao deploy foi
+revogada e removida da VPS. O token Sentry foi revogado no próprio provedor.
