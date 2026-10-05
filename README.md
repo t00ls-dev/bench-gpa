@@ -1,5 +1,11 @@
 # Bench GPA
 
+> **Projeto descontinuado e hibernado em 05/10/2026.** A aplicação foi retirada
+> de produção, as automações foram desligadas e o banco operacional foi excluído
+> sem criar um novo backup. Este repositório permanece apenas como preservação
+> do código-fonte e do histórico Git. Consulte
+> [`docs/hibernacao-2026-10-05.md`](docs/hibernacao-2026-10-05.md).
+
 Plataforma de analytics operacional/comercial para o Grupo Pão de Açúcar (GPA). Dashboard, análise de produtos, análise por área hierárquica, previsão de venda, upload de planilhas XLSX e gerenciamento de usuários.
 
 ## Stack
